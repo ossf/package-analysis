@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analysis-deployment
+  labels:
+    app: analysis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: analysis
+  template:
+    metadata:
+      labels:
+        app: analysis
+    spec:
+      containers:
+      - name: app
+        image: ko://github.com/ossf/package-feeds/analysis
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: analysis
+spec:
+  selector:
+    app: analysis
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
