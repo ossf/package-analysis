@@ -1,0 +1,33 @@
+ebpf:
+  enabled: true
+falco:
+  httpOutput:
+    enabled: true
+    url: http://analysis.default/falco
+  jsonOutput: true
+  jsonIncludeOutputProperty: true
+customRules:
+  rules-custom.yaml: |-
+    - list: allowed_files
+      items: [/etc/ld.so.cache, /etc/hosts, /usr/lib/ssl/openssl.cnf, /etc/nsswitch.conf, /etc/resolv.conf]
+    - macro: outbound_conn
+      condition: >
+        (evt.type = connect and k8s.ns.name="default" and fd.ip != "0.0.0.0")
+
+    - rule: Unexpected file access
+      desc: Detect file access outside the workingdir
+      condition: >
+        (open_read and 
+         not fd.name startswith /app/ and
+         not fd.name startswith /tmp/ and
+         not fd.name startswith /usr/local/lib/ and
+         not fd.name startswith /usr/lib/ and
+         not fd.name startswith /lib/ and
+         not fd.name startswith /proc/ and
+         not fd.name startswith /usr/lib/locale/ and
+         not fd.name in (allowed_files) and
+         container and
+         k8s.ns.name="default" and
+         k8s.pod.label.install="1")
+      output: unexpected file access (command=%proc.cmdline fd=%fd.name user=%user.name pod=%k8s.pod.name)
+      priority: NOTICE
