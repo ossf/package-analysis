@@ -15,6 +15,7 @@ locals {
     "cloudbuild.googleapis.com",
     "run.googleapis.com",
     "cloudscheduler.googleapis.com",
+    "cloudresourcemanager.googleapis.com",
   ]
 }
 
