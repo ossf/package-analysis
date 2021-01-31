@@ -17,6 +17,9 @@ spec:
       containers:
       - name: app
         image: ko://github.com/ossf/package-feeds/analysis
+        env:
+          - name: OSSF_MALWARE_ANALYSIS_RESULTS
+            value: gs://ossf-malware-analysis-results
         ports:
         - containerPort: 8080
 ---

@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -32,6 +35,7 @@ type OutputFields struct {
 	CmdLine        string `json:"proc.cmdline"`
 	IP             string `json:"fd.sip"`
 	Path           string `json:"fd.name"`
+	Labels         string `json:"k8s.pod.labels"`
 }
 
 var bucket *blob.Bucket
@@ -39,7 +43,7 @@ var bucket *blob.Bucket
 func main() {
 	ctx := context.Background()
 	var err error
-	bucket, err = blob.OpenBucket(ctx, "gs://ossf-malware-analysis-results")
+	bucket, err = blob.OpenBucket(ctx, os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS"))
 	if err != nil {
 		log.Panic(err)
 	}
@@ -49,11 +53,11 @@ func main() {
 	http.ListenAndServe(":8080", nil)
 }
 
-func setTimer(pod string) {
+func setTimer(pod string, labels map[string]string) {
 	if podTimers[pod] != nil {
 		podTimers[pod].Stop()
 	}
-	podTimers[pod] = time.AfterFunc(time.Minute, finalizePod(pod))
+	podTimers[pod] = time.AfterFunc(time.Minute, finalizePod(pod, labels))
 }
 
 func falcoHandler(w http.ResponseWriter, r *http.Request) {
@@ -71,6 +75,13 @@ func falcoHandler(w http.ResponseWriter, r *http.Request) {
 	if pod == "" {
 		return
 	}
+	kvps := strings.Split(output.OutputFields.Labels, ", ")
+	labels := map[string]string{}
+	for _, kvp := range kvps {
+		kv := strings.SplitN(kvp, ":", 2)
+		labels[kv[0]] = kv[1]
+	}
+
 	switch output.Rule {
 	case "Unexpected file access":
 		if podFiles[pod] == nil {
@@ -80,7 +91,7 @@ func falcoHandler(w http.ResponseWriter, r *http.Request) {
 	default:
 		return
 	}
-	setTimer(pod)
+	setTimer(pod, labels)
 	fmt.Println(output.Rule, output.OutputFields)
 }
 
@@ -88,7 +99,7 @@ type data struct {
 	Files []string
 }
 
-func finalizePod(pod string) func() {
+func finalizePod(pod string, labels map[string]string) func() {
 	return func() {
 		ctx := context.Background()
 		mutex.Lock()
@@ -108,7 +119,12 @@ func finalizePod(pod string) func() {
 			return
 		}
 		log.Printf("Uploading files and ips for %s\n", pod)
-		w, err := bucket.NewWriter(ctx, pod, nil)
+
+		path := filepath.Join(
+			labels["package_type"],
+			labels["package_version"], labels["package_name"], labels["version"],
+			"results.json")
+		w, err := bucket.NewWriter(ctx, path, nil)
 		if err != nil {
 			log.Print(err)
 			return

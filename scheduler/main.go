@@ -78,7 +78,10 @@ func createPypiPod(name, version string) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: fmt.Sprintf("%s", name),
 			Labels: map[string]string{
-				"install": "1",
+				"install":         "1",
+				"package_name":    name,
+				"package_version": version,
+				"package_type":    "pypi",
 			},
 		},
 		Spec: v1.PodSpec{

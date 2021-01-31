@@ -29,5 +29,5 @@ customRules:
          container and
          k8s.ns.name="default" and
          k8s.pod.label.install="1")
-      output: unexpected file access (command=%proc.cmdline fd=%fd.name user=%user.name pod=%k8s.pod.name)
+      output: unexpected file access (command=%proc.cmdline fd=%fd.name user=%user.name pod=%k8s.pod.name labels=%k8s.pod.labels)
       priority: NOTICE
