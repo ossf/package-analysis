@@ -72,6 +72,8 @@ func falcoHandler(w http.ResponseWriter, r *http.Request) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	pod := output.OutputFields.Pod
+
+	// Not from one of our pods.
 	if pod == "" {
 		return
 	}
@@ -79,7 +81,15 @@ func falcoHandler(w http.ResponseWriter, r *http.Request) {
 	labels := map[string]string{}
 	for _, kvp := range kvps {
 		kv := strings.SplitN(kvp, ":", 2)
+		if len(kv) != 2 {
+			continue
+		}
 		labels[kv[0]] = kv[1]
+	}
+
+	// Not a pod for analysis, ignore
+	if labels["install"] != "1" {
+		return
 	}
 
 	switch output.Rule {
@@ -122,7 +132,8 @@ func finalizePod(pod string, labels map[string]string) func() {
 
 		path := filepath.Join(
 			labels["package_type"],
-			labels["package_version"], labels["package_name"], labels["version"],
+			labels["package_name"],
+			labels["package_version"],
 			"results.json")
 		w, err := bucket.NewWriter(ctx, path, nil)
 		if err != nil {

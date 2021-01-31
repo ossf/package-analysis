@@ -20,7 +20,6 @@ import (
 var clientset *kubernetes.Clientset
 
 func main() {
-
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		panic(err.Error())
@@ -76,7 +75,7 @@ func createPypiPod(name, version string) error {
 	pods := clientset.CoreV1().Pods("default")
 	pod, err := pods.Create(context.Background(), &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("%s", name),
+			GenerateName: "pypi-",
 			Labels: map[string]string{
 				"install":         "1",
 				"package_name":    name,
