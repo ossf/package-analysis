@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/jordan-wright/ossmalware/pkg/library"
 	"gocloud.dev/pubsub"
@@ -72,6 +73,8 @@ func handlePkg(pkg library.Package) error {
 }
 
 func createPypiPod(name, version string) error {
+	// Wait a few minutes before creating the pod. PyPI might be slow.
+	time.Sleep(1 * time.Minute)
 	pods := clientset.CoreV1().Pods("default")
 	pod, err := pods.Create(context.Background(), &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
