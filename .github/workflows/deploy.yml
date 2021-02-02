@@ -40,6 +40,8 @@ jobs:
         cd feeds/pypi;
         gcloud builds submit --tag gcr.io/${{ secrets.GOOGLE_PROJECT_ID }}/feeds-pypi;
         cd ../../;
+        gcloud builds submit --tag gcr.io/${{ secrets.GOOGLE_PROJECT_ID }}/feeds-npm;
+        cd ../../;
 
     - name: Terraform Init
       run: terraform init
@@ -68,4 +70,10 @@ jobs:
           --platform managed \
           --region us-central1 \
           --image gcr.io/${{ secrets.GOOGLE_PROJECT_ID }}/feeds-pypi;
+        cd ../../;
+        gcloud run deploy \
+          npm-run-srv \
+          --platform managed \
+          --region us-central1 \
+          --image gcr.io/${{ secrets.GOOGLE_PROJECT_ID }}/feeds-npm;
         cd ../../;
