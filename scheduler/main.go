@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/jordan-wright/ossmalware/pkg/library"
 	"gocloud.dev/pubsub"
@@ -38,6 +39,9 @@ func main() {
 		panic(err)
 	}
 
+	// Start the background cleanup job
+	go cleanupJob()
+
 	for {
 		msg, err := sub.Receive(ctx)
 		if err != nil {
@@ -63,16 +67,14 @@ func main() {
 
 func handlePkg(pkg library.Package) error {
 	// Turn it into a Pod!
-	switch pkg.Type {
-	case "pypi":
-		return createPypiPod(pkg.Name, pkg.Version)
-	case "npm":
-		// createNpmPod(pkg.Name, pkg.Version)
+	if pkg.Type == "pypi" || pkg.Type == "npm" {
+		return createPod(pkg.Name, pkg.Version, pkg.Type)
 	}
+	log.Println("unknown package type: ", pkg.Type)
 	return nil
 }
 
-func createPypiPod(name, version string) error {
+func createPod(name, version, packageType string) error {
 	// We need to pass a bool pointer below.
 	var token = false
 	var retries int32 = 3
@@ -80,14 +82,26 @@ func createPypiPod(name, version string) error {
 	var deadline int64 = 600
 	jobs := clientset.BatchV1().Jobs("default")
 
+	var image, command string
+	switch packageType {
+	case "npm":
+		image = "node"
+		command = "npm init --force && npm install %s@%s"
+	case "pypi":
+		image = "python:3"
+		command = "pip3 install %s==%s"
+	}
+
 	job, err := jobs.Create(context.Background(), &bv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "pypi-",
+			GenerateName: packageType + "-",
 			Labels: map[string]string{
-				"install":         "1",
+				"install":      "1",
+				"package_type": packageType,
+			},
+			Annotations: map[string]string{
 				"package_name":    name,
 				"package_version": version,
-				"package_type":    "pypi",
 			},
 		},
 		Spec: bv1.JobSpec{
@@ -97,10 +111,12 @@ func createPypiPod(name, version string) error {
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"install":         "1",
+						"install":      "1",
+						"package_type": packageType,
+					},
+					Annotations: map[string]string{
 						"package_name":    name,
 						"package_version": version,
-						"package_type":    "pypi",
 					},
 				},
 				Spec: v1.PodSpec{
@@ -109,10 +125,10 @@ func createPypiPod(name, version string) error {
 					Containers: []v1.Container{
 						{
 							Name:    "install",
-							Image:   "python:3",
+							Image:   image,
 							Command: []string{"/bin/bash", "-c"},
 							Args: []string{
-								fmt.Sprintf("mkdir -p /app && cd /app && pip3 install %s==%s", name, version),
+								"mkdir /app && cd /app && " + fmt.Sprintf(command, name, version),
 							},
 							Resources: v1.ResourceRequirements{
 								Requests: v1.ResourceList{
@@ -133,4 +149,39 @@ func createPypiPod(name, version string) error {
 	}
 	fmt.Println("Created job: ", job.Name)
 	return nil
+}
+
+// k8s has a TTL controller, but it's alpha.
+func cleanupJob() {
+	jc := clientset.BatchV1().Jobs("default")
+
+	ctx := context.Background()
+	for {
+		time.Sleep(time.Minute)
+		// Delete everything completed
+		jobs, err := jc.List(ctx, metav1.ListOptions{})
+		if err != nil {
+			log.Printf("error listing jobs: %s", err)
+			continue
+		}
+
+		succeededOldest := time.Now().Add(-1 * time.Hour)
+		failedOldest := time.Now().Add(-24 * time.Hour)
+		for _, j := range jobs.Items {
+			var oldest time.Time
+			if j.Status.Succeeded == 1 {
+				oldest = succeededOldest
+			} else {
+				oldest = failedOldest
+			}
+			if j.Status.StartTime.Time.Before(oldest) {
+				log.Printf("Deleting job %s with start time %s", j.ObjectMeta.Name, j.Status.StartTime)
+				if err := jc.Delete(ctx, j.ObjectMeta.Name, metav1.DeleteOptions{}); err != nil {
+					log.Printf("error deleting job: %s %s", j.ObjectMeta.Name, err)
+				}
+			} else {
+				log.Printf("Not deleting job %s with start time %s", j.ObjectMeta.Name, j.Status.StartTime)
+			}
+		}
+	}
 }

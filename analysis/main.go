@@ -14,6 +14,9 @@ import (
 
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/gcsblob"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 var mutex sync.Mutex
@@ -39,10 +42,21 @@ type OutputFields struct {
 }
 
 var bucket *blob.Bucket
+var clientset *kubernetes.Clientset
 
 func main() {
 	ctx := context.Background()
-	var err error
+
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		panic(err.Error())
+	}
+	// creates the clientset
+	clientset, err = kubernetes.NewForConfig(config)
+	if err != nil {
+		panic(err.Error())
+	}
+
 	bucket, err = blob.OpenBucket(ctx, os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS"))
 	if err != nil {
 		log.Panic(err)
@@ -53,11 +67,11 @@ func main() {
 	http.ListenAndServe(":8080", nil)
 }
 
-func setTimer(pod string, labels map[string]string) {
+func setTimer(pod string) {
 	if podTimers[pod] != nil {
 		podTimers[pod].Stop()
 	}
-	podTimers[pod] = time.AfterFunc(time.Minute, finalizePod(pod, labels))
+	podTimers[pod] = time.AfterFunc(time.Minute, finalizePod(pod))
 }
 
 func falcoHandler(w http.ResponseWriter, r *http.Request) {
@@ -101,7 +115,7 @@ func falcoHandler(w http.ResponseWriter, r *http.Request) {
 	default:
 		return
 	}
-	setTimer(pod, labels)
+	setTimer(pod)
 	fmt.Println(output.Rule, output.OutputFields)
 }
 
@@ -109,13 +123,20 @@ type data struct {
 	Files []string
 }
 
-func finalizePod(pod string, labels map[string]string) func() {
+func finalizePod(podName string) func() {
 	return func() {
 		ctx := context.Background()
+		// Fetch the pod once.
+		pod, err := clientset.CoreV1().Pods("").Get(ctx, podName, metav1.GetOptions{})
+		if err != nil {
+			log.Println("fetching pod: ", err)
+			return
+		}
+
 		mutex.Lock()
 		defer mutex.Unlock()
 		// ips := podIps[pod]
-		files := podFiles[pod]
+		files := podFiles[podName]
 
 		d := data{}
 
@@ -130,9 +151,9 @@ func finalizePod(pod string, labels map[string]string) func() {
 		}
 
 		path := filepath.Join(
-			labels["package_type"],
-			labels["package_name"],
-			labels["package_version"],
+			pod.ObjectMeta.Labels["package_type"],
+			pod.ObjectMeta.Annotations["package_name"],
+			pod.ObjectMeta.Annotations["package_version"],
 			"results.json")
 
 		log.Printf("Uploading files and ips for %s to %s\n", pod, path)
@@ -149,7 +170,7 @@ func finalizePod(pod string, labels map[string]string) func() {
 			log.Print(err)
 			return
 		}
-		delete(podFiles, pod)
-		delete(podTimers, pod)
+		delete(podFiles, podName)
+		delete(podTimers, podName)
 	}
 }
