@@ -40,6 +40,7 @@ jobs:
         cd feeds/pypi;
         gcloud builds submit --tag gcr.io/${{ secrets.GOOGLE_PROJECT_ID }}/feeds-pypi;
         cd ../../;
+        cd feeds/npm;
         gcloud builds submit --tag gcr.io/${{ secrets.GOOGLE_PROJECT_ID }}/feeds-npm;
         cd ../../;
 
@@ -71,6 +72,7 @@ jobs:
           --region us-central1 \
           --image gcr.io/${{ secrets.GOOGLE_PROJECT_ID }}/feeds-pypi;
         cd ../../;
+        cd feeds/npm;
         gcloud run deploy \
           npm-run-srv \
           --platform managed \
