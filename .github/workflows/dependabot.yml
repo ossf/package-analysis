@@ -1,0 +1,26 @@
+version: 2
+updates:
+  - package-ecosystem: "go:modules"
+    directory: "/scheduler"
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "go:modules"
+    directory: "/analysis"
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "go:modules"
+    directory: "/feeds/pypi"
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "go:modules"
+    directory: "/feeds/npm"
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "docker"
+    directory: "/feeds/pypi"
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "docker"
+    directory: "/feeds/npm"
+    schedule:
+      interval: "daily"
