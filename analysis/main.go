@@ -128,13 +128,14 @@ func finalizePod(pod string, labels map[string]string) func() {
 			log.Print(err)
 			return
 		}
-		log.Printf("Uploading files and ips for %s\n", pod)
 
 		path := filepath.Join(
 			labels["package_type"],
 			labels["package_name"],
 			labels["package_version"],
 			"results.json")
+
+		log.Printf("Uploading files and ips for %s to %s\n", pod, path)
 		w, err := bucket.NewWriter(ctx, path, nil)
 		if err != nil {
 			log.Print(err)

@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 
 	"github.com/jordan-wright/ossmalware/pkg/library"
 	"gocloud.dev/pubsub"
 	_ "gocloud.dev/pubsub/gcppubsub"
+	bv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -73,10 +73,14 @@ func handlePkg(pkg library.Package) error {
 }
 
 func createPypiPod(name, version string) error {
-	// Wait a few minutes before creating the pod. PyPI might be slow.
-	time.Sleep(1 * time.Minute)
-	pods := clientset.CoreV1().Pods("default")
-	pod, err := pods.Create(context.Background(), &v1.Pod{
+	// We need to pass a bool pointer below.
+	var token = false
+	var retries int32 = 3
+	var ttl int32 = 3600
+	var deadline int64 = 600
+	jobs := clientset.BatchV1().Jobs("default")
+
+	job, err := jobs.Create(context.Background(), &bv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "pypi-",
 			Labels: map[string]string{
@@ -86,19 +90,38 @@ func createPypiPod(name, version string) error {
 				"package_type":    "pypi",
 			},
 		},
-		Spec: v1.PodSpec{
-			RestartPolicy: v1.RestartPolicyNever,
-			Containers: []v1.Container{
-				{
-					Name:    "install",
-					Image:   "python:3",
-					Command: []string{"/bin/bash", "-c"},
-					Args: []string{
-						fmt.Sprintf("mkdir -p /app && cd /app && pip3 install %s==%s", name, version),
+		Spec: bv1.JobSpec{
+			ActiveDeadlineSeconds:   &deadline,
+			TTLSecondsAfterFinished: &ttl,
+			BackoffLimit:            &retries,
+			Template: v1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"install":         "1",
+						"package_name":    name,
+						"package_version": version,
+						"package_type":    "pypi",
 					},
-					Resources: v1.ResourceRequirements{
-						Requests: v1.ResourceList{
-							v1.ResourceCPU: resource.MustParse("250m"),
+				},
+				Spec: v1.PodSpec{
+					RestartPolicy:                v1.RestartPolicyNever,
+					AutomountServiceAccountToken: &token,
+					Containers: []v1.Container{
+						{
+							Name:    "install",
+							Image:   "python:3",
+							Command: []string{"/bin/bash", "-c"},
+							Args: []string{
+								fmt.Sprintf("mkdir -p /app && cd /app && pip3 install %s==%s", name, version),
+							},
+							Resources: v1.ResourceRequirements{
+								Requests: v1.ResourceList{
+									v1.ResourceCPU: resource.MustParse("250m"),
+								},
+								Limits: v1.ResourceList{
+									v1.ResourceCPU: resource.MustParse("500m"),
+								},
+							},
 						},
 					},
 				},
@@ -108,6 +131,6 @@ func createPypiPod(name, version string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("Created pod: ", pod.Name)
+	fmt.Println("Created job: ", job.Name)
 	return nil
 }

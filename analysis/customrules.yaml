@@ -25,6 +25,7 @@ customRules:
          not fd.name startswith /lib/ and
          not fd.name startswith /proc/ and
          not fd.name startswith /usr/lib/locale/ and
+         not fd.name startswith /run/containerd/ and
          not fd.name in (allowed_files) and
          container and
          k8s.ns.name="default" and
