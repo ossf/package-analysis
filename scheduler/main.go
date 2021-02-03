@@ -179,8 +179,6 @@ func cleanupJob() {
 				if err := jc.Delete(ctx, j.ObjectMeta.Name, metav1.DeleteOptions{}); err != nil {
 					log.Printf("error deleting job: %s %s", j.ObjectMeta.Name, err)
 				}
-			} else {
-				log.Printf("Not deleting job %s with start time %s", j.ObjectMeta.Name, j.Status.StartTime)
 			}
 		}
 	}
