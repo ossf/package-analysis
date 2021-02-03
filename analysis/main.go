@@ -103,6 +103,7 @@ func falcoHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Not a pod for analysis, ignore
 	if labels["install"] != "1" {
+		log.Println("skipping upload for pod:", pod)
 		return
 	}
 
@@ -125,9 +126,10 @@ type data struct {
 
 func finalizePod(podName string) func() {
 	return func() {
+		log.Println("Fetching info for pod: ", podName)
 		ctx := context.Background()
 		// Fetch the pod once.
-		pod, err := clientset.CoreV1().Pods("").Get(ctx, podName, metav1.GetOptions{})
+		pod, err := clientset.CoreV1().Pods("default").Get(ctx, podName, metav1.GetOptions{})
 		if err != nil {
 			log.Println("fetching pod: ", err)
 			return
@@ -156,7 +158,7 @@ func finalizePod(podName string) func() {
 			pod.ObjectMeta.Annotations["package_version"],
 			"results.json")
 
-		log.Printf("Uploading files and ips for %s to %s\n", pod, path)
+		log.Printf("Uploading files and ips for %s to %s\n", podName, path)
 		w, err := bucket.NewWriter(ctx, path, nil)
 		if err != nil {
 			log.Print(err)
