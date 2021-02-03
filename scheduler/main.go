@@ -65,9 +65,29 @@ func main() {
 	}
 }
 
+type pkgManager struct {
+	commandFmt string
+	image      string
+}
+
+var supportedPkgManagers = map[string]pkgManager{
+	"pypi": pkgManager{
+		image:      "python:3",
+		commandFmt: "pip3 install --no-deps %s==%s",
+	},
+	"npm": pkgManager{
+		image:      "node",
+		commandFmt: "npm init --force && npm install %s@%s",
+	},
+	"rubygems": pkgManager{
+		image:      "ruby",
+		commandFmt: "gem install %s -v %s",
+	},
+}
+
 func handlePkg(pkg library.Package) error {
 	// Turn it into a Pod!
-	if pkg.Type == "pypi" || pkg.Type == "npm" {
+	if _, ok := supportedPkgManagers[pkg.Type]; ok {
 		return createPod(pkg.Name, pkg.Version, pkg.Type)
 	}
 	log.Println("unknown package type: ", pkg.Type)
@@ -82,15 +102,8 @@ func createPod(name, version, packageType string) error {
 	var deadline int64 = 600
 	jobs := clientset.BatchV1().Jobs("default")
 
-	var image, command string
-	switch packageType {
-	case "npm":
-		image = "node"
-		command = "npm init --force && npm install %s@%s"
-	case "pypi":
-		image = "python:3"
-		command = "pip3 install --no-deps %s==%s"
-	}
+	image := supportedPkgManagers[packageType].image
+	command := fmt.Sprintf(supportedPkgManagers[packageType].commandFmt, name, version)
 
 	job, err := jobs.Create(context.Background(), &bv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -128,7 +141,7 @@ func createPod(name, version, packageType string) error {
 							Image:   image,
 							Command: []string{"/bin/bash", "-c"},
 							Args: []string{
-								"mkdir /app && cd /app && " + fmt.Sprintf(command, name, version),
+								"set -ex && mkdir /app && cd /app && " + command,
 							},
 							Resources: v1.ResourceRequirements{
 								Requests: v1.ResourceList{
