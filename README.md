@@ -1,6 +1,6 @@
 # Package Feeds
 
-This repo contains a few subprojects to aid in the analysis of open source packages.
+This repo contains a few subprojects to aid in the analysis of open source packages, in particular to look for malicious software.
 
 These are:
 
