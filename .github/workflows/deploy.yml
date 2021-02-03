@@ -43,6 +43,9 @@ jobs:
         cd feeds/npm;
         gcloud builds submit --tag gcr.io/${{ secrets.GOOGLE_PROJECT_ID }}/feeds-npm;
         cd ../../;
+        cd feeds/rubygems;
+        gcloud builds submit --tag gcr.io/${{ secrets.GOOGLE_PROJECT_ID }}/feeds-rubygems;
+        cd ../../;
 
     - name: Terraform Init
       run: terraform init
@@ -78,4 +81,11 @@ jobs:
           --platform managed \
           --region us-central1 \
           --image gcr.io/${{ secrets.GOOGLE_PROJECT_ID }}/feeds-npm;
+        cd ../../;
+        cd feeds/rubygems;
+        gcloud run deploy \
+          npm-run-srv \
+          --platform managed \
+          --region us-central1 \
+          --image gcr.io/${{ secrets.GOOGLE_PROJECT_ID }}/feeds-rubygems;
         cd ../../;
