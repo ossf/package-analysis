@@ -84,7 +84,7 @@ jobs:
         cd ../../;
         cd feeds/rubygems;
         gcloud run deploy \
-          npm-run-srv \
+          ruby-run-srv \
           --platform managed \
           --region us-central1 \
           --image gcr.io/${{ secrets.GOOGLE_PROJECT_ID }}/feeds-rubygems;
