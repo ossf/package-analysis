@@ -1,11 +1,26 @@
 ebpf:
   enabled: true
+docker:
+  enabled: false # we use containerd
+resources:
+  requests:
+    cpu: 500m
+  limits:
+    cpu: 500m
 falco:
+  priority: CRITICAL
   httpOutput:
     enabled: true
     url: http://analysis.default/falco
   jsonOutput: true
   jsonIncludeOutputProperty: true
+  syscallEventDrops:
+    rate: 10
+    maxBurst: 500
+  bufferedOutputs: true
+  outputs:
+    rate: 10
+    maxBurst: 10000
 customRules:
   rules-custom.yaml: |-
     - list: allowed_files
@@ -25,10 +40,13 @@ customRules:
          not fd.name startswith /lib/ and
          not fd.name startswith /proc/ and
          not fd.name startswith /usr/lib/locale/ and
+         not fd.name startswith /usr/include/c++ and
          not fd.name startswith /run/containerd/ and
+         not fd.name startswith /usr/local/bundle/ and
+         not fd.name startswith /usr/local/include/ruby-3.0.0/ and
          not fd.name in (allowed_files) and
          container and
          k8s.ns.name="default" and
          k8s.pod.label.install="1")
       output: unexpected file access (command=%proc.cmdline fd=%fd.name user=%user.name pod=%k8s.pod.name labels=%k8s.pod.labels)
-      priority: NOTICE
+      priority: CRITICAL

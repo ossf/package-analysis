@@ -83,41 +83,45 @@ func falcoHandler(w http.ResponseWriter, r *http.Request) {
 		log.Print(err)
 		return
 	}
-	mutex.Lock()
-	defer mutex.Unlock()
-	pod := output.OutputFields.Pod
+	// handle everything else in the background!
+	go func() {
+		mutex.Lock()
+		defer mutex.Unlock()
+		pod := output.OutputFields.Pod
 
-	// Not from one of our pods.
-	if pod == "" {
-		return
-	}
-	kvps := strings.Split(output.OutputFields.Labels, ", ")
-	labels := map[string]string{}
-	for _, kvp := range kvps {
-		kv := strings.SplitN(kvp, ":", 2)
-		if len(kv) != 2 {
-			continue
+		// Not from one of our pods.
+		if pod == "" {
+			return
 		}
-		labels[kv[0]] = kv[1]
-	}
-
-	// Not a pod for analysis, ignore
-	if labels["install"] != "1" {
-		log.Println("skipping upload for pod:", pod)
-		return
-	}
-
-	switch output.Rule {
-	case "Unexpected file access":
-		if podFiles[pod] == nil {
-			podFiles[pod] = map[string]bool{}
+		kvps := strings.Split(output.OutputFields.Labels, ", ")
+		labels := map[string]string{}
+		for _, kvp := range kvps {
+			kv := strings.SplitN(kvp, ":", 2)
+			if len(kv) != 2 {
+				continue
+			}
+			labels[kv[0]] = kv[1]
 		}
-		podFiles[pod][output.OutputFields.Path] = true
-	default:
-		return
-	}
-	setTimer(pod)
-	fmt.Println(output.Rule, output.OutputFields)
+
+		// Not a pod for analysis, ignore
+		if labels["install"] != "1" {
+			log.Println("skipping upload for pod:", pod)
+			return
+		}
+
+		switch output.Rule {
+		case "Unexpected file access":
+			if podFiles[pod] == nil {
+				podFiles[pod] = map[string]bool{}
+			}
+			podFiles[pod][output.OutputFields.Path] = true
+		default:
+			return
+		}
+		setTimer(pod)
+		fmt.Println(output.Rule, output.OutputFields)
+	}()
+	w.WriteHeader(http.StatusOK)
 }
 
 type data struct {
