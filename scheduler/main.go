@@ -89,7 +89,7 @@ func createPod(name, version, packageType string) error {
 		command = "npm init --force && npm install %s@%s"
 	case "pypi":
 		image = "python:3"
-		command = "pip3 install %s==%s"
+		command = "pip3 install --no-deps %s==%s"
 	}
 
 	job, err := jobs.Create(context.Background(), &bv1.Job{
