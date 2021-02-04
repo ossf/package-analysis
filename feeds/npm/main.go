@@ -11,13 +11,14 @@ import (
 	"time"
 
 	"github.com/jordan-wright/ossmalware/pkg/library"
-
+	"github.com/pkg/errors"
 	"gocloud.dev/pubsub"
 	_ "gocloud.dev/pubsub/gcppubsub"
 )
 
 const (
 	delta      = 5 * time.Minute
+	timeout    = 10 * time.Second
 	baseURL    = "https://registry.npmjs.org/-/rss"
 	versionURL = "https://registry.npmjs.org/"
 )
@@ -52,47 +53,43 @@ func (t *rfc1123Time) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error
 	var marshaledTime string
 	err := d.DecodeElement(&marshaledTime, &start)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "unable to unmarshal xml")
 	}
 	decodedTime, err := time.Parse(time.RFC1123, marshaledTime)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "unable to deocde time")
 	}
 	*t = rfc1123Time{decodedTime}
 	return nil
 }
 
 func fetchPackages() ([]*Package, error) {
-	client := &http.Client{
-		Timeout: 10 * time.Second,
-	}
+	client := &http.Client{Timeout: timeout}
 	resp, err := client.Get(baseURL)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "unable to connect")
 	}
 	defer resp.Body.Close()
 	rssResponse := &Response{}
 	err = xml.NewDecoder(resp.Body).Decode(rssResponse)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "unable to decode the xml response")
 	}
 	return rssResponse.Packages, nil
 }
 
-// Gets the package version from the NPM
+// Gets the package version from the NPM.
 func fetchVersionInformation(packageName string) (string, error) {
-	client := &http.Client{
-		Timeout: 10 * time.Second,
-	}
+	client := &http.Client{Timeout: timeout}
 	resp, err := client.Get(fmt.Sprintf("%s/%s", versionURL, packageName))
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "unable to get http for version information")
 	}
 	defer resp.Body.Close()
 	v := &PackageVersion{}
 	err = json.NewDecoder(resp.Body).Decode(v)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "unable to decode json for the version information")
 	}
 	return v.DistTags.Latest, nil
 }
@@ -144,7 +141,6 @@ func Poll(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	//nolint:errcheck
 	log.Printf("Processed %d packages", processed)
 	//nolint:errcheck
 	w.Write([]byte("OK"))

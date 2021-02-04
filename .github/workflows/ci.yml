@@ -1,0 +1,30 @@
+name: CI
+# Trigger the CI on pull requests and direct pushes to any branch
+on:
+  push:
+  pull_request:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.15
+
+    - name: npm feeds build
+      run: |
+           cd feeds/npm/
+           make build
+
+    - name: npm feeds verify
+      run: |
+           cd feeds/npm/
+           make verify
+
+    - name: npm feeds docker build
+      run: |
+           cd feeds/npm/
+           make image
