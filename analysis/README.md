@@ -13,6 +13,9 @@ gcloud container clusters get-credentials analysis-cluster --zone=us-central1-c 
 Falco is installed with Helm, using the customrules file here.
 
 ```shell
+helm repo add falcosecurity https://falcosecurity.github.io/charts
+helm repo update
+kubectl create namespace falco
 helm --namespace=falco install falco falcosecurity/falco --set ebpf.enabled=true -f customrules.yaml
 ```
 
