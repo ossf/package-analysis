@@ -47,19 +47,19 @@ resource "google_storage_bucket" "feed-functions-bucket" {
 module "pypi_scheduler" {
   source = "./scheduler"
 
-  pkg-ecosystem = "pypi"
-  project = var.project
-  region = var.region
+  pkg-ecosystem         = "pypi"
+  project               = var.project
+  region                = var.region
   service-account-email = google_service_account.run-invoker-account.email
-  pubsub-topic-feed-id = google_pubsub_topic.feed-topic.id
+  pubsub-topic-feed-id  = google_pubsub_topic.feed-topic.id
 }
 
 module "npm_scheduler" {
   source = "./scheduler"
 
-  pkg-ecosystem = "npm"
-  project = var.project
-  region = var.region
+  pkg-ecosystem         = "npm"
+  project               = var.project
+  region                = var.region
   service-account-email = google_service_account.run-invoker-account.email
-  pubsub-topic-feed-id = google_pubsub_topic.feed-topic.id
+  pubsub-topic-feed-id  = google_pubsub_topic.feed-topic.id
 }
