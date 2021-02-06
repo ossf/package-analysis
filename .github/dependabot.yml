@@ -24,3 +24,7 @@ updates:
     directory: "/feeds/npm"
     schedule:
       interval: "daily"
+ - package-ecosystem: "github-actions"
+    directory: ".github/workflows"
+    schedule:
+      interval: "daily"
