@@ -9,6 +9,13 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v1
+
+    - name: terraform fmt
+      run: terraform fmt -check
+      working-directory: ./terraform
+
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
