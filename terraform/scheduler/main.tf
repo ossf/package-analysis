@@ -23,7 +23,7 @@ resource "google_cloud_run_service" "run-scheduler" {
         image = "gcr.io/${var.project}/feeds-${var.pkg-ecosystem}"
         env {
           name  = "OSSMALWARE_TOPIC_URL"
-          value = var.pubsub-topic-feed-id
+          value = "gcppubsub://${var.pubsub-topic-feed-id}"
         }
       }
     }
