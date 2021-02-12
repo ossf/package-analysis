@@ -1,0 +1,20 @@
+name: Pulumi-PR
+on:
+  - pull_request
+jobs:
+ preview:
+    name: Preview
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: pulumi/actions@v0.0.2
+        with:
+          command: preview
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          PULUMI_ROOT: ./infrastructure
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IS_PR_WORKFLOW: true
+          PULUMI_STACK_NAME: dev
+          COMMENT_ON_PR: 1

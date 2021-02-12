@@ -1,0 +1,11 @@
+config:
+  analyzefeeds:data:
+    CreateCluster: true 
+    CreateRegistry: true
+    CreateBucket: true  
+    BucketName: dev-malware-analysis
+    ClusterName: analysis
+    MachineType: n1-standard-1
+    NumberOfNodes: 1
+  gcp:project: ossf-malware-analysis
+  gcp:zone: us-central1-c

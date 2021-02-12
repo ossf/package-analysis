@@ -1,0 +1,3 @@
+name: analyzefeeds
+runtime: go
+description: analyze feeds
