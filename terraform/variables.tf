@@ -1,2 +1,0 @@
-variable "project" {}
-variable "region" {}
