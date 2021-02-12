@@ -8,22 +8,6 @@ updates:
     directory: "/analysis"
     schedule:
       interval: "daily"
-  - package-ecosystem: "go:modules"
-    directory: "/feeds/pypi"
-    schedule:
-      interval: "daily"
-  - package-ecosystem: "go:modules"
-    directory: "/feeds/npm"
-    schedule:
-      interval: "daily"
-  - package-ecosystem: "docker"
-    directory: "/feeds/pypi"
-    schedule:
-      interval: "daily"
-  - package-ecosystem: "docker"
-    directory: "/feeds/npm"
-    schedule:
-      interval: "daily"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
