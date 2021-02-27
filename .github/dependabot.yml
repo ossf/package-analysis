@@ -1,14 +1,16 @@
 version: 2
 updates:
-  - package-ecosystem: "go:modules"
-    directory: "/scheduler"
-    schedule:
-      interval: "daily"
-  - package-ecosystem: "go:modules"
-    directory: "/analysis"
-    schedule:
-      interval: "daily"
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
+- package-ecosystem: gomod
+  directory: "/analysis"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+- package-ecosystem: gomod
+  directory: "/scheduler"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+- package-ecosystem: "github-actions"
+  directory: "/"
+  schedule:
       interval: "daily"
