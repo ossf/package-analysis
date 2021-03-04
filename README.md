@@ -1,7 +1,7 @@
 # Package Analysis
 
 This repo contains a few subprojects to aid in the analysis of open source packages, in particular to look for malicious software.
-This code is designed to work with the [Package Feeds](github.com/ossf/package-feeds) project, and
+This code is designed to work with the [Package Feeds](https://github.com/ossf/package-feeds) project, and
 originally started there.
 
 These are:
