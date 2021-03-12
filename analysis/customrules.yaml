@@ -1,3 +1,7 @@
+image:
+  registry: gcr.io
+  repository: ossf-malware-analysis/falco
+  tag: 0.27.0-3
 ebpf:
   enabled: true
 docker:
@@ -6,7 +10,7 @@ resources:
   requests:
     cpu: 500m
   limits:
-    cpu: 500m
+    cpu: 1000m
 falco:
   priority: CRITICAL
   httpOutput:

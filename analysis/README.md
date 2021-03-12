@@ -16,8 +16,12 @@ Falco is installed with Helm, using the customrules file here.
 helm repo add falcosecurity https://falcosecurity.github.io/charts
 helm repo update
 kubectl create namespace falco
-helm --namespace=falco install falco falcosecurity/falco --set ebpf.enabled=true -f customrules.yaml
+helm --namespace=falco install falco falcosecurity/falco -f customrules.yaml
 ```
+
+We also build our own falco, to
+[increase the ring buffer size](https://github.com/ossf/package-analysis/issues/10) used for
+logging syscalls. The build script can be found in `../hacks/falco`.
 
 Workload Identity is enabled for uploads to GCS.
 
