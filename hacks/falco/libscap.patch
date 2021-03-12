@@ -1,0 +1,62 @@
+diff --git a/userspace/libscap/scap.c b/userspace/libscap/scap.c
+index 8031a0d7..3f91917b 100644
+--- a/userspace/libscap/scap.c
++++ b/userspace/libscap/scap.c
+@@ -57,7 +57,7 @@ limitations under the License.
+ //#define NDEBUG
+ #include <assert.h>
+ 
+-static const char *SYSDIG_BPF_PROBE_ENV = "SYSDIG_BPF_PROBE";
++static const char *SYSDIG_BPF_PROBE_ENV = "FALCO_BPF_PROBE";
+ 
+ //
+ // Probe version string size
+@@ -119,7 +119,7 @@ static uint32_t get_max_consumers()
+ {
+ #ifndef _WIN32
+ 	uint32_t max;
+-	FILE *pfile = fopen("/sys/module/" PROBE_DEVICE_NAME "_probe/parameters/max_consumers", "r");
++	FILE *pfile = fopen("/sys/module/" PROBE_DEVICE_NAME "/parameters/max_consumers", "r");
+ 	if(pfile != NULL)
+ 	{
+ 		int w = fscanf(pfile, "%"PRIu32, &max);
+@@ -193,7 +193,7 @@ scap_t* scap_open_live_int(char *error, int32_t *rc,
+ 				return NULL;
+ 			}
+ 
+-			snprintf(buf, sizeof(buf), "%s/.sysdig/%s-bpf.o", home, PROBE_NAME);
++			snprintf(buf, sizeof(buf), "%s/.falco/%s-bpf.o", home, PROBE_NAME);
+ 			bpf_probe = buf;
+ 		}
+ 	}
+@@ -353,7 +353,7 @@ scap_t* scap_open_live_int(char *error, int32_t *rc,
+ 				else if(errno == EBUSY)
+ 				{
+ 					uint32_t curr_max_consumers = get_max_consumers();
+-					snprintf(error, SCAP_LASTERR_SIZE, "Too many sysdig instances attached to device %s. Current value for /sys/module/" PROBE_DEVICE_NAME "_probe/parameters/max_consumers is '%"PRIu32"'.", filename, curr_max_consumers);
++					snprintf(error, SCAP_LASTERR_SIZE, "Too many Falco instances attached to device %s. Current value for /sys/module/" PROBE_DEVICE_NAME "/parameters/max_consumers is '%"PRIu32"'.", filename, curr_max_consumers);
+ 				}
+ 				else
+ 				{
+@@ -2283,7 +2283,7 @@ int32_t scap_disable_dynamic_snaplen(scap_t* handle)
+ 
+ const char* scap_get_host_root()
+ {
+-	char* p = getenv("SYSDIG_HOST_ROOT");
++	char* p = getenv("HOST_ROOT");
+ 	static char env_str[SCAP_MAX_PATH_SIZE + 1];
+ 	static bool inited = false;
+ 	if (! inited) {
+diff --git a/userspace/libscap/scap_bpf.c b/userspace/libscap/scap_bpf.c
+index daf66eb3..2607f261 100644
+--- a/userspace/libscap/scap_bpf.c
++++ b/userspace/libscap/scap_bpf.c
+@@ -58,7 +58,7 @@ struct bpf_map_data {
+ 	struct bpf_map_def def;
+ };
+ 
+-static const int BUF_SIZE_PAGES = 2048;
++static const int BUF_SIZE_PAGES = 2048 * 16;
+ 
+ static const int BPF_LOG_SIZE = 1 << 18;
+ 
