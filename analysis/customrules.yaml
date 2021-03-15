@@ -25,6 +25,8 @@ falco:
   outputs:
     rate: 10
     maxBurst: 10000
+  webserver:
+    enabled: false
 customRules:
   rules-custom.yaml: |-
     - list: allowed_files
