@@ -31,10 +31,6 @@ customRules:
   rules-custom.yaml: |-
     - list: allowed_files
       items: [/etc/ld.so.cache, /etc/hosts, /usr/lib/ssl/openssl.cnf, /etc/nsswitch.conf, /etc/resolv.conf]
-    - macro: outbound_conn
-      condition: >
-        (evt.type = connect and k8s.ns.name="default" and fd.ip != "0.0.0.0")
-
     - rule: Unexpected file access
       desc: Detect file access outside the workingdir
       condition: >
@@ -55,4 +51,14 @@ customRules:
          k8s.ns.name="default" and
          k8s.pod.label.install="1")
       output: unexpected file access (command=%proc.cmdline fd=%fd.name user=%user.name pod=%k8s.pod.name labels=%k8s.pod.labels)
+      priority: CRITICAL
+
+    - rule: Network connection
+      desc: Detect network access
+      condition: >
+          (outbound and
+           container and
+           k8s.ns.name="default" and
+           k8s.pod.label.install="1")
+      output: network connection (command=%proc.cmdline ip=%fd.sip user=%user.name pod=%k8s.pod.name labels=%k8s.pod.labels)
       priority: CRITICAL

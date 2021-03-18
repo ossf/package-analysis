@@ -20,8 +20,6 @@ import (
 )
 
 var mutex sync.Mutex
-var podFiles = map[string]map[string]bool{}
-var podTimers = map[string]*time.Timer{}
 
 //{"output":"14:10:23.822542303: Notice unexpected file access (command=falco --cri /run/containerd/containerd.sock -K /var/run/secrets/kubernetes.io/serviceaccount/token -k https://10.68.0.1 -pk fd=/etc/hosts user=root k8s.ns=default k8s.pod=falco-4qg8j container=a1ce096597d1 image=sha256:8e85af245293402c1219ad382aeb71c9336a525c7afe595fdbd9dcd040c9103b)","priority":"Notice","rule":"Unexpected file access","time":"2021-01-26T14:10:23.822542303Z", "output_fields": {"container.id":"a1ce096597d1","container.image":"sha256:8e85af245293402c1219ad382aeb71c9336a525c7afe595fdbd9dcd040c9103b","evt.time":1611670223822542303,"fd.name":"/etc/hosts","k8s.ns.name":"default","k8s.pod.name":"falco-4qg8j","proc.cmdline":"falco --cri /run/containerd/containerd.sock -K /var/run/secrets/kubernetes.io/serviceaccount/token -k https://10.68.0.1 -pk","user.name":"root"}}
 type falcoOutput struct {
@@ -41,8 +39,15 @@ type OutputFields struct {
 	Labels         string `json:"k8s.pod.labels"`
 }
 
+type podInfo struct {
+	Files map[string]bool
+	IPs   map[string]bool
+	Timer *time.Timer
+}
+
 var bucket *blob.Bucket
 var clientset *kubernetes.Clientset
+var podInfos = map[string]*podInfo{}
 
 func main() {
 	ctx := context.Background()
@@ -67,11 +72,25 @@ func main() {
 	http.ListenAndServe(":8080", nil)
 }
 
-func setTimer(pod string) {
-	if podTimers[pod] != nil {
-		podTimers[pod].Stop()
+func newPodInfo() *podInfo {
+	return &podInfo{
+		Files: make(map[string]bool),
+		IPs:   make(map[string]bool),
 	}
-	podTimers[pod] = time.AfterFunc(time.Minute, finalizePod(pod))
+}
+
+func getPodInfo(pod string) *podInfo {
+	if podInfos[pod] == nil {
+		podInfos[pod] = newPodInfo()
+	}
+	return podInfos[pod]
+}
+
+func setTimer(pod string, info *podInfo) {
+	if info.Timer != nil {
+		info.Timer.Stop()
+	}
+	info.Timer = time.AfterFunc(time.Minute, finalizePod(pod))
 }
 
 func falcoHandler(w http.ResponseWriter, r *http.Request) {
@@ -109,16 +128,16 @@ func falcoHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		info := getPodInfo(pod)
 		switch output.Rule {
 		case "Unexpected file access":
-			if podFiles[pod] == nil {
-				podFiles[pod] = map[string]bool{}
-			}
-			podFiles[pod][output.OutputFields.Path] = true
+			info.Files[output.OutputFields.Path] = true
+		case "Network connection":
+			info.IPs[output.OutputFields.IP] = true
 		default:
 			return
 		}
-		setTimer(pod)
+		setTimer(pod, info)
 		fmt.Println(output.Rule, output.OutputFields)
 	}()
 	w.WriteHeader(http.StatusOK)
@@ -126,6 +145,7 @@ func falcoHandler(w http.ResponseWriter, r *http.Request) {
 
 type data struct {
 	Files []string
+	IPs   []string
 }
 
 func finalizePod(podName string) func() {
@@ -141,13 +161,14 @@ func finalizePod(podName string) func() {
 
 		mutex.Lock()
 		defer mutex.Unlock()
-		// ips := podIps[pod]
-		files := podFiles[podName]
+		info := podInfos[podName]
 
 		d := data{}
-
-		for f, _ := range files {
+		for f, _ := range info.Files {
 			d.Files = append(d.Files, f)
+		}
+		for ip, _ := range info.IPs {
+			d.IPs = append(d.IPs, ip)
 		}
 
 		b, err := json.Marshal(d)
@@ -176,7 +197,6 @@ func finalizePod(podName string) func() {
 			log.Print(err)
 			return
 		}
-		delete(podFiles, podName)
-		delete(podTimers, podName)
+		delete(podInfos, podName)
 	}
 }
