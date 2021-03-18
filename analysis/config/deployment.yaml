@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: app
-        image: ko://github.com/ossf/package-feeds/analysis
+        image: ko://github.com/ossf/package-analysis/analysis
         env:
           - name: OSSF_MALWARE_ANALYSIS_RESULTS
             value: gs://ossf-malware-analysis-results
