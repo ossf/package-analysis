@@ -1,4 +1,4 @@
-module github.com/ossf/package-feeds/analysis
+module github.com/ossf/package-analysis/analysis
 
 go 1.15
 

@@ -1,4 +1,4 @@
-module github.com/ossf/package-feeds/scheduler
+module github.com/ossf/package-analysis/scheduler
 
 go 1.15
 
