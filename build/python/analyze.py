@@ -40,6 +40,9 @@ def analyze(package):
 
 
 def main():
+    if len(sys.argv) != 2:
+      raise ValueError(f'Usage: {sys.argv[0]} package_name[==version]')
+
     package_with_version = sys.argv[1]
     pip_install(package_with_version)
 
