@@ -72,8 +72,8 @@ type pkgManager struct {
 
 var supportedPkgManagers = map[string]pkgManager{
 	"pypi": pkgManager{
-		image:      "python:3",
-		commandFmt: "pip3 install --no-deps %s==%s",
+		image:      "gcr.io/ossf-malware-analysis/python",
+		commandFmt: "analyze.py %s==%s",
 	},
 	"npm": pkgManager{
 		image:      "node",
