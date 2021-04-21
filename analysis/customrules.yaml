@@ -27,30 +27,54 @@ falco:
     maxBurst: 10000
   webserver:
     enabled: false
+extraArgs:
+  - "-A"  # https://falco.org/docs/rules/#ignored-system-calls
 customRules:
   rules-custom.yaml: |-
     - list: allowed_files
       items: [/etc/ld.so.cache, /etc/hosts, /usr/lib/ssl/openssl.cnf, /etc/nsswitch.conf, /etc/resolv.conf]
-    - rule: Unexpected file access
-      desc: Detect file access outside the workingdir
+    - macro: stat_file
+      condition: evt.type in (access, stat, stat64, lstat, lstat64)
+    - macro: open_file
+      condition: (evt.type in (open, openat) and evt.is_open_read=true)
+    - rule: Unexpected file stat
+      desc: Detect file stat outside the workingdir
       condition: >
-        (open_read and 
-         not fd.name startswith /app/ and
-         not fd.name startswith /tmp/ and
-         not fd.name startswith /usr/local/lib/ and
-         not fd.name startswith /usr/lib/ and
-         not fd.name startswith /lib/ and
-         not fd.name startswith /proc/ and
-         not fd.name startswith /usr/lib/locale/ and
-         not fd.name startswith /usr/include/c++ and
-         not fd.name startswith /run/containerd/ and
-         not fd.name startswith /usr/local/bundle/ and
-         not fd.name startswith /usr/local/include/ruby-3.0.0/ and
-         not fd.name in (allowed_files) and
+        (stat_file and
+         not evt.arg.path startswith /app and
+         not evt.arg.path startswith /tmp and
+         not evt.arg.path startswith /usr/local and
+         not evt.arg.path startswith /usr/lib and
+         not evt.arg.path startswith /usr/share and
+         not evt.arg.path startswith /lib and
+         not evt.arg.path startswith /proc and
+         not evt.arg.path startswith /usr/include/c++ and
+         not evt.arg.path startswith /run/containerd and
+         not evt.arg.path in (allowed_files) and
          container and
          k8s.ns.name="default" and
          k8s.pod.label.install="1")
-      output: unexpected file access (command=%proc.cmdline fd=%fd.name user=%user.name pod=%k8s.pod.name labels=%k8s.pod.labels)
+      output: unexpected file stat (command=%proc.cmdline type=%evt.type fd=%evt.arg.path user=%user.name pod=%k8s.pod.name labels=%k8s.pod.labels)
+      priority: CRITICAL
+
+    - rule: Unexpected file access
+      desc: Detect file access outside the workingdir
+      condition: >
+        (open_file and
+         not evt.arg.name startswith /app and
+         not evt.arg.name startswith /tmp and
+         not evt.arg.name startswith /usr/local and
+         not evt.arg.name startswith /usr/lib and
+         not evt.arg.name startswith /usr/share and
+         not evt.arg.name startswith /lib and
+         not evt.arg.name startswith /proc and
+         not evt.arg.name startswith /usr/include/c++ and
+         not evt.arg.name startswith /run/containerd and
+         not evt.arg.name in (allowed_files) and
+         container and
+         k8s.ns.name="default" and
+         k8s.pod.label.install="1")
+      output: unexpected file access (command=%proc.cmdline type=%evt.type fd=%evt.arg.name user=%user.name pod=%k8s.pod.name labels=%k8s.pod.labels)
       priority: CRITICAL
 
     - rule: Network connection
