@@ -132,6 +132,8 @@ func falcoHandler(w http.ResponseWriter, r *http.Request) {
 		switch output.Rule {
 		case "Unexpected file access":
 			info.Files[output.OutputFields.Path] = true
+		case "Unexpected file stat":
+			info.Files[output.OutputFields.Path] = true
 		case "Network connection":
 			info.IPs[output.OutputFields.IP] = true
 		default:
