@@ -34,15 +34,14 @@ customRules:
     - list: allowed_files
       items: [/etc/ld.so.cache, /etc/hosts, /usr/lib/ssl/openssl.cnf, /etc/nsswitch.conf, /etc/resolv.conf]
     - macro: stat_file
-      condition: evt.type in (access, stat, stat64, lstat, lstat64)
+      condition: evt.type in (stat, stat64, lstat, lstat64) and evt.arg.path!=""
     - macro: open_file
-      condition: evt.type in (open, openat)
+      condition: evt.type in (open, openat) and evt.arg.name!=""
     - rule: Unexpected file stat
       desc: Detect file stat outside the workingdir
       condition: >
         (stat_file and
          not evt.arg.path startswith /app and
-         not evt.arg.path startswith /tmp and
          not evt.arg.path startswith /usr/local and
          not evt.arg.path startswith /usr/lib and
          not evt.arg.path startswith /usr/share and
@@ -61,7 +60,6 @@ customRules:
       condition: >
         (open_file and
          not evt.arg.name startswith /app and
-         not evt.arg.name startswith /tmp and
          not evt.arg.name startswith /usr/local and
          not evt.arg.name startswith /usr/lib and
          not evt.arg.name startswith /usr/share and
