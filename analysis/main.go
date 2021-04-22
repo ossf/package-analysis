@@ -35,7 +35,8 @@ type OutputFields struct {
 	Pod            string `json:"k8s.pod.name"`
 	CmdLine        string `json:"proc.cmdline"`
 	IP             string `json:"fd.sip"`
-	Path           string `json:"fd.name"`
+	Path           string `json:"evt.arg.path"`
+	Name           string `json:"evt.arg.name"`
 	Labels         string `json:"k8s.pod.labels"`
 }
 
@@ -131,7 +132,7 @@ func falcoHandler(w http.ResponseWriter, r *http.Request) {
 		info := getPodInfo(pod)
 		switch output.Rule {
 		case "Unexpected file access":
-			info.Files[output.OutputFields.Path] = true
+			info.Files[output.OutputFields.Name] = true
 		case "Unexpected file stat":
 			info.Files[output.OutputFields.Path] = true
 		case "Network connection":
@@ -167,7 +168,9 @@ func finalizePod(podName string) func() {
 
 		d := data{}
 		for f, _ := range info.Files {
-			d.Files = append(d.Files, f)
+			if f != "" {
+				d.Files = append(d.Files, f)
+			}
 		}
 		for ip, _ := range info.IPs {
 			d.IPs = append(d.IPs, ip)
