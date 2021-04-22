@@ -36,7 +36,7 @@ customRules:
     - macro: stat_file
       condition: evt.type in (access, stat, stat64, lstat, lstat64)
     - macro: open_file
-      condition: (evt.type in (open, openat) and evt.is_open_read=true)
+      condition: evt.type in (open, openat)
     - rule: Unexpected file stat
       desc: Detect file stat outside the workingdir
       condition: >
