@@ -168,9 +168,7 @@ func finalizePod(podName string) func() {
 
 		d := data{}
 		for f, _ := range info.Files {
-			if f != "" {
-				d.Files = append(d.Files, f)
-			}
+			d.Files = append(d.Files, f)
 		}
 		for ip, _ := range info.IPs {
 			d.IPs = append(d.IPs, ip)
