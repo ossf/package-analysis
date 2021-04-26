@@ -41,9 +41,10 @@ type OutputFields struct {
 }
 
 type podInfo struct {
-	Files map[string]bool
-	IPs   map[string]bool
-	Timer *time.Timer
+	Files    map[string]bool
+	IPs      map[string]bool
+	Commands map[string]bool
+	Timer    *time.Timer
 }
 
 var bucket *blob.Bucket
@@ -75,8 +76,9 @@ func main() {
 
 func newPodInfo() *podInfo {
 	return &podInfo{
-		Files: make(map[string]bool),
-		IPs:   make(map[string]bool),
+		Files:    make(map[string]bool),
+		IPs:      make(map[string]bool),
+		Commands: make(map[string]bool),
 	}
 }
 
@@ -130,6 +132,10 @@ func falcoHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		info := getPodInfo(pod)
+		if output.OutputFields.CmdLine != "" {
+			info.Commands[output.OutputFields.CmdLine] = true
+		}
+
 		switch output.Rule {
 		case "Unexpected file access":
 			info.Files[output.OutputFields.Name] = true
@@ -147,8 +153,9 @@ func falcoHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type data struct {
-	Files []string
-	IPs   []string
+	Files    []string
+	IPs      []string
+	Commands []string
 }
 
 func finalizePod(podName string) func() {
@@ -172,6 +179,9 @@ func finalizePod(podName string) func() {
 		}
 		for ip, _ := range info.IPs {
 			d.IPs = append(d.IPs, ip)
+		}
+		for command, _ := range info.Commands {
+			d.Commands = append(d.Commands, command)
 		}
 
 		b, err := json.Marshal(d)
