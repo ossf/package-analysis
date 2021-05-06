@@ -77,7 +77,7 @@ var supportedPkgManagers = map[string]pkgManager{
 	},
 	"npm": pkgManager{
 		image:      "node",
-		commandFmt: "npm init --force && npm install %s@%s",
+		commandFmt: "analyze.js %s@%s",
 	},
 	"rubygems": pkgManager{
 		image:      "ruby",

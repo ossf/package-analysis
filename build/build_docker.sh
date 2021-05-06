@@ -2,6 +2,7 @@
 
 REGISTRY=gcr.io/ossf-malware-analysis
 IMAGES=(
+  node
   python
 )
 

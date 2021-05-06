@@ -8,5 +8,5 @@ for pkg in $(cat python.txt); do
       --labels=install=1,package_type=pypi \
       --annotations=package_name=$pkg \
       --annotations=package_version=test \
-      --requests="cpu=250m" -- sh -c "mkdir -p /app && cd /app && analyze.py $pkg"
+      --requests="cpu=250m" -- sh -c "analyze.py $pkg"
 done
