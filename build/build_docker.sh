@@ -4,6 +4,7 @@ REGISTRY=gcr.io/ossf-malware-analysis
 IMAGES=(
   node
   python
+  ruby
 )
 
 for image in "${IMAGES[@]}"; do

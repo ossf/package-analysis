@@ -76,12 +76,12 @@ var supportedPkgManagers = map[string]pkgManager{
 		commandFmt: "analyze.py %s==%s",
 	},
 	"npm": pkgManager{
-		image:      "node",
+		image:      "gcr.io/ossf-malware-analysis/node",
 		commandFmt: "analyze.js %s@%s",
 	},
 	"rubygems": pkgManager{
-		image:      "ruby",
-		commandFmt: "gem install %s -v %s",
+		image:      "gcr.io/ossf-malware-analysis/ruby",
+		commandFmt: "analyze.rb %s %s",
 	},
 }
 
