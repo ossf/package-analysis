@@ -10,28 +10,11 @@ gcloud container clusters get-credentials analysis-cluster --zone=us-central1-c 
 
 ### Setup
 
-Falco is installed with Helm, using the customrules file here.
-
-```shell
-helm repo add falcosecurity https://falcosecurity.github.io/charts
-helm repo update
-kubectl create namespace falco
-helm --namespace=falco install falco falcosecurity/falco -f customrules.yaml
-```
-
-We also build our own falco, to
-[increase the ring buffer size](https://github.com/ossf/package-analysis/issues/10) used for
-logging syscalls. The build script can be found in `../hacks/falco`.
-
 Workload Identity is enabled for uploads to GCS.
 
 ## Deployment
 
-The code in this directory is deployed with ko:
-
-```
-ko apply -f config/
-```
+The code in this directory is by building the docker image in `build/analysis`.
 
 ## Analysis
 
