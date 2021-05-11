@@ -16,5 +16,3 @@
 
 terraform/.terraform
 *.tfstate
-
-hacks/falco/falco/

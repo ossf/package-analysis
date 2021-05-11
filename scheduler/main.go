@@ -19,6 +19,10 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+const (
+	analysisImage = "gcr.io/ossf-malware-analysis/python"
+)
+
 var clientset *kubernetes.Clientset
 
 func main() {
@@ -96,12 +100,14 @@ func handlePkg(pkg library.Package) error {
 
 func createPod(name, version, packageType string) error {
 	// We need to pass a bool pointer below.
+	var privileged = true
 	var token = false
 	var retries int32 = 3
 	var ttl int32 = 3600
 	var deadline int64 = 600
 	jobs := clientset.BatchV1().Jobs("default")
 
+	bucket := os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS")
 	image := supportedPkgManagers[packageType].image
 	command := fmt.Sprintf(supportedPkgManagers[packageType].commandFmt, name, version)
 
@@ -137,11 +143,14 @@ func createPod(name, version, packageType string) error {
 					AutomountServiceAccountToken: &token,
 					Containers: []v1.Container{
 						{
-							Name:    "install",
-							Image:   image,
-							Command: []string{"/bin/bash", "-c"},
+							Name:    "analyze",
+							Image:   analysisImage,
+							Command: []string{"analyze"},
 							Args: []string{
-								"set -ex && mkdir /app && cd /app && " + command,
+								"-image=" + image,
+								"-command=" + command,
+								"-bucket=" + bucket,
+								"-upload=" + fmt.Sprintf("%s/%s/%s/results.json", packageType, name, version),
 							},
 							Resources: v1.ResourceRequirements{
 								Requests: v1.ResourceList{
@@ -150,6 +159,9 @@ func createPod(name, version, packageType string) error {
 								Limits: v1.ResourceList{
 									v1.ResourceCPU: resource.MustParse("500m"),
 								},
+							},
+							SecurityContext: &v1.SecurityContext{
+								Privileged: &privileged,
 							},
 						},
 					},
