@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"time"
 
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/gcsblob"
@@ -132,21 +131,10 @@ func analyzeSyscall(syscall, args string, info *analysisInfo) {
 }
 
 func runAnalysis(image, command string) *analysisInfo {
-	cmd := exec.Command("service", "docker", "start")
+	cmd := exec.Command("podman", "run", "--runtime=/usr/local/bin/runsc", "--cgroup-manager=cgroupfs", "--rm", image, "sh", "-c", command)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
-	if err != nil {
-		log.Panic(err)
-	}
-
-	// We still need a little delay for the docker service to be ready.
-	time.Sleep(2 * time.Second)
-
-	cmd = exec.Command("docker", "run", "--rm", image, "sh", "-c", command)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err = cmd.Run()
 	if err != nil {
 		log.Panic(err)
 	}
