@@ -16,10 +16,15 @@ import (
 	_ "gocloud.dev/blob/gcsblob"
 )
 
+type commandRecord struct {
+	Command     string
+	Environment string
+}
+
 type analysisInfo struct {
 	Files    map[string]bool
 	IPs      map[string]bool
-	Commands map[string]bool
+	Commands map[commandRecord]bool
 }
 
 const (
@@ -29,8 +34,8 @@ const (
 var (
 	// 510 06:34:52.506847   43512 strace.go:587] [   2] python3 E openat(AT_FDCWD /app, 0x7f13f2254c50 /root/.ssh, O_RDONLY|O_CLOEXEC|O_DIRECTORY|O_NONBLOCK, 0o0)
 	stracePattern = regexp.MustCompile(`.*strace.go:\d+\] \[.*?\] ([^\s]+) (E|X) ([^\s]+)\((.*)\)`)
-	// 0x7f13f2a5f970 /usr/local/bin/python3, 0x7f13f20c0150 ["/usr/local/bin/python3", "-m", "pip", "install", "example-malicious"]
-	execvePattern = regexp.MustCompile(`.*(\[.*?\])`)
+	// 0x7f1c3a0a2620 /usr/bin/uname, 0x7f1c39e12930 ["uname", "-rs"], 0x55bbefc2d070 ["HOSTNAME=63d5c9dbacb6", "PYTHON_PIP_VERSION=21.0.1", "HOME=/root"]
+	execvePattern = regexp.MustCompile(`.*?(\[.*?\])[^[]+(\[.*\])?`)
 	// 0x7f1bc9c84e50 /usr/local/lib/python3.9/encodings/__pycache__/aliases.cpython-39.pyc,
 	openPattern = regexp.MustCompile(`[^\s]+ ([^\s]+),`)
 	// AT_FDCWD /app, 0x7f13f201a0a3 /proc/self/fd, O_RDONLY|O_CLOEXEC, 0o0
@@ -96,8 +101,13 @@ func analyzeSyscall(syscall, args string, info *analysisInfo) {
 			return
 		}
 
-		log.Printf("execve %s", match[1])
-		info.Commands[match[1]] = true
+		cmd := commandRecord{
+			Command:     match[1],
+			Environment: match[2],
+		}
+
+		log.Printf("execve %s %s", match[1], match[2])
+		info.Commands[cmd] = true
 	case "connect":
 		match := connectPattern.FindStringSubmatch(args)
 		if match == nil {
@@ -150,7 +160,7 @@ func runAnalysis(image, command string) *analysisInfo {
 	info := &analysisInfo{
 		Files:    make(map[string]bool),
 		IPs:      make(map[string]bool),
-		Commands: make(map[string]bool),
+		Commands: make(map[commandRecord]bool),
 	}
 
 	scanner := bufio.NewScanner(file)
@@ -161,7 +171,10 @@ func runAnalysis(image, command string) *analysisInfo {
 			continue
 		}
 
-		analyzeSyscall(match[3], match[4], info)
+		if match[2] == "X" {
+			// Analyze exit events only.
+			analyzeSyscall(match[3], match[4], info)
+		}
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -171,10 +184,15 @@ func runAnalysis(image, command string) *analysisInfo {
 	return info
 }
 
+type commandResult struct {
+	Command     []string
+	Environment []string
+}
+
 type data struct {
 	Files    []string
 	IPs      []string
-	Commands []string
+	Commands []commandResult
 }
 
 func uploadResults(info *analysisInfo) {
@@ -186,7 +204,22 @@ func uploadResults(info *analysisInfo) {
 		d.IPs = append(d.IPs, ip)
 	}
 	for command, _ := range info.Commands {
-		d.Commands = append(d.Commands, command)
+		result := commandResult{}
+		if command.Command != "" {
+			err := json.Unmarshal([]byte(command.Command), &result.Command)
+			if err != nil {
+				log.Panicf("Failed to parse %s: %v", command.Command, err)
+			}
+		}
+
+		if command.Environment != "" {
+			err := json.Unmarshal([]byte(command.Environment), &result.Environment)
+			if err != nil {
+				log.Panicf("Failed to parse %s: %v", command.Environment, err)
+			}
+		}
+
+		d.Commands = append(d.Commands, result)
 	}
 
 	b, err := json.Marshal(d)
