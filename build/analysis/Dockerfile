@@ -13,7 +13,9 @@ RUN apt-get update && apt-get upgrade -y && \
         curl \
         iptables \
         podman \
-        software-properties-common
+        software-properties-common && \
+    update-alternatives --set iptables /usr/sbin/iptables-legacy && \
+    update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
 
 # Install gVisor.
 RUN curl -fsSL https://gvisor.dev/archive.key | apt-key add - && \
