@@ -1,4 +1,4 @@
-FROM node:16.1.0@sha256:2e0fc91aaa6081b9d871b81a01f1c80fda83071e5d7a32ec17e2ac346fa8f008
+FROM node:16.1.0-slim@sha256:972548af5d81a09288fe9bb1b7291ff0c4e4e41e4b2e5f5ca80a80fc363e62f3
 
 COPY analyze.js /usr/local/bin/
 RUN chmod 755 /usr/local/bin/analyze.js
