@@ -12,5 +12,5 @@ rm -rf analysis/analysis
 cp -r ../analysis analysis/
 
 for image in "${IMAGES[@]}"; do
-  docker build -t $REGISTRY/$image $image
+  docker build --squash -t $REGISTRY/$image $image
 done
