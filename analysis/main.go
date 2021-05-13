@@ -44,6 +44,8 @@ var (
 	openatPattern = regexp.MustCompile(`[^\s]+ ([^,]+), [^\s]+ ([^,]+), ([^,]+)`)
 	// 0x561c42f5be30 /usr/local/bin/Modules/Setup.local, 0x7fdfb323c180
 	statPattern = regexp.MustCompile(`[^\s]+ ([^,]+),`)
+	// 0x3 /tmp/pip-install-398qx_i7/build/bdist.linux-x86_64/wheel, 0x7ff1e4a30620 mal, 0x7fae4d8741f0, 0x100
+	newfstatatPattern = regexp.MustCompile(`[^\s]+ ([^,]+), [^\s]+ ([^,]+)`)
 	// 0x3 socket:[2], 0x7f1bc9e7b914 {Family: AF_INET, Addr: 8.8.8.8, Port: 53}, 0x10
 	connectPattern = regexp.MustCompile(`.*AF_INET.*Addr: ([^,]+),`)
 )
@@ -69,12 +71,12 @@ func main() {
 	}
 }
 
-func recordFileAccess(info *analysisInfo, filepath string, read, write bool) {
-	if _, exists := info.Files[filepath]; !exists {
-		info.Files[filepath] = &fileInfo{}
+func recordFileAccess(info *analysisInfo, file string, read, write bool) {
+	if _, exists := info.Files[file]; !exists {
+		info.Files[file] = &fileInfo{}
 	}
-	info.Files[filepath].Read = info.Files[filepath].Read || read
-	info.Files[filepath].Write = info.Files[filepath].Write || write
+	info.Files[file].Read = info.Files[file].Read || read
+	info.Files[file].Write = info.Files[file].Write || write
 }
 
 func parseOpenFlags(openFlags string) (read, write bool) {
@@ -118,6 +120,14 @@ func extractCmdAndEnv(cmdAndEnv string) ([]string, []string) {
 	return cmd, env
 }
 
+func joinPaths(dir, file string) string {
+	if filepath.IsAbs(file) {
+		return file
+	}
+
+	return filepath.Join(dir, file)
+}
+
 func analyzeSyscall(syscall, args string, info *analysisInfo) {
 	switch syscall {
 	case "creat":
@@ -146,12 +156,7 @@ func analyzeSyscall(syscall, args string, info *analysisInfo) {
 			return
 		}
 
-		var path string
-		if filepath.IsAbs(match[2]) {
-			path = match[2]
-		} else {
-			path = filepath.Join(match[1], match[2])
-		}
+		path := joinPaths(match[1], match[2])
 		read, write := parseOpenFlags(match[3])
 		log.Printf("openat %s read=%t, write=%t", path, read, write)
 		recordFileAccess(info, path, read, write)
@@ -172,11 +177,11 @@ func analyzeSyscall(syscall, args string, info *analysisInfo) {
 		}
 		log.Printf("connect %s", match[1])
 		info.IPs[match[1]] = true
-	case "stat":
+	case "fstat":
 		fallthrough
 	case "lstat":
 		fallthrough
-	case "fstat":
+	case "stat":
 		match := statPattern.FindStringSubmatch(args)
 		if match == nil {
 			log.Printf("failed to parse stat args: %s", args)
@@ -184,6 +189,15 @@ func analyzeSyscall(syscall, args string, info *analysisInfo) {
 		}
 		log.Printf("stat %s", match[1])
 		recordFileAccess(info, match[1], true, false)
+	case "newfstatat":
+		match := newfstatatPattern.FindStringSubmatch(args)
+		if match == nil {
+			log.Printf("failed to parse newfstatat args: %s", args)
+			return
+		}
+		path := joinPaths(match[1], match[2])
+		log.Printf("newfstatat %s", path)
+		recordFileAccess(info, path, true, false)
 	}
 }
 
