@@ -10,20 +10,21 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/gcsblob"
 )
 
-type commandRecord struct {
-	Command     string
-	Environment string
+type fileInfo struct {
+	Read  bool
+	Write bool
 }
 
 type analysisInfo struct {
-	Files    map[string]bool
+	Files    map[string]*fileInfo
 	IPs      map[string]bool
-	Commands map[commandRecord]bool
+	Commands map[string]bool
 }
 
 const (
@@ -34,15 +35,17 @@ var (
 	// 510 06:34:52.506847   43512 strace.go:587] [   2] python3 E openat(AT_FDCWD /app, 0x7f13f2254c50 /root/.ssh, O_RDONLY|O_CLOEXEC|O_DIRECTORY|O_NONBLOCK, 0o0)
 	stracePattern = regexp.MustCompile(`.*strace.go:\d+\] \[.*?\] ([^\s]+) (E|X) ([^\s]+)\((.*)\)`)
 	// 0x7f1c3a0a2620 /usr/bin/uname, 0x7f1c39e12930 ["uname", "-rs"], 0x55bbefc2d070 ["HOSTNAME=63d5c9dbacb6", "PYTHON_PIP_VERSION=21.0.1", "HOME=/root"]
-	execvePattern = regexp.MustCompile(`.*?(\[.*?\])[^[]+(\[.*\])?`)
-	// 0x7f1bc9c84e50 /usr/local/lib/python3.9/encodings/__pycache__/aliases.cpython-39.pyc,
-	openPattern = regexp.MustCompile(`[^\s]+ ([^\s]+),`)
+	execvePattern = regexp.MustCompile(`.*?(\[.*\])`)
+	//0x7f13f201a0a3 /path, 0x0
+	creatPattern = regexp.MustCompile(`[^\s]+ ([^,]+)`)
+	//0x7f13f201a0a3 /proc/self/fd, O_RDONLY|O_CLOEXEC,
+	openPattern = regexp.MustCompile(`[^\s]+ ([^,]+), ([^,]+)`)
 	// AT_FDCWD /app, 0x7f13f201a0a3 /proc/self/fd, O_RDONLY|O_CLOEXEC, 0o0
-	openatPattern = regexp.MustCompile(`[^\s]+ ([^\s]+), [^\s]+ ([^\s]+),`)
+	openatPattern = regexp.MustCompile(`[^\s]+ ([^,]+), [^\s]+ ([^,]+), ([^,]+)`)
 	// 0x561c42f5be30 /usr/local/bin/Modules/Setup.local, 0x7fdfb323c180
-	statPattern = regexp.MustCompile(`[^\s]+ ([^\s]+),`)
+	statPattern = regexp.MustCompile(`[^\s]+ ([^,]+),`)
 	// 0x3 socket:[2], 0x7f1bc9e7b914 {Family: AF_INET, Addr: 8.8.8.8, Port: 53}, 0x10
-	connectPattern = regexp.MustCompile(`.*AF_INET.*Addr: ([^\s]+),`)
+	connectPattern = regexp.MustCompile(`.*AF_INET.*Addr: ([^,]+),`)
 )
 
 var (
@@ -66,8 +69,66 @@ func main() {
 	}
 }
 
+func recordFileAccess(info *analysisInfo, filepath string, read, write bool) {
+	if _, exists := info.Files[filepath]; !exists {
+		info.Files[filepath] = &fileInfo{}
+	}
+	info.Files[filepath].Read = info.Files[filepath].Read || read
+	info.Files[filepath].Write = info.Files[filepath].Write || write
+}
+
+func parseOpenFlags(openFlags string) (read, write bool) {
+	if strings.Contains(openFlags, "O_RDWR") {
+		read = true
+		write = true
+	}
+
+	if strings.Contains(openFlags, "O_CREAT") {
+		write = true
+	}
+
+	if strings.Contains(openFlags, "O_WRONLY") {
+		write = true
+	}
+
+	if strings.Contains(openFlags, "O_RDONLY") {
+		read = true
+	}
+	return
+}
+
+func extractCmdAndEnv(cmdAndEnv string) ([]string, []string) {
+	decoder := json.NewDecoder(strings.NewReader(cmdAndEnv))
+	var cmd []string
+	// Decode up to end of first valid JSON (which is the command).
+	err := decoder.Decode(&cmd)
+	if err != nil {
+		log.Panicf("failed to parse %s: %v", cmdAndEnv, err)
+	}
+
+	// Find the start of the next JSON (which is the environment).
+	nextIdx := decoder.InputOffset() + int64(strings.Index(cmdAndEnv[decoder.InputOffset():], "["))
+	decoder = json.NewDecoder(strings.NewReader(cmdAndEnv[nextIdx:]))
+	var env []string
+	err = decoder.Decode(&env)
+	if err != nil {
+		log.Panicf("failed to parse %s: %v", cmdAndEnv[nextIdx:], err)
+	}
+
+	return cmd, env
+}
+
 func analyzeSyscall(syscall, args string, info *analysisInfo) {
 	switch syscall {
+	case "creat":
+		match := creatPattern.FindStringSubmatch(args)
+		if match == nil {
+			log.Printf("failed to parse creat args: %s", args)
+			return
+		}
+
+		log.Printf("creat %s", match[1])
+		recordFileAccess(info, match[1], false, true)
 	case "open":
 		match := openPattern.FindStringSubmatch(args)
 		if match == nil {
@@ -75,8 +136,9 @@ func analyzeSyscall(syscall, args string, info *analysisInfo) {
 			return
 		}
 
-		log.Printf("open %s", match[1])
-		info.Files[match[1]] = true
+		read, write := parseOpenFlags(match[2])
+		log.Printf("open %s read=%t, write=%t", match[1], read, write)
+		recordFileAccess(info, match[1], read, write)
 	case "openat":
 		match := openatPattern.FindStringSubmatch(args)
 		if match == nil {
@@ -90,23 +152,18 @@ func analyzeSyscall(syscall, args string, info *analysisInfo) {
 		} else {
 			path = filepath.Join(match[1], match[2])
 		}
-		log.Printf("openat %s", path)
-		info.Files[path] = true
+		read, write := parseOpenFlags(match[3])
+		log.Printf("openat %s read=%t, write=%t", path, read, write)
+		recordFileAccess(info, path, read, write)
 	case "execve":
-		// TODO(ochang): Other exec syscalls?
 		match := execvePattern.FindStringSubmatch(args)
 		if match == nil {
 			log.Printf("failed to parse execve args: %s", args)
 			return
 		}
 
-		cmd := commandRecord{
-			Command:     match[1],
-			Environment: match[2],
-		}
-
-		log.Printf("execve %s %s", match[1], match[2])
-		info.Commands[cmd] = true
+		log.Printf("execve %s", match[1])
+		info.Commands[match[1]] = true
 	case "connect":
 		match := connectPattern.FindStringSubmatch(args)
 		if match == nil {
@@ -126,7 +183,7 @@ func analyzeSyscall(syscall, args string, info *analysisInfo) {
 			return
 		}
 		log.Printf("stat %s", match[1])
-		info.Files[match[1]] = true
+		recordFileAccess(info, match[1], true, false)
 	}
 }
 
@@ -146,9 +203,9 @@ func runAnalysis(image, command string) *analysisInfo {
 	defer file.Close()
 
 	info := &analysisInfo{
-		Files:    make(map[string]bool),
+		Files:    make(map[string]*fileInfo),
 		IPs:      make(map[string]bool),
-		Commands: make(map[commandRecord]bool),
+		Commands: make(map[string]bool),
 	}
 
 	scanner := bufio.NewScanner(file)
@@ -177,36 +234,36 @@ type commandResult struct {
 	Environment []string
 }
 
+type fileResult struct {
+	Path  string
+	Read  bool
+	Write bool
+}
+
 type data struct {
-	Files    []string
+	Files    []fileResult
 	IPs      []string
 	Commands []commandResult
 }
 
 func uploadResults(info *analysisInfo) {
 	d := data{}
-	for f, _ := range info.Files {
-		d.Files = append(d.Files, f)
+	for f, info := range info.Files {
+		d.Files = append(d.Files, fileResult{
+			Path:  f,
+			Read:  info.Read,
+			Write: info.Write,
+		})
 	}
 	for ip, _ := range info.IPs {
 		d.IPs = append(d.IPs, ip)
 	}
 	for command, _ := range info.Commands {
-		result := commandResult{}
-		if command.Command != "" {
-			err := json.Unmarshal([]byte(command.Command), &result.Command)
-			if err != nil {
-				log.Panicf("Failed to parse %s: %v", command.Command, err)
-			}
+		cmd, env := extractCmdAndEnv(command)
+		result := commandResult{
+			Command:     cmd,
+			Environment: env,
 		}
-
-		if command.Environment != "" {
-			err := json.Unmarshal([]byte(command.Environment), &result.Environment)
-			if err != nil {
-				log.Panicf("Failed to parse %s: %v", command.Environment, err)
-			}
-		}
-
 		d.Commands = append(d.Commands, result)
 	}
 
