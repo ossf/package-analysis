@@ -11,5 +11,5 @@ for pkg in $(cat python.txt); do
       --requests="cpu=250m" -- \
       analyze \
       --package="pypi/$pkg" \
-      --upload="gs://ossf-malware-analysis-results-test/pypi/$pkg/test/results.json"
+      --upload="gs://ossf-malware-analysis-results-test/pypi/$pkg"
 done

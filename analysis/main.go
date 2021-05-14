@@ -307,7 +307,6 @@ type data struct {
 }
 
 func uploadResults(bucket, path, ecosystem, pkgName, version string, info *analysisInfo) {
-	log.Printf("uploading to bucket=%s, path=%s", bucket, path)
 	d := data{}
 	d.Package.Ecosystem = ecosystem
 	d.Package.Name = pkgName
@@ -345,7 +344,10 @@ func uploadResults(bucket, path, ecosystem, pkgName, version string, info *analy
 	}
 	defer bkt.Close()
 
-	w, err := bkt.NewWriter(ctx, path, nil)
+	uploadPath := filepath.Join(path, version+".json")
+	log.Printf("uploading to bucket=%s, path=%s", bucket, uploadPath)
+
+	w, err := bkt.NewWriter(ctx, uploadPath, nil)
 	if err != nil {
 		log.Panic(err)
 	}

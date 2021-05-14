@@ -12,5 +12,5 @@ for pkg in $(cat rubygems.txt); do
       --requests="cpu=250m" -- \
       analyze \
       --package="rubygems/$pkg" \
-      --upload="gs://ossf-malware-analysis-results-test/rubygems/$pkg/test/results.json"
+      --upload="gs://ossf-malware-analysis-results-test/rubygems/$pkg"
 done

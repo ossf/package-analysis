@@ -12,5 +12,5 @@ for pkg in $(cat node.txt); do
       --requests="cpu=250m" -- \
       analyze \
       --package="npm/$pkg" \
-      --upload="gs://ossf-malware-analysis-results-test/npm/$pkg/test/results.json"
+      --upload="gs://ossf-malware-analysis-results-test/npm/$pkg"
 done

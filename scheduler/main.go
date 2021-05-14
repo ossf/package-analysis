@@ -132,7 +132,7 @@ func createPod(name, version, packageType string) error {
 							Args: []string{
 								"-package=" + packageType + "/" + name,
 								"-version=" + version,
-								"-upload=" + fmt.Sprintf("%s/%s/%s/%s/results.json", bucket, packageType, name, version),
+								"-upload=" + fmt.Sprintf("%s/%s/%s", bucket, packageType, name),
 							},
 							Resources: v1.ResourceRequirements{
 								Requests: v1.ResourceList{
