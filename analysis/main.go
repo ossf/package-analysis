@@ -29,6 +29,7 @@ type analysisInfo struct {
 
 type pkgManager struct {
 	commandFmt func(string, string) string
+	getLatest  func(string) string
 	image      string
 }
 
@@ -61,36 +62,9 @@ var (
 	upload  = flag.String("upload", "", "bucket path for uploading results")
 
 	supportedPkgManagers = map[string]pkgManager{
-		"pypi": pkgManager{
-			image: "gcr.io/ossf-malware-analysis/python",
-			commandFmt: func(pkg, ver string) string {
-				cmd := "analyze.py " + pkg
-				if ver != "" {
-					cmd += "==" + ver
-				}
-				return cmd
-			},
-		},
-		"npm": pkgManager{
-			image: "gcr.io/ossf-malware-analysis/node",
-			commandFmt: func(pkg, ver string) string {
-				cmd := "analyze.js " + pkg
-				if ver != "" {
-					cmd += "@" + ver
-				}
-				return cmd
-			},
-		},
-		"rubygems": pkgManager{
-			image: "gcr.io/ossf-malware-analysis/ruby",
-			commandFmt: func(pkg, ver string) string {
-				cmd := "analyze.rb " + pkg
-				if ver != "" {
-					cmd += " " + ver
-				}
-				return cmd
-			},
-		},
+		"npm":      NPMPackageManager,
+		"pypi":     PyPIPackageManager,
+		"rubygems": RubyGemsPackageManager,
 	}
 )
 
@@ -106,9 +80,18 @@ func main() {
 	}
 
 	ecosystem, name := pkgParts[0], pkgParts[1]
-	image := supportedPkgManagers[ecosystem].image
-	command := supportedPkgManagers[ecosystem].commandFmt(name, *version)
 
+	manager, ok := supportedPkgManagers[ecosystem]
+	if !ok {
+		log.Panicf("Unsupported pkg manager %s", manager)
+	}
+
+	image := manager.image
+	if *version == "" {
+		*version = manager.getLatest(name)
+	}
+
+	command := manager.commandFmt(name, *version)
 	info := runAnalysis(image, command)
 
 	if *upload != "" {
@@ -248,6 +231,8 @@ func analyzeSyscall(syscall, args string, info *analysisInfo) {
 }
 
 func runAnalysis(image, command string) *analysisInfo {
+	log.Printf("Running analysis using %s: %s", image, command)
+
 	cmd := exec.Command("podman", "run", "--runtime=/usr/local/bin/runsc", "--cgroup-manager=cgroupfs", "--rm", image, "sh", "-c", command)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
