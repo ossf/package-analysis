@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: workers-deployment
+  labels:
+    app: workers
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: workers
+  template:
+    metadata:
+      labels:
+        app: workers
+    spec:
+      containers:
+      - name: worker
+        image: gcr.io/ossf-malware-analysis/analysis:latest
+        imagePullPolicy: Always
+        command: ["worker"]
+        env:
+        - name: OSSMALWARE_WORKER_SUBSCRIPTION
+          value: gcppubsub://projects/ossf-malware-analysis/subscriptions/workers
+        - name: OSSF_MALWARE_ANALYSIS_RESULTS
+          value: gs://ossf-malware-analysis-results
+        securityContext:
+          privileged: true
+        resources:
+          requests:
+            cpu: 250m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
