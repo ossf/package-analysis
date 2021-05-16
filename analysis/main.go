@@ -27,6 +27,12 @@ type analysisInfo struct {
 	Commands map[string]bool
 }
 
+type pkgManager struct {
+	commandFmt func(string, string) string
+	getLatest  func(string) string
+	image      string
+}
+
 const (
 	logPath = "/tmp/runsc.log.boot"
 )
@@ -51,23 +57,46 @@ var (
 )
 
 var (
-	image   = flag.String("image", "", "image to use for analysis")
-	command = flag.String("command", "", "command to use for analysis")
-	bucket  = flag.String("bucket", "", "bucket for results")
-	upload  = flag.String("upload", "", "path within bucket for results")
+	pkg     = flag.String("package", "", "ecosystem/package")
+	version = flag.String("version", "", "version")
+	upload  = flag.String("upload", "", "bucket path for uploading results")
+
+	supportedPkgManagers = map[string]pkgManager{
+		"npm":      NPMPackageManager,
+		"pypi":     PyPIPackageManager,
+		"rubygems": RubyGemsPackageManager,
+	}
 )
 
 func main() {
 	flag.Parse()
-	if *image == "" || *command == "" {
+	if *pkg == "" {
 		flag.Usage()
 		return
 	}
+	pkgParts := strings.SplitN(*pkg, "/", 2)
+	if len(pkgParts) != 2 {
+		log.Panicf("Invalid package format: %s", *pkg)
+	}
 
-	info := runAnalysis(*image, *command)
+	ecosystem, name := pkgParts[0], pkgParts[1]
 
-	if *bucket != "" && *upload != "" {
-		uploadResults(info)
+	manager, ok := supportedPkgManagers[ecosystem]
+	if !ok {
+		log.Panicf("Unsupported pkg manager %s", manager)
+	}
+
+	image := manager.image
+	if *version == "" {
+		*version = manager.getLatest(name)
+	}
+
+	command := manager.commandFmt(name, *version)
+	info := runAnalysis(image, command)
+
+	if *upload != "" {
+		bucket, path := parseBucketPath(*upload)
+		uploadResults(bucket, path, ecosystem, name, *version, info)
 	}
 }
 
@@ -202,6 +231,8 @@ func analyzeSyscall(syscall, args string, info *analysisInfo) {
 }
 
 func runAnalysis(image, command string) *analysisInfo {
+	log.Printf("Running analysis using %s: %s", image, command)
+
 	cmd := exec.Command("podman", "run", "--runtime=/usr/local/bin/runsc", "--cgroup-manager=cgroupfs", "--rm", image, "sh", "-c", command)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -243,6 +274,16 @@ func runAnalysis(image, command string) *analysisInfo {
 	return info
 }
 
+func parseBucketPath(path string) (string, string) {
+	pattern := regexp.MustCompile(`(.*?://[^/]+)/(.*)`)
+	match := pattern.FindStringSubmatch(path)
+	if match == nil {
+		log.Panic("Failed to parse bucket path: %s", path)
+	}
+
+	return match[1], match[2]
+}
+
 type commandResult struct {
 	Command     []string
 	Environment []string
@@ -255,13 +296,22 @@ type fileResult struct {
 }
 
 type data struct {
+	Package struct {
+		Ecosystem string
+		Name      string
+		Version   string
+	}
 	Files    []fileResult
 	IPs      []string
 	Commands []commandResult
 }
 
-func uploadResults(info *analysisInfo) {
+func uploadResults(bucket, path, ecosystem, pkgName, version string, info *analysisInfo) {
 	d := data{}
+	d.Package.Ecosystem = ecosystem
+	d.Package.Name = pkgName
+	d.Package.Version = version
+
 	for f, info := range info.Files {
 		d.Files = append(d.Files, fileResult{
 			Path:  f,
@@ -288,13 +338,16 @@ func uploadResults(info *analysisInfo) {
 	}
 
 	ctx := context.Background()
-	bkt, err := blob.OpenBucket(ctx, *bucket)
+	bkt, err := blob.OpenBucket(ctx, bucket)
 	if err != nil {
 		log.Panic(err)
 	}
 	defer bkt.Close()
 
-	w, err := bkt.NewWriter(ctx, *upload, nil)
+	uploadPath := filepath.Join(path, version+".json")
+	log.Printf("uploading to bucket=%s, path=%s", bucket, uploadPath)
+
+	w, err := bkt.NewWriter(ctx, uploadPath, nil)
 	if err != nil {
 		log.Panic(err)
 	}

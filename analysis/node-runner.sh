@@ -11,7 +11,6 @@ for pkg in $(cat node.txt); do
       --annotations=package_version=test \
       --requests="cpu=250m" -- \
       analyze \
-      --image=$REGISTRY/node --command="analyze.js $pkg" \
-      --bucket=gs://ossf-malware-analysis-results \
-      --upload="npm/$pkg/test/results.json"
+      --package="npm/$pkg" \
+      --upload="gs://ossf-malware-analysis-results-test/npm/$pkg"
 done

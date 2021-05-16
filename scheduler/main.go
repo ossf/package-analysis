@@ -24,6 +24,11 @@ const (
 )
 
 var clientset *kubernetes.Clientset
+var supportedPkgManagers = map[string]bool{
+	"npm":      true,
+	"pypi":     true,
+	"rubygems": true,
+}
 
 func main() {
 	config, err := rest.InClusterConfig()
@@ -69,26 +74,6 @@ func main() {
 	}
 }
 
-type pkgManager struct {
-	commandFmt string
-	image      string
-}
-
-var supportedPkgManagers = map[string]pkgManager{
-	"pypi": pkgManager{
-		image:      "gcr.io/ossf-malware-analysis/python",
-		commandFmt: "analyze.py %s==%s",
-	},
-	"npm": pkgManager{
-		image:      "gcr.io/ossf-malware-analysis/node",
-		commandFmt: "analyze.js %s@%s",
-	},
-	"rubygems": pkgManager{
-		image:      "gcr.io/ossf-malware-analysis/ruby",
-		commandFmt: "analyze.rb %s %s",
-	},
-}
-
 func handlePkg(pkg library.Package) error {
 	// Turn it into a Pod!
 	if _, ok := supportedPkgManagers[pkg.Type]; ok {
@@ -108,8 +93,6 @@ func createPod(name, version, packageType string) error {
 	jobs := clientset.BatchV1().Jobs("default")
 
 	bucket := os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS")
-	image := supportedPkgManagers[packageType].image
-	command := fmt.Sprintf(supportedPkgManagers[packageType].commandFmt, name, version)
 
 	job, err := jobs.Create(context.Background(), &bv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -147,10 +130,9 @@ func createPod(name, version, packageType string) error {
 							Image:   analysisImage,
 							Command: []string{"analyze"},
 							Args: []string{
-								"-image=" + image,
-								"-command=" + command,
-								"-bucket=" + bucket,
-								"-upload=" + fmt.Sprintf("%s/%s/%s/results.json", packageType, name, version),
+								"-package=" + packageType + "/" + name,
+								"-version=" + version,
+								"-upload=" + fmt.Sprintf("%s/%s/%s", bucket, packageType, name),
 							},
 							Resources: v1.ResourceRequirements{
 								Requests: v1.ResourceList{

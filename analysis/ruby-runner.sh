@@ -11,7 +11,6 @@ for pkg in $(cat rubygems.txt); do
       --annotations=package_version=test \
       --requests="cpu=250m" -- \
       analyze \
-      --image=$REGISTRY/ruby --command="analyze.rb $pkg" \
-      --bucket=gs://ossf-malware-analysis-results \
-      --upload="rubygems/$pkg/test/results.json"
+      --package="rubygems/$pkg" \
+      --upload="gs://ossf-malware-analysis-results-test/rubygems/$pkg"
 done

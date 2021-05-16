@@ -1,7 +1,6 @@
 #!/bin/bash
 
 REGISTRY=gcr.io/ossf-malware-analysis
-
 for pkg in $(cat python.txt); do
   rand=$(cat /dev/urandom | tr -dc 'a-z0-9' | head -c 10)
   kubectl run pypi-$rand --image=$REGISTRY/analysis --restart='Never' \
@@ -11,7 +10,6 @@ for pkg in $(cat python.txt); do
       --annotations=package_version=test \
       --requests="cpu=250m" -- \
       analyze \
-      --image=$REGISTRY/python --command="analyze.py $pkg" \
-      --bucket=gs://ossf-malware-analysis-results \
-      --upload="pypi/$pkg/test/results.json"
+      --package="pypi/$pkg" \
+      --upload="gs://ossf-malware-analysis-results-test/pypi/$pkg"
 done
