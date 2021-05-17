@@ -20,5 +20,5 @@ spec:
         env:
         - name: OSSMALWARE_SUBSCRIPTION_URL
           value: gcppubsub://projects/ossf-malware-analysis/subscriptions/feed-subscription
-        - name: OSSF_MALWARE_ANALYSIS_RESULTS
-          value: gs://ossf-malware-analysis-results
+        - name: OSSMALWARE_WORKER_TOPIC
+          value: gcppubsub://projects/ossf-malware-analysis/topics/workers

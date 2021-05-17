@@ -1,4 +1,4 @@
-package main
+package analysis
 
 import (
 	"encoding/json"
@@ -28,10 +28,10 @@ func getRubyGemsLatest(pkg string) string {
 	return details.Version
 }
 
-var RubyGemsPackageManager = pkgManager{
-	image: "gcr.io/ossf-malware-analysis/ruby",
-	commandFmt: func(pkg, ver string) string {
+var RubyGemsPackageManager = PkgManager{
+	Image: "gcr.io/ossf-malware-analysis/ruby",
+	CommandFmt: func(pkg, ver string) string {
 		return fmt.Sprintf("analyze.rb %s %s", pkg, ver)
 	},
-	getLatest: getRubyGemsLatest,
+	GetLatest: getRubyGemsLatest,
 }

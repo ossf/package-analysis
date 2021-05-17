@@ -1,4 +1,4 @@
-package main
+package analysis
 
 import (
 	"encoding/json"
@@ -30,10 +30,10 @@ func getPyPILatest(pkg string) string {
 	return details.Info.Version
 }
 
-var PyPIPackageManager = pkgManager{
-	image: "gcr.io/ossf-malware-analysis/python",
-	commandFmt: func(pkg, ver string) string {
+var PyPIPackageManager = PkgManager{
+	Image: "gcr.io/ossf-malware-analysis/python",
+	CommandFmt: func(pkg, ver string) string {
 		return fmt.Sprintf("analyze.py %s==%s", pkg, ver)
 	},
-	getLatest: getPyPILatest,
+	GetLatest: getPyPILatest,
 }

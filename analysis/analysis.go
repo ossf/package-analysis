@@ -1,10 +1,9 @@
-package main
+package analysis
 
 import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"flag"
 	"log"
 	"os"
 	"os/exec"
@@ -27,14 +26,22 @@ type analysisInfo struct {
 	Commands map[string]bool
 }
 
-type pkgManager struct {
-	commandFmt func(string, string) string
-	getLatest  func(string) string
-	image      string
+type PkgManager struct {
+	CommandFmt func(string, string) string
+	GetLatest  func(string) string
+	Image      string
 }
 
 const (
 	logPath = "/tmp/runsc.log.boot"
+)
+
+var (
+	SupportedPkgManagers = map[string]PkgManager{
+		"npm":      NPMPackageManager,
+		"pypi":     PyPIPackageManager,
+		"rubygems": RubyGemsPackageManager,
+	}
 )
 
 var (
@@ -55,50 +62,6 @@ var (
 	// 0x3 socket:[2], 0x7f1bc9e7b914 {Family: AF_INET, Addr: 8.8.8.8, Port: 53}, 0x10
 	connectPattern = regexp.MustCompile(`.*AF_INET.*Addr: ([^,]+),`)
 )
-
-var (
-	pkg     = flag.String("package", "", "ecosystem/package")
-	version = flag.String("version", "", "version")
-	upload  = flag.String("upload", "", "bucket path for uploading results")
-
-	supportedPkgManagers = map[string]pkgManager{
-		"npm":      NPMPackageManager,
-		"pypi":     PyPIPackageManager,
-		"rubygems": RubyGemsPackageManager,
-	}
-)
-
-func main() {
-	flag.Parse()
-	if *pkg == "" {
-		flag.Usage()
-		return
-	}
-	pkgParts := strings.SplitN(*pkg, "/", 2)
-	if len(pkgParts) != 2 {
-		log.Panicf("Invalid package format: %s", *pkg)
-	}
-
-	ecosystem, name := pkgParts[0], pkgParts[1]
-
-	manager, ok := supportedPkgManagers[ecosystem]
-	if !ok {
-		log.Panicf("Unsupported pkg manager %s", manager)
-	}
-
-	image := manager.image
-	if *version == "" {
-		*version = manager.getLatest(name)
-	}
-
-	command := manager.commandFmt(name, *version)
-	info := runAnalysis(image, command)
-
-	if *upload != "" {
-		bucket, path := parseBucketPath(*upload)
-		uploadResults(bucket, path, ecosystem, name, *version, info)
-	}
-}
 
 func recordFileAccess(info *analysisInfo, file string, read, write bool) {
 	if _, exists := info.Files[file]; !exists {
@@ -230,7 +193,7 @@ func analyzeSyscall(syscall, args string, info *analysisInfo) {
 	}
 }
 
-func runAnalysis(image, command string) *analysisInfo {
+func Run(image, command string) *analysisInfo {
 	log.Printf("Running analysis using %s: %s", image, command)
 
 	cmd := exec.Command("podman", "run", "--runtime=/usr/local/bin/runsc", "--cgroup-manager=cgroupfs", "--rm", image, "sh", "-c", command)
@@ -274,16 +237,6 @@ func runAnalysis(image, command string) *analysisInfo {
 	return info
 }
 
-func parseBucketPath(path string) (string, string) {
-	pattern := regexp.MustCompile(`(.*?://[^/]+)/(.*)`)
-	match := pattern.FindStringSubmatch(path)
-	if match == nil {
-		log.Panic("Failed to parse bucket path: %s", path)
-	}
-
-	return match[1], match[2]
-}
-
 type commandResult struct {
 	Command     []string
 	Environment []string
@@ -306,7 +259,7 @@ type data struct {
 	Commands []commandResult
 }
 
-func uploadResults(bucket, path, ecosystem, pkgName, version string, info *analysisInfo) {
+func UploadResults(bucket, path, ecosystem, pkgName, version string, info *analysisInfo) {
 	d := data{}
 	d.Package.Ecosystem = ecosystem
 	d.Package.Name = pkgName
