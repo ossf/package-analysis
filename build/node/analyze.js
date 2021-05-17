@@ -19,5 +19,9 @@ if (result.status != 0) {
 }
 
 const pkg = pkgAndVersion.split('@')[0]
-require(pkg);
+try {
+  require(pkg);
+} catch (e) {
+  console.log(`Failed to import ${pkg}: ${e}`);
+}
 
