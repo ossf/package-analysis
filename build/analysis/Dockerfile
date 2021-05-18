@@ -27,3 +27,8 @@ COPY runsc /usr/local/bin
 
 COPY --from=build /src/analyze /usr/local/bin/analyze
 COPY --from=build /src/worker /usr/local/bin/worker
+
+# Cache analysis images.
+RUN podman pull gcr.io/ossf-malware-analysis/node:flat && \
+    podman pull gcr.io/ossf-malware-analysis/python:flat && \
+    podman pull gcr.io/ossf-malware-analysis/ruby:flat

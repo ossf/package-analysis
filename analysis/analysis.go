@@ -196,7 +196,9 @@ func analyzeSyscall(syscall, args string, info *analysisInfo) {
 func Run(image, command string) *analysisInfo {
 	log.Printf("Running analysis using %s: %s", image, command)
 
-	cmd := exec.Command("podman", "run", "--runtime=/usr/local/bin/runsc", "--cgroup-manager=cgroupfs", "--rm", image, "sh", "-c", command)
+	cmd := exec.Command(
+		"podman", "run", "--runtime=/usr/local/bin/runsc", "--cgroup-manager=cgroupfs",
+		"--events-backend=file", "--rm", image, "sh", "-c", command)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
