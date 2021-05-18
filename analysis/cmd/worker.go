@@ -11,21 +11,13 @@ import (
 	"github.com/ossf/package-analysis/analysis"
 )
 
-func main() {
-	ctx := context.Background()
-
-	subURL := os.Getenv("OSSMALWARE_WORKER_SUBSCRIPTION")
-	resultsBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS")
-	sub, err := pubsub.OpenSubscription(ctx, subURL)
-	if err != nil {
-		log.Panic(err)
-	}
-
+func messageLoop(ctx context.Context, sub *pubsub.Subscription, resultsBucket string) {
 	for {
 		msg, err := sub.Receive(ctx)
 		if err != nil {
+			// All subsequent receive calls will return the same error, so we bail out.
 			log.Printf("error receiving message: %v", err)
-			continue
+			return
 		}
 
 		name := msg.Metadata["name"]
@@ -57,5 +49,20 @@ func main() {
 		info := analysis.Run(manager.Image, manager.CommandFmt(name, version))
 		analysis.UploadResults(resultsBucket, ecosystem+"/"+name, ecosystem, name, version, info)
 		msg.Ack()
+	}
+}
+
+func main() {
+	ctx := context.Background()
+	subURL := os.Getenv("OSSMALWARE_WORKER_SUBSCRIPTION")
+	resultsBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS")
+
+	for {
+		sub, err := pubsub.OpenSubscription(ctx, subURL)
+		if err != nil {
+			log.Panic(err)
+		}
+
+		messageLoop(ctx, sub, resultsBucket)
 	}
 }

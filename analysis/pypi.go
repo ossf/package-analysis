@@ -31,7 +31,7 @@ func getPyPILatest(pkg string) string {
 }
 
 var PyPIPackageManager = PkgManager{
-	Image: "gcr.io/ossf-malware-analysis/python",
+	Image: "gcr.io/ossf-malware-analysis/python:flat",
 	CommandFmt: func(pkg, ver string) string {
 		return fmt.Sprintf("analyze.py %s==%s", pkg, ver)
 	},
