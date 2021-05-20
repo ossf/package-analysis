@@ -1,7 +1,30 @@
 #!/usr/bin/env ruby
 #
 require 'find'
+require 'open3'
 require 'pathname'
+
+def install(package, version)
+  cmd = "gem install #{package}"
+  if version
+    cmd += " -v #{version}"
+  end
+
+  output, status = Open3.capture2e(cmd)
+  puts output
+
+  if status.success?
+    puts "Install succeeded."
+    return
+  end
+
+  puts "Install failed."
+  if output.include? "Could not find a valid gem"
+    exit 0
+  end
+
+  exit 1
+end
 
 if ARGV.length < 1
   puts "Usage: #{$0} package version"
@@ -11,15 +34,7 @@ end
 package = ARGV.shift
 version = ARGV.shift
 
-cmd = "gem install #{package}"
-if version
-  cmd += " -v #{version}"
-end
-
-if not system(cmd)
-  exit 1
-end
-
+install(package, version)
 spec = Gem::Specification.find_by_name(package)
 
 spec.require_paths.each do |require_path|

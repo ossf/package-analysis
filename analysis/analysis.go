@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -200,10 +201,25 @@ func Run(image, command string) *analysisInfo {
 		"podman", "run", "--runtime=/usr/local/bin/runsc", "--cgroup-manager=cgroupfs",
 		"--events-backend=file", "--rm", image, "sh", "-c", command)
 	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err := cmd.Run()
+
+	pipe, err := cmd.StderrPipe()
 	if err != nil {
 		log.Panic(err)
+	}
+
+	if err := cmd.Start(); err != nil {
+		log.Panic(err)
+	}
+	stderr, err := io.ReadAll(pipe)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	if err := cmd.Wait(); err != nil {
+		// Not really an error
+		if !strings.Contains(string(stderr), "gofer is still running") {
+			log.Panic(err)
+		}
 	}
 
 	file, err := os.Open(logPath)

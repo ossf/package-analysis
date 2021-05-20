@@ -31,7 +31,7 @@ func getNPMLatest(pkg string) string {
 }
 
 var NPMPackageManager = PkgManager{
-	Image: "gcr.io/ossf-malware-analysis/node:flat",
+	Image: "gcr.io/ossf-malware-analysis/node",
 	CommandFmt: func(pkg, ver string) string {
 		return fmt.Sprintf("analyze.js %s@%s", pkg, ver)
 	},
