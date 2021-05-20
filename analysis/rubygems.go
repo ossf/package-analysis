@@ -29,7 +29,7 @@ func getRubyGemsLatest(pkg string) string {
 }
 
 var RubyGemsPackageManager = PkgManager{
-	Image: "gcr.io/ossf-malware-analysis/ruby:flat",
+	Image: "gcr.io/ossf-malware-analysis/ruby",
 	CommandFmt: func(pkg, ver string) string {
 		return fmt.Sprintf("analyze.rb %s %s", pkg, ver)
 	},

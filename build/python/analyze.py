@@ -10,7 +10,20 @@ PY_EXTENSION = '.py'
 
 def pip_install(package):
     """Pip install."""
-    subprocess.check_call((sys.executable, '-m', 'pip', 'install', package))
+    try:
+      output = subprocess.check_output(
+          (sys.executable, '-m', 'pip', 'install', package),
+          stderr=subprocess.STDOUT)
+      print('Install succeeded:')
+      print(output.decode())
+    except subprocess.CalledProcessError as e:
+      print('Failed to install:')
+      print(e.output.decode())
+      if b'No matching distribution' in e.output:
+          sys.exit(0)
+
+      # Some other unknown error.
+      raise
 
 
 def path_to_import(path):
@@ -41,7 +54,7 @@ def analyze(package):
 
 def main():
     if len(sys.argv) != 2:
-      raise ValueError(f'Usage: {sys.argv[0]} package_name[==version]')
+        raise ValueError(f'Usage: {sys.argv[0]} package_name[==version]')
 
     package_with_version = sys.argv[1]
     pip_install(package_with_version)
