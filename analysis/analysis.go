@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -14,6 +15,9 @@ import (
 
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/gcsblob"
+
+	"gocloud.dev/docstore"
+	_ "gocloud.dev/docstore/gcpfirestore"
 )
 
 type fileInfo struct {
@@ -31,6 +35,38 @@ type PkgManager struct {
 	CommandFmt func(string, string) string
 	GetLatest  func(string) string
 	Image      string
+}
+
+type commandResult struct {
+	Command     []string
+	Environment []string
+}
+
+type fileResult struct {
+	Path  string
+	Read  bool
+	Write bool
+}
+
+type Package struct {
+	Ecosystem string
+	Name      string
+	Version   string
+}
+
+type AnalysisResult struct {
+	Package  Package
+	Files    []fileResult
+	IPs      []string
+	Commands []commandResult
+}
+
+type DocstoreData struct {
+	ID       string
+	Package  Package
+	Files    []string
+	IPs      []string
+	Commands []string
 }
 
 const (
@@ -194,7 +230,7 @@ func analyzeSyscall(syscall, args string, info *analysisInfo) {
 	}
 }
 
-func Run(image, command string) *analysisInfo {
+func Run(ecosystem, pkgName, version, image, command string) *AnalysisResult {
 	log.Printf("Running analysis using %s: %s", image, command)
 
 	cmd := exec.Command(
@@ -252,33 +288,12 @@ func Run(image, command string) *analysisInfo {
 		log.Panic(err)
 	}
 
-	return info
+	result := AnalysisResult{}
+	result.setData(ecosystem, pkgName, version, info)
+	return &result
 }
 
-type commandResult struct {
-	Command     []string
-	Environment []string
-}
-
-type fileResult struct {
-	Path  string
-	Read  bool
-	Write bool
-}
-
-type data struct {
-	Package struct {
-		Ecosystem string
-		Name      string
-		Version   string
-	}
-	Files    []fileResult
-	IPs      []string
-	Commands []commandResult
-}
-
-func UploadResults(bucket, path, ecosystem, pkgName, version string, info *analysisInfo) {
-	d := data{}
+func (d *AnalysisResult) setData(ecosystem, pkgName, version string, info *analysisInfo) {
 	d.Package.Ecosystem = ecosystem
 	d.Package.Name = pkgName
 	d.Package.Version = version
@@ -302,30 +317,90 @@ func UploadResults(bucket, path, ecosystem, pkgName, version string, info *analy
 		d.Commands = append(d.Commands, result)
 	}
 
-	b, err := json.Marshal(d)
-	if err != nil {
-		log.Print(err)
-		return
+}
+
+func normalizeDocstoreName(ID string) string {
+	return strings.ReplaceAll(ID, "/", "\\")
+}
+
+func (d *DocstoreData) setData(result *AnalysisResult) {
+	d.ID = normalizeDocstoreName(
+		fmt.Sprintf("%s:%s:%s", result.Package.Ecosystem, result.Package.Name, result.Package.Version))
+	d.Package = result.Package
+
+	// Index touched file components.
+	fileParts := map[string]bool{}
+	for _, f := range result.Files {
+		cur := f.Path
+		for cur != "/" && cur != "." {
+			name := filepath.Base(cur)
+			fileParts[name] = true
+			cur = filepath.Dir(cur)
+		}
+	}
+	for part, _ := range fileParts {
+		d.Files = append(d.Files, part)
 	}
 
-	ctx := context.Background()
+	// IPs are indexed as is.
+	for _, ip := range result.IPs {
+		d.IPs = append(d.IPs, ip)
+	}
+
+	// Index command components.
+	cmdParts := map[string]bool{}
+	for _, cmd := range result.Commands {
+		for _, part := range cmd.Command {
+			cmdParts[part] = true
+		}
+	}
+	for part, _ := range cmdParts {
+		d.Commands = append(d.Commands, part)
+	}
+}
+
+func UploadResults(ctx context.Context, bucket, path string, result *AnalysisResult) error {
+	b, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
+
 	bkt, err := blob.OpenBucket(ctx, bucket)
 	if err != nil {
-		log.Panic(err)
+		return err
 	}
 	defer bkt.Close()
 
-	uploadPath := filepath.Join(path, version+".json")
+	uploadPath := filepath.Join(path, result.Package.Version+".json")
 	log.Printf("uploading to bucket=%s, path=%s", bucket, uploadPath)
 
 	w, err := bkt.NewWriter(ctx, uploadPath, nil)
 	if err != nil {
-		log.Panic(err)
+		return err
 	}
 	if _, err := w.Write(b); err != nil {
-		log.Panic(err)
+		return err
 	}
 	if err := w.Close(); err != nil {
-		log.Panic(err)
+		return err
 	}
+
+	return nil
+}
+
+func WriteResultsToDocstore(ctx context.Context, collectionPath string, result *AnalysisResult) error {
+	coll, err := docstore.OpenCollection(ctx, collectionPath)
+	if err != nil {
+		return err
+	}
+	defer coll.Close()
+
+	d := DocstoreData{}
+	d.setData(result)
+
+	err = coll.Put(ctx, &d)
+	if err != nil {
+		return err
+	}
+	return nil
 }

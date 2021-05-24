@@ -11,7 +11,7 @@ import (
 	"github.com/ossf/package-analysis/analysis"
 )
 
-func messageLoop(ctx context.Context, sub *pubsub.Subscription, resultsBucket string) {
+func messageLoop(ctx context.Context, sub *pubsub.Subscription, resultsBucket, docstorePath string) {
 	for {
 		msg, err := sub.Receive(ctx)
 		if err != nil {
@@ -23,18 +23,21 @@ func messageLoop(ctx context.Context, sub *pubsub.Subscription, resultsBucket st
 		name := msg.Metadata["name"]
 		if name == "" {
 			log.Printf("name is empty")
+			msg.Ack()
 			continue
 		}
 
 		ecosystem := msg.Metadata["ecosystem"]
 		if ecosystem == "" {
 			log.Printf("ecosystem is empty")
+			msg.Ack()
 			continue
 		}
 
 		manager, ok := analysis.SupportedPkgManagers[ecosystem]
 		if !ok {
 			log.Printf("Unsupported pkg manager %s", manager)
+			msg.Ack()
 			continue
 		}
 		log.Printf("Got request %s/%s", ecosystem, name)
@@ -46,8 +49,17 @@ func messageLoop(ctx context.Context, sub *pubsub.Subscription, resultsBucket st
 		log.Printf("Installing version %s", version)
 
 		log.Printf("Got request %s/%s at version %s", ecosystem, name, version)
-		info := analysis.Run(manager.Image, manager.CommandFmt(name, version))
-		analysis.UploadResults(resultsBucket, ecosystem+"/"+name, ecosystem, name, version, info)
+		result := analysis.Run(ecosystem, name, version, manager.Image, manager.CommandFmt(name, version))
+		err = analysis.UploadResults(ctx, resultsBucket, ecosystem+"/"+name, result)
+		if err != nil {
+			log.Panicf("Failed to upload to blobstore = %v\n", err)
+		}
+
+		err = analysis.WriteResultsToDocstore(ctx, docstorePath, result)
+		if err != nil {
+			log.Panicf("Failed to write to docstore = %v\n", err)
+		}
+
 		msg.Ack()
 	}
 }
@@ -56,6 +68,7 @@ func main() {
 	ctx := context.Background()
 	subURL := os.Getenv("OSSMALWARE_WORKER_SUBSCRIPTION")
 	resultsBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS")
+	docstorePath := os.Getenv("OSSMALWARE_DOCSTORE_URL")
 
 	for {
 		sub, err := pubsub.OpenSubscription(ctx, subURL)
@@ -63,6 +76,6 @@ func main() {
 			log.Panic(err)
 		}
 
-		messageLoop(ctx, sub, resultsBucket)
+		messageLoop(ctx, sub, resultsBucket, docstorePath)
 	}
 }

@@ -24,6 +24,8 @@ spec:
           value: gcppubsub://projects/ossf-malware-analysis/subscriptions/workers
         - name: OSSF_MALWARE_ANALYSIS_RESULTS
           value: gs://ossf-malware-analysis-results
+        - name: OSSMALWARE_DOCSTORE_URL
+          value: firestore://projects/ossf-malware-analysis/databases/(default)/documents/analysis?name_field=ID
         securityContext:
           privileged: true
         resources:
