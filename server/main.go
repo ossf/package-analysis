@@ -58,6 +58,7 @@ func queryHandler(c *gin.Context) {
 
 	if req.Type != "file" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid search type"})
+		return
 	}
 
 	if req.Search == "" {
