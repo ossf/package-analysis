@@ -7,13 +7,11 @@ import (
 	"log"
 	"os"
 
-	"github.com/jordan-wright/ossmalware/pkg/library"
 	"gocloud.dev/pubsub"
 	_ "gocloud.dev/pubsub/gcppubsub"
-)
 
-const (
-	analysisImage = "gcr.io/ossf-malware-analysis/python"
+	"github.com/ossf/package-analysis/scheduler/proxy"
+	"github.com/ossf/package-feeds/feeds"
 )
 
 var supportedPkgManagers = map[string]bool{
@@ -35,41 +33,29 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	srv := proxy.New(topic, sub)
+	fmt.Println("Listening for messages to proxy...")
 
-	for {
-		msg, err := sub.Receive(ctx)
-		if err != nil {
-			log.Println("error receiving message: ", err)
-			continue
+	err = srv.Listen(ctx, func(m *pubsub.Message) (*pubsub.Message, error) {
+		log.Println("Handling message: ", string(m.Body))
+		pkg := feeds.Package{}
+		if err := json.Unmarshal(m.Body, &pkg); err != nil {
+			return nil, fmt.Errorf("error unmarshalling json: %w", err)
 		}
-		go func(m *pubsub.Message) {
-			log.Println("handling message: ", string(m.Body))
-			pkg := library.Package{}
-			if err := json.Unmarshal(m.Body, &pkg); err != nil {
-				log.Println("error unmarshalling json: ", err)
-				return
-			}
-			if err := handlePkg(ctx, topic, pkg); err != nil {
-				fmt.Println("Error: ", err)
-				msg.Nack()
-				return
-			}
-			msg.Ack()
-		}(msg)
-	}
-}
-
-func handlePkg(ctx context.Context, topic *pubsub.Topic, pkg library.Package) error {
-	if _, ok := supportedPkgManagers[pkg.Type]; !ok {
-		log.Println("unknown package type: ", pkg.Type)
-		return nil
-	}
-
-	return topic.Send(ctx, &pubsub.Message{
-		Metadata: map[string]string{
-			"name":      pkg.Name,
-			"ecosystem": pkg.Type,
-			"version":   pkg.Version,
-		},
+		if _, ok := supportedPkgManagers[pkg.Type]; !ok {
+			return nil, fmt.Errorf("package type is not supported: %v", pkg.Type)
+		}
+		return &pubsub.Message{
+			Body: []byte{},
+			Metadata: map[string]string{
+				"name":      pkg.Name,
+				"ecosystem": pkg.Type,
+				"version":   pkg.Version,
+			},
+		}, nil
 	})
+
+	if err != nil {
+		panic(err)
+	}
 }
