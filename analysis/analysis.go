@@ -232,6 +232,11 @@ func analyzeSyscall(syscall, args string, info *analysisInfo) {
 func Run(ecosystem, pkgName, version, image, command string) *AnalysisResult {
 	log.Printf("Running analysis using %s: %s", image, command)
 
+	// Delete existing logs (if any). This function uses a fixed log name and is not threadsafe.
+	if err := os.RemoveAll(logPath); err != nil {
+		log.Panic(err)
+	}
+
 	cmd := exec.Command(
 		"podman", "run", "--runtime=/usr/local/bin/runsc", "--cgroup-manager=cgroupfs",
 		"--events-backend=file", "--rm", image, "sh", "-c", command)
