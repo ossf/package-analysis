@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -14,6 +15,9 @@ import (
 
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/gcsblob"
+
+	"gocloud.dev/docstore"
+	_ "gocloud.dev/docstore/gcpfirestore"
 )
 
 type fileInfo struct {
@@ -33,8 +37,39 @@ type PkgManager struct {
 	Image      string
 }
 
+type commandResult struct {
+	Command     []string
+	Environment []string
+}
+
+type fileResult struct {
+	Path  string
+	Read  bool
+	Write bool
+}
+
+type Package struct {
+	Ecosystem string
+	Name      string
+	Version   string
+}
+
+type AnalysisResult struct {
+	Package  Package
+	Files    []fileResult
+	IPs      []string
+	Commands []commandResult
+}
+
+type DocstoreIndex struct {
+	ID      string
+	Package Package
+	Indexes []string
+}
+
 const (
-	logPath = "/tmp/runsc.log.boot"
+	logPath         = "/tmp/runsc.log.boot"
+	maxIndexEntries = 10000
 )
 
 var (
@@ -194,7 +229,7 @@ func analyzeSyscall(syscall, args string, info *analysisInfo) {
 	}
 }
 
-func Run(image, command string) *analysisInfo {
+func Run(ecosystem, pkgName, version, image, command string) *AnalysisResult {
 	log.Printf("Running analysis using %s: %s", image, command)
 
 	cmd := exec.Command(
@@ -252,33 +287,12 @@ func Run(image, command string) *analysisInfo {
 		log.Panic(err)
 	}
 
-	return info
+	result := AnalysisResult{}
+	result.setData(ecosystem, pkgName, version, info)
+	return &result
 }
 
-type commandResult struct {
-	Command     []string
-	Environment []string
-}
-
-type fileResult struct {
-	Path  string
-	Read  bool
-	Write bool
-}
-
-type data struct {
-	Package struct {
-		Ecosystem string
-		Name      string
-		Version   string
-	}
-	Files    []fileResult
-	IPs      []string
-	Commands []commandResult
-}
-
-func UploadResults(bucket, path, ecosystem, pkgName, version string, info *analysisInfo) {
-	d := data{}
+func (d *AnalysisResult) setData(ecosystem, pkgName, version string, info *analysisInfo) {
 	d.Package.Ecosystem = ecosystem
 	d.Package.Name = pkgName
 	d.Package.Version = version
@@ -302,30 +316,129 @@ func UploadResults(bucket, path, ecosystem, pkgName, version string, info *analy
 		d.Commands = append(d.Commands, result)
 	}
 
-	b, err := json.Marshal(d)
-	if err != nil {
-		log.Print(err)
-		return
+}
+
+func generateDocstoreName(pkg Package) string {
+	id := fmt.Sprintf("%s:%s:%s", pkg.Ecosystem, pkg.Name, pkg.Version)
+	id = strings.ReplaceAll(id, "/", "\\")
+	return id
+}
+
+func generateIndexEntries(pkg Package, indexValues []string) []*DocstoreIndex {
+	var entries []*DocstoreIndex
+	for i := 0; i < len(indexValues); i += maxIndexEntries {
+		endIdx := i + maxIndexEntries
+		if endIdx > len(indexValues) {
+			endIdx = len(indexValues)
+		}
+
+		entry := &DocstoreIndex{
+			ID:      fmt.Sprintf("%s-%d", generateDocstoreName(pkg), i/maxIndexEntries),
+			Package: pkg,
+			Indexes: indexValues[i:endIdx],
+		}
+		entries = append(entries, entry)
+	}
+	return entries
+}
+
+func (r *AnalysisResult) GenerateFileIndexes() []*DocstoreIndex {
+	fileParts := map[string]bool{}
+	for _, f := range r.Files {
+		cur := f.Path
+		for cur != "/" && cur != "." {
+			name := filepath.Base(cur)
+			fileParts[name] = true
+			cur = filepath.Dir(cur)
+		}
 	}
 
-	ctx := context.Background()
+	var parts []string
+	for part, _ := range fileParts {
+		parts = append(parts, part)
+	}
+
+	return generateIndexEntries(r.Package, parts)
+}
+
+func (r *AnalysisResult) GenerateIPIndexes() []*DocstoreIndex {
+	// IPs are indexed as is.
+	return generateIndexEntries(r.Package, r.IPs)
+}
+
+func (r *AnalysisResult) GenerateCmdIndexes() []*DocstoreIndex {
+	// Index command components.
+	cmdParts := map[string]bool{}
+	for _, cmd := range r.Commands {
+		for _, part := range cmd.Command {
+			cmdParts[part] = true
+		}
+	}
+	var parts []string
+	for part, _ := range cmdParts {
+		parts = append(parts, part)
+	}
+	return generateIndexEntries(r.Package, parts)
+}
+
+func UploadResults(ctx context.Context, bucket, path string, result *AnalysisResult) error {
+	b, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
+
 	bkt, err := blob.OpenBucket(ctx, bucket)
 	if err != nil {
-		log.Panic(err)
+		return err
 	}
 	defer bkt.Close()
 
-	uploadPath := filepath.Join(path, version+".json")
+	uploadPath := filepath.Join(path, result.Package.Version+".json")
 	log.Printf("uploading to bucket=%s, path=%s", bucket, uploadPath)
 
 	w, err := bkt.NewWriter(ctx, uploadPath, nil)
 	if err != nil {
-		log.Panic(err)
+		return err
 	}
 	if _, err := w.Write(b); err != nil {
-		log.Panic(err)
+		return err
 	}
 	if err := w.Close(); err != nil {
-		log.Panic(err)
+		return err
 	}
+
+	return nil
+}
+
+func writeIndexes(ctx context.Context, collectionPath string, indexes []*DocstoreIndex) error {
+	coll, err := docstore.OpenCollection(ctx, collectionPath)
+	if err != nil {
+		return err
+	}
+	defer coll.Close()
+
+	actionList := coll.Actions()
+	for _, index := range indexes {
+		actionList.Put(index)
+	}
+	return actionList.Do(ctx)
+}
+
+func collectionPath(prefix, name string) string {
+	return prefix + name + "?name_field=ID"
+}
+
+func WriteResultsToDocstore(ctx context.Context, collectionPrefix string, result *AnalysisResult) error {
+	files := result.GenerateFileIndexes()
+	if err := writeIndexes(ctx, collectionPath(collectionPrefix, "files"), files); err != nil {
+		return err
+	}
+
+	ips := result.GenerateIPIndexes()
+	if err := writeIndexes(ctx, collectionPath(collectionPrefix, "ips"), ips); err != nil {
+		return err
+	}
+
+	cmds := result.GenerateCmdIndexes()
+	return writeIndexes(ctx, collectionPath(collectionPrefix, "commands"), cmds)
 }

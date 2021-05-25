@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 	"regexp"
@@ -10,9 +11,10 @@ import (
 )
 
 var (
-	pkg     = flag.String("package", "", "ecosystem/package")
-	version = flag.String("version", "", "version")
-	upload  = flag.String("upload", "", "bucket path for uploading results")
+	pkg      = flag.String("package", "", "ecosystem/package")
+	version  = flag.String("version", "", "version")
+	upload   = flag.String("upload", "", "bucket path for uploading results")
+	docstore = flag.String("docstore", "", "docstore path")
 )
 
 func parseBucketPath(path string) (string, string) {
@@ -48,10 +50,21 @@ func main() {
 	}
 
 	command := manager.CommandFmt(name, *version)
-	info := analysis.Run(manager.Image, command)
+	result := analysis.Run(ecosystem, name, *version, manager.Image, command)
 
+	ctx := context.Background()
 	if *upload != "" {
 		bucket, path := parseBucketPath(*upload)
-		analysis.UploadResults(bucket, path, ecosystem, name, *version, info)
+		err := analysis.UploadResults(ctx, bucket, path, result)
+		if err != nil {
+			log.Fatalf("Failed to upload results to blobstore: %v", err)
+		}
+	}
+
+	if *docstore != "" {
+		err := analysis.WriteResultsToDocstore(ctx, *docstore, result)
+		if err != nil {
+			log.Fatalf("Failed to write results to docstore: %v", err)
+		}
 	}
 }
