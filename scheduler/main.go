@@ -9,6 +9,7 @@ import (
 
 	"gocloud.dev/pubsub"
 	_ "gocloud.dev/pubsub/gcppubsub"
+	_ "gocloud.dev/pubsub/kafkapubsub"
 
 	"github.com/ossf/package-analysis/scheduler/proxy"
 	"github.com/ossf/package-feeds/feeds"
