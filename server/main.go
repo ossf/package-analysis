@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"cloud.google.com/go/firestore"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"google.golang.org/api/iterator"
 )
@@ -15,13 +16,22 @@ const (
 )
 
 var (
-	projectID = ""
+	projectID        = ""
+	typeToCollection = map[string]string{
+		"file":    "files",
+		"command": "commands",
+		"ip":      "ips",
+	}
 )
 
 func main() {
 	projectID = os.Getenv("GOOGLE_CLOUD_PROJECT")
 
 	router := gin.Default()
+	config := cors.DefaultConfig()
+	config.AllowOrigins = []string{"http://localhost:8080", "https://ossf-malware-analysis.storage.googleapis.com"}
+	router.Use(cors.New(config))
+
 	router.POST("/query", queryHandler)
 
 	port := os.Getenv("PORT")
@@ -56,7 +66,8 @@ func queryHandler(c *gin.Context) {
 		return
 	}
 
-	if req.Type != "file" {
+	collection := typeToCollection[req.Type]
+	if collection == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid search type"})
 		return
 	}
@@ -74,7 +85,7 @@ func queryHandler(c *gin.Context) {
 	}
 	defer fs.Close()
 
-	q := fs.Collection("files").Select("Package").
+	q := fs.Collection(collection).Select("Package").
 		Where("Indexes", "array-contains", req.Search).
 		OrderBy("__name__", firestore.Asc).
 		Limit(queryLimit + 1) // Check if there are more by fetching one more.
