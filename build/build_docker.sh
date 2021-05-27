@@ -1,18 +1,25 @@
-#!/bin/bash
+#!/bin/bash -ex
 
 REGISTRY=gcr.io/ossf-malware-analysis
-IMAGES=(
+ANALYSIS_IMAGES=(
   node
   python
   ruby
 )
 
-for image in "${IMAGES[@]}"; do
+for image in "${ANALYSIS_IMAGES[@]}"; do
   docker build --squash -t $REGISTRY/$image $image
   docker push $REGISTRY/$image
 done
 
-rm -rf analysis/analysis
-cp -r ../analysis analysis/
-docker build --squash -t $REGISTRY/analysis analysis
-docker push $REGISTRY/analysis
+OTHER_IMAGES=(
+  analysis
+  server
+)
+
+for image in "${OTHER_IMAGES[@]}"; do
+  pushd ../$image
+  docker build --squash -t $REGISTRY/$image .
+  docker push $REGISTRY/$image
+  popd
+done

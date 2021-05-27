@@ -1,6 +1,6 @@
-FROM golang:1.16.3 as build
+FROM golang:1.16.3@sha256:f7d3519759ba6988a2b73b5874b17c5958ac7d0aa48a8b1d84d66ef25fa345f1 as build
 WORKDIR /src
-COPY analysis/ ./
+COPY . ./
 RUN go build cmd/analyze.go && go build cmd/worker.go
 
 FROM ubuntu:21.04@sha256:be154cc2b1211a9f98f4d708f4266650c9129784d0485d4507d9b0fa05d928b6
