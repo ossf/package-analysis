@@ -1,0 +1,9 @@
+feeds:
+  - type: pypi
+publisher:
+  type: kafka
+  config:
+    brokers: ["kafka:9092"]
+    topic: "package-feeds"
+
+poll_rate: "10h"

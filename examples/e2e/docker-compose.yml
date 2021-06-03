@@ -1,0 +1,78 @@
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_SYNC_LIMIT: 2
+
+  kafka:
+    image: confluentinc/cp-kafka
+    ports:
+      - 9094:9094
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: INTERNAL://kafka:9092,OUTSIDE://kafka:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,OUTSIDE://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_offsets_topic_replication_factor: 1
+
+  analysis:
+    restart: "on-failure"
+    image: gcr.io/ossf-malware-analysis/analysis:latest
+    privileged: true
+    entrypoint: "/usr/local/bin/worker"
+    environment:
+      OSSMALWARE_WORKER_SUBSCRIPTION: kafka://worker?topic=workers
+      OSSF_MALWARE_ANALYSIS_RESULTS: file:///data/
+      MONGO_SERVER_URL: mongodb://root:example@mongo
+      OSSMALWARE_DOCSTORE_URL: mongo://analysis/
+      KAFKA_BROKERS: kafka:9092
+    depends_on:
+      - kafka
+    volumes:
+      - "./data/:/data/"
+
+  scheduler:
+    restart: "on-failure"
+    image: gcr.io/ossf-malware-analysis/scheduler:latest
+    entrypoint: "/usr/local/bin/scheduler"
+    depends_on:
+      - kafka
+    environment:
+      OSSMALWARE_WORKER_TOPIC: kafka://workers
+      OSSMALWARE_SUBSCRIPTION_URL: kafka://worker?topic=package-feeds
+      KAFKA_BROKERS: kafka:9092
+
+  feeds:
+    restart: "on-failure"
+    image: docker.pkg.github.com/ossf/package-feeds/packagefeeds:latest
+    ports:
+      - 8080:8080
+    depends_on:
+      - kafka
+    environment:
+      PACKAGE_FEEDS_CONFIG_PATH: /config/feeds.yml
+    volumes:
+      - "./config/:/config/"
+
+  mongo:
+    image: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+
+  mongo-express:
+    image: mongo-express
+    restart: always
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: example

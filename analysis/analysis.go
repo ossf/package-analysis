@@ -14,10 +14,12 @@ import (
 	"strings"
 
 	"gocloud.dev/blob"
+	_ "gocloud.dev/blob/fileblob"
 	_ "gocloud.dev/blob/gcsblob"
 
 	"gocloud.dev/docstore"
 	_ "gocloud.dev/docstore/gcpfirestore"
+	_ "gocloud.dev/docstore/mongodocstore"
 )
 
 type fileInfo struct {
@@ -429,21 +431,39 @@ func writeIndexes(ctx context.Context, collectionPath string, indexes []*Docstor
 	return actionList.Do(ctx)
 }
 
-func collectionPath(prefix, name string) string {
-	return prefix + name + "?name_field=ID"
+func buildCollectionPath(prefix, name string) (string, error) {
+	if strings.HasPrefix(prefix, "firestore://") {
+		return prefix + name + "?name_field=ID", nil
+	} else if strings.HasPrefix(prefix, "mongo://") {
+		return prefix + name + "?id_field=ID", nil
+	} else {
+		return "", fmt.Errorf("unknown docstore collection path prefix: %v", prefix)
+	}
 }
 
 func WriteResultsToDocstore(ctx context.Context, collectionPrefix string, result *AnalysisResult) error {
 	files := result.GenerateFileIndexes()
-	if err := writeIndexes(ctx, collectionPath(collectionPrefix, "files"), files); err != nil {
+	filesPath, err := buildCollectionPath(collectionPrefix, "files")
+	if err != nil {
+		return err
+	}
+	if err := writeIndexes(ctx, filesPath, files); err != nil {
 		return err
 	}
 
 	ips := result.GenerateIPIndexes()
-	if err := writeIndexes(ctx, collectionPath(collectionPrefix, "ips"), ips); err != nil {
+	ipsPath, err := buildCollectionPath(collectionPrefix, "ips")
+	if err != nil {
+		return err
+	}
+	if err := writeIndexes(ctx, ipsPath, ips); err != nil {
 		return err
 	}
 
 	cmds := result.GenerateCmdIndexes()
-	return writeIndexes(ctx, collectionPath(collectionPrefix, "commands"), cmds)
+	cmdsPath, err := buildCollectionPath(collectionPrefix, "commands")
+	if err != nil {
+		return err
+	}
+	return writeIndexes(ctx, cmdsPath, cmds)
 }
