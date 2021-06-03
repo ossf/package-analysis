@@ -15,6 +15,7 @@ import (
 
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/gcsblob"
+	_ "gocloud.dev/blob/s3blob"
 
 	"gocloud.dev/docstore"
 	_ "gocloud.dev/docstore/gcpfirestore"
