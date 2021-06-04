@@ -1,3 +1,4 @@
+version: "3"
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper
@@ -22,6 +23,23 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_offsets_topic_replication_factor: 1
 
+  minio:
+    image: minio/minio:RELEASE.2021-05-27T22-06-31Z
+    hostname: minio
+    ports:
+      - 9000:9000
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+      MINIO_REGION_NAME: dummy_region
+    entrypoint: sh
+    command: -c 'mkdir -p /data/package-analysis && /usr/bin/minio server /data'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
   analysis:
     restart: "on-failure"
     image: gcr.io/ossf-malware-analysis/analysis:latest
@@ -29,15 +47,15 @@ services:
     entrypoint: "/usr/local/bin/worker"
     environment:
       OSSMALWARE_WORKER_SUBSCRIPTION: kafka://worker?topic=workers
-      OSSF_MALWARE_ANALYSIS_RESULTS: file:///data/
+      OSSF_MALWARE_ANALYSIS_RESULTS: s3://package-analysis?endpoint=minio:9000&disableSSL=true&s3ForcePathStyle=true
       MONGO_SERVER_URL: mongodb://root:example@mongo
       OSSMALWARE_DOCSTORE_URL: mongo://analysis/
       KAFKA_BROKERS: kafka:9092
+      AWS_ACCESS_KEY_ID: minio
+      AWS_SECRET_ACCESS_KEY: minio123
+      AWS_REGION: dummy_region
     depends_on:
       - kafka
-    volumes:
-      - "./data/:/data/"
-
   scheduler:
     restart: "on-failure"
     image: gcr.io/ossf-malware-analysis/scheduler:latest
