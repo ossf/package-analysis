@@ -50,14 +50,19 @@ func messageLoop(ctx context.Context, sub *pubsub.Subscription, resultsBucket, d
 
 		log.Printf("Got request %s/%s at version %s", ecosystem, name, version)
 		result := analysis.Run(ecosystem, name, version, manager.Image, manager.CommandFmt(name, version))
-		err = analysis.UploadResults(ctx, resultsBucket, ecosystem+"/"+name, result)
-		if err != nil {
-			log.Panicf("Failed to upload to blobstore = %v\n", err)
+
+		if resultsBucket != "" {
+			err = analysis.UploadResults(ctx, resultsBucket, ecosystem+"/"+name, result)
+			if err != nil {
+				log.Panicf("Failed to upload to blobstore = %v\n", err)
+			}
 		}
 
-		err = analysis.WriteResultsToDocstore(ctx, docstorePath, result)
-		if err != nil {
-			log.Panicf("Failed to write to docstore = %v\n", err)
+		if docstorePath != "" {
+			err = analysis.WriteResultsToDocstore(ctx, docstorePath, result)
+			if err != nil {
+				log.Panicf("Failed to write to docstore = %v\n", err)
+			}
 		}
 
 		msg.Ack()
