@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"os"
+	"time"
 
 	"gocloud.dev/pubsub"
 	_ "gocloud.dev/pubsub/gcppubsub"
@@ -15,6 +17,12 @@ import (
 	"github.com/ossf/package-feeds/feeds"
 )
 
+const (
+	maxRetries    = 10
+	retryInterval = 1
+	retryExpRate  = 1.5
+)
+
 var supportedPkgManagers = map[string]bool{
 	"npm":      true,
 	"pypi":     true,
@@ -22,18 +30,40 @@ var supportedPkgManagers = map[string]bool{
 }
 
 func main() {
+	retryCount := 0
 	subscriptionURL := os.Getenv("OSSMALWARE_SUBSCRIPTION_URL")
+	topicURL := os.Getenv("OSSMALWARE_WORKER_TOPIC")
+
+	for retryCount <= maxRetries {
+		err := listenLoop(subscriptionURL, topicURL)
+
+		if err != nil {
+			if retryCount++; retryCount >= maxRetries {
+				log.Printf("Retries exceeded, Error: %v\n", err)
+				break
+			}
+			log.Printf("Warning: %v\n", err)
+
+			retryDuration := time.Second * time.Duration(retryDelay(retryCount))
+			log.Printf("Error encountered, will try again after %v seconds\n", retryDuration.Seconds())
+			time.Sleep(retryDuration)
+		}
+	}
+}
+
+func listenLoop(subUrl, topicURL string) error {
 	ctx := context.Background()
-	sub, err := pubsub.OpenSubscription(ctx, subscriptionURL)
+
+	sub, err := pubsub.OpenSubscription(ctx, subUrl)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	topicURL := os.Getenv("OSSMALWARE_WORKER_TOPIC")
 	topic, err := pubsub.OpenTopic(ctx, topicURL)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
 	srv := proxy.New(topic, sub)
 	fmt.Println("Listening for messages to proxy...")
 
@@ -56,7 +86,9 @@ func main() {
 		}, nil
 	})
 
-	if err != nil {
-		panic(err)
-	}
+	return err
+}
+
+func retryDelay(retryCount int) int {
+	return int(math.Floor(retryInterval * math.Pow(retryExpRate, float64(retryCount))))
 }
