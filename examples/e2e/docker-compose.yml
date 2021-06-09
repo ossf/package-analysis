@@ -41,7 +41,6 @@ services:
       retries: 3
 
   analysis:
-    restart: "on-failure"
     image: gcr.io/ossf-malware-analysis/analysis:latest
     privileged: true
     entrypoint: "/usr/local/bin/worker"
@@ -56,8 +55,8 @@ services:
       AWS_REGION: dummy_region
     depends_on:
       - kafka
+
   scheduler:
-    restart: "on-failure"
     image: gcr.io/ossf-malware-analysis/scheduler:latest
     entrypoint: "/usr/local/bin/scheduler"
     depends_on:
