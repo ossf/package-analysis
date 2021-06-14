@@ -24,12 +24,15 @@ An example of these variables can be found in the [e2e example docker-compose](e
 ### Analysis
 
 `OSSMALWARE_WORKER_SUBSCRIPTION` - Can be used to set the subscription URL for the data coming out of scheduler. Values should follow [goclouddev subscriptions](https://gocloud.dev/howto/pubsub/subscribe/).
+
 `OSSF_MALWARE_ANALYSIS_RESULTS` - **OPTIONAL**: Can be used to set the bucket URL to publish results to. Values should follow [goclouddev buckets](https://gocloud.dev/howto/blob/).
+
 `OSSMALWARE_DOCSTORE_URL` - **OPTIONAL**: Can be used to set the docstore URL to publish results to. Values should follow [goclouddev docstore](https://gocloud.dev/howto/docstore/).
 
 ### Scheduler
 
 `OSSMALWARE_WORKER_TOPIC` - Can be used to set the topic URL to publish data for consumption by Analysis workers. Values should follow [goclouddev publishing](https://gocloud.dev/howto/pubsub/publish/).
+
 `OSSMALWARE_SUBSCRIPTION_URL` - Can be used to set the subscription URL for the data coming out of [package-feeds](https://github.com/ossf/package-feeds). Values should follow [goclouddev subscriptions](https://gocloud.dev/howto/pubsub/subscribe/).
 
 # Contributing
