@@ -14,7 +14,7 @@ import (
 	_ "gocloud.dev/pubsub/kafkapubsub"
 
 	"github.com/ossf/package-analysis/scheduler/proxy"
-	"github.com/ossf/package-feeds/feeds"
+	"github.com/ossf/package-feeds/pkg/feeds"
 )
 
 const (
