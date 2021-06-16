@@ -1,0 +1,26 @@
+name: "Build"
+
+on:
+  pull_request:
+
+jobs:
+  Build:
+    name:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-go@v2
+      with:
+        go-version: '1.15.5'
+    - run: go build -o scheduler
+      working-directory: scheduler
+    - run: go build -o worker cmd/worker.go
+      working-directory: analysis
+    - run: go build -o analyze cmd/analyze.go
+      working-directory: analysis
+    - run: go build -o analyze cmd/fillindexes.go
+      working-directory: analysis
+    - run: go build -o server main.go
+      working-directory: server
+    - run: go build -o loader load.go
+      working-directory: loader
