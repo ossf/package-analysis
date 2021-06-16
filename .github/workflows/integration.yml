@@ -44,7 +44,7 @@ jobs:
       - name: setup-go
         uses: actions/setup-go@v2
         with:
-          go-version: '1.15.5'
+          go-version: '1.16.5'
 
       # Include the integration tests here.
 

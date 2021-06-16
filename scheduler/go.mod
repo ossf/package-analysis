@@ -1,6 +1,6 @@
 module github.com/ossf/package-analysis/scheduler
 
-go 1.15
+go 1.16
 
 require (
 	github.com/ossf/package-feeds v0.0.0-20210521141112-9f84198979a6
