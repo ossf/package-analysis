@@ -1,7 +1,7 @@
 version: "3"
 services:
   zookeeper:
-    image: confluentinc/cp-zookeeper
+    image: confluentinc/cp-zookeeper@sha256:87314e87320abf190f0407bf1689f4827661fbb4d671a41cba62673b45b66bfa
     ports:
       - "2181:2181"
     environment:
@@ -10,7 +10,7 @@ services:
       ZOOKEEPER_SYNC_LIMIT: 2
 
   kafka:
-    image: confluentinc/cp-kafka
+    image: confluentinc/cp-kafka@sha256:c6320f9a0cbf57075e102546de110dcebdf374955f12388d58c23a54b8a47d31
     ports:
       - 9094:9094
     depends_on:
@@ -24,7 +24,7 @@ services:
       KAFKA_offsets_topic_replication_factor: 1
 
   minio:
-    image: minio/minio:RELEASE.2021-05-27T22-06-31Z
+    image: minio/minio@sha256:684ce208c005fe032659ec77bafa6a17a16c41686c334618dec924b3505e7090
     hostname: minio
     ports:
       - 9000:9000
@@ -79,14 +79,14 @@ services:
       - "./config/:/config/"
 
   mongo:
-    image: mongo
+    image: mongo@sha256:482a562bf25f42f02ce589458f72866bbe9eded5b6f8fa5b1213313f0e00bba2
     restart: always
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
 
   mongo-express:
-    image: mongo-express
+    image: mongo-express@sha256:6ad795986bf2138b254012e82b080761e8563887cdc8357fcd0bc1646805544f
     restart: always
     ports:
       - 8081:8081
