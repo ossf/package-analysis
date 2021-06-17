@@ -1,6 +1,6 @@
 module github.com/ossf/package-analysis/analysis
 
-go 1.15
+go 1.16
 
 require (
 	gocloud.dev v0.23.0
