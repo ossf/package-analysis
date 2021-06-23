@@ -242,7 +242,14 @@ func Run(ecosystem, pkgName, version, image, command string) *AnalysisResult {
 
 	cmd := exec.Command(
 		"podman", "run", "--runtime=/usr/local/bin/runsc", "--cgroup-manager=cgroupfs",
-		"--events-backend=file", "--rm", image, "sh", "-c", command)
+		"--events-backend=file", "--rm")
+
+	podmanRoot := os.Getenv("PODMAN_ROOT")
+	if podmanRoot != "" {
+		cmd.Args = append(cmd.Args, "--root", podmanRoot)
+	}
+
+	cmd.Args = append(cmd.Args, image, "sh", "-c", command)
 	cmd.Stdout = os.Stdout
 
 	pipe, err := cmd.StderrPipe()
