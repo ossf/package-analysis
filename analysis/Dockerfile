@@ -19,7 +19,7 @@ RUN apt-get update && apt-get upgrade -y && \
 
 # Install gVisor.
 RUN curl -fsSL https://gvisor.dev/archive.key | apt-key add - && \
-    add-apt-repository "deb https://storage.googleapis.com/gvisor/releases master main" && \
+    add-apt-repository "deb https://storage.googleapis.com/gvisor/releases 20210601 main" && \
     apt-get update && apt-get install -y runsc
 
 # runsc with our own builtin args.
@@ -29,6 +29,8 @@ COPY --from=build /src/analyze /usr/local/bin/analyze
 COPY --from=build /src/worker /usr/local/bin/worker
 
 # Cache analysis images.
-RUN podman pull gcr.io/ossf-malware-analysis/node && \
-    podman pull gcr.io/ossf-malware-analysis/python && \
-    podman pull gcr.io/ossf-malware-analysis/ruby
+ARG NO_PODMAN_PULL
+RUN test -n "$NO_PODMAN_PULL" || \
+    (podman pull gcr.io/ossf-malware-analysis/node && \
+     podman pull gcr.io/ossf-malware-analysis/python && \
+     podman pull gcr.io/ossf-malware-analysis/ruby)

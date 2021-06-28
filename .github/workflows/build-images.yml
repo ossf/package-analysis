@@ -1,0 +1,25 @@
+name: "Build docker"
+
+on: [pull_request, push]
+
+jobs:
+  build_docker:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: setup-go
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.15.5'
+
+    - name: Enable docker experimental
+      run: |
+        echo $'{"experimental": true}' | sudo dd status=none of=/etc/docker/daemon.json
+        sudo service docker restart
+        docker version -f '{{.Server.Experimental}}'
+
+    - name: build_docker
+      run: NOPUSH=true NO_PODMAN_PULL=1 ./build_docker.sh
+      working-directory: build
