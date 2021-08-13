@@ -64,7 +64,7 @@ func messageLoop(ctx context.Context, subURL, resultsBucket, docstorePath string
 		log.Printf("Installing version %s", version)
 
 		log.Printf("Got request %s/%s at version %s", ecosystem, name, version)
-		result := analysis.Run(ecosystem, name, version, manager.Image, manager.CommandFmt(name, version))
+		result := analysis.RunLive(ecosystem, name, version, manager.Image, manager.CommandFmt(name, version))
 
 		if resultsBucket != "" {
 			err = analysis.UploadResults(ctx, resultsBucket, ecosystem+"/"+name, result)

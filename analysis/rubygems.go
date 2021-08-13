@@ -31,7 +31,10 @@ func getRubyGemsLatest(pkg string) string {
 var RubyGemsPackageManager = PkgManager{
 	Image: "gcr.io/ossf-malware-analysis/ruby",
 	CommandFmt: func(pkg, ver string) string {
-		return fmt.Sprintf("analyze.rb %s %s", pkg, ver)
+		if ver != "" {
+			return fmt.Sprintf("analyze.rb %s %s", pkg, ver)
+		}
+		return fmt.Sprintf("analyze.rb %s", pkg)
 	},
 	GetLatest: getRubyGemsLatest,
 }
