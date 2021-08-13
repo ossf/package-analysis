@@ -51,8 +51,8 @@ To run this on a live package (e.g. the "Django" package on https://pypi.org)
 
 ```bash
 $ mkdir /tmp/results
-$ docker run --privileged -ti -v \
-    /tmp/results:/results \
+$ docker run --privileged -ti \
+    -v /tmp/results:/results \
     gcr.io/ossf-malware-analysis/analysis analyze \
     -package Django -ecosystem pypi \
     -upload file:///results/
@@ -64,9 +64,9 @@ be mounted into the the container.
 
 ```bash
 $ mkdir /tmp/results
-$ docker run --privileged -ti -v \
-    /tmp/results:/results \
-    /path/to/test.whl:/test.whl \
+$ docker run --privileged -ti \
+    -v /tmp/results:/results \
+    -v /path/to/test.whl:/test.whl \
     gcr.io/ossf-malware-analysis/analysis analyze \
     -local /test.whl -ecosystem pypi \
     -upload file:///results/
