@@ -52,6 +52,9 @@ func main() {
 			log.Panic("Unable to specify version for local packages")
 		}
 		live = false
+	} else {
+		flag.Usage()
+		return
 	}
 
 	command := manager.CommandFmt(pkgName, *version)
