@@ -4,53 +4,66 @@ import (
 	"context"
 	"flag"
 	"log"
-	"regexp"
-	"strings"
+	"net/url"
 
 	"github.com/ossf/package-analysis/analysis"
 )
 
 var (
-	pkg      = flag.String("package", "", "ecosystem/package")
-	version  = flag.String("version", "", "version")
-	upload   = flag.String("upload", "", "bucket path for uploading results")
-	docstore = flag.String("docstore", "", "docstore path")
+	pkg       = flag.String("package", "", "live package name")
+	localPkg  = flag.String("local", "", "local package path")
+	ecosystem = flag.String("ecosystem", "", "ecosystem (npm, pypi, or rubygems)")
+	version   = flag.String("version", "", "version")
+	upload    = flag.String("upload", "", "bucket path for uploading results")
+	docstore  = flag.String("docstore", "", "docstore path")
 )
 
 func parseBucketPath(path string) (string, string) {
-	pattern := regexp.MustCompile(`(.*?://[^/]+)/(.*)`)
-	match := pattern.FindStringSubmatch(path)
-	if match == nil {
-		log.Panic("Failed to parse bucket path: %s", path)
+	parsed, err := url.Parse(path)
+	if err != nil {
+		log.Panicf("Failed to parse bucket path: %s", path)
 	}
 
-	return match[1], match[2]
+	return parsed.Scheme + "://" + parsed.Host, parsed.Path
 }
 
 func main() {
 	flag.Parse()
-	if *pkg == "" {
+	if *ecosystem == "" {
 		flag.Usage()
 		return
 	}
-	pkgParts := strings.SplitN(*pkg, "/", 2)
-	if len(pkgParts) != 2 {
-		log.Panicf("Invalid package format: %s", *pkg)
-	}
 
-	ecosystem, name := pkgParts[0], pkgParts[1]
-
-	manager, ok := analysis.SupportedPkgManagers[ecosystem]
+	manager, ok := analysis.SupportedPkgManagers[*ecosystem]
 	if !ok {
 		log.Panicf("Unsupported pkg manager %s", manager)
 	}
 
-	if *version == "" {
-		*version = manager.GetLatest(name)
+	var pkgName string
+	live := true
+	if *pkg != "" {
+		pkgName = *pkg
+		if *version == "" {
+			*version = manager.GetLatest(pkgName)
+		}
+	} else if *localPkg != "" {
+		pkgName = *localPkg
+		if *version != "" {
+			log.Panic("Unable to specify version for local packages")
+		}
+		live = false
+	} else {
+		flag.Usage()
+		return
 	}
 
-	command := manager.CommandFmt(name, *version)
-	result := analysis.Run(ecosystem, name, *version, manager.Image, command)
+	command := manager.CommandFmt(pkgName, *version)
+	var result *analysis.AnalysisResult
+	if live {
+		result = analysis.RunLive(*ecosystem, pkgName, *version, manager.Image, command)
+	} else {
+		result = analysis.RunLocal(*ecosystem, pkgName, *version, manager.Image, command)
+	}
 
 	ctx := context.Background()
 	if *upload != "" {

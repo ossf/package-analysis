@@ -232,18 +232,38 @@ func analyzeSyscall(syscall, args string, info *analysisInfo) {
 	}
 }
 
-func Run(ecosystem, pkgName, version, image, command string) *AnalysisResult {
-	log.Printf("Running analysis using %s: %s", image, command)
+func RunLocal(ecosystem, pkgPath, version, image, command string) *AnalysisResult {
+	cmd := podmanCmd(image, command, []string{
+		"-v", fmt.Sprintf("%s:%s", pkgPath, pkgPath),
+	})
+	return run(ecosystem, pkgPath, version, image, cmd)
+}
+
+func RunLive(ecosystem, pkgName, version, image, command string) *AnalysisResult {
+	cmd := podmanCmd(image, command, nil)
+	return run(ecosystem, pkgName, version, image, cmd)
+}
+
+func podmanCmd(image, command string, extraArgs []string) *exec.Cmd {
+	args := []string{
+		"run", "--runtime=/usr/local/bin/runsc", "--cgroup-manager=cgroupfs",
+		"--events-backend=file", "--rm",
+	}
+	args = append(args, extraArgs...)
+	args = append(args, image, "sh", "-c", command)
+
+	cmd := exec.Command("podman", args...)
+	cmd.Stdout = os.Stdout
+	return cmd
+}
+
+func run(ecosystem, pkgName, version, image string, cmd *exec.Cmd) *AnalysisResult {
+	log.Printf("Running analysis using %s %s", cmd.Path, cmd.Args)
 
 	// Delete existing logs (if any). This function uses a fixed log name and is not threadsafe.
 	if err := os.RemoveAll(logPath); err != nil {
 		log.Panic(err)
 	}
-
-	cmd := exec.Command(
-		"podman", "run", "--runtime=/usr/local/bin/runsc", "--cgroup-manager=cgroupfs",
-		"--events-backend=file", "--rm", image, "sh", "-c", command)
-	cmd.Stdout = os.Stdout
 
 	pipe, err := cmd.StderrPipe()
 	if err != nil {
@@ -261,7 +281,7 @@ func Run(ecosystem, pkgName, version, image, command string) *AnalysisResult {
 	if err := cmd.Wait(); err != nil {
 		// Not really an error
 		if !strings.Contains(string(stderr), "gofer is still running") {
-			log.Panic(err)
+			log.Panicf("%v: %s", err, string(stderr))
 		}
 	}
 
@@ -401,7 +421,12 @@ func UploadResults(ctx context.Context, bucket, path string, result *AnalysisRes
 	}
 	defer bkt.Close()
 
-	uploadPath := filepath.Join(path, result.Package.Version+".json")
+	filename := "results.json"
+	if result.Package.Version != "" {
+		filename = result.Package.Version + ".json"
+	}
+
+	uploadPath := filepath.Join(path, filename)
 	log.Printf("uploading to bucket=%s, path=%s", bucket, uploadPath)
 
 	w, err := bkt.NewWriter(ctx, uploadPath, nil)
