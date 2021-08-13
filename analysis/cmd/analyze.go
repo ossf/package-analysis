@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	pkg       = flag.String("package", "", "package name (or local path to package)")
+	pkg       = flag.String("package", "", "live package name")
 	localPkg  = flag.String("local", "", "local package path")
 	ecosystem = flag.String("ecosystem", "", "ecosystem (npm, pypi, or rubygems)")
 	version   = flag.String("version", "", "version")
