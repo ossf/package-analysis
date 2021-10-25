@@ -10,6 +10,21 @@ updates:
   schedule:
     interval: daily
   open-pull-requests-limit: 10
+- package-ecosystem: gomod
+  directory: "/server"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+- package-ecosystem: gomod
+  directory: "/loader"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+- package-ecosystem: npm
+  directory: "/web/dashboard"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
 - package-ecosystem: "github-actions"
   directory: "/"
   schedule:
