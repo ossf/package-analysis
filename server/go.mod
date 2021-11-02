@@ -3,7 +3,7 @@ module github.com/ossf/package-analysis/server
 go 1.17
 
 require (
-	cloud.google.com/go/firestore v1.5.0
+	cloud.google.com/go/firestore v1.6.1
 	github.com/gin-contrib/cors v1.3.1
 	github.com/gin-gonic/gin v1.7.4
 	google.golang.org/api v0.59.0
@@ -33,7 +33,7 @@ require (
 	golang.org/x/text v0.3.6 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20211008145708-270636b82663 // indirect
+	google.golang.org/genproto v0.0.0-20211028162531-8db9c33dc351 // indirect
 	google.golang.org/grpc v1.40.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/yaml.v2 v2.2.8 // indirect
