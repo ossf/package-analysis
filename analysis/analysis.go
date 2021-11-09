@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"gocloud.dev/blob"
@@ -28,9 +29,14 @@ type fileInfo struct {
 	Write bool
 }
 
+type socketInfo struct {
+	Address string
+	Port    int
+}
+
 type analysisInfo struct {
 	Files    map[string]*fileInfo
-	IPs      map[string]bool
+	Sockets  map[string]*socketInfo
 	Commands map[string]bool
 }
 
@@ -60,7 +66,7 @@ type Package struct {
 type AnalysisResult struct {
 	Package  Package
 	Files    []fileResult
-	IPs      []string
+	Sockets  []socketInfo
 	Commands []commandResult
 }
 
@@ -99,7 +105,10 @@ var (
 	// 0x3 /tmp/pip-install-398qx_i7/build/bdist.linux-x86_64/wheel, 0x7ff1e4a30620 mal, 0x7fae4d8741f0, 0x100
 	newfstatatPattern = regexp.MustCompile(`[^\s]+ ([^,]+), [^\s]+ ([^,]+)`)
 	// 0x3 socket:[2], 0x7f1bc9e7b914 {Family: AF_INET, Addr: 8.8.8.8, Port: 53}, 0x10
-	connectPattern = regexp.MustCompile(`.*AF_INET.*Addr: ([^,]+),`)
+	// 0x3 socket:[1], 0x7f27cbd0ac50 {Family: AF_INET, Addr: , Port: 0}, 0x10
+	// 0x3 socket:[4], 0x55ed873bb510 {Family: AF_INET6, Addr: 2001:67c:1360:8001::24, Port: 80}, 0x1c
+	// 0x3 socket:[16], 0x5568c5caf2d0 {Family: AF_INET, Addr: , Port: 5000}, 0x10
+	socketPattern = regexp.MustCompile(`{Family: AF_INET6?, Addr: ([^,]*), Port: ([0-9]+)}`)
 )
 
 func recordFileAccess(info *analysisInfo, file string, read, write bool) {
@@ -128,6 +137,25 @@ func parseOpenFlags(openFlags string) (read, write bool) {
 		read = true
 	}
 	return
+}
+
+func parsePort(portString string) int {
+	port, err := strconv.Atoi(portString)
+	if err != nil {
+		log.Panicf("failed to parse port %s: %v", portString, err)
+	}
+	return port
+}
+
+func recordSocket(info *analysisInfo, address string, port int) {
+	// Use a '-' dash as the address may contain colons if IPv6
+	key := fmt.Sprintf("%s-%d", address, port)
+	if _, exists := info.Sockets[key]; !exists {
+		info.Sockets[key] = &socketInfo{
+			Address: address,
+			Port:    port,
+		}
+	}
 }
 
 func extractCmdAndEnv(cmdAndEnv string) ([]string, []string) {
@@ -200,14 +228,20 @@ func analyzeSyscall(syscall, args string, info *analysisInfo) {
 
 		log.Printf("execve %s", match[1])
 		info.Commands[match[1]] = true
+	case "bind":
+		fallthrough
+	case "listen":
+		fallthrough
 	case "connect":
-		match := connectPattern.FindStringSubmatch(args)
+		match := socketPattern.FindStringSubmatch(args)
 		if match == nil {
-			log.Printf("failed to parse connect args: %s", args)
+			log.Printf("failed to parse socket args: %s", args)
 			return
 		}
-		log.Printf("connect %s", match[1])
-		info.IPs[match[1]] = true
+		address := match[1]
+		port := parsePort(match[2])
+		log.Printf("socket %s : %d", address, port)
+		recordSocket(info, address, port)
 	case "fstat":
 		fallthrough
 	case "lstat":
@@ -293,7 +327,7 @@ func run(ecosystem, pkgName, version, image string, cmd *exec.Cmd) *AnalysisResu
 
 	info := &analysisInfo{
 		Files:    make(map[string]*fileInfo),
-		IPs:      make(map[string]bool),
+		Sockets:  make(map[string]*socketInfo),
 		Commands: make(map[string]bool),
 	}
 
@@ -332,8 +366,8 @@ func (d *AnalysisResult) setData(ecosystem, pkgName, version string, info *analy
 			Write: info.Write,
 		})
 	}
-	for ip, _ := range info.IPs {
-		d.IPs = append(d.IPs, ip)
+	for _, socket := range info.Sockets {
+		d.Sockets = append(d.Sockets, *socket)
 	}
 	for command, _ := range info.Commands {
 		cmd, env := extractCmdAndEnv(command)
@@ -389,9 +423,13 @@ func (r *AnalysisResult) GenerateFileIndexes() []*DocstoreIndex {
 	return generateIndexEntries(r.Package, parts)
 }
 
-func (r *AnalysisResult) GenerateIPIndexes() []*DocstoreIndex {
-	// IPs are indexed as is.
-	return generateIndexEntries(r.Package, r.IPs)
+func (r *AnalysisResult) GenerateSocketIndexes() []*DocstoreIndex {
+	var parts []string
+	for _, socket := range r.Sockets {
+		parts = append(parts, fmt.Sprintf("%s-%d", socket.Address, socket.Port))
+		parts = append(parts, socket.Address)
+	}
+	return generateIndexEntries(r.Package, parts)
 }
 
 func (r *AnalysisResult) GenerateCmdIndexes() []*DocstoreIndex {
@@ -477,12 +515,12 @@ func WriteResultsToDocstore(ctx context.Context, collectionPrefix string, result
 		return err
 	}
 
-	ips := result.GenerateIPIndexes()
-	ipsPath, err := buildCollectionPath(collectionPrefix, "ips")
+	sockets := result.GenerateSocketIndexes()
+	socketsPath, err := buildCollectionPath(collectionPrefix, "sockets")
 	if err != nil {
 		return err
 	}
-	if err := writeIndexes(ctx, ipsPath, ips); err != nil {
+	if err := writeIndexes(ctx, socketsPath, sockets); err != nil {
 		return err
 	}
 
