@@ -15,7 +15,7 @@
     "vue-router": "^3.5.3"
   },
   "devDependencies": {
-    "@vue/cli": "^4.5.13",
+    "@vue/cli": "^4.5.15",
     "@vue/cli-plugin-babel": "~4.5.15",
     "@vue/cli-plugin-eslint": "~4.5.15",
     "@vue/cli-plugin-router": "~4.5.15",
