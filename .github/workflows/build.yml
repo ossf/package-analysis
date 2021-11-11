@@ -20,7 +20,6 @@ jobs:
       working-directory: analysis
     - run: go build -o analyze cmd/fillindexes.go
       working-directory: analysis
-    - run: go build -o server main.go
-      working-directory: server
+    - run: go build -o server cmd/server/main.go
     - run: go build -o loader load.go
       working-directory: loader

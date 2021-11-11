@@ -1,17 +1,17 @@
 version: 2
 updates:
 - package-ecosystem: gomod
+  directory: "/"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+- package-ecosystem: gomod
   directory: "/analysis"
   schedule:
     interval: daily
   open-pull-requests-limit: 10
 - package-ecosystem: gomod
   directory: "/scheduler"
-  schedule:
-    interval: daily
-  open-pull-requests-limit: 10
-- package-ecosystem: gomod
-  directory: "/server"
   schedule:
     interval: daily
   open-pull-requests-limit: 10
