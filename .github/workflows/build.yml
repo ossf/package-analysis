@@ -12,8 +12,7 @@ jobs:
     - uses: actions/setup-go@v2
       with:
         go-version: '1.17.1'
-    - run: go build -o scheduler
-      working-directory: scheduler
+    - run: go build -o scheduler cmd/scheduler/main.go
     - run: go build -o worker cmd/worker.go
       working-directory: analysis
     - run: go build -o analyze cmd/analyze.go

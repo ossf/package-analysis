@@ -17,7 +17,6 @@ done
 
 OTHER_IMAGES=(
   analysis
-  scheduler
 )
 
 for image in "${OTHER_IMAGES[@]}"; do
@@ -28,6 +27,7 @@ for image in "${OTHER_IMAGES[@]}"; do
 done
 
 CMD_IMAGES=(
+  scheduler
   server
 )
 
