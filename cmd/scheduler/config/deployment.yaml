@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: app
-        image: ko://github.com/ossf/package-analysis/scheduler
+        image: ko://github.com/ossf/package-analysis/cmd/scheduler
         env:
         - name: OSSMALWARE_SUBSCRIPTION_URL
           value: gcppubsub://projects/ossf-malware-analysis/subscriptions/feed-subscription

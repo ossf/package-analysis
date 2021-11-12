@@ -11,11 +11,6 @@ updates:
     interval: daily
   open-pull-requests-limit: 10
 - package-ecosystem: gomod
-  directory: "/scheduler"
-  schedule:
-    interval: daily
-  open-pull-requests-limit: 10
-- package-ecosystem: gomod
   directory: "/loader"
   schedule:
     interval: daily
