@@ -4,16 +4,16 @@ nopush=${NOPUSH:-"false"}
 
 BASE_PATH="$(dirname $(dirname $(realpath $0)))"
 REGISTRY=gcr.io/ossf-malware-analysis
-ANALYSIS_IMAGES=(
-  node
-  python
-  ruby
-)
 
-for image in "${ANALYSIS_IMAGES[@]}"; do
-  docker build -t $REGISTRY/$image $image
+# TODO: rename the Docker images
+declare -A ANALYSIS_IMAGES=( [node]=npm [python]=pypi [ruby]=rubygems )
+
+pushd "$BASE_PATH/sandboxes"
+for image in "${!ANALYSIS_IMAGES[@]}"; do
+  docker build -t $REGISTRY/$image ${ANALYSIS_IMAGES[$image]}
   [[ "$nopush" == "false" ]]  && docker push $REGISTRY/$image
 done
+popd
 
 OTHER_IMAGES=(
   analysis
