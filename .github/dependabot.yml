@@ -6,11 +6,6 @@ updates:
     interval: daily
   open-pull-requests-limit: 10
 - package-ecosystem: gomod
-  directory: "/analysis"
-  schedule:
-    interval: daily
-  open-pull-requests-limit: 10
-- package-ecosystem: gomod
   directory: "/function/loader"
   schedule:
     interval: daily
