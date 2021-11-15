@@ -1,7 +1,7 @@
 FROM golang@sha256:3c4de86eec9cbc619cdd72424abd88326ffcf5d813a8338a7743c55e5898734f as build
 WORKDIR /src
 COPY . ./
-RUN go build cmd/analyze.go && go build cmd/worker.go
+RUN go build -o analyze cmd/analyze/main.go && go build -o worker cmd/worker/main.go
 
 FROM ubuntu:21.04@sha256:be154cc2b1211a9f98f4d708f4266650c9129784d0485d4507d9b0fa05d928b6
 
@@ -21,9 +21,6 @@ RUN apt-get update && apt-get upgrade -y && \
 RUN curl -fsSL https://gvisor.dev/archive.key | apt-key add - && \
     add-apt-repository "deb https://storage.googleapis.com/gvisor/releases 20210601 main" && \
     apt-get update && apt-get install -y runsc
-
-# runsc with our own builtin args.
-COPY runsc /usr/local/bin
 
 COPY --from=build /src/analyze /usr/local/bin/analyze
 COPY --from=build /src/worker /usr/local/bin/worker

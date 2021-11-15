@@ -280,7 +280,15 @@ func RunLive(ecosystem, pkgName, version, image, command string) *AnalysisResult
 
 func podmanCmd(image, command string, extraArgs []string) *exec.Cmd {
 	args := []string{
-		"run", "--runtime=/usr/local/bin/runsc", "--cgroup-manager=cgroupfs",
+		"run",
+		"--runtime=/usr/bin/runsc",
+		"--runtime-flag=root=/var/run/runsc",
+		"--runtime-flag=debug-log=/tmp/runsc.log.%COMMAND%",
+		"--runtime-flag=net-raw",
+		"--runtime-flag=debug",
+		"--runtime-flag=strace",
+		"--runtime-flag=log-packets",
+		"--cgroup-manager=cgroupfs",
 		"--events-backend=file", "--rm",
 	}
 	args = append(args, extraArgs...)
