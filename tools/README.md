@@ -1,4 +1,3 @@
 # Package Analysis Tools
 
-This directory contains scripts and tools used during development and the
-management of the Package Analysis project and infrastructure.
+This directory contains scripts and tools useful during development and testing.

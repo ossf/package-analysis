@@ -6,34 +6,99 @@ originally started there.
 
 These are:
 
-[Analysis](./analysis/) to collect package behavior data and make it available publicly
-for researchers.
+[Analysis](./analysis/) to collect package behavior data and make it available
+publicly for researchers.
 
-[Scheduler](./scheduler/) to create jobs for Analysis based on the data from Feeds.
+[Scheduler](./scheduler/) to create jobs for Analysis based on the data from
+Feeds.
 
-The goal is for all of these components to work together and provide extensible, community-run
-infrastructure to study behavior of open source packages and to look for malicious software.
-We also hope that the components can be used independently, to provide package feeds or runtime
-behavior data for anyone interested.
+The goal is for all of these components to work together and provide extensible,
+community-run infrastructure to study behavior of open source packages and to
+look for malicious software. We also hope that the components can be used
+independently, to provide package feeds or runtime behavior data for anyone
+interested.
 
 ## Configuration
 
-Configuration for these subprojects consist of a collection of environment variables for the various endpoints. These endpoints are configured using goclouddev compatible URL strings. In these cases, documentation will be linked to and `DRIVER-Constructor` sections should be ignored in favour of `DRIVER` sections as these are appropriate to the configurations in place throughout these subprojects. Note that not all drivers will be supported but they can be added quite simply with a minor patch to the repository. See the addition of kafka for scheduler in [one line](https://github.com/ossf/package-analysis/commit/985ab76a67d29d2fc8582b3920643e7eb963da8a#diff-8565ef29cfb886db7902792675eddce1e7a0ccfe33428a59e7f2e365b354af88R12).
+Configuration for these subprojects consist of a collection of environment
+variables for the various endpoints. These endpoints are configured using
+goclouddev compatible URL strings. In these cases, documentation will be linked
+to and `DRIVER-Constructor` sections should be ignored in favour of `DRIVER`
+sections as these are appropriate to the configurations in place throughout
+these subprojects. Note that not all drivers will be supported but they can be
+added quite simply with a minor patch to the repository. See the addition of
+kafka for scheduler in
+[one line](https://github.com/ossf/package-analysis/commit/985ab76a67d29d2fc8582b3920643e7eb963da8a#diff-8565ef29cfb886db7902792675eddce1e7a0ccfe33428a59e7f2e365b354af88R12).
 
-An example of these variables can be found in the [e2e example docker-compose](examples/e2e/docker-compose.yml).
+An example of these variables can be found in the
+[e2e example docker-compose](examples/e2e/docker-compose.yml).
+
 ### Analysis
 
-`OSSMALWARE_WORKER_SUBSCRIPTION` - Can be used to set the subscription URL for the data coming out of scheduler. Values should follow [goclouddev subscriptions](https://gocloud.dev/howto/pubsub/subscribe/).
+`OSSMALWARE_WORKER_SUBSCRIPTION` - Can be used to set the subscription URL for
+the data coming out of scheduler. Values should follow
+[goclouddev subscriptions](https://gocloud.dev/howto/pubsub/subscribe/).
 
-`OSSF_MALWARE_ANALYSIS_RESULTS` - **OPTIONAL**: Can be used to set the bucket URL to publish results to. Values should follow [goclouddev buckets](https://gocloud.dev/howto/blob/).
+`OSSF_MALWARE_ANALYSIS_RESULTS` - **OPTIONAL**: Can be used to set the bucket
+URL to publish results to. Values should follow
+[goclouddev buckets](https://gocloud.dev/howto/blob/).
 
-`OSSMALWARE_DOCSTORE_URL` - **OPTIONAL**: Can be used to set the docstore URL to publish results to. Values should follow [goclouddev docstore](https://gocloud.dev/howto/docstore/).
+`OSSMALWARE_DOCSTORE_URL` - **OPTIONAL**: Can be used to set the docstore URL to
+publish results to. Values should follow
+[goclouddev docstore](https://gocloud.dev/howto/docstore/).
 
 ### Scheduler
 
-`OSSMALWARE_WORKER_TOPIC` - Can be used to set the topic URL to publish data for consumption by Analysis workers. Values should follow [goclouddev publishing](https://gocloud.dev/howto/pubsub/publish/).
+`OSSMALWARE_WORKER_TOPIC` - Can be used to set the topic URL to publish data for
+consumption by Analysis workers. Values should follow
+[goclouddev publishing](https://gocloud.dev/howto/pubsub/publish/).
 
-`OSSMALWARE_SUBSCRIPTION_URL` - Can be used to set the subscription URL for the data coming out of [package-feeds](https://github.com/ossf/package-feeds). Values should follow [goclouddev subscriptions](https://gocloud.dev/howto/pubsub/subscribe/).
+`OSSMALWARE_SUBSCRIPTION_URL` - Can be used to set the subscription URL for the
+data coming out of [package-feeds](https://github.com/ossf/package-feeds).
+Values should follow
+[goclouddev subscriptions](https://gocloud.dev/howto/pubsub/subscribe/).
+
+## Local Analysis
+
+To run the analysis code locally, the easiest way is to use the Docker image
+`gcr.io/ossf-malware-analysis/analysis`. This can be built from
+`./build/build_docker.sh`.
+
+This container uses `podman` to run a nested, sandboxed ([gVisor]) container for
+analysis.
+
+The following commands will dump the JSON result to `/tmp/results`.
+
+[gVisor]: https://gvisor.dev/
+
+### Live package
+
+To run this on a live package (e.g. the "Django" package on
+[pypi.org](https://pypi.org))
+
+```bash
+$ mkdir /tmp/results
+$ docker run --privileged -ti \
+    -v /tmp/results:/results \
+    gcr.io/ossf-malware-analysis/analysis analyze \
+    -package Django -ecosystem pypi \
+    -upload file:///results/
+```
+
+### Local package
+
+To run this on a local package archive (e.g. `/path/to/test.whl`), it needs to
+be mounted into the the container.
+
+```bash
+$ mkdir /tmp/results
+$ docker run --privileged -ti \
+    -v /tmp/results:/results \
+    -v /path/to/test.whl:/test.whl \
+    gcr.io/ossf-malware-analysis/analysis analyze \
+    -local /test.whl -ecosystem pypi \
+    -upload file:///results/
+```
 
 # Contributing
 
