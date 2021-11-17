@@ -40,12 +40,6 @@ type analysisInfo struct {
 	Commands map[string]bool
 }
 
-type PkgManager struct {
-	CommandFmt func(string, string) string
-	GetLatest  func(string) string
-	Image      string
-}
-
 type commandResult struct {
 	Command     []string
 	Environment []string
@@ -79,14 +73,6 @@ type DocstoreIndex struct {
 const (
 	logPath         = "/tmp/runsc.log.boot"
 	maxIndexEntries = 10000
-)
-
-var (
-	SupportedPkgManagers = map[string]PkgManager{
-		"npm":      NPMPackageManager,
-		"pypi":     PyPIPackageManager,
-		"rubygems": RubyGemsPackageManager,
-	}
 )
 
 var (

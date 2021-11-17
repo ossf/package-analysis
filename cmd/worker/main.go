@@ -13,6 +13,7 @@ import (
 	_ "gocloud.dev/pubsub/kafkapubsub"
 
 	"github.com/ossf/package-analysis/analysis"
+	"github.com/ossf/package-analysis/internal/pkgecosystem"
 )
 
 const (
@@ -49,7 +50,7 @@ func messageLoop(ctx context.Context, subURL, resultsBucket, docstorePath string
 			continue
 		}
 
-		manager, ok := analysis.SupportedPkgManagers[ecosystem]
+		manager, ok := pkgecosystem.SupportedPkgManagers[ecosystem]
 		if !ok {
 			log.Printf("Unsupported pkg manager %s", manager)
 			msg.Ack()

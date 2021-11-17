@@ -7,6 +7,7 @@ import (
 	"net/url"
 
 	"github.com/ossf/package-analysis/analysis"
+	"github.com/ossf/package-analysis/internal/pkgecosystem"
 )
 
 var (
@@ -34,7 +35,7 @@ func main() {
 		return
 	}
 
-	manager, ok := analysis.SupportedPkgManagers[*ecosystem]
+	manager, ok := pkgecosystem.SupportedPkgManagers[*ecosystem]
 	if !ok {
 		log.Panicf("Unsupported pkg manager %s", manager)
 	}
