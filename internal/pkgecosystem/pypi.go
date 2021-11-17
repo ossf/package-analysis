@@ -1,4 +1,4 @@
-package analysis
+package pkgecosystem
 
 import (
 	"encoding/json"
@@ -31,6 +31,7 @@ func getPyPILatest(pkg string) string {
 }
 
 var PyPIPackageManager = PkgManager{
+	Name:  "pypi",
 	Image: "gcr.io/ossf-malware-analysis/python",
 	CommandFmt: func(pkg, ver string) string {
 		if ver != "" {

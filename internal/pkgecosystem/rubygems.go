@@ -1,4 +1,4 @@
-package analysis
+package pkgecosystem
 
 import (
 	"encoding/json"
@@ -29,6 +29,7 @@ func getRubyGemsLatest(pkg string) string {
 }
 
 var RubyGemsPackageManager = PkgManager{
+	Name:  "rubygems",
 	Image: "gcr.io/ossf-malware-analysis/ruby",
 	CommandFmt: func(pkg, ver string) string {
 		if ver != "" {

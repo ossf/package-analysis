@@ -1,4 +1,4 @@
-package analysis
+package pkgecosystem
 
 import (
 	"encoding/json"
@@ -31,6 +31,7 @@ func getNPMLatest(pkg string) string {
 }
 
 var NPMPackageManager = PkgManager{
+	Name:  "npm",
 	Image: "gcr.io/ossf-malware-analysis/node",
 	CommandFmt: func(pkg, ver string) string {
 		if ver != "" {
