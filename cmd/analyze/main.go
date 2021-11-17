@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/url"
 
-	"github.com/ossf/package-analysis/analysis"
+	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 )
 

@@ -12,7 +12,7 @@ import (
 	_ "gocloud.dev/pubsub/gcppubsub"
 	_ "gocloud.dev/pubsub/kafkapubsub"
 
-	"github.com/ossf/package-analysis/analysis"
+	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 )
 

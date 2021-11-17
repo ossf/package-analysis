@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ossf/package-analysis/analysis"
+	"github.com/ossf/package-analysis/internal/analysis"
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/gcsblob"
 )
