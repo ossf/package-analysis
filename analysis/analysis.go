@@ -1,7 +1,6 @@
 package analysis
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -10,10 +9,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
-	"strconv"
 	"strings"
 
+	"github.com/ossf/package-analysis/internal/strace"
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/fileblob"
 	_ "gocloud.dev/blob/gcsblob"
@@ -24,31 +22,20 @@ import (
 	_ "gocloud.dev/docstore/mongodocstore"
 )
 
-type fileInfo struct {
+type fileResult struct {
+	Path  string
 	Read  bool
 	Write bool
 }
 
-type socketInfo struct {
+type socketResult struct {
 	Address string
 	Port    int
-}
-
-type analysisInfo struct {
-	Files    map[string]*fileInfo
-	Sockets  map[string]*socketInfo
-	Commands map[string]bool
 }
 
 type commandResult struct {
 	Command     []string
 	Environment []string
-}
-
-type fileResult struct {
-	Path  string
-	Read  bool
-	Write bool
 }
 
 type Package struct {
@@ -60,7 +47,7 @@ type Package struct {
 type AnalysisResult struct {
 	Package  Package
 	Files    []fileResult
-	Sockets  []socketInfo
+	Sockets  []socketResult
 	Commands []commandResult
 }
 
@@ -74,183 +61,6 @@ const (
 	logPath         = "/tmp/runsc.log.boot"
 	maxIndexEntries = 10000
 )
-
-var (
-	// 510 06:34:52.506847   43512 strace.go:587] [   2] python3 E openat(AT_FDCWD /app, 0x7f13f2254c50 /root/.ssh, O_RDONLY|O_CLOEXEC|O_DIRECTORY|O_NONBLOCK, 0o0)
-	stracePattern = regexp.MustCompile(`.*strace.go:\d+\] \[.*?\] ([^\s]+) (E|X) ([^\s]+)\((.*)\)`)
-	// 0x7f1c3a0a2620 /usr/bin/uname, 0x7f1c39e12930 ["uname", "-rs"], 0x55bbefc2d070 ["HOSTNAME=63d5c9dbacb6", "PYTHON_PIP_VERSION=21.0.1", "HOME=/root"]
-	execvePattern = regexp.MustCompile(`.*?(\[.*\])`)
-	//0x7f13f201a0a3 /path, 0x0
-	creatPattern = regexp.MustCompile(`[^\s]+ ([^,]+)`)
-	//0x7f13f201a0a3 /proc/self/fd, O_RDONLY|O_CLOEXEC,
-	openPattern = regexp.MustCompile(`[^\s]+ ([^,]+), ([^,]+)`)
-	// AT_FDCWD /app, 0x7f13f201a0a3 /proc/self/fd, O_RDONLY|O_CLOEXEC, 0o0
-	openatPattern = regexp.MustCompile(`[^\s]+ ([^,]+), [^\s]+ ([^,]+), ([^,]+)`)
-	// 0x561c42f5be30 /usr/local/bin/Modules/Setup.local, 0x7fdfb323c180
-	statPattern = regexp.MustCompile(`[^\s]+ ([^,]+),`)
-	// 0x3 /tmp/pip-install-398qx_i7/build/bdist.linux-x86_64/wheel, 0x7ff1e4a30620 mal, 0x7fae4d8741f0, 0x100
-	newfstatatPattern = regexp.MustCompile(`[^\s]+ ([^,]+), [^\s]+ ([^,]+)`)
-	// 0x3 socket:[2], 0x7f1bc9e7b914 {Family: AF_INET, Addr: 8.8.8.8, Port: 53}, 0x10
-	// 0x3 socket:[1], 0x7f27cbd0ac50 {Family: AF_INET, Addr: , Port: 0}, 0x10
-	// 0x3 socket:[4], 0x55ed873bb510 {Family: AF_INET6, Addr: 2001:67c:1360:8001::24, Port: 80}, 0x1c
-	// 0x3 socket:[16], 0x5568c5caf2d0 {Family: AF_INET, Addr: , Port: 5000}, 0x10
-	socketPattern = regexp.MustCompile(`{Family: AF_INET6?, Addr: ([^,]*), Port: ([0-9]+)}`)
-)
-
-func recordFileAccess(info *analysisInfo, file string, read, write bool) {
-	if _, exists := info.Files[file]; !exists {
-		info.Files[file] = &fileInfo{}
-	}
-	info.Files[file].Read = info.Files[file].Read || read
-	info.Files[file].Write = info.Files[file].Write || write
-}
-
-func parseOpenFlags(openFlags string) (read, write bool) {
-	if strings.Contains(openFlags, "O_RDWR") {
-		read = true
-		write = true
-	}
-
-	if strings.Contains(openFlags, "O_CREAT") {
-		write = true
-	}
-
-	if strings.Contains(openFlags, "O_WRONLY") {
-		write = true
-	}
-
-	if strings.Contains(openFlags, "O_RDONLY") {
-		read = true
-	}
-	return
-}
-
-func parsePort(portString string) int {
-	port, err := strconv.Atoi(portString)
-	if err != nil {
-		log.Panicf("failed to parse port %s: %v", portString, err)
-	}
-	return port
-}
-
-func recordSocket(info *analysisInfo, address string, port int) {
-	// Use a '-' dash as the address may contain colons if IPv6
-	key := fmt.Sprintf("%s-%d", address, port)
-	if _, exists := info.Sockets[key]; !exists {
-		info.Sockets[key] = &socketInfo{
-			Address: address,
-			Port:    port,
-		}
-	}
-}
-
-func extractCmdAndEnv(cmdAndEnv string) ([]string, []string) {
-	decoder := json.NewDecoder(strings.NewReader(cmdAndEnv))
-	var cmd []string
-	// Decode up to end of first valid JSON (which is the command).
-	err := decoder.Decode(&cmd)
-	if err != nil {
-		log.Panicf("failed to parse %s: %v", cmdAndEnv, err)
-	}
-
-	// Find the start of the next JSON (which is the environment).
-	nextIdx := decoder.InputOffset() + int64(strings.Index(cmdAndEnv[decoder.InputOffset():], "["))
-	decoder = json.NewDecoder(strings.NewReader(cmdAndEnv[nextIdx:]))
-	var env []string
-	err = decoder.Decode(&env)
-	if err != nil {
-		log.Panicf("failed to parse %s: %v", cmdAndEnv[nextIdx:], err)
-	}
-
-	return cmd, env
-}
-
-func joinPaths(dir, file string) string {
-	if filepath.IsAbs(file) {
-		return file
-	}
-
-	return filepath.Join(dir, file)
-}
-
-func analyzeSyscall(syscall, args string, info *analysisInfo) {
-	switch syscall {
-	case "creat":
-		match := creatPattern.FindStringSubmatch(args)
-		if match == nil {
-			log.Printf("failed to parse creat args: %s", args)
-			return
-		}
-
-		log.Printf("creat %s", match[1])
-		recordFileAccess(info, match[1], false, true)
-	case "open":
-		match := openPattern.FindStringSubmatch(args)
-		if match == nil {
-			log.Printf("failed to parse open args: %s", args)
-			return
-		}
-
-		read, write := parseOpenFlags(match[2])
-		log.Printf("open %s read=%t, write=%t", match[1], read, write)
-		recordFileAccess(info, match[1], read, write)
-	case "openat":
-		match := openatPattern.FindStringSubmatch(args)
-		if match == nil {
-			log.Printf("failed to parse openat args: %s", args)
-			return
-		}
-
-		path := joinPaths(match[1], match[2])
-		read, write := parseOpenFlags(match[3])
-		log.Printf("openat %s read=%t, write=%t", path, read, write)
-		recordFileAccess(info, path, read, write)
-	case "execve":
-		match := execvePattern.FindStringSubmatch(args)
-		if match == nil {
-			log.Printf("failed to parse execve args: %s", args)
-			return
-		}
-
-		log.Printf("execve %s", match[1])
-		info.Commands[match[1]] = true
-	case "bind":
-		fallthrough
-	case "listen":
-		fallthrough
-	case "connect":
-		match := socketPattern.FindStringSubmatch(args)
-		if match == nil {
-			log.Printf("failed to parse socket args: %s", args)
-			return
-		}
-		address := match[1]
-		port := parsePort(match[2])
-		log.Printf("socket %s : %d", address, port)
-		recordSocket(info, address, port)
-	case "fstat":
-		fallthrough
-	case "lstat":
-		fallthrough
-	case "stat":
-		match := statPattern.FindStringSubmatch(args)
-		if match == nil {
-			log.Printf("failed to parse stat args: %s", args)
-			return
-		}
-		log.Printf("stat %s", match[1])
-		recordFileAccess(info, match[1], true, false)
-	case "newfstatat":
-		match := newfstatatPattern.FindStringSubmatch(args)
-		if match == nil {
-			log.Printf("failed to parse newfstatat args: %s", args)
-			return
-		}
-		path := joinPaths(match[1], match[2])
-		log.Printf("newfstatat %s", path)
-		recordFileAccess(info, path, true, false)
-	}
-}
 
 func RunLocal(ecosystem, pkgPath, version, image, command string) *AnalysisResult {
 	cmd := podmanCmd(image, command, []string{
@@ -319,57 +129,39 @@ func run(ecosystem, pkgName, version, image string, cmd *exec.Cmd) *AnalysisResu
 	}
 	defer file.Close()
 
-	info := &analysisInfo{
-		Files:    make(map[string]*fileInfo),
-		Sockets:  make(map[string]*socketInfo),
-		Commands: make(map[string]bool),
-	}
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		match := stracePattern.FindStringSubmatch(line)
-		if match == nil {
-			continue
-		}
-
-		if match[2] == "X" {
-			// Analyze exit events only.
-			analyzeSyscall(match[3], match[4], info)
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
+	straceResult, err := strace.Parse(file)
+	if err != nil {
 		log.Panic(err)
 	}
 
 	result := AnalysisResult{}
-	result.setData(ecosystem, pkgName, version, info)
+	result.setData(ecosystem, pkgName, version, straceResult)
 	return &result
 }
 
-func (d *AnalysisResult) setData(ecosystem, pkgName, version string, info *analysisInfo) {
+func (d *AnalysisResult) setData(ecosystem, pkgName, version string, straceResult *strace.Result) {
 	d.Package.Ecosystem = ecosystem
 	d.Package.Name = pkgName
 	d.Package.Version = version
 
-	for f, info := range info.Files {
+	for _, f := range straceResult.Files() {
 		d.Files = append(d.Files, fileResult{
-			Path:  f,
-			Read:  info.Read,
-			Write: info.Write,
+			Path:  f.Path,
+			Read:  f.Read,
+			Write: f.Write,
 		})
 	}
-	for _, socket := range info.Sockets {
-		d.Sockets = append(d.Sockets, *socket)
+	for _, s := range straceResult.Sockets() {
+		d.Sockets = append(d.Sockets, socketResult{
+			Address: s.Address,
+			Port:    s.Port,
+		})
 	}
-	for command, _ := range info.Commands {
-		cmd, env := extractCmdAndEnv(command)
-		result := commandResult{
-			Command:     cmd,
-			Environment: env,
-		}
-		d.Commands = append(d.Commands, result)
+	for _, c := range straceResult.Commands() {
+		d.Commands = append(d.Commands, commandResult{
+			Command:     c.Command,
+			Environment: c.Env,
+		})
 	}
 
 }
