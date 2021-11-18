@@ -4,13 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
+	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/internal/strace"
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/fileblob"
@@ -58,78 +56,42 @@ type DocstoreIndex struct {
 }
 
 const (
-	logPath         = "/tmp/runsc.log.boot"
 	maxIndexEntries = 10000
 )
 
 func RunLocal(ecosystem, pkgPath, version, image, command string) *AnalysisResult {
-	cmd := podmanCmd(image, command, []string{
+	return run(ecosystem, pkgPath, version, image, command, []string{
 		"-v", fmt.Sprintf("%s:%s", pkgPath, pkgPath),
 	})
-	return run(ecosystem, pkgPath, version, image, cmd)
 }
 
 func RunLive(ecosystem, pkgName, version, image, command string) *AnalysisResult {
-	cmd := podmanCmd(image, command, nil)
-	return run(ecosystem, pkgName, version, image, cmd)
+	return run(ecosystem, pkgName, version, image, command, nil)
 }
 
-func podmanCmd(image, command string, extraArgs []string) *exec.Cmd {
-	args := []string{
-		"run",
-		"--runtime=/usr/bin/runsc",
-		"--runtime-flag=root=/var/run/runsc",
-		"--runtime-flag=debug-log=/tmp/runsc.log.%COMMAND%",
-		"--runtime-flag=net-raw",
-		"--runtime-flag=debug",
-		"--runtime-flag=strace",
-		"--runtime-flag=log-packets",
-		"--cgroup-manager=cgroupfs",
-		"--events-backend=file", "--rm",
-	}
-	args = append(args, extraArgs...)
-	args = append(args, image, "sh", "-c", command)
+func run(ecosystem, pkgName, version, image, command string, args []string) *AnalysisResult {
+	log.Printf("Running analysis using %s %s", command, args)
 
-	cmd := exec.Command("podman", args...)
-	cmd.Stdout = os.Stdout
-	return cmd
-}
-
-func run(ecosystem, pkgName, version, image string, cmd *exec.Cmd) *AnalysisResult {
-	log.Printf("Running analysis using %s %s", cmd.Path, cmd.Args)
-
-	// Delete existing logs (if any). This function uses a fixed log name and is not threadsafe.
-	if err := os.RemoveAll(logPath); err != nil {
-		log.Panic(err)
-	}
-
-	pipe, err := cmd.StderrPipe()
+	// Init the sandbox
+	sb, err := sandbox.Init(image)
 	if err != nil {
 		log.Panic(err)
 	}
 
-	if err := cmd.Start(); err != nil {
-		log.Panic(err)
-	}
-	stderr, err := io.ReadAll(pipe)
+	// Run the command
+	r, err := sb.RunAndRemove(command, args...)
 	if err != nil {
 		log.Panic(err)
 	}
 
-	if err := cmd.Wait(); err != nil {
-		// Not really an error
-		if !strings.Contains(string(stderr), "gofer is still running") {
-			log.Panicf("%v: %s", err, string(stderr))
-		}
-	}
-
-	file, err := os.Open(logPath)
+	// Grab the log file
+	l, err := r.Log()
 	if err != nil {
 		log.Panic(err)
 	}
-	defer file.Close()
+	defer l.Close()
 
-	straceResult, err := strace.Parse(file)
+	straceResult, err := strace.Parse(l)
 	if err != nil {
 		log.Panic(err)
 	}
