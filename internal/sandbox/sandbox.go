@@ -72,6 +72,7 @@ func podmanRunCmd(image, command string, extraArgs []string) *exec.Cmd {
 		"--runtime-flag=log-packets",
 		"--cgroup-manager=cgroupfs",
 		"--events-backend=file",
+		"--rm",
 	}
 	args = append(args, extraArgs...)
 	args = append(args, image, "sh", "-c", command)
@@ -98,8 +99,8 @@ func Init(image string) (*Sandbox, error) {
 
 // Run will run a single command inside the sandbox.
 //
-// The container used to execute the command will not be removed once the
-// command is completed.
+// The container used to execute the command will be removed when the  command
+// is completed.
 //
 // This function is useful for running multiple commands in the sandbox.
 func (s *Sandbox) Run(command string, args ...string) (*RunResult, error) {
@@ -136,13 +137,6 @@ func (s *Sandbox) Run(command string, args ...string) (*RunResult, error) {
 	}
 
 	return result, err
-}
-
-// RunAndRemove will run a single command inside the sandbox and remove the
-// container on exit.
-func (s *Sandbox) RunAndRemove(command string, args ...string) (*RunResult, error) {
-	args = append(args, "--rm")
-	return s.Run(command, args...)
 }
 
 // Clean stops and removes all containers.
