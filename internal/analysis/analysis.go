@@ -80,6 +80,7 @@ func run(ecosystem, pkgName, version, image, command string, args []string) *Ana
 
 	// Run the command
 	r, err := sb.RunAndRemove(command, args...)
+
 	if err != nil {
 		log.Panic(err)
 	}
