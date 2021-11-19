@@ -99,7 +99,7 @@ func Init(image string) (*Sandbox, error) {
 
 // Run will run a single command inside the sandbox.
 //
-// The container used to execute the command will be removed when the  command
+// The container used to execute the command will be removed when the command
 // is completed.
 //
 // This function is useful for running multiple commands in the sandbox.
