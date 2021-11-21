@@ -14,7 +14,7 @@ import (
 
 var (
 	// 510 06:34:52.506847   43512 strace.go:587] [   2] python3 E openat(AT_FDCWD /app, 0x7f13f2254c50 /root/.ssh, O_RDONLY|O_CLOEXEC|O_DIRECTORY|O_NONBLOCK, 0o0)
-	stracePattern = regexp.MustCompile(`.*strace.go:\d+\] \[.*?\] ([^\s]+) (E|X) ([^\s]+)\((.*)\)`)
+	stracePattern = regexp.MustCompile(`.*strace.go:\d+\] \[.*?\] (.+) (E|X) ([^\s]+)\((.*)\)`)
 	// 0x7f1c3a0a2620 /usr/bin/uname, 0x7f1c39e12930 ["uname", "-rs"], 0x55bbefc2d070 ["HOSTNAME=63d5c9dbacb6", "PYTHON_PIP_VERSION=21.0.1", "HOME=/root"]
 	execvePattern = regexp.MustCompile(`.*?(\[.*\])`)
 	//0x7f13f201a0a3 /path, 0x0
