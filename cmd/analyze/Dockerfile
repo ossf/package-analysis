@@ -1,4 +1,5 @@
 FROM golang@sha256:3c4de86eec9cbc619cdd72424abd88326ffcf5d813a8338a7743c55e5898734f as build
+RUN apt-get update && apt-get install -y libpcap-dev
 WORKDIR /src
 COPY . ./
 RUN go build -o analyze cmd/analyze/main.go && go build -o worker cmd/worker/main.go
@@ -12,6 +13,7 @@ RUN apt-get update && apt-get upgrade -y && \
         ca-certificates \
         curl \
         iptables \
+        libpcap0.8 \
         podman \
         software-properties-common && \
     update-alternatives --set iptables /usr/sbin/iptables-legacy && \

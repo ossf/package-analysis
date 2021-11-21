@@ -8,6 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
+	"github.com/ossf/package-analysis/internal/packetcapture"
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/internal/strace"
 	"gocloud.dev/blob"
@@ -78,12 +81,42 @@ func run(ecosystem, pkgName, version, image, command string, args []string) *Ana
 		log.Panic(err)
 	}
 
-	// Run the command
-	r, err := sb.Run(command, args...)
-
+	pcap, err := packetcapture.New()
 	if err != nil {
 		log.Panic(err)
 	}
+	pcap.AddHandler(layers.LayerTypeDNS, func(l gopacket.Layer, p gopacket.Packet) {
+		log.Println("DNS Handler")
+		dns, ok := l.(*layers.DNS)
+		if !ok {
+			return
+		}
+		if len(dns.Questions) == 0 {
+			// skip, no questions
+			return
+		}
+		log.Printf("DNS ID == %d", dns.ID)
+		log.Printf("DNS len(Questions) == %d", len(dns.Questions))
+		for _, q := range dns.Questions {
+			log.Printf("DNS %s %s", q.Type, q.Name)
+		}
+		log.Printf("DNS len(Answers) == %d", len(dns.Answers))
+		for _, a := range dns.Answers {
+			log.Printf("DNS - %s", a)
+		}
+	})
+	if err := pcap.Start(); err != nil {
+		log.Panic(err)
+	}
+	defer pcap.Close()
+
+	// Run the command
+	r, err := sb.Run(command, args...)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	pcap.Close()
 
 	// Grab the log file
 	l, err := r.Log()
