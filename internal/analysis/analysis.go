@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ossf/package-analysis/internal/dnsanalyzer"
+	"github.com/ossf/package-analysis/internal/packetcapture"
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/internal/strace"
 	"gocloud.dev/blob"
@@ -27,8 +29,9 @@ type fileResult struct {
 }
 
 type socketResult struct {
-	Address string
-	Port    int
+	Address   string
+	Port      int
+	Hostnames []string
 }
 
 type commandResult struct {
@@ -78,12 +81,25 @@ func run(ecosystem, pkgName, version, image, command string, args []string) *Ana
 		log.Panic(err)
 	}
 
-	// Run the command
-	r, err := sb.Run(command, args...)
-
+	pcap, err := packetcapture.New()
 	if err != nil {
 		log.Panic(err)
 	}
+
+	dns := dnsanalyzer.New()
+	pcap.RegisterReceiver(dns)
+	if err := pcap.Start(); err != nil {
+		log.Panic(err)
+	}
+	defer pcap.Close()
+
+	// Run the command
+	r, err := sb.Run(command, args...)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	pcap.Close()
 
 	// Grab the log file
 	l, err := r.Log()
@@ -98,11 +114,11 @@ func run(ecosystem, pkgName, version, image, command string, args []string) *Ana
 	}
 
 	result := AnalysisResult{}
-	result.setData(ecosystem, pkgName, version, straceResult)
+	result.setData(ecosystem, pkgName, version, straceResult, dns)
 	return &result
 }
 
-func (d *AnalysisResult) setData(ecosystem, pkgName, version string, straceResult *strace.Result) {
+func (d *AnalysisResult) setData(ecosystem, pkgName, version string, straceResult *strace.Result, dns *dnsanalyzer.DNSAnalyzer) {
 	d.Package.Ecosystem = ecosystem
 	d.Package.Name = pkgName
 	d.Package.Version = version
@@ -116,8 +132,9 @@ func (d *AnalysisResult) setData(ecosystem, pkgName, version string, straceResul
 	}
 	for _, s := range straceResult.Sockets() {
 		d.Sockets = append(d.Sockets, socketResult{
-			Address: s.Address,
-			Port:    s.Port,
+			Address:   s.Address,
+			Port:      s.Port,
+			Hostnames: dns.Hostnames(s.Address),
 		})
 	}
 	for _, c := range straceResult.Commands() {
@@ -165,7 +182,7 @@ func (r *AnalysisResult) GenerateFileIndexes() []*DocstoreIndex {
 	}
 
 	var parts []string
-	for part, _ := range fileParts {
+	for part := range fileParts {
 		parts = append(parts, part)
 	}
 
@@ -190,7 +207,7 @@ func (r *AnalysisResult) GenerateCmdIndexes() []*DocstoreIndex {
 		}
 	}
 	var parts []string
-	for part, _ := range cmdParts {
+	for part := range cmdParts {
 		parts = append(parts, part)
 	}
 	return generateIndexEntries(r.Package, parts)
