@@ -1,8 +1,6 @@
 package packetcapture
 
 import (
-	"log"
-
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/pcap"
 )
@@ -11,14 +9,21 @@ const (
 	captureDevice = "eth0"
 )
 
+// PacketReceiver implementations can be registered with a PacketCapture to be
+// recieve all the packets for a specified set of LayerTypes.
+type PacketReceiver interface {
+	LayerTypes() []gopacket.LayerType
+	Receive(gopacket.Layer, gopacket.Packet)
+}
+
 // Handler is passed to AddHandler() to capture a specific gopacket.LayerType.
 type Handler func(gopacket.Layer, gopacket.Packet)
 
 type PacketCapture struct {
-	inactiveHandle *pcap.InactiveHandle
-	handle         *pcap.Handle
-	packetSource   *gopacket.PacketSource
-	packetHandlers map[gopacket.LayerType][]Handler
+	inactiveHandle  *pcap.InactiveHandle
+	handle          *pcap.Handle
+	packetSource    *gopacket.PacketSource
+	packetReceivers map[gopacket.LayerType][]PacketReceiver
 }
 
 // New returns a new Trace instance.
@@ -31,25 +36,27 @@ func New() (*PacketCapture, error) {
 	}
 
 	return &PacketCapture{
-		inactiveHandle: inactiveHandle,
-		handle:         nil,
-		packetSource:   nil,
-		packetHandlers: make(map[gopacket.LayerType][]Handler),
+		inactiveHandle:  inactiveHandle,
+		handle:          nil,
+		packetSource:    nil,
+		packetReceivers: make(map[gopacket.LayerType][]PacketReceiver),
 	}, nil
 }
 
-// AddHandler registers a specific Handler for a given gopacket LayerType.
+// RegisterReceiver registers a receiver for a given set of gopacket LayerTypes.
 //
-// Each Handler will be called each time a packet with the given LayerType is
-// received.
+// Each PacketReceiver will be called each time a packet in the set of
+// LayerTypes is received.
 //
-// Calls to Handler happen in a separate goroutine.
-func (pc *PacketCapture) AddHandler(layerType gopacket.LayerType, handler Handler) {
+// Calls to PacketReceiver.Receiver happen in a separate goroutine.
+func (pc *PacketCapture) RegisterReceiver(receiver PacketReceiver) {
 	// TODO add a check to ensure the capture hasn't started
-	if _, exists := pc.packetHandlers[layerType]; !exists {
-		pc.packetHandlers[layerType] = make([]Handler, 0)
+	for _, lt := range receiver.LayerTypes() {
+		if _, exists := pc.packetReceivers[lt]; !exists {
+			pc.packetReceivers[lt] = make([]PacketReceiver, 0)
+		}
+		pc.packetReceivers[lt] = append(pc.packetReceivers[lt], receiver)
 	}
-	pc.packetHandlers[layerType] = append(pc.packetHandlers[layerType], handler)
 }
 
 func (pc *PacketCapture) Start() error {
@@ -80,14 +87,13 @@ func (pc *PacketCapture) Close() {
 }
 
 func (pc *PacketCapture) handlePacket(packet gopacket.Packet) {
-	for t, handlers := range pc.packetHandlers {
+	for t, receivers := range pc.packetReceivers {
 		l := packet.Layer(t)
 		if l == nil {
 			continue
 		}
-		for _, h := range handlers {
-			log.Println("Calling Handler")
-			h(l, packet)
+		for _, r := range receivers {
+			r.Receive(l, packet)
 		}
 	}
 }

@@ -8,8 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
+	"github.com/ossf/package-analysis/internal/dnsanalyzer"
 	"github.com/ossf/package-analysis/internal/packetcapture"
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/internal/strace"
@@ -30,8 +29,9 @@ type fileResult struct {
 }
 
 type socketResult struct {
-	Address string
-	Port    int
+	Address   string
+	Port      int
+	Hostnames []string
 }
 
 type commandResult struct {
@@ -85,26 +85,9 @@ func run(ecosystem, pkgName, version, image, command string, args []string) *Ana
 	if err != nil {
 		log.Panic(err)
 	}
-	pcap.AddHandler(layers.LayerTypeDNS, func(l gopacket.Layer, p gopacket.Packet) {
-		log.Println("DNS Handler")
-		dns, ok := l.(*layers.DNS)
-		if !ok {
-			return
-		}
-		if len(dns.Questions) == 0 {
-			// skip, no questions
-			return
-		}
-		log.Printf("DNS ID == %d", dns.ID)
-		log.Printf("DNS len(Questions) == %d", len(dns.Questions))
-		for _, q := range dns.Questions {
-			log.Printf("DNS %s %s", q.Type, q.Name)
-		}
-		log.Printf("DNS len(Answers) == %d", len(dns.Answers))
-		for _, a := range dns.Answers {
-			log.Printf("DNS - %s", a)
-		}
-	})
+
+	dns := dnsanalyzer.New()
+	pcap.RegisterReceiver(dns)
 	if err := pcap.Start(); err != nil {
 		log.Panic(err)
 	}
@@ -131,11 +114,11 @@ func run(ecosystem, pkgName, version, image, command string, args []string) *Ana
 	}
 
 	result := AnalysisResult{}
-	result.setData(ecosystem, pkgName, version, straceResult)
+	result.setData(ecosystem, pkgName, version, straceResult, dns)
 	return &result
 }
 
-func (d *AnalysisResult) setData(ecosystem, pkgName, version string, straceResult *strace.Result) {
+func (d *AnalysisResult) setData(ecosystem, pkgName, version string, straceResult *strace.Result, dns *dnsanalyzer.DNSAnalyzer) {
 	d.Package.Ecosystem = ecosystem
 	d.Package.Name = pkgName
 	d.Package.Version = version
@@ -149,8 +132,9 @@ func (d *AnalysisResult) setData(ecosystem, pkgName, version string, straceResul
 	}
 	for _, s := range straceResult.Sockets() {
 		d.Sockets = append(d.Sockets, socketResult{
-			Address: s.Address,
-			Port:    s.Port,
+			Address:   s.Address,
+			Port:      s.Port,
+			Hostnames: dns.Hostname(s.Address),
 		})
 	}
 	for _, c := range straceResult.Commands() {
@@ -198,7 +182,7 @@ func (r *AnalysisResult) GenerateFileIndexes() []*DocstoreIndex {
 	}
 
 	var parts []string
-	for part, _ := range fileParts {
+	for part := range fileParts {
 		parts = append(parts, part)
 	}
 
@@ -223,7 +207,7 @@ func (r *AnalysisResult) GenerateCmdIndexes() []*DocstoreIndex {
 		}
 	}
 	var parts []string
-	for part, _ := range cmdParts {
+	for part := range cmdParts {
 		parts = append(parts, part)
 	}
 	return generateIndexEntries(r.Package, parts)
