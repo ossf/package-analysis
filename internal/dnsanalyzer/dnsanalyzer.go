@@ -7,20 +7,15 @@ import (
 	"github.com/google/gopacket/layers"
 )
 
-type rawLookup struct {
-	query *layers.DNS
-	reply *layers.DNS
-}
+type empty struct{}
 
 type DNSAnalyzer struct {
-	lookups     map[uint16]*rawLookup
-	ipHostnames map[string]map[string]struct{}
+	ipHostnames map[string]map[string]empty
 }
 
 func New() *DNSAnalyzer {
 	return &DNSAnalyzer{
-		lookups:     make(map[uint16]*rawLookup),
-		ipHostnames: make(map[string]map[string]struct{}),
+		ipHostnames: make(map[string]map[string]empty),
 	}
 }
 
@@ -34,7 +29,7 @@ func (d *DNSAnalyzer) addIPHostnames(l *layers.DNS) {
 		return
 	}
 
-	// Collect all the hostnames who's IP address are being queried.
+	// Collect all the hostnames who's IP addresses are being queried.
 	hostnames := make([]string, 0)
 	for _, q := range l.Questions {
 		if q.Type != layers.DNSTypeA && q.Type != layers.DNSTypeAAAA {
@@ -56,10 +51,10 @@ func (d *DNSAnalyzer) addIPHostnames(l *layers.DNS) {
 		}
 		ip := a.IP.String()
 		if _, exists := d.ipHostnames[ip]; !exists {
-			d.ipHostnames[ip] = make(map[string]struct{})
+			d.ipHostnames[ip] = make(map[string]empty)
 		}
 		for _, h := range hostnames {
-			d.ipHostnames[ip][h] = struct{}{}
+			d.ipHostnames[ip][h] = empty{}
 		}
 	}
 }
@@ -74,16 +69,7 @@ func (d *DNSAnalyzer) Receive(l gopacket.Layer, p gopacket.Packet) {
 		// skip, no questions
 		return
 	}
-
-	if _, exists := d.lookups[dns.ID]; !exists {
-		d.lookups[dns.ID] = &rawLookup{}
-	}
-	if dns.QR {
-		d.lookups[dns.ID].reply = dns
-		d.addIPHostnames(dns)
-	} else {
-		d.lookups[dns.ID].query = dns
-	}
+	d.addIPHostnames(dns)
 }
 
 // Hostname returns the hostname used to obtain the given IP address.
