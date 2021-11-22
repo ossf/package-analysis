@@ -76,7 +76,8 @@ func (d *DNSAnalyzer) Receive(l gopacket.Layer, p gopacket.Packet) {
 //
 // Returns the hostnames found. Otherwise it returns an empty slice.
 func (d *DNSAnalyzer) Hostnames(address string) []string {
-	// We parse the IP to ensure that it is valid.
+	// We parse the IP to ensure that it is normalized and to exit early if
+	// the address passed in is not valid.
 	ip := net.ParseIP(address)
 	if ip == nil {
 		return []string{}
