@@ -134,7 +134,7 @@ func (d *AnalysisResult) setData(ecosystem, pkgName, version string, straceResul
 		d.Sockets = append(d.Sockets, socketResult{
 			Address:   s.Address,
 			Port:      s.Port,
-			Hostnames: dns.Hostname(s.Address),
+			Hostnames: dns.Hostnames(s.Address),
 		})
 	}
 	for _, c := range straceResult.Commands() {
