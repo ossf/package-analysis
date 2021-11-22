@@ -1,16 +1,22 @@
 # Package Analysis
 
-This repo contains a few subprojects to aid in the analysis of open source packages, in particular to look for malicious software.
-This code is designed to work with the [Package Feeds](https://github.com/ossf/package-feeds) project, and
-originally started there.
+This repo contains a few components to aid in the analysis of open source
+packages, in particular to look for malicious software. This code is designed
+to work with the [Package Feeds](https://github.com/ossf/package-feeds) project,
+and originally started there.
 
-These are:
+The components are:
 
-[Analysis](./analysis/) to collect package behavior data and make it available
-publicly for researchers.
-
-[Scheduler](./scheduler/) to create jobs for Analysis based on the data from
-Feeds.
+- A [scheduler](./cmd/scheduler/) - creates jobs for the analysis worker from
+  Package Feeds.
+- Analysis (one-shot [analyze](./cmd/analyze/) and [worker](./cmd/worker/)) -
+  collects package behavior data through static and dynamic analysis of each
+  package.
+- A [loader](./function/loader/) - pushes the analysis results into BigQuery.
+- (Deprecated) a [fillindexes](./cmd/fillindexes/) utility - backfills analysis
+  results into a FireStore database.
+- (Deprecated) an [api server](./cmd/server) - allows the FireStore database
+  to be queried.
 
 The goal is for all of these components to work together and provide extensible,
 community-run infrastructure to study behavior of open source packages and to
