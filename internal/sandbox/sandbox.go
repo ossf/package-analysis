@@ -72,6 +72,7 @@ func podmanRunCmd(image, command string, extraArgs []string) *exec.Cmd {
 		"--runtime-flag=log-packets",
 		"--cgroup-manager=cgroupfs",
 		"--events-backend=file",
+		"--hostname=box",
 		"--rm",
 	}
 	args = append(args, extraArgs...)

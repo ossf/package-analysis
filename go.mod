@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go/firestore v1.6.1
 	github.com/gin-contrib/cors v1.3.1
 	github.com/gin-gonic/gin v1.7.4
+	github.com/google/gopacket v1.1.19
 	github.com/ossf/package-feeds v0.0.0-20211108050428-2ce6d6de33c8
 	gocloud.dev v0.24.0
 	gocloud.dev/docstore/mongodocstore v0.24.0
@@ -47,7 +48,6 @@ require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/go-cmp v0.5.6 // indirect
-	github.com/google/gopacket v1.1.19 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/google/wire v0.5.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.1.1 // indirect

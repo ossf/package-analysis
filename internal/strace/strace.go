@@ -8,6 +8,7 @@ import (
 	"log"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -119,7 +120,8 @@ func (r *Result) recordFileAccess(file string, read, write bool) {
 
 func (r *Result) recordSocket(address string, port int) {
 	// Use a '-' dash as the address may contain colons if IPv6
-	key := fmt.Sprintf("%s-%d", address, port)
+	// Pad the integer field so that keys can be sorted.
+	key := fmt.Sprintf("%s-%05d", address, port)
 	if _, exists := r.sockets[key]; !exists {
 		r.sockets[key] = &SocketInfo{
 			Address: address,
@@ -254,27 +256,48 @@ func Parse(r io.Reader) (*Result, error) {
 
 // Files returns all the files access from the parsed strace.
 func (r *Result) Files() []FileInfo {
-	files := make([]FileInfo, 0, len(r.files))
-	for _, file := range r.files {
-		files = append(files, *file)
+	// Sort the keys so the output is in a stable order
+	paths := make([]string, 0, len(r.files))
+	for p := range r.files {
+		paths = append(paths, p)
+	}
+	sort.Strings(paths)
+
+	files := make([]FileInfo, 0, len(paths))
+	for _, p := range paths {
+		files = append(files, *r.files[p])
 	}
 	return files
 }
 
 // Sockets returns all the IPv4 and IPv6 sockets from the parsed strace.
 func (r *Result) Sockets() []SocketInfo {
-	sockets := make([]SocketInfo, 0, len(r.sockets))
-	for _, socket := range r.sockets {
-		sockets = append(sockets, *socket)
+	// Sort the keys so the output is in a stable order
+	keys := make([]string, 0, len(r.sockets))
+	for k := range r.sockets {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	sockets := make([]SocketInfo, 0, len(keys))
+	for _, k := range keys {
+		sockets = append(sockets, *r.sockets[k])
 	}
 	return sockets
 }
 
 // Commands returns all the exec'd commands from the parsed strace.
 func (r *Result) Commands() []CommandInfo {
-	commands := make([]CommandInfo, 0, len(r.commands))
-	for _, command := range r.commands {
-		commands = append(commands, *command)
+	// Sort the keys so the output is in a stable order
+	keys := make([]string, 0, len(r.commands))
+	for k := range r.commands {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	commands := make([]CommandInfo, 0, len(keys))
+	for _, k := range keys {
+		commands = append(commands, *r.commands[k])
 	}
 	return commands
 }
