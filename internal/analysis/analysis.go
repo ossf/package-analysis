@@ -130,6 +130,7 @@ func (d *AnalysisResult) setData(ecosystem, pkgName, version string, straceResul
 			Write: f.Write,
 		})
 	}
+
 	for _, s := range straceResult.Sockets() {
 		d.Sockets = append(d.Sockets, socketResult{
 			Address:   s.Address,
@@ -137,6 +138,7 @@ func (d *AnalysisResult) setData(ecosystem, pkgName, version string, straceResul
 			Hostnames: dns.Hostnames(s.Address),
 		})
 	}
+
 	for _, c := range straceResult.Commands() {
 		d.Commands = append(d.Commands, commandResult{
 			Command:     c.Command,
