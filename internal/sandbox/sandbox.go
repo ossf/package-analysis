@@ -3,6 +3,7 @@ package sandbox
 import (
 	"bytes"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"strings"
