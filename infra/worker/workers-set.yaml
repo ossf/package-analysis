@@ -1,10 +1,11 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
-  name: workers-deployment
+  name: workers-set
   labels:
     app: workers
 spec:
+  serviceName: workers
   replicas: 5
   selector:
     matchLabels:
@@ -28,6 +29,9 @@ spec:
           value: firestore://projects/ossf-malware-analysis/databases/(default)/documents/
         securityContext:
           privileged: true
+        volumeMounts:
+          - mountPath: "/var/lib/containers"
+            name: image-storage
         resources:
           requests:
             cpu: 500m
@@ -35,3 +39,13 @@ spec:
           limits:
             cpu: 1
             memory: 1Gi
+  volumeClaimTemplates:
+  - metadata:
+      name: image-storage
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      storageClassName: premium-rwo
+      resources:
+        requests:
+          storage: 30Gi  
