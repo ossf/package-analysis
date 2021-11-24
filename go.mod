@@ -5,7 +5,7 @@ go 1.17
 require (
 	cloud.google.com/go/firestore v1.6.1
 	github.com/gin-contrib/cors v1.3.1
-	github.com/gin-gonic/gin v1.7.4
+	github.com/gin-gonic/gin v1.7.6
 	github.com/google/gopacket v1.1.19
 	github.com/ossf/package-feeds v0.0.0-20211108050428-2ce6d6de33c8
 	gocloud.dev v0.24.0
