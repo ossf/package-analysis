@@ -54,6 +54,12 @@ func podmanPull(image string) error {
 	return cmd.Run()
 }
 
+func podmanPrune() error {
+	args := []string{"image", "prune", "-f"}
+	cmd := exec.Command(podmanBin, args...)
+	return cmd.Run()
+}
+
 func podmanCleanContainers() error {
 	args := []string{"rm", "--all", "--force"}
 	cmd := exec.Command(podmanBin, args...)
@@ -91,6 +97,9 @@ type Sandbox struct {
 // The image supplied will be pulled if it hasn't already been.
 func Init(image string) (*Sandbox, error) {
 	if err := podmanPull(image); err != nil {
+		return nil, err
+	}
+	if err := podmanPrune(); err != nil {
 		return nil, err
 	}
 	return &Sandbox{

@@ -21,5 +21,5 @@ jobs:
         docker version -f '{{.Server.Experimental}}'
 
     - name: build_docker
-      run: NOPUSH=true NO_PODMAN_PULL=1 ./build_docker.sh
+      run: NOPUSH=true ./build_docker.sh
       working-directory: build

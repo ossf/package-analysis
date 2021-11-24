@@ -20,7 +20,7 @@ declare -A CMD_IMAGES=( [analysis]=analyze [scheduler]=scheduler [server]=server
 
 pushd "$BASE_PATH"
 for image in "${!CMD_IMAGES[@]}"; do
-  docker build --build-arg NO_PODMAN_PULL=$NO_PODMAN_PULL -t $REGISTRY/$image -f cmd/${CMD_IMAGES[$image]}/Dockerfile .
+  docker build -t $REGISTRY/$image -f cmd/${CMD_IMAGES[$image]}/Dockerfile .
   [[ "$nopush" == "false" ]] && docker push $REGISTRY/$image
 done
 popd
