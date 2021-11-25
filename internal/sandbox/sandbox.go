@@ -3,6 +3,7 @@ package sandbox
 import (
 	"bytes"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -146,6 +147,8 @@ func (s *Sandbox) Run(command string, args ...string) (*RunResult, error) {
 		}
 	}
 
+	log.Printf("Sandbox stdout = %s", stdout.String())
+	log.Printf("Sandbox stderr = %s", stderr.String())
 	return result, err
 }
 
