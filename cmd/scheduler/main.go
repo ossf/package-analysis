@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math"
 	"os"
 	"time"
@@ -14,6 +13,7 @@ import (
 	_ "gocloud.dev/pubsub/kafkapubsub"
 
 	"github.com/ossf/package-analysis/cmd/scheduler/proxy"
+	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-feeds/pkg/feeds"
 )
 
@@ -33,19 +33,24 @@ func main() {
 	retryCount := 0
 	subscriptionURL := os.Getenv("OSSMALWARE_SUBSCRIPTION_URL")
 	topicURL := os.Getenv("OSSMALWARE_WORKER_TOPIC")
+	log.Initalize(os.Getenv("LOGGER_ENV") == "prod")
 
 	for retryCount <= maxRetries {
 		err := listenLoop(subscriptionURL, topicURL)
 
 		if err != nil {
 			if retryCount++; retryCount >= maxRetries {
-				log.Printf("Retries exceeded, Error: %v\n", err)
+				log.Error("Retries exceeded",
+					"error", err,
+					"retryCount", retryCount)
 				break
 			}
-			log.Printf("Warning: %v\n", err)
 
 			retryDuration := time.Second * time.Duration(retryDelay(retryCount))
-			log.Printf("Error encountered, will try again after %v seconds\n", retryDuration.Seconds())
+			log.Error("Error encountered, retrying",
+				"error", err,
+				"retryCount", retryCount,
+				"waitSeconds", retryDuration.Seconds())
 			time.Sleep(retryDuration)
 		}
 	}
@@ -65,10 +70,11 @@ func listenLoop(subUrl, topicURL string) error {
 	}
 
 	srv := proxy.New(topic, sub)
-	fmt.Println("Listening for messages to proxy...")
+	log.Info("Listening for messages to proxy...")
 
 	err = srv.Listen(ctx, func(m *pubsub.Message) (*pubsub.Message, error) {
-		log.Println("Handling message: ", string(m.Body))
+		log.Info("Handling message",
+			"body", string(m.Body))
 		pkg := feeds.Package{}
 		if err := json.Unmarshal(m.Body, &pkg); err != nil {
 			return nil, fmt.Errorf("error unmarshalling json: %w", err)

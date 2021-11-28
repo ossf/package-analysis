@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"net/http"
 	"os"
 
@@ -9,6 +8,8 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"google.golang.org/api/iterator"
+
+	"github.com/ossf/package-analysis/internal/log"
 )
 
 const (
@@ -26,6 +27,7 @@ var (
 
 func main() {
 	projectID = os.Getenv("GOOGLE_CLOUD_PROJECT")
+	log.Initalize(os.Getenv("LOGGER_ENV") == "prod")
 
 	router := gin.Default()
 	config := cors.DefaultConfig()
@@ -37,14 +39,17 @@ func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
-		log.Printf("defaulting to port %s", port)
+		log.Debug("Using default port",
+			"port", port)
 	}
 
 	// Start HTTP server.
-	log.Printf("listening on port %s", port)
+	log.Info("Listening...",
+		"port", port)
 	router.Run()
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
-		log.Fatal(err)
+		log.Fatal("Failed to start HTTP server",
+			"error", err)
 	}
 }
 
@@ -79,7 +84,8 @@ func queryHandler(c *gin.Context) {
 
 	fs, err := firestore.NewClient(c, projectID)
 	if err != nil {
-		log.Printf("Failed to create firestore client: %v", err)
+		log.Error("Failed to create firestore client",
+			"error", err)
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
@@ -104,7 +110,8 @@ func queryHandler(c *gin.Context) {
 			break
 		}
 		if err != nil {
-			log.Printf("Failed to iterate: %v", err)
+			log.Error("Failed to iterate",
+				"error", err)
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
 		}

@@ -6,11 +6,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"strings"
 	"sync"
 
 	"github.com/ossf/package-analysis/internal/analysis"
+	"github.com/ossf/package-analysis/internal/log"
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/gcsblob"
 )
@@ -25,6 +25,7 @@ const (
 )
 
 func main() {
+	log.Initalize(false)
 	flag.Parse()
 	if *bucket == "" || *docstorePath == "" {
 		flag.Usage()
@@ -34,7 +35,9 @@ func main() {
 	ctx := context.Background()
 	bkt, err := blob.OpenBucket(ctx, *bucket)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Failed to open bucket",
+			"bucket", *bucket,
+			"error", err)
 	}
 	defer bkt.Close()
 
@@ -47,13 +50,16 @@ func main() {
 				fmt.Println(key)
 				data, err := bkt.ReadAll(ctx, key)
 				if err != nil {
-					log.Fatal(err)
+					log.Fatal("Failed to read bucket",
+						"key", key,
+						"error", err)
 				}
 
 				var results analysis.AnalysisResult
 				err = json.Unmarshal(data, &results)
 				if err != nil {
-					log.Fatal(err)
+					log.Fatal("Failed to parse JSON data",
+						"error", err)
 				}
 
 				analysis.WriteResultsToDocstore(ctx, *docstorePath, &results)
@@ -69,7 +75,8 @@ func main() {
 			break
 		}
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("Failed to get next bucket entry",
+				"error", err)
 		}
 
 		if !strings.HasSuffix(obj.Key, ".json") {
