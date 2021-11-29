@@ -124,7 +124,7 @@ The container must include:
 1. Update [build_docker.sh](../build/build_docker.sh) to reference the image.
 2. Extend [internal/pkgecosystem](../internal/pkgecosystem) to add support for
    the new sandbox.
-3. Ensure your new ecosystem is supporteded by
+3. Ensure your new ecosystem is supported by
    [package-feeds](https://github.com/ossf/package-feeds).
 4. Make sure [cmd/scheduler](../cmd/scheduler) marks the new ecosystem as
    supported.
