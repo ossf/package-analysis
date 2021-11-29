@@ -5,14 +5,14 @@ go 1.17
 require (
 	cloud.google.com/go/firestore v1.6.1
 	github.com/gin-contrib/cors v1.3.1
-	github.com/gin-gonic/gin v1.7.6
+	github.com/gin-gonic/gin v1.7.7
 	github.com/google/gopacket v1.1.19
 	github.com/ossf/package-feeds v0.0.0-20211108050428-2ce6d6de33c8
+	go.uber.org/zap v1.19.1
 	gocloud.dev v0.24.0
 	gocloud.dev/docstore/mongodocstore v0.24.0
 	gocloud.dev/pubsub/kafkapubsub v0.24.0
 	google.golang.org/api v0.60.0
-	go.uber.org/zap v1.19.1
 )
 
 require (
