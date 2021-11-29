@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"path/filepath"
 	"strings"
 
 	"github.com/ossf/package-analysis/internal/dnsanalyzer"
+	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/packetcapture"
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/internal/strace"
@@ -73,44 +73,58 @@ func RunLive(ecosystem, pkgName, version, image, command string) *AnalysisResult
 }
 
 func run(ecosystem, pkgName, version, image, command string, args []string) *AnalysisResult {
-	log.Printf("Running analysis using %s %s", command, args)
+	log.Info("Running analysis",
+		"command", command,
+		"args", args)
 
 	// Init the sandbox
+	log.Debug("Init the sandbox")
 	sb, err := sandbox.Init(image)
 	if err != nil {
-		log.Panic(err)
+		log.Panic("Failed to init sandbox",
+			"error", err)
 	}
 
+	log.Debug("Preparing packet capture")
 	pcap, err := packetcapture.New()
 	if err != nil {
-		log.Panic(err)
+		log.Panic("Failed to init packet capture",
+			"error", err)
 	}
 
 	dns := dnsanalyzer.New()
 	pcap.RegisterReceiver(dns)
 	if err := pcap.Start(); err != nil {
-		log.Panic(err)
+		log.Panic("Failed to start packet capture",
+			"error", err)
 	}
 	defer pcap.Close()
 
 	// Run the command
+	log.Debug("Running the command",
+		"command", command,
+		"args", args)
 	r, err := sb.Run(command, args...)
 	if err != nil {
-		log.Panic(err)
+		log.Panic("Command exited unsucessfully",
+			"error", err)
 	}
 
 	pcap.Close()
 
 	// Grab the log file
+	log.Debug("Parsing the strace log")
 	l, err := r.Log()
 	if err != nil {
-		log.Panic(err)
+		log.Panic("Failed to open the log",
+			"error", err)
 	}
 	defer l.Close()
 
 	straceResult, err := strace.Parse(l)
 	if err != nil {
-		log.Panic(err)
+		log.Panic("Failed to parse the strace",
+			"error", err)
 	}
 
 	result := AnalysisResult{}
@@ -233,7 +247,9 @@ func UploadResults(ctx context.Context, bucket, path string, result *AnalysisRes
 	}
 
 	uploadPath := filepath.Join(path, filename)
-	log.Printf("uploading to bucket=%s, path=%s", bucket, uploadPath)
+	log.Info("Uploading results",
+		"bucket", bucket,
+		"path", uploadPath)
 
 	w, err := bkt.NewWriter(ctx, uploadPath, nil)
 	if err != nil {

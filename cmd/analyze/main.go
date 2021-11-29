@@ -3,10 +3,10 @@ package main
 import (
 	"context"
 	"flag"
-	"log"
 	"net/url"
 
 	"github.com/ossf/package-analysis/internal/analysis"
+	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 )
 
@@ -22,13 +22,15 @@ var (
 func parseBucketPath(path string) (string, string) {
 	parsed, err := url.Parse(path)
 	if err != nil {
-		log.Panicf("Failed to parse bucket path: %s", path)
+		log.Panic("Failed to parse bucket path",
+			"path", path)
 	}
 
 	return parsed.Scheme + "://" + parsed.Host, parsed.Path
 }
 
 func main() {
+	log.Initalize(false)
 	flag.Parse()
 	if *ecosystem == "" {
 		flag.Usage()
@@ -37,7 +39,8 @@ func main() {
 
 	manager, ok := pkgecosystem.SupportedPkgManagers[*ecosystem]
 	if !ok {
-		log.Panicf("Unsupported pkg manager %s", manager)
+		log.Panic("Unsupported pkg manager",
+			"ecosystem", ecosystem)
 	}
 
 	var pkgName string
@@ -58,6 +61,12 @@ func main() {
 		return
 	}
 
+	log.Info("Got request",
+		"ecosystem", ecosystem,
+		"name", pkgName,
+		"version", version,
+		"live", live)
+
 	command := manager.CommandFmt(pkgName, *version)
 	var result *analysis.AnalysisResult
 	if live {
@@ -71,14 +80,16 @@ func main() {
 		bucket, path := parseBucketPath(*upload)
 		err := analysis.UploadResults(ctx, bucket, path, result)
 		if err != nil {
-			log.Fatalf("Failed to upload results to blobstore: %v", err)
+			log.Fatal("Failed to upload results to blobstore",
+				"error", err)
 		}
 	}
 
 	if *docstore != "" {
 		err := analysis.WriteResultsToDocstore(ctx, *docstore, result)
 		if err != nil {
-			log.Fatalf("Failed to write results to docstore: %v", err)
+			log.Fatal("Failed to write results to docstore",
+				"error", err)
 		}
 	}
 }
