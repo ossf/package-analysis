@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"math"
 	"os"
 	"time"
@@ -13,6 +12,7 @@ import (
 	_ "gocloud.dev/pubsub/kafkapubsub"
 
 	"github.com/ossf/package-analysis/internal/analysis"
+	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 )
 
@@ -28,7 +28,7 @@ func messageLoop(ctx context.Context, subURL, resultsBucket, docstorePath string
 		return err
 	}
 
-	fmt.Println("Awaiting message from subscription...")
+	log.Info("Listening for messages to process...")
 	for {
 		msg, err := sub.Receive(ctx)
 		if err != nil {
@@ -38,33 +38,37 @@ func messageLoop(ctx context.Context, subURL, resultsBucket, docstorePath string
 
 		name := msg.Metadata["name"]
 		if name == "" {
-			log.Printf("name is empty")
+			log.Warn("name is empty")
 			msg.Ack()
 			continue
 		}
 
 		ecosystem := msg.Metadata["ecosystem"]
 		if ecosystem == "" {
-			log.Printf("ecosystem is empty")
+			log.Warn("ecosystem is empty",
+				"name", name)
 			msg.Ack()
 			continue
 		}
 
 		manager, ok := pkgecosystem.SupportedPkgManagers[ecosystem]
 		if !ok {
-			log.Printf("Unsupported pkg manager %s", manager)
+			log.Warn("Unsupported pkg manager",
+				"ecosystem", ecosystem,
+				"name", name)
 			msg.Ack()
 			continue
 		}
-		log.Printf("Got request %s/%s", ecosystem, name)
 
 		version := msg.Metadata["version"]
 		if version == "" {
 			version = manager.GetLatest(name)
 		}
-		log.Printf("Installing version %s", version)
 
-		log.Printf("Got request %s/%s at version %s", ecosystem, name, version)
+		log.Info("Got request",
+			"ecosystem", ecosystem,
+			"name", name,
+			"version", version)
 		result := analysis.RunLive(ecosystem, name, version, manager.Image, manager.CommandFmt(name, version))
 
 		if resultsBucket != "" {
@@ -83,7 +87,6 @@ func messageLoop(ctx context.Context, subURL, resultsBucket, docstorePath string
 
 		msg.Ack()
 	}
-	return nil
 }
 
 func main() {
@@ -92,18 +95,23 @@ func main() {
 	subURL := os.Getenv("OSSMALWARE_WORKER_SUBSCRIPTION")
 	resultsBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS")
 	docstorePath := os.Getenv("OSSMALWARE_DOCSTORE_URL")
+	log.Initalize(os.Getenv("LOGGER_ENV") == "prod")
 
 	for {
 		err := messageLoop(ctx, subURL, resultsBucket, docstorePath)
 		if err != nil {
 			if retryCount++; retryCount >= maxRetries {
-				log.Printf("Retries exceeded, Error: %v\n", err)
+				log.Error("Retries exceeded",
+					"error", err,
+					"retryCount", retryCount)
 				break
 			}
-			log.Printf("Warning: %v\n", err)
 
 			retryDuration := time.Second * time.Duration(retryDelay(retryCount))
-			log.Printf("Error encountered, will try again after %v seconds\n", retryDuration.Seconds())
+			log.Error("Error encountered, retrying",
+				"error", err,
+				"retryCount", retryCount,
+				"waitSeconds", retryDuration.Seconds())
 			time.Sleep(retryDuration)
 		}
 	}

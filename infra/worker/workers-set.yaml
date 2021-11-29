@@ -27,6 +27,8 @@ spec:
           value: gs://ossf-malware-analysis-results
         - name: OSSMALWARE_DOCSTORE_URL
           value: firestore://projects/ossf-malware-analysis/databases/(default)/documents/
+        - name: LOGGER_ENV
+          value: prod
         securityContext:
           privileged: true
         volumeMounts:

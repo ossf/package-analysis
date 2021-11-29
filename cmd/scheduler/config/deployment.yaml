@@ -22,3 +22,5 @@ spec:
           value: gcppubsub://projects/ossf-malware-analysis/subscriptions/feed-subscription
         - name: OSSMALWARE_WORKER_TOPIC
           value: gcppubsub://projects/ossf-malware-analysis/topics/workers
+        - name: LOGGER_ENV
+          value: prod

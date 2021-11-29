@@ -5,9 +5,10 @@ go 1.17
 require (
 	cloud.google.com/go/firestore v1.6.1
 	github.com/gin-contrib/cors v1.3.1
-	github.com/gin-gonic/gin v1.7.6
+	github.com/gin-gonic/gin v1.7.7
 	github.com/google/gopacket v1.1.19
 	github.com/ossf/package-feeds v0.0.0-20211108050428-2ce6d6de33c8
+	go.uber.org/zap v1.19.1
 	gocloud.dev v0.24.0
 	gocloud.dev/docstore/mongodocstore v0.24.0
 	gocloud.dev/pubsub/kafkapubsub v0.24.0
@@ -75,6 +76,8 @@ require (
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
 	go.mongodb.org/mongo-driver v1.7.1 // indirect
 	go.opencensus.io v0.23.0 // indirect
+	go.uber.org/atomic v1.9.0 // indirect
+	go.uber.org/multierr v1.7.0 // indirect
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5 // indirect
 	golang.org/x/net v0.0.0-20210825183410-e898025ed96a // indirect
 	golang.org/x/oauth2 v0.0.0-20211005180243-6b3c2da341f1 // indirect
