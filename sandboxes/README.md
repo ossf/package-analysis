@@ -14,18 +14,24 @@ Each command must conform to the following API specification.
 
 #### Arguments
 
-- Must take 2 required arguments and 1 optional argument:
-    1. phase name
-        - must support at least "all", "install".
-        - may also include "import" and any other phases useful to the
-          ecosystem.
-    1. package:
-        - either a local file contain a package to install;
-        - or the name of the package in the package repository to install.
-    1. version (optional):
-        - when passing in a local file the version information will be ignored.
-        - if version is not set when passing the name of the package, the
-          version used will be chosen by the package manager.
+```
+Usage: analyze.[ext] [--local] PHASE PACKAGE [VERSION]
+```
+
+- `PHASE` - the phase name:
+  - must support at least `all` and `install`.
+  - may also include `import` and any other phases useful to the
+    ecosystem.
+- `PACKAGE` - package:
+  - refers to a local file contain a package to install if `--local` is set;
+    otherwise
+  - the name of the package in the package repository to install.
+- `VERSION` - a version of the package (optional):
+  - when passing in a local file the version information will be ignored.
+  - if version is not set when passing the name of the package, the version used
+    will be chosen by the package manager.
+- `--local` - whether or not `PACKAGE` is a local file (optional):
+  - if set, `PACKAGE` will be treated as a local file
 
 
 #### Phases
@@ -33,8 +39,8 @@ Each command must conform to the following API specification.
 ##### all
 
 - should run all the phases in the following order:
-  - install
-  - import
+  - `install`
+  - `import`
   - any other phases specified
 
 **NOTE:** this is a transitional step while support is added to the library
