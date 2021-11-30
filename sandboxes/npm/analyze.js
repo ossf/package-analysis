@@ -1,19 +1,48 @@
 #!/usr/bin/env node
 
 const { spawnSync } = require('child_process');
+const { argv } = require('process');
 
-if (process.argv.length < 3) {
-  console.log(`Usage: ${process.argv[0]} ${process.argv[1]} pkg@version`);
+console.log(argv);
+const nodeBin = argv.shift();
+const scriptPath = argv.shift();
+console.log(argv);
+
+if (argv.length < 2 || argv > 4) {
+  console.log(`Usage: ${nodeBin} ${scriptPath} [--local file | --version version] phase pkg`);
   process.exit(1);
 }
+
+var localFile = null;
+var ver = null;
+switch (argv[0]) {
+  case '--local':
+    argv.shift();
+    localFile = argv.shift();
+    break;
+  case '--version':
+    argv.shift();
+    ver = argv.shift();
+    break;
+}
+
+const phase = argv.shift();
+const pkg = argv.shift();
+
+if (phase != 'all') {
+  console.log('Only "all" phase is supported at the moment.');
+  process.exit(1);
+}
+
+// Specify the package to install.
+const installPkg = localFile ? localFile : (ver ? `${pkg}@${ver}` : pkg);
 
 let result = spawnSync('npm', ['init', '--force'], { stdio: 'inherit' });
 if (result.status != 0) {
   throw 'Failed to init npm';
 }
 
-const pkgAndVersion = process.argv[2];
-result = spawnSync('npm', ['install', pkgAndVersion], { stdio: 'pipe', encoding: 'utf8' });
+result = spawnSync('npm', ['install', installPkg], { stdio: 'pipe', encoding: 'utf8' });
 console.log(result.stdout + result.stderr);
 
 if (result.status == 0) {
@@ -26,7 +55,6 @@ if (result.status == 0) {
   process.exit(1);
 }
 
-const pkg = pkgAndVersion.split('@')[0];
 try {
   require(pkg);
 } catch (e) {

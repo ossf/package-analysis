@@ -1,5 +1,38 @@
 # Sandboxes for Analysis
 
+## Sandbox Image Testing
+
+By default the analysis command will update the sandbox images from the grc.io
+repository.
+
+To use local images for analysis:
+
+1. The images need to be manually pulled into `/var/lib/containers` using the
+   `buildah` tool included with `podman`.
+2. `/var/lib/containers` then needs to be mounted inside the container so it can
+   be used by `podman`.
+3. Finally, the `analysis` command should be run using the `-nopull` option to
+   use the local image only.
+
+For example, assuming there is a locally built npm image:
+
+```bash
+# Prepare the local machine.
+$ sudo apt install podman
+$ mkdir /tmp/results
+
+# Populate the local podman images with the image we want to use from docker.
+$ sudo buildah pull docker-daemon:gcr.io/ossf-malware-analysis/node:latest
+
+# Run the analysis locally, without pulling the image again.
+$ docker run --privileged -ti \
+    -v /tmp/results:/results \
+    -v /var/lib/containers:/var/lib/containers \
+    gcr.io/ossf-malware-analysis/analysis analyze \
+    -package test -ecosystem npm \
+    -upload file:///results/ -nopull
+```
+
 ## Adding a new Runtime Analysis Sandbox
 
 Each runtime analysis sandbox requires:
@@ -15,7 +48,8 @@ Each command must conform to the following API specification.
 #### Arguments
 
 ```
-Usage: analyze.[ext] [--local] PHASE PACKAGE [VERSION]
+Usage:
+  analyze.[ext] [--local FILE | --version VERSION] PHASE PACKAGE
 ```
 
 - `PHASE` - the phase name:
@@ -26,13 +60,17 @@ Usage: analyze.[ext] [--local] PHASE PACKAGE [VERSION]
   - refers to a local file contain a package to install if `--local` is set;
     otherwise
   - the name of the package in the package repository to install.
-- `VERSION` - a version of the package (optional):
-  - when passing in a local file the version information will be ignored.
-  - if version is not set when passing the name of the package, the version used
-    will be chosen by the package manager.
-- `--local` - whether or not `PACKAGE` is a local file (optional):
-  - if set, `PACKAGE` will be treated as a local file
-
+- `--version VERSION` - a version of the package (optional):
+  - if no version is not set when passing the name of the package, the version
+    used will be chosen by the package manager.
+  - only used if `PHASE` is `all` or `install`.
+  - cannot be used with `--local`
+- `--local FILE` - a local file to install instead of using the registry
+  (optional):
+  - if set, `FILE` will be installed. `PACKAGE` must match the name of the
+    package being installed.
+  - only used if `PHASE` is `all` or `install`.
+  - canot be used with `--version`
 
 #### Phases
 

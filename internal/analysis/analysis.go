@@ -51,9 +51,9 @@ const (
 	maxIndexEntries = 10000
 )
 
-func RunLocal(ecosystem, pkgPath, version string, sb sandbox.Sandbox, command string) *AnalysisResult {
+func RunLocal(ecosystem, pkgPath, localPkg, version string, sb sandbox.Sandbox, command string) *AnalysisResult {
 	return run(ecosystem, pkgPath, version, sb, command, []string{
-		"-v", fmt.Sprintf("%s:%s", pkgPath, pkgPath),
+		"-v", fmt.Sprintf("%s:%s", localPkg, localPkg),
 	})
 }
 

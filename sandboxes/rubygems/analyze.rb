@@ -4,13 +4,19 @@ require 'find'
 require 'open3'
 require 'pathname'
 
-def install(package, version)
-  cmd = "gem install #{package}"
-  if version
-    cmd += " -v #{version}"
+def install(package, version, local_file)
+  cmd = ["gem", "install"]
+  if local_file
+    cmd << local_file
+  else
+    if version
+      cmd << "-v"
+      cmd << version
+    end
+    cmd << package
   end
 
-  output, status = Open3.capture2e(cmd)
+  output, status = Open3.capture2e(*cmd)
   puts output
 
   if status.success?
@@ -26,15 +32,32 @@ def install(package, version)
   exit 1
 end
 
-if ARGV.length < 1
-  puts "Usage: #{$0} package version"
+if ARGV.length < 2 || ARGV.length > 4
+  puts "Usage: #{$0} [--local file | --version version] phase package"
   exit 1
 end
 
-package = ARGV.shift
-version = ARGV.shift
+local_file = nil
+version = nil
 
-install(package, version)
+case ARGV[0]
+when "--local"
+  ARGV.shift
+  local_file = ARGV.shift
+when "--version"
+  ARGV.shift
+  version = ARGV.shift
+end
+
+phase = ARGV.shift
+package = ARGV.shift
+
+if phase != "all"
+  puts "Only \"all\" phase is supported at the moment"
+  exit 1
+end
+
+install(package, version, local_file)
 spec = Gem::Specification.find_by_name(package)
 
 spec.require_paths.each do |require_path|

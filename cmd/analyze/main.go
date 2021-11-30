@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	pkg       = flag.String("package", "", "live package name")
+	pkg       = flag.String("package", "", "package name")
 	localPkg  = flag.String("local", "", "local package path")
 	ecosystem = flag.String("ecosystem", "", "ecosystem (npm, pypi, or rubygems)")
 	version   = flag.String("version", "", "version")
@@ -44,31 +44,30 @@ func main() {
 			"ecosystem", ecosystem)
 	}
 
-	var pkgName string
-	live := true
-	if *pkg != "" {
-		pkgName = *pkg
-		if *version == "" {
-			*version = manager.GetLatest(pkgName)
-		}
-	} else if *localPkg != "" {
-		pkgName = *localPkg
-		if *version != "" {
-			log.Panic("Unable to specify version for local packages")
-		}
-		live = false
-	} else {
+	if *pkg == "" {
 		flag.Usage()
 		return
 	}
 
+	live := true
+	if *localPkg == "" {
+		if *version == "" {
+			*version = manager.GetLatest(*pkg)
+		}
+	} else {
+		live = false
+		if *version != "" {
+			log.Panic("Unable to specify version for local packages")
+		}
+	}
+
 	log.Info("Got request",
 		"ecosystem", *ecosystem,
-		"name", pkgName,
+		"name", *pkg,
 		"version", *version,
 		"live", live)
 
-	command := manager.CommandFmt(pkgName, *version)
+	command := manager.Command("all", *pkg, *version, *localPkg)
 
 	// Prepare the sandbox to use ensuring we respect the -"nopull" option.
 	sbOpts := make([]sandbox.Option, 0)
@@ -79,9 +78,9 @@ func main() {
 
 	var result *analysis.AnalysisResult
 	if live {
-		result = analysis.RunLive(*ecosystem, pkgName, *version, sb, command)
+		result = analysis.RunLive(*ecosystem, *pkg, *version, sb, command)
 	} else {
-		result = analysis.RunLocal(*ecosystem, pkgName, *version, sb, command)
+		result = analysis.RunLocal(*ecosystem, *pkg, *localPkg, *version, sb, command)
 	}
 
 	ctx := context.Background()
