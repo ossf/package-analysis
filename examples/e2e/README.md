@@ -24,7 +24,7 @@ curl localhost:8080
 ```
 
 Curling `localhost:8080` will trigger package-feeds to poll it's feeds and send the packages downstream to package-analysis. Outputs can be found at http://localhost:9000/minio/package-analysis,
-using the credentials minio:minio123 for authentication. Alternatively data can be found within the mongodb docstore which can be found at http://localhost:8081/db/analysis/.
+using the credentials minio:minio123 for authentication.
 
 `docker-compose logs -f feeds` will provide information on the packages which have been send downstream.
 
