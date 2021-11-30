@@ -49,6 +49,47 @@ func (r *RunResult) Log() (io.ReadCloser, error) {
 	return os.Open(logPath)
 }
 
+type Sandbox interface {
+	// Init prepares the Sandbox ready for running commands.
+	//
+	// It must be called before Run so that any setup work is complete before
+	// any commands are executed.
+	Init() error
+
+	// Run will run a command in the sandbox.
+	//
+	// The container used to execute the command will be removed when the command
+	// is completed.
+	Run(command string, args ...string) (*RunResult, error)
+}
+
+// Implements the Sandbox interface using "podman".
+type podmanSandbox struct {
+	image  string
+	init   bool
+	noPull bool
+}
+
+type Option interface{ set(*podmanSandbox) }
+type option func(*podmanSandbox)       // option implements Option.
+func (o option) set(sb *podmanSandbox) { o(sb) }
+
+func New(image string, options ...Option) Sandbox {
+	sb := &podmanSandbox{
+		image:  image,
+		init:   false,
+		noPull: false,
+	}
+	for _, o := range options {
+		o.set(sb)
+	}
+	return sb
+}
+
+func NoPull() Option {
+	return option(func(sb *podmanSandbox) { sb.noPull = true })
+}
+
 func podmanPull(image string) error {
 	args := []string{"pull", image}
 	cmd := exec.Command(podmanBin, args...)
@@ -74,7 +115,6 @@ func podmanRunCmd(image, command string, extraArgs []string) *exec.Cmd {
 		"--runtime-flag=root=" + rootDir,
 		"--runtime-flag=debug-log=/tmp/runsc.log.%COMMAND%",
 		"--runtime-flag=net-raw",
-		"--runtime-flag=debug",
 		"--runtime-flag=strace",
 		"--runtime-flag=log-packets",
 		"--cgroup-manager=cgroupfs",
@@ -89,23 +129,23 @@ func podmanRunCmd(image, command string, extraArgs []string) *exec.Cmd {
 	return cmd
 }
 
-type Sandbox struct {
-	image string
-}
-
 // Initializes the Sandbox ready for running commands.
 //
 // The image supplied will be pulled if it hasn't already been.
-func Init(image string) (*Sandbox, error) {
-	if err := podmanPull(image); err != nil {
-		return nil, err
+func (s *podmanSandbox) Init() error {
+	if s.init {
+		return nil
+	}
+	if !s.noPull {
+		if err := podmanPull(s.image); err != nil {
+			return err
+		}
 	}
 	if err := podmanPrune(); err != nil {
-		return nil, err
+		return err
 	}
-	return &Sandbox{
-		image: image,
-	}, nil
+	s.init = true
+	return nil
 }
 
 // Run will run a single command inside the sandbox.
@@ -114,7 +154,7 @@ func Init(image string) (*Sandbox, error) {
 // is completed.
 //
 // This function is useful for running multiple commands in the sandbox.
-func (s *Sandbox) Run(command string, args ...string) (*RunResult, error) {
+func (s *podmanSandbox) Run(command string, args ...string) (*RunResult, error) {
 	// Delete existing logs (if any).
 	// This function uses a fixed log name and is not threadsafe.
 	if err := os.RemoveAll(logPath); err != nil {
@@ -153,7 +193,7 @@ func (s *Sandbox) Run(command string, args ...string) (*RunResult, error) {
 }
 
 // Clean stops and removes all containers.
-func (s *Sandbox) Clean() error {
+func (s *podmanSandbox) Clean() error {
 	// remove log files too?
 	return podmanCleanContainers()
 }

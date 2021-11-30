@@ -51,24 +51,24 @@ const (
 	maxIndexEntries = 10000
 )
 
-func RunLocal(ecosystem, pkgPath, version, image, command string) *AnalysisResult {
-	return run(ecosystem, pkgPath, version, image, command, []string{
+func RunLocal(ecosystem, pkgPath, version string, sb sandbox.Sandbox, command string) *AnalysisResult {
+	return run(ecosystem, pkgPath, version, sb, command, []string{
 		"-v", fmt.Sprintf("%s:%s", pkgPath, pkgPath),
 	})
 }
 
-func RunLive(ecosystem, pkgName, version, image, command string) *AnalysisResult {
-	return run(ecosystem, pkgName, version, image, command, nil)
+func RunLive(ecosystem, pkgName, version string, sb sandbox.Sandbox, command string) *AnalysisResult {
+	return run(ecosystem, pkgName, version, sb, command, nil)
 }
 
-func run(ecosystem, pkgName, version, image, command string, args []string) *AnalysisResult {
+func run(ecosystem, pkgName, version string, sb sandbox.Sandbox, command string, args []string) *AnalysisResult {
 	log.Info("Running analysis",
 		"command", command,
 		"args", args)
 
 	// Init the sandbox
 	log.Debug("Init the sandbox")
-	sb, err := sandbox.Init(image)
+	err := sb.Init()
 	if err != nil {
 		log.Panic("Failed to init sandbox",
 			"error", err)
