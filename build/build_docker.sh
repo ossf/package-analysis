@@ -16,7 +16,7 @@ done
 popd
 
 # Mapping from the container name to the path containing the Dockerfile.
-declare -A CMD_IMAGES=( [analysis]=analyze [scheduler]=scheduler [server]=server )
+declare -A CMD_IMAGES=( [analysis]=analyze [scheduler]=scheduler )
 
 pushd "$BASE_PATH"
 for image in "${!CMD_IMAGES[@]}"; do

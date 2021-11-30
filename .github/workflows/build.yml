@@ -17,7 +17,5 @@ jobs:
     - run: go build -o scheduler cmd/scheduler/main.go
     - run: go build -o worker cmd/worker/main.go
     - run: go build -o analyze cmd/analyze/main.go
-    - run: go build -o fillindexes cmd/fillindexes/main.go
-    - run: go build -o server cmd/server/main.go
     - run: go build -o loader load.go
       working-directory: function/loader

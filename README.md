@@ -13,10 +13,6 @@ The components are:
   collects package behavior data through static and dynamic analysis of each
   package.
 - A [loader](./function/loader/) - pushes the analysis results into BigQuery.
-- (Deprecated) a [fillindexes](./cmd/fillindexes/) utility - backfills analysis
-  results into a FireStore database.
-- (Deprecated) an [api server](./cmd/server) - allows the FireStore database
-  to be queried.
 
 The goal is for all of these components to work together and provide extensible,
 community-run infrastructure to study behavior of open source packages and to
@@ -48,10 +44,6 @@ the data coming out of scheduler. Values should follow
 `OSSF_MALWARE_ANALYSIS_RESULTS` - **OPTIONAL**: Can be used to set the bucket
 URL to publish results to. Values should follow
 [goclouddev buckets](https://gocloud.dev/howto/blob/).
-
-`OSSMALWARE_DOCSTORE_URL` - **OPTIONAL**: Can be used to set the docstore URL to
-publish results to. Values should follow
-[goclouddev docstore](https://gocloud.dev/howto/docstore/).
 
 ### Scheduler
 

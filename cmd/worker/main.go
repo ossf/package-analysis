@@ -22,7 +22,7 @@ const (
 	retryExpRate  = 1.5
 )
 
-func messageLoop(ctx context.Context, subURL, resultsBucket, docstorePath string) error {
+func messageLoop(ctx context.Context, subURL, resultsBucket string) error {
 	sub, err := pubsub.OpenSubscription(ctx, subURL)
 	if err != nil {
 		return err
@@ -78,13 +78,6 @@ func messageLoop(ctx context.Context, subURL, resultsBucket, docstorePath string
 			}
 		}
 
-		if docstorePath != "" {
-			err = analysis.WriteResultsToDocstore(ctx, docstorePath, result)
-			if err != nil {
-				return fmt.Errorf("failed to write to docstore = %v\n", err)
-			}
-		}
-
 		msg.Ack()
 	}
 }
@@ -94,11 +87,10 @@ func main() {
 	ctx := context.Background()
 	subURL := os.Getenv("OSSMALWARE_WORKER_SUBSCRIPTION")
 	resultsBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS")
-	docstorePath := os.Getenv("OSSMALWARE_DOCSTORE_URL")
 	log.Initalize(os.Getenv("LOGGER_ENV") == "prod")
 
 	for {
-		err := messageLoop(ctx, subURL, resultsBucket, docstorePath)
+		err := messageLoop(ctx, subURL, resultsBucket)
 		if err != nil {
 			if retryCount++; retryCount >= maxRetries {
 				log.Error("Retries exceeded",

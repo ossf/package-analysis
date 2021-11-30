@@ -47,8 +47,6 @@ services:
     environment:
       OSSMALWARE_WORKER_SUBSCRIPTION: kafka://worker?topic=workers
       OSSF_MALWARE_ANALYSIS_RESULTS: s3://package-analysis?endpoint=minio:9000&disableSSL=true&s3ForcePathStyle=true
-      MONGO_SERVER_URL: mongodb://root:example@mongo
-      OSSMALWARE_DOCSTORE_URL: mongo://analysis/
       KAFKA_BROKERS: kafka:9092
       AWS_ACCESS_KEY_ID: minio
       AWS_SECRET_ACCESS_KEY: minio123
@@ -77,19 +75,3 @@ services:
       PACKAGE_FEEDS_CONFIG_PATH: /config/feeds.yml
     volumes:
       - "./config/:/config/"
-
-  mongo:
-    image: mongo@sha256:482a562bf25f42f02ce589458f72866bbe9eded5b6f8fa5b1213313f0e00bba2
-    restart: always
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: example
-
-  mongo-express:
-    image: mongo-express@sha256:6ad795986bf2138b254012e82b080761e8563887cdc8357fcd0bc1646805544f
-    restart: always
-    ports:
-      - 8081:8081
-    environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: root
-      ME_CONFIG_MONGODB_ADMINPASSWORD: example

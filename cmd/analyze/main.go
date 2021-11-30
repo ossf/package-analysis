@@ -16,7 +16,6 @@ var (
 	ecosystem = flag.String("ecosystem", "", "ecosystem (npm, pypi, or rubygems)")
 	version   = flag.String("version", "", "version")
 	upload    = flag.String("upload", "", "bucket path for uploading results")
-	docstore  = flag.String("docstore", "", "docstore path")
 )
 
 func parseBucketPath(path string) (string, string) {
@@ -81,14 +80,6 @@ func main() {
 		err := analysis.UploadResults(ctx, bucket, path, result)
 		if err != nil {
 			log.Fatal("Failed to upload results to blobstore",
-				"error", err)
-		}
-	}
-
-	if *docstore != "" {
-		err := analysis.WriteResultsToDocstore(ctx, *docstore, result)
-		if err != nil {
-			log.Fatal("Failed to write results to docstore",
 				"error", err)
 		}
 	}
