@@ -14,6 +14,7 @@ import (
 	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
+	"github.com/ossf/package-analysis/internal/sandbox"
 )
 
 const (
@@ -69,7 +70,8 @@ func messageLoop(ctx context.Context, subURL, resultsBucket string) error {
 			"ecosystem", ecosystem,
 			"name", name,
 			"version", version)
-		result := analysis.RunLive(ecosystem, name, version, manager.Image, manager.CommandFmt(name, version))
+		sb := sandbox.New(manager.Image)
+		result := analysis.RunLive(ecosystem, name, version, sb, manager.CommandFmt(name, version))
 
 		if resultsBucket != "" {
 			err = analysis.UploadResults(ctx, resultsBucket, ecosystem+"/"+name, result)
