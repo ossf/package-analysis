@@ -3,7 +3,6 @@ package analysis
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"path/filepath"
 
 	"github.com/ossf/package-analysis/internal/dnsanalyzer"
@@ -51,19 +50,8 @@ const (
 	maxIndexEntries = 10000
 )
 
-func RunLocal(ecosystem, pkgPath, version string, sb sandbox.Sandbox, command string) *AnalysisResult {
-	return run(ecosystem, pkgPath, version, sb, command, []string{
-		"-v", fmt.Sprintf("%s:%s", pkgPath, pkgPath),
-	})
-}
-
-func RunLive(ecosystem, pkgName, version string, sb sandbox.Sandbox, command string) *AnalysisResult {
-	return run(ecosystem, pkgName, version, sb, command, nil)
-}
-
-func run(ecosystem, pkgName, version string, sb sandbox.Sandbox, command string, args []string) *AnalysisResult {
+func Run(ecosystem, pkgName, version string, sb sandbox.Sandbox, args []string) *AnalysisResult {
 	log.Info("Running analysis",
-		"command", command,
 		"args", args)
 
 	// Init the sandbox
@@ -91,9 +79,8 @@ func run(ecosystem, pkgName, version string, sb sandbox.Sandbox, command string,
 
 	// Run the command
 	log.Debug("Running the command",
-		"command", command,
 		"args", args)
-	r, err := sb.Run(command, args...)
+	r, err := sb.Run(args...)
 	if err != nil {
 		log.Panic("Command exited unsucessfully",
 			"error", err)

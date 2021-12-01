@@ -31,14 +31,7 @@ func getPyPILatest(pkg string) string {
 }
 
 var PyPIPackageManager = PkgManager{
-	Name:  "pypi",
-	Image: "gcr.io/ossf-malware-analysis/python",
-	CommandFmt: func(pkg, ver string) string {
-		if ver != "" {
-			return fmt.Sprintf("analyze.py %s==%s", pkg, ver)
-		}
-
-		return fmt.Sprintf("analyze.py %s", pkg)
-	},
+	Name:      "pypi",
+	Image:     "gcr.io/ossf-malware-analysis/python",
 	GetLatest: getPyPILatest,
 }

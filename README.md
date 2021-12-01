@@ -85,8 +85,8 @@ $ docker run --privileged -ti \
 
 ### Local package
 
-To run this on a local package archive (e.g. `/path/to/test.whl`), it needs to
-be mounted into the the container.
+To run this on a local package archive (e.g. `/path/to/test.whl` for a package
+named `test`), it needs to be mounted into the the container.
 
 ```bash
 $ mkdir /tmp/results
@@ -94,7 +94,7 @@ $ docker run --privileged -ti \
     -v /tmp/results:/results \
     -v /path/to/test.whl:/test.whl \
     gcr.io/ossf-malware-analysis/analysis analyze \
-    -local /test.whl -ecosystem pypi \
+    -local /test.whl -package test -ecosystem pypi \
     -upload file:///results/
 ```
 

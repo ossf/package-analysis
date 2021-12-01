@@ -8,3 +8,5 @@ FROM scratch
 COPY --from=image / /
 ENV NODE_PATH /app/node_modules
 WORKDIR /app
+
+ENTRYPOINT [ "/usr/local/bin/analyze.js" ]

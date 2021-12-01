@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	pkg       = flag.String("package", "", "live package name")
+	pkg       = flag.String("package", "", "package name")
 	localPkg  = flag.String("local", "", "local package path")
 	ecosystem = flag.String("ecosystem", "", "ecosystem (npm, pypi, or rubygems)")
 	version   = flag.String("version", "", "version")
@@ -44,45 +44,43 @@ func main() {
 			"ecosystem", ecosystem)
 	}
 
-	var pkgName string
-	live := true
-	if *pkg != "" {
-		pkgName = *pkg
-		if *version == "" {
-			*version = manager.GetLatest(pkgName)
-		}
-	} else if *localPkg != "" {
-		pkgName = *localPkg
-		if *version != "" {
-			log.Panic("Unable to specify version for local packages")
-		}
-		live = false
-	} else {
+	if *pkg == "" {
 		flag.Usage()
 		return
 	}
 
+	live := true
+	if *localPkg == "" {
+		if *version == "" {
+			*version = manager.GetLatest(*pkg)
+		}
+	} else {
+		live = false
+		if *version != "" {
+			log.Panic("Unable to specify version for local packages")
+		}
+	}
+
 	log.Info("Got request",
 		"ecosystem", *ecosystem,
-		"name", pkgName,
+		"name", *pkg,
 		"version", *version,
 		"live", live)
 
-	command := manager.CommandFmt(pkgName, *version)
+	args := manager.Args("all", *pkg, *version, *localPkg)
 
-	// Prepare the sandbox to use ensuring we respect the -"nopull" option.
+	// Prepare the sandbox to use ensuring we respect the -"nopull" option and
+	// any local package is mapped through.
 	sbOpts := make([]sandbox.Option, 0)
 	if *noPull {
 		sbOpts = append(sbOpts, sandbox.NoPull())
 	}
-	sb := sandbox.New(manager.Image, sbOpts...)
-
-	var result *analysis.AnalysisResult
-	if live {
-		result = analysis.RunLive(*ecosystem, pkgName, *version, sb, command)
-	} else {
-		result = analysis.RunLocal(*ecosystem, pkgName, *version, sb, command)
+	if !live {
+		sbOpts = append(sbOpts, sandbox.Volume(*localPkg, *localPkg))
 	}
+
+	sb := sandbox.New(manager.Image, sbOpts...)
+	result := analysis.Run(*ecosystem, *pkg, *version, sb, args)
 
 	ctx := context.Background()
 	if *upload != "" {

@@ -71,7 +71,7 @@ func messageLoop(ctx context.Context, subURL, resultsBucket string) error {
 			"name", name,
 			"version", version)
 		sb := sandbox.New(manager.Image)
-		result := analysis.RunLive(ecosystem, name, version, sb, manager.CommandFmt(name, version))
+		result := analysis.Run(ecosystem, name, version, sb, manager.Args("all", name, version, ""))
 
 		if resultsBucket != "" {
 			err = analysis.UploadResults(ctx, resultsBucket, ecosystem+"/"+name, result)

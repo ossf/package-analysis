@@ -7,3 +7,5 @@ RUN mkdir -p /app
 FROM scratch
 COPY --from=image / /
 WORKDIR /app
+
+ENTRYPOINT [ "/usr/local/bin/analyze.rb" ]

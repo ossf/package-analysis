@@ -53,13 +53,38 @@ def analyze(package):
 
 
 def main():
-    if len(sys.argv) != 2:
-        raise ValueError(f'Usage: {sys.argv[0]} package_name[==version]')
+    args = list(sys.argv)
+    script = args.pop(0)
 
-    package_with_version = sys.argv[1]
-    pip_install(package_with_version)
+    if len(args) < 2 or len(args) > 4:
+        raise ValueError(f'Usage: {script} [--local file | --version version] phase package_name')
 
-    package = package_with_version.split('==')[0]
+    # Parse the arguments manually to avoid introducing unnecessary dependencies
+    # and side effects that add noise to the strace output.
+    local_package = None
+    version = None
+    if args[0] == '--local':
+        args.pop(0)
+        local_package = args.pop(0)
+    elif args[0] == '--version':
+        args.pop(0)
+        version = args.pop(0)
+
+    phase = args.pop(0)
+    package = args.pop(0)
+
+    if phase != 'all':
+        print('Only "all" phase is supported at the moment')
+        exit(1)
+
+    if local_package:
+        install_package = local_package
+    elif version:
+        install_package = f'{package}=={version}'
+    else:
+        install_package = package
+
+    pip_install(install_package)
     analyze(package)
 
 
