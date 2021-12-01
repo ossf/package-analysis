@@ -25,6 +25,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.4.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.7.0 // indirect
 	github.com/aws/smithy-go v1.8.0 // indirect
+	github.com/blendle/zapdriver v1.3.1 // indirect
 	github.com/census-instrumentation/opencensus-proto v0.3.0 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cncf/udpa/go v0.0.0-20201120205902-5459f2c99403 // indirect

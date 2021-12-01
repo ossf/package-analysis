@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/ossf/package-analysis/internal/log"
 )
 
 const (
@@ -203,8 +204,14 @@ func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	logOut := log.Writer(log.InfoLevel,
+		"args", args)
+	defer logOut.Close()
+	logErr := log.Writer(log.WarnLevel,
+		"args", args)
+	defer logErr.Close()
+	cmd.Stdout = io.MultiWriter(&stdout, logOut)
+	cmd.Stderr = io.MultiWriter(&stderr, logErr)
 
 	if err := cmd.Start(); err != nil {
 		return &RunResult{}, err
@@ -225,8 +232,6 @@ func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
 		}
 	}
 
-	log.Printf("Sandbox stdout = %s", stdout.String())
-	log.Printf("Sandbox stderr = %s", stderr.String())
 	return result, err
 }
 

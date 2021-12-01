@@ -33,7 +33,7 @@ func main() {
 	retryCount := 0
 	subscriptionURL := os.Getenv("OSSMALWARE_SUBSCRIPTION_URL")
 	topicURL := os.Getenv("OSSMALWARE_WORKER_TOPIC")
-	log.Initalize(os.Getenv("LOGGER_ENV") == "prod")
+	log.Initalize(os.Getenv("LOGGER_ENV"))
 
 	for retryCount <= maxRetries {
 		err := listenLoop(subscriptionURL, topicURL)
