@@ -59,6 +59,8 @@ def main():
     if len(args) < 2 or len(args) > 4:
         raise ValueError(f'Usage: {script} [--local file | --version version] phase package_name')
 
+    # Parse the arguments manually to avoid introducing unnecessary dependencies
+    # and side effects that add noise to the strace output.
     local_package = None
     version = None
     if args[0] == '--local':

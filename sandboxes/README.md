@@ -157,6 +157,8 @@ The container must include:
 - the package manager used by the analysis command
 - system libraries used by the majority of packages
 
+The `Dockerfile` must also set the analysis command as the `ENTRYPOINT`.
+
 ### Wiring It Up
 
 1. Update [build_docker.sh](../build/build_docker.sh) to reference the image.

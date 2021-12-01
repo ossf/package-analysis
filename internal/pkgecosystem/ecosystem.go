@@ -1,12 +1,9 @@
 package pkgecosystem
 
-import "strings"
-
 type PkgManager struct {
-	Name        string
-	CommandPath string
-	GetLatest   func(string) string
-	Image       string
+	Name      string
+	GetLatest func(string) string
+	Image     string
 }
 
 var (
@@ -22,24 +19,14 @@ func (p PkgManager) String() string {
 	return p.Name
 }
 
-// escape ensures that args being used are safely escaped for usage.
-func escape(s string) string {
-	if len(s) == 0 {
-		return "''"
-	}
-
-	return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'"
-}
-
-// Command returns the analysis command for the given package.
-func (p PkgManager) Command(phase, pkg, ver, local string) string {
+// Args returns the analysis arguments for the given package.
+func (p PkgManager) Args(phase, pkg, ver, local string) []string {
 	args := make([]string, 0)
-	args = append(args, p.CommandPath)
 
 	if local != "" {
-		args = append(args, "--local", escape(local))
+		args = append(args, "--local", local)
 	} else if ver != "" {
-		args = append(args, "--version", escape(ver))
+		args = append(args, "--version", ver)
 	}
 
 	if phase == "" {
@@ -48,7 +35,7 @@ func (p PkgManager) Command(phase, pkg, ver, local string) string {
 		args = append(args, phase)
 	}
 
-	args = append(args, escape(pkg))
+	args = append(args, pkg)
 
-	return strings.Join(args, " ")
+	return args
 }

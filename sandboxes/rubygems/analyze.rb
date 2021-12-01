@@ -40,6 +40,8 @@ end
 local_file = nil
 version = nil
 
+# Parse the arguments manually to avoid introducing unnecessary dependencies
+# and side effects that add noise to the strace output.
 case ARGV[0]
 when "--local"
   ARGV.shift

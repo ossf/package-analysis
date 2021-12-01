@@ -31,8 +31,7 @@ func getNPMLatest(pkg string) string {
 }
 
 var NPMPackageManager = PkgManager{
-	Name:        "npm",
-	Image:       "gcr.io/ossf-malware-analysis/node",
-	CommandPath: "analyze.js",
-	GetLatest:   getNPMLatest,
+	Name:      "npm",
+	Image:     "gcr.io/ossf-malware-analysis/node",
+	GetLatest: getNPMLatest,
 }

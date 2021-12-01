@@ -2,6 +2,7 @@ package sandbox
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -56,18 +57,32 @@ type Sandbox interface {
 	// any commands are executed.
 	Init() error
 
-	// Run will run a command in the sandbox.
+	// Run will run the sandbox for the given args.
 	//
 	// The container used to execute the command will be removed when the command
 	// is completed.
-	Run(command string, args ...string) (*RunResult, error)
+	Run(...string) (*RunResult, error)
+}
+
+// volume represents a volume mapping between a host src and a container dest
+type volume struct {
+	src  string
+	dest string
+}
+
+func (v volume) args() []string {
+	return []string{
+		"-v",
+		fmt.Sprintf("%s:%s", v.src, v.dest),
+	}
 }
 
 // Implements the Sandbox interface using "podman".
 type podmanSandbox struct {
-	image  string
-	init   bool
-	noPull bool
+	image   string
+	init    bool
+	noPull  bool
+	volumes []volume
 }
 
 type Option interface{ set(*podmanSandbox) }
@@ -76,9 +91,10 @@ func (o option) set(sb *podmanSandbox) { o(sb) }
 
 func New(image string, options ...Option) Sandbox {
 	sb := &podmanSandbox{
-		image:  image,
-		init:   false,
-		noPull: false,
+		image:   image,
+		init:    false,
+		noPull:  false,
+		volumes: make([]volume, 0),
 	}
 	for _, o := range options {
 		o.set(sb)
@@ -86,8 +102,21 @@ func New(image string, options ...Option) Sandbox {
 	return sb
 }
 
+// NoPull will disable the image for the sandbox from being pulled during Init.
 func NoPull() Option {
 	return option(func(sb *podmanSandbox) { sb.noPull = true })
+}
+
+// Volume can be used to specify an additional volume map into the container.
+//
+// src is the path in the host that will be mapped to the dest path.
+func Volume(src, dest string) Option {
+	return option(func(sb *podmanSandbox) {
+		sb.volumes = append(sb.volumes, volume{
+			src:  src,
+			dest: dest,
+		})
+	})
 }
 
 func podmanPull(image string) error {
@@ -108,7 +137,7 @@ func podmanCleanContainers() error {
 	return cmd.Run()
 }
 
-func podmanRunCmd(image, command string, extraArgs []string) *exec.Cmd {
+func podmanRunCmd(image string, commandArgs []string, extraArgs []string) *exec.Cmd {
 	args := []string{
 		"run",
 		"--runtime=" + runtimeBin,
@@ -123,10 +152,19 @@ func podmanRunCmd(image, command string, extraArgs []string) *exec.Cmd {
 		"--rm",
 	}
 	args = append(args, extraArgs...)
-	args = append(args, image, "sh", "-c", command)
+	args = append(args, image)
+	args = append(args, commandArgs...)
 
 	cmd := exec.Command(podmanBin, args...)
 	return cmd
+}
+
+func (s *podmanSandbox) extraArgs() []string {
+	args := make([]string, 0)
+	for _, v := range s.volumes {
+		args = append(args, v.args()...)
+	}
+	return args
 }
 
 // Initializes the Sandbox ready for running commands.
@@ -154,14 +192,14 @@ func (s *podmanSandbox) Init() error {
 // is completed.
 //
 // This function is useful for running multiple commands in the sandbox.
-func (s *podmanSandbox) Run(command string, args ...string) (*RunResult, error) {
+func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
 	// Delete existing logs (if any).
 	// This function uses a fixed log name and is not threadsafe.
 	if err := os.RemoveAll(logPath); err != nil {
 		return &RunResult{}, err
 	}
 
-	cmd := podmanRunCmd(s.image, command, args)
+	cmd := podmanRunCmd(s.image, args, s.extraArgs())
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer

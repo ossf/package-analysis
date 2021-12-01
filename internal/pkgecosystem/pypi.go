@@ -31,8 +31,7 @@ func getPyPILatest(pkg string) string {
 }
 
 var PyPIPackageManager = PkgManager{
-	Name:        "pypi",
-	Image:       "gcr.io/ossf-malware-analysis/python",
-	CommandPath: "analyze.py",
-	GetLatest:   getPyPILatest,
+	Name:      "pypi",
+	Image:     "gcr.io/ossf-malware-analysis/python",
+	GetLatest: getPyPILatest,
 }

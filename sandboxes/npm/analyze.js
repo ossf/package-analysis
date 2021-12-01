@@ -13,6 +13,8 @@ if (argv.length < 2 || argv > 4) {
   process.exit(1);
 }
 
+// Parse the arguments manually to avoid introducing unnecessary dependencies
+// and side effects that add noise to the strace output.
 var localFile = null;
 var ver = null;
 switch (argv[0]) {

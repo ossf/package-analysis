@@ -67,21 +67,20 @@ func main() {
 		"version", *version,
 		"live", live)
 
-	command := manager.Command("all", *pkg, *version, *localPkg)
+	args := manager.Args("all", *pkg, *version, *localPkg)
 
-	// Prepare the sandbox to use ensuring we respect the -"nopull" option.
+	// Prepare the sandbox to use ensuring we respect the -"nopull" option and
+	// any local package is mapped through.
 	sbOpts := make([]sandbox.Option, 0)
 	if *noPull {
 		sbOpts = append(sbOpts, sandbox.NoPull())
 	}
-	sb := sandbox.New(manager.Image, sbOpts...)
-
-	var result *analysis.AnalysisResult
-	if live {
-		result = analysis.RunLive(*ecosystem, *pkg, *version, sb, command)
-	} else {
-		result = analysis.RunLocal(*ecosystem, *pkg, *localPkg, *version, sb, command)
+	if !live {
+		sbOpts = append(sbOpts, sandbox.Volume(*localPkg, *localPkg))
 	}
+
+	sb := sandbox.New(manager.Image, sbOpts...)
+	result := analysis.Run(*ecosystem, *pkg, *version, sb, args)
 
 	ctx := context.Background()
 	if *upload != "" {
