@@ -61,8 +61,11 @@ func Initalize(env string) {
 	case LoggingEnvProd.String():
 		defaultLoggingEnv = LoggingEnvProd
 		config := zapdriver.NewProductionConfig()
-		config.Sampling = nil // make sure sampling is disabled
-		logger, err = config.Build()
+		// Make sure sampling is disabled.
+		config.Sampling = nil
+		// Build the logger and ensure we use the zapdriver Core so that labels
+		// are handled correctly.
+		logger, err = config.Build(zapdriver.WrapCore())
 	case LoggingEnvDev.String():
 		fallthrough
 	default:
