@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"net/url"
+	"os"
 
 	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/log"
@@ -31,7 +32,7 @@ func parseBucketPath(path string) (string, string) {
 }
 
 func main() {
-	log.Initalize(false)
+	log.Initalize(os.Getenv("LOGGER_ENV"))
 	flag.Parse()
 	if *ecosystem == "" {
 		flag.Usage()
@@ -41,7 +42,7 @@ func main() {
 	manager, ok := pkgecosystem.SupportedPkgManagers[*ecosystem]
 	if !ok {
 		log.Panic("Unsupported pkg manager",
-			"ecosystem", ecosystem)
+			log.Label("ecosystem", *ecosystem))
 	}
 
 	if *pkg == "" {
@@ -62,9 +63,9 @@ func main() {
 	}
 
 	log.Info("Got request",
-		"ecosystem", *ecosystem,
-		"name", *pkg,
-		"version", *version,
+		log.Label("ecosystem", *ecosystem),
+		log.Label("name", *pkg),
+		log.Label("version", *version),
 		"live", live)
 
 	args := manager.Args("all", *pkg, *version, *localPkg)

@@ -47,7 +47,7 @@ func messageLoop(ctx context.Context, subURL, resultsBucket string) error {
 		ecosystem := msg.Metadata["ecosystem"]
 		if ecosystem == "" {
 			log.Warn("ecosystem is empty",
-				"name", name)
+				log.Label("name", name))
 			msg.Ack()
 			continue
 		}
@@ -55,8 +55,8 @@ func messageLoop(ctx context.Context, subURL, resultsBucket string) error {
 		manager, ok := pkgecosystem.SupportedPkgManagers[ecosystem]
 		if !ok {
 			log.Warn("Unsupported pkg manager",
-				"ecosystem", ecosystem,
-				"name", name)
+				log.Label("ecosystem", ecosystem),
+				log.Label("name", name))
 			msg.Ack()
 			continue
 		}
@@ -67,9 +67,9 @@ func messageLoop(ctx context.Context, subURL, resultsBucket string) error {
 		}
 
 		log.Info("Got request",
-			"ecosystem", ecosystem,
-			"name", name,
-			"version", version)
+			log.Label("ecosystem", ecosystem),
+			log.Label("name", name),
+			log.Label("version", version))
 		sb := sandbox.New(manager.Image)
 		result := analysis.Run(ecosystem, name, version, sb, manager.Args("all", name, version, ""))
 
@@ -89,7 +89,7 @@ func main() {
 	ctx := context.Background()
 	subURL := os.Getenv("OSSMALWARE_WORKER_SUBSCRIPTION")
 	resultsBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS")
-	log.Initalize(os.Getenv("LOGGER_ENV") == "prod")
+	log.Initalize(os.Getenv("LOGGER_ENV"))
 
 	for {
 		err := messageLoop(ctx, subURL, resultsBucket)

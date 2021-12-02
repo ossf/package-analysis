@@ -3,10 +3,8 @@
 const { spawnSync } = require('child_process');
 const { argv } = require('process');
 
-console.log(argv);
 const nodeBin = argv.shift();
 const scriptPath = argv.shift();
-console.log(argv);
 
 if (argv.length < 2 || argv > 4) {
   console.log(`Usage: ${nodeBin} ${scriptPath} [--local file | --version version] phase pkg`);

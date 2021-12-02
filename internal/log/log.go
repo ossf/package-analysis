@@ -9,12 +9,43 @@ package log
 
 import (
 	golog "log"
+	"strings"
 
+	"github.com/blendle/zapdriver"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+)
+
+// Level represents a specific logging level. It wraps zapcore.Level.
+type Level zapcore.Level
+
+const (
+	DebugLevel  Level = Level(zapcore.DebugLevel)
+	InfoLevel   Level = Level(zapcore.InfoLevel)
+	WarnLevel   Level = Level(zapcore.WarnLevel)
+	ErrorLevel  Level = Level(zapcore.ErrorLevel)
+	DPanicLevel Level = Level(zapcore.DPanicLevel)
+	PanicLevel  Level = Level(zapcore.PanicLevel)
+	FatalLevel  Level = Level(zapcore.FatalLevel)
+)
+
+// LoggingEnv is used to represent a specific configuration used by a given
+// environment.
+type LoggingEnv string
+
+// String implements the Stringer interface.
+func (e LoggingEnv) String() string {
+	return string(e)
+}
+
+const (
+	LoggingEnvDev  LoggingEnv = "dev"
+	LoggingEnvProd LoggingEnv = "prod"
 )
 
 var (
-	defaultLogger *zap.SugaredLogger
+	defaultLogger     *zap.SugaredLogger
+	defaultLoggingEnv LoggingEnv = LoggingEnvDev
 )
 
 // Initalize the logger for logging.
@@ -23,18 +54,25 @@ var (
 // "false" will use the default development configuration.
 //
 // Note: this method MUST be called before any other method in this package.
-func Initalize(prod bool) {
+func Initalize(env string) {
 	var err error
 	var logger *zap.Logger
-	if prod {
-		logger, err = zap.NewProduction()
-	} else {
+	switch strings.ToLower(env) {
+	case LoggingEnvProd.String():
+		defaultLoggingEnv = LoggingEnvProd
+		config := zapdriver.NewProductionConfig()
+		config.Sampling = nil // make sure sampling is disabled
+		logger, err = config.Build()
+	case LoggingEnvDev.String():
+		fallthrough
+	default:
 		logger, err = zap.NewDevelopment()
 	}
 	if err != nil {
 		golog.Panic(err)
 	}
-	defaultLogger = logger.Sugar()
+	zap.RedirectStdLog(logger)
+	defaultLogger = logger.WithOptions(zap.AddCallerSkip(1)).Sugar()
 }
 
 func checkInit() {
@@ -90,4 +128,14 @@ func Panic(msg string, keysAndValues ...interface{}) {
 func DPanic(msg string, keysAndValues ...interface{}) {
 	checkInit()
 	defaultLogger.DPanicw(msg, keysAndValues...)
+}
+
+// Label is a convenience wrapper for zapdriver.Label if the LoggingEnv used
+// is LoggingEnvProd. Otherwise it will wrap zap.String.
+func Label(key, value string) zap.Field {
+	if defaultLoggingEnv == LoggingEnvProd {
+		return zapdriver.Label(key, value)
+	} else {
+		return zap.String(key, value)
+	}
 }
