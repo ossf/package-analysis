@@ -4,16 +4,24 @@ require 'find'
 require 'open3'
 require 'pathname'
 
-def install(package, version, local_file)
+class Package
+  attr_reader :name, :version, :local_file
+
+  def initialize(name:, version:, local_file:)
+    @name, @version, @local_file = name, version, local_file
+  end
+end
+
+def install(package)
   cmd = ["gem", "install"]
-  if local_file
-    cmd << local_file
+  if package.local_file
+    cmd << package.local_file
   else
-    if version
+    if package.version
       cmd << "-v"
-      cmd << version
+      cmd << package.version
     end
-    cmd << package
+    cmd << package.name
   end
 
   output, status = Open3.capture2e(*cmd)
@@ -31,6 +39,38 @@ def install(package, version, local_file)
 
   exit 1
 end
+
+def importPkg(package)
+  spec = Gem::Specification.find_by_name(package.name)
+
+  spec.require_paths.each do |require_path|
+    if Pathname.new(require_path).absolute?
+      lib_path = Pathname.new(require_path)
+    else
+      lib_path = Pathname.new(File.join(spec.full_gem_path, require_path))
+    end
+
+    Find.find(lib_path.to_s) do |path|
+      if path.end_with?('.rb')
+        relative_path = Pathname.new(path).relative_path_from(lib_path)
+
+        require_path = relative_path.to_s.delete_suffix('.rb')
+        puts "Loading #{require_path}"
+        begin
+          require require_path
+        rescue Exception => e
+          puts "Failed to load #{require_path}: #{e}"
+        end
+      end
+    end
+  end
+end
+
+phases = {
+  "all" => [method(:install), method(:importPkg)],
+  "install" => [method(:install)],
+  "import" => [method(:importPkg)],
+}
 
 if ARGV.length < 2 || ARGV.length > 4
   puts "Usage: #{$0} [--local file | --version version] phase package"
@@ -52,34 +92,13 @@ when "--version"
 end
 
 phase = ARGV.shift
-package = ARGV.shift
+package_name = ARGV.shift
 
-if phase != "all"
-  puts "Only \"all\" phase is supported at the moment"
+package = Package.new(name: package_name, version: version, local_file: local_file)
+
+if !phases.has_key?(phase)
+  puts "Unknown phase #{phase} specified"
   exit 1
 end
 
-install(package, version, local_file)
-spec = Gem::Specification.find_by_name(package)
-
-spec.require_paths.each do |require_path|
-  if Pathname.new(require_path).absolute?
-    lib_path = Pathname.new(require_path)
-  else
-    lib_path = Pathname.new(File.join(spec.full_gem_path, require_path))
-  end
-
-  Find.find(lib_path.to_s) do |path|
-    if path.end_with?('.rb')
-      relative_path = Pathname.new(path).relative_path_from(lib_path)
-
-      require_path = relative_path.to_s.delete_suffix('.rb')
-      puts "Loading #{require_path}"
-      begin
-        require require_path
-      rescue Exception => e
-        puts "Failed to load #{require_path}: #{e}"
-      end
-    end
-  end
-end
+phases[phase].each { |m| m.call(package) }
