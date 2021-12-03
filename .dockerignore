@@ -1,0 +1,9 @@
+# What to ignore while building Go based cmd container images.
+# This helps make the images build a lot faster.
+build
+infra
+examples
+function
+sandboxes
+tools
+web
