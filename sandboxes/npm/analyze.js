@@ -3,6 +3,47 @@
 const { spawnSync } = require('child_process');
 const { argv } = require('process');
 
+function install(package) {
+  // Specify the package to install.
+  const installPkg = package.localFile
+    ? package.localFile
+    : (package.version
+      ? `${package.name}@${package.version}`
+      : package.name);
+
+  let result = spawnSync('npm', ['init', '--force'], { stdio: 'inherit' });
+  if (result.status != 0) {
+    throw 'Failed to init npm';
+  }
+
+  result = spawnSync('npm', ['install', installPkg], { stdio: 'pipe', encoding: 'utf8' });
+  console.log(result.stdout + result.stderr);
+
+  if (result.status == 0) {
+    console.log('Install succeeded.');
+  } else {
+    if (result.stderr.includes('is not in the npm registry.')) {
+      process.exit(0);
+    }
+    console.log('Install failed.');
+    process.exit(1);
+  }
+}
+
+function importPkg(package) {
+  try {
+    require(package.name);
+  } catch (e) {
+    console.log(`Failed to import ${package.name}: ${e}`);
+  }  
+}
+
+const phases = new Map([
+  ['all', [install, importPkg]],
+  ['install', [install]],
+  ['import', [importPkg]]
+]);
+
 const nodeBin = argv.shift();
 const scriptPath = argv.shift();
 
@@ -28,35 +69,16 @@ switch (argv[0]) {
 
 const phase = argv.shift();
 const pkg = argv.shift();
+const package = {
+  name: pkg,
+  version: ver,
+  localFile: localFile,
+};
 
-if (phase != 'all') {
-  console.log('Only "all" phase is supported at the moment.');
+if (!phases.keys().includes(phase)) {
+  console.log(`Unknown phase ${phase} specified.`);
   process.exit(1);
 }
 
-// Specify the package to install.
-const installPkg = localFile ? localFile : (ver ? `${pkg}@${ver}` : pkg);
-
-let result = spawnSync('npm', ['init', '--force'], { stdio: 'inherit' });
-if (result.status != 0) {
-  throw 'Failed to init npm';
-}
-
-result = spawnSync('npm', ['install', installPkg], { stdio: 'pipe', encoding: 'utf8' });
-console.log(result.stdout + result.stderr);
-
-if (result.status == 0) {
-  console.log('Install succeeded.');
-} else {
-  if (result.stderr.includes('is not in the npm registry.')) {
-    process.exit(0);
-  }
-  console.log('Install failed.');
-  process.exit(1);
-}
-
-try {
-  require(pkg);
-} catch (e) {
-  console.log(`Failed to import ${pkg}: ${e}`);
-}
+// Execute the phase
+phases[phase].forEach((f) => f(package));
