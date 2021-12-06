@@ -12,12 +12,6 @@ func init() {
 	log.Initalize("")
 }
 
-// TestParseExecve
-// TestParseBind
-// TestParseListen
-// TestParseConnect
-// TestParseFileCreateAndRead
-
 func TestIgnoreEntryLogs(t *testing.T) {
 	input := "I1203 05:29:21.585712     173 strace.go:625] [   2] python3 E creat(0x7f015d7865d0 /tmp/abctest, 0o600)"
 	r := strings.NewReader(input)
