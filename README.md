@@ -98,6 +98,14 @@ $ docker run --privileged -ti \
     -upload file:///results/
 ```
 
+## Development
+
+### Required Dependencies
+
+- Go v1.17
+- Docker
+- libpcap-dev
+
 # Contributing
 
 If you want to get involved or have ideas you'd like to chat about, we discuss this project in the [OSSF Securing Critical Projects Working Group](https://github.com/ossf/wg-securing-critical-projects) meetings.
