@@ -11,6 +11,13 @@ from these package repositories (at the time of creation). The data is from
 [PyPI](https://hugovk.github.io/top-pypi-packages/top-pypi-packages-30-days.json)
 and [RubyGems](https://rubygems.org/stats).
 
+### Prerequisites
+
+This script requires:
+
+- Python 3
+- [Google Cloud SDK](https://cloud.google.com/sdk/docs/install)
+
 ### Example usage
 
 Firstly, ensure you are authenticated with the cloud project:

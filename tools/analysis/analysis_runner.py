@@ -3,15 +3,17 @@ import argparse
 import os
 import subprocess
 
-# TODO: Support customizing these.
-_TOPIC = 'projects/ossf-malware-analysis/topics/workers'
-_PACKAGES_BUCKET = 'ossf-malware-analysis-packages'
+_TOPIC = os.getenv(
+    'OSSMALWARE_WORKER_TOPIC',
+    'gcppubsub://projects/ossf-malware-analysis/topics/workers')
+_PACKAGES_BUCKET = os.getenv(
+    'OSSF_MALWARE_ANALYSIS_PACKAGES', 'gs://ossf-malware-analysis-packages')
 
 
 def _upload_file(local_path):
   # TODO: figure out a better way to key these.
   filename = os.path.basename(local_path)
-  upload_path = f'gs://{_PACKAGES_BUCKET}/{filename}'
+  upload_path = f'{_PACKAGES_BUCKET}/{filename}'
   print('Uploading', local_path, 'to', upload_path)
   subprocess.run(
     ('gsutil', 'cp', local_path, upload_path), check=True)
@@ -36,9 +38,10 @@ def _request(name, ecosystem, version, local_file=None, results_bucket=None):
     attributes.append('results_bucket_override=' + results_bucket)
 
   print('Requesting analysis with', attributes)
+  topic = _TOPIC[_TOPIC.find('://') + 3:]
   subprocess.run(
     ('gcloud', 'pubsub', 'topics', 'publish',
-      _TOPIC, '--attribute=' + ','.join(attributes)), check=True)
+      topic, '--attribute=' + ','.join(attributes)), check=True)
 
 
 def main():
