@@ -33,7 +33,7 @@ var (
 	// 0x3 socket:[1], 0x7f27cbd0ac50 {Family: AF_INET, Addr: , Port: 0}, 0x10
 	// 0x3 socket:[4], 0x55ed873bb510 {Family: AF_INET6, Addr: 2001:67c:1360:8001::24, Port: 80}, 0x1c
 	// 0x3 socket:[16], 0x5568c5caf2d0 {Family: AF_INET, Addr: , Port: 5000}, 0x10
-	socketPattern = regexp.MustCompile(`{Family: AF_INET6?, Addr: ([^,]*), Port: ([0-9]+)}`)
+	socketPattern = regexp.MustCompile(`{Family: ([^,]+), (Addr: ([^,]*), Port: ([0-9]+)|[^}]+)}`)
 )
 
 type FileInfo struct {
@@ -182,7 +182,6 @@ func (r *Result) parseSyscall(syscall, args string) error {
 		if match == nil {
 			return fmt.Errorf("Failed to parse execve args: %s", args)
 		}
-
 		log.Debug("execve",
 			"cmdAndEnv", match[1])
 		cmd, env, err := parseCmdAndEnv(match[1])
@@ -192,15 +191,20 @@ func (r *Result) parseSyscall(syscall, args string) error {
 		r.recordCommand(cmd, env)
 	case "bind":
 		fallthrough
-	case "listen":
-		fallthrough
 	case "connect":
 		match := socketPattern.FindStringSubmatch(args)
 		if match == nil {
 			return fmt.Errorf("Failed to parse socket args: %s", args)
 		}
-		address := match[1]
-		port, err := parsePort(match[2])
+		family := match[1]
+		if family != "AF_INET" && family != "AF_INET6" {
+			log.Debug("Ignoring socket",
+				"family", family,
+				"socket", match[2])
+			return nil
+		}
+		address := match[3]
+		port, err := parsePort(match[4])
 		if err != nil {
 			return err
 		}
