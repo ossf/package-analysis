@@ -3,10 +3,17 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"math"
 	"os"
+	"path"
 	"time"
 
+	"gocloud.dev/blob"
+	_ "gocloud.dev/blob/fileblob"
+	_ "gocloud.dev/blob/gcsblob"
+	_ "gocloud.dev/blob/s3blob"
 	"gocloud.dev/pubsub"
 	_ "gocloud.dev/pubsub/gcppubsub"
 	_ "gocloud.dev/pubsub/kafkapubsub"
@@ -21,13 +28,109 @@ const (
 	maxRetries    = 10
 	retryInterval = 1
 	retryExpRate  = 1.5
+
+	localPkgPathFmt = "/local/%s"
 )
 
-func messageLoop(ctx context.Context, subURL, resultsBucket string) error {
+func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blob.Bucket, resultsBucket string) error {
+	name := msg.Metadata["name"]
+	if name == "" {
+		log.Warn("name is empty")
+		msg.Ack()
+		return nil
+	}
+
+	ecosystem := msg.Metadata["ecosystem"]
+	if ecosystem == "" {
+		log.Warn("ecosystem is empty",
+			log.Label("name", name))
+		msg.Ack()
+		return nil
+	}
+
+	manager, ok := pkgecosystem.SupportedPkgManagers[ecosystem]
+	if !ok {
+		log.Warn("Unsupported pkg manager",
+			log.Label("ecosystem", ecosystem),
+			log.Label("name", name))
+		msg.Ack()
+		return nil
+	}
+
+	version := msg.Metadata["version"]
+	if version == "" {
+		version = manager.GetLatest(name)
+	}
+
+	pkgPath := msg.Metadata["package_path"]
+
+	resultsBucketOverride := msg.Metadata["results_bucket_override"]
+	if resultsBucketOverride != "" {
+		resultsBucket = resultsBucketOverride
+	}
+
+	log.Info("Got request",
+		log.Label("ecosystem", ecosystem),
+		log.Label("name", name),
+		log.Label("version", version),
+		log.Label("package_path", pkgPath),
+		log.Label("results_bucket_override", resultsBucketOverride),
+	)
+
+	localPkgPath := ""
+	sbOpts := make([]sandbox.Option, 0)
+
+	if pkgPath != "" {
+		// Copy remote package path to temporary file.
+		r, err := packagesBucket.NewReader(ctx, pkgPath, nil)
+		if err != nil {
+			return err
+		}
+		defer r.Close()
+
+		f, err := ioutil.TempFile("", "")
+		if err != nil {
+			return err
+		}
+		defer os.Remove(f.Name())
+
+		if _, err := io.Copy(f, r); err != nil {
+			return err
+		}
+
+		if err := f.Close(); err != nil {
+			return err
+		}
+
+		localPkgPath = fmt.Sprintf(localPkgPathFmt, path.Base(pkgPath))
+		sbOpts = append(sbOpts, sandbox.Volume(f.Name(), localPkgPath))
+	}
+
+	sb := sandbox.New(manager.Image, sbOpts...)
+	result := analysis.Run(ecosystem, name, version, sb, manager.Args("all", name, version, localPkgPath))
+
+	if resultsBucket != "" {
+		err := analysis.UploadResults(ctx, resultsBucket, ecosystem+"/"+name, result)
+		if err != nil {
+			return fmt.Errorf("failed to upload to blobstore = %w", err)
+		}
+	}
+
+	msg.Ack()
+	return nil
+}
+
+func messageLoop(ctx context.Context, subURL, packagesBucket, resultsBucket string) error {
 	sub, err := pubsub.OpenSubscription(ctx, subURL)
 	if err != nil {
 		return err
 	}
+
+	pkgsBkt, err := blob.OpenBucket(ctx, packagesBucket)
+	if err != nil {
+		return err
+	}
+	defer pkgsBkt.Close()
 
 	log.Info("Listening for messages to process...")
 	for {
@@ -37,50 +140,10 @@ func messageLoop(ctx context.Context, subURL, resultsBucket string) error {
 			return fmt.Errorf("error receiving message: %w", err)
 		}
 
-		name := msg.Metadata["name"]
-		if name == "" {
-			log.Warn("name is empty")
-			msg.Ack()
-			continue
+		if err := handleMessage(ctx, msg, pkgsBkt, resultsBucket); err != nil {
+			log.Error("Failed to process message",
+				"error", err)
 		}
-
-		ecosystem := msg.Metadata["ecosystem"]
-		if ecosystem == "" {
-			log.Warn("ecosystem is empty",
-				log.Label("name", name))
-			msg.Ack()
-			continue
-		}
-
-		manager, ok := pkgecosystem.SupportedPkgManagers[ecosystem]
-		if !ok {
-			log.Warn("Unsupported pkg manager",
-				log.Label("ecosystem", ecosystem),
-				log.Label("name", name))
-			msg.Ack()
-			continue
-		}
-
-		version := msg.Metadata["version"]
-		if version == "" {
-			version = manager.GetLatest(name)
-		}
-
-		log.Info("Got request",
-			log.Label("ecosystem", ecosystem),
-			log.Label("name", name),
-			log.Label("version", version))
-		sb := sandbox.New(manager.Image)
-		result := analysis.Run(ecosystem, name, version, sb, manager.Args("all", name, version, ""))
-
-		if resultsBucket != "" {
-			err = analysis.UploadResults(ctx, resultsBucket, ecosystem+"/"+name, result)
-			if err != nil {
-				return fmt.Errorf("failed to upload to blobstore = %w", err)
-			}
-		}
-
-		msg.Ack()
 	}
 }
 
@@ -88,11 +151,12 @@ func main() {
 	retryCount := 0
 	ctx := context.Background()
 	subURL := os.Getenv("OSSMALWARE_WORKER_SUBSCRIPTION")
+	packagesBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_PACKAGES")
 	resultsBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS")
 	log.Initalize(os.Getenv("LOGGER_ENV"))
 
 	for {
-		err := messageLoop(ctx, subURL, resultsBucket)
+		err := messageLoop(ctx, subURL, packagesBucket, resultsBucket)
 		if err != nil {
 			if retryCount++; retryCount >= maxRetries {
 				log.Error("Retries exceeded",

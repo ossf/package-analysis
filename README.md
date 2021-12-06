@@ -45,6 +45,10 @@ the data coming out of scheduler. Values should follow
 URL to publish results to. Values should follow
 [goclouddev buckets](https://gocloud.dev/howto/blob/).
 
+`OSSF_MALWARE_ANALYSIS_PACKAGES` - **OPTIONAL**: Can be used to set the bucket
+URL to get custom uploaded packages from. Values should follow
+[goclouddev buckets](https://gocloud.dev/howto/blob/).
+
 ### Scheduler
 
 `OSSMALWARE_WORKER_TOPIC` - Can be used to set the topic URL to publish data for
