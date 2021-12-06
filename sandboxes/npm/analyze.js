@@ -75,10 +75,10 @@ const package = {
   localFile: localFile,
 };
 
-if (!phases.keys().includes(phase)) {
+if (!Array.from(phases.keys()).includes(phase)) {
   console.log(`Unknown phase ${phase} specified.`);
   process.exit(1);
 }
 
 // Execute the phase
-phases[phase].forEach((f) => f(package));
+phases.get(phase).forEach((f) => f(package));
