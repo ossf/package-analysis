@@ -2,7 +2,7 @@
 
 ## Analysis Runner
 
-The `analysis-runner.sh` script is used to inject package names into the PubSub
+The `analysis_runner.py` script is used to inject packages into the PubSub
 queue the analysis pipeline consumes work from.
 
 `node.txt`, `python.txt` and `rubygems.txt` contain a lists of the top packages
@@ -13,19 +13,17 @@ and [RubyGems](https://rubygems.org/stats).
 
 ### Example usage
 
-Firstly, ensure you are authenticated with the cluster:
+Firstly, ensure you are authenticated with the cloud project:
 
 ```shell
-$ gcloud container clusters get-credentials analysis-cluster \
-    --zone=us-central1-c --project=ossf-malware-analysis
+$ gcloud auth login
 ```
 
 Here are some possible ways to invoke the script:
 
 ```shell
-$ ./analysis-runner.sh pypi python.txt
-$ ./analysis-runner.sh npm node.txt
-$ ./analysis-runner.sh rubygems rubygems.txt
-$ echo "my-npm-package" | ./analysis-runner.sh npm
+$ python3 analysis_runner.py pypi --list python.txt
+$ python3 analysis_runner.py npm --list node.txt
+$ python3 analysis_runner.py npm --name my-npm-package
+$ python3 analysis_runner.py npm --name my-npm-package --version 0.1.1 --file /path/to/local.tgz
 ```
-
