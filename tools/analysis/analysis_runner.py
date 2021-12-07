@@ -109,10 +109,8 @@ def main():
   if args.list:
     with open(args.list) as f:
       for line in f.readlines():
-        pkg, *rest = line.strip().split(' ')
-        version = rest[0] if rest else args.version
         _request(
-            pkg, args.ecosystem, version,
+            line.strip(), args.ecosystem, args.version,
             results_bucket=args.results)
 
   elif args.name:
