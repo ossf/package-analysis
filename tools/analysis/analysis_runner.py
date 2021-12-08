@@ -5,7 +5,6 @@ import os
 import subprocess
 import urllib.parse
 import urllib.request
-from xml.etree import ElementTree
 
 _TOPIC = os.getenv(
     'OSSMALWARE_WORKER_TOPIC',
@@ -26,10 +25,11 @@ def _npm_versions_for_package(pkg):
 
 def _pypi_versions_for_package(pkg):
   safe_pkg = urllib.parse.quote_plus(pkg)
-  url = f'https://pypi.org/rss/project/{safe_pkg}/releases.xml'
+  url = f'https://pypi.org/pypi/{safe_pkg}/json'
   resp = urllib.request.urlopen(url)
-  root = ElementTree.fromstring(resp.read())
-  return [next(e.itertext()) for e in root.findall('.//item/title')]
+  data = json.loads(resp.read())
+  releases = data.get('releases', {})
+  return [v for v, d in releases.items() if d]
 
 
 def _rubygems_versions_for_package(pkg):
@@ -106,21 +106,25 @@ def main():
   if args.file and (not args.name or not args.version):
     raise ValueError('Need to specify package name and version for local file.')
 
+  package_names = []
   if args.list:
     with open(args.list) as f:
-      for line in f.readlines():
-        _request(
-            line.strip(), args.ecosystem, args.version,
-            results_bucket=args.results)
-
+      package_names = [line.strip() for line in f.readlines() if line.strip()]
   elif args.name:
+    package_names = [args.name]
+
+  if not package_names:
+    raise ValueError('No package name found.')
+
+  for package in package_names:
     if args.all:
-      for version in _versions_for_package(args.ecosystem, args.name):
-        _request(args.name, args.ecosystem, version,
+      for version in _versions_for_package(args.ecosystem, package):
+        _request(
+            package, args.ecosystem, version,
             results_bucket=args.results)
     else:
       _request(
-          args.name, args.ecosystem, args.version, local_file=args.file,
+          package, args.ecosystem, args.version,
           results_bucket=args.results)
 
 
