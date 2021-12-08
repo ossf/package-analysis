@@ -29,7 +29,7 @@ def _pypi_versions_for_package(pkg):
   resp = urllib.request.urlopen(url)
   data = json.loads(resp.read())
   releases = data.get('releases', {})
-  return [v for v, d in releases.items() if d]
+  return [v for v, d in releases.items() if d][::-1]
 
 
 def _rubygems_versions_for_package(pkg):
