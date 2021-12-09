@@ -32,7 +32,7 @@ const (
 	localPkgPathFmt = "/local/%s"
 )
 
-func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blob.Bucket, resultsBucket string) error {
+func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blob.Bucket, resultsBucket, imageTag string) error {
 	name := msg.Metadata["name"]
 	if name == "" {
 		log.Warn("name is empty")
@@ -78,7 +78,9 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	)
 
 	localPkgPath := ""
-	sbOpts := make([]sandbox.Option, 0)
+	sbOpts := []sandbox.Option{
+		sandbox.Tag(imageTag),
+	}
 
 	if pkgPath != "" {
 		// Copy remote package path to temporary file.
@@ -120,7 +122,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	return nil
 }
 
-func messageLoop(ctx context.Context, subURL, packagesBucket, resultsBucket string) error {
+func messageLoop(ctx context.Context, subURL, packagesBucket, resultsBucket, imageTag string) error {
 	sub, err := pubsub.OpenSubscription(ctx, subURL)
 	if err != nil {
 		return err
@@ -140,7 +142,7 @@ func messageLoop(ctx context.Context, subURL, packagesBucket, resultsBucket stri
 			return fmt.Errorf("error receiving message: %w", err)
 		}
 
-		if err := handleMessage(ctx, msg, pkgsBkt, resultsBucket); err != nil {
+		if err := handleMessage(ctx, msg, pkgsBkt, resultsBucket, imageTag); err != nil {
 			log.Error("Failed to process message",
 				"error", err)
 		}
@@ -153,10 +155,11 @@ func main() {
 	subURL := os.Getenv("OSSMALWARE_WORKER_SUBSCRIPTION")
 	packagesBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_PACKAGES")
 	resultsBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS")
+	imageTag := os.Getenv("OSSF_SANDBOX_IMAGE_TAG")
 	log.Initalize(os.Getenv("LOGGER_ENV"))
 
 	for {
-		err := messageLoop(ctx, subURL, packagesBucket, resultsBucket)
+		err := messageLoop(ctx, subURL, packagesBucket, resultsBucket, imageTag)
 		if err != nil {
 			if retryCount++; retryCount >= maxRetries {
 				log.Error("Retries exceeded",

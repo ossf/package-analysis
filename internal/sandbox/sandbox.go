@@ -81,6 +81,7 @@ func (v volume) args() []string {
 // Implements the Sandbox interface using "podman".
 type podmanSandbox struct {
 	image   string
+	tag     string
 	init    bool
 	noPull  bool
 	volumes []volume
@@ -93,6 +94,7 @@ func (o option) set(sb *podmanSandbox) { o(sb) }
 func New(image string, options ...Option) Sandbox {
 	sb := &podmanSandbox{
 		image:   image,
+		tag:     "",
 		init:    false,
 		noPull:  false,
 		volumes: make([]volume, 0),
@@ -118,6 +120,10 @@ func Volume(src, dest string) Option {
 			dest: dest,
 		})
 	})
+}
+
+func Tag(tag string) Option {
+	return option(func(sb *podmanSandbox) { sb.tag = tag })
 }
 
 func podmanPull(image string) error {
@@ -168,6 +174,14 @@ func (s *podmanSandbox) extraArgs() []string {
 	return args
 }
 
+func (s *podmanSandbox) imageWithTag() string {
+	tag := "latest"
+	if s.tag != "" {
+		tag = s.tag
+	}
+	return fmt.Sprintf("%s:%s", s.image, tag)
+}
+
 // Initializes the Sandbox ready for running commands.
 //
 // The image supplied will be pulled if it hasn't already been.
@@ -176,7 +190,7 @@ func (s *podmanSandbox) Init() error {
 		return nil
 	}
 	if !s.noPull {
-		if err := podmanPull(s.image); err != nil {
+		if err := podmanPull(s.imageWithTag()); err != nil {
 			return err
 		}
 	}
@@ -200,7 +214,7 @@ func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
 		return &RunResult{}, err
 	}
 
-	cmd := podmanRunCmd(s.image, args, s.extraArgs())
+	cmd := podmanRunCmd(s.imageWithTag(), args, s.extraArgs())
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
