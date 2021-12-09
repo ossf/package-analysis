@@ -19,6 +19,7 @@ var (
 	version   = flag.String("version", "", "version")
 	upload    = flag.String("upload", "", "bucket path for uploading results")
 	noPull    = flag.Bool("nopull", false, "disables pulling down sandbox images")
+	imageTag  = flag.String("image-tag", "", "set a image tag")
 )
 
 func parseBucketPath(path string) (string, string) {
@@ -70,9 +71,13 @@ func main() {
 
 	args := manager.Args("all", *pkg, *version, *localPkg)
 
-	// Prepare the sandbox to use ensuring we respect the -"nopull" option and
-	// any local package is mapped through.
-	sbOpts := make([]sandbox.Option, 0)
+	// Prepare the sandbox:
+	// - Always pass through the tag. An empty tag is the same as "latest".
+	// - Respect the "-nopull" option.
+	// - Ensure any local package is mapped through.
+	sbOpts := []sandbox.Option{
+		sandbox.Tag(*imageTag),
+	}
 	if *noPull {
 		sbOpts = append(sbOpts, sandbox.NoPull())
 	}

@@ -26,3 +26,6 @@ RUN curl -fsSL https://gvisor.dev/archive.key | apt-key add - && \
 
 COPY --from=build /src/analyze /usr/local/bin/analyze
 COPY --from=build /src/worker /usr/local/bin/worker
+
+ARG SANDBOX_IMAGE_TAG
+ENV OSSF_SANDBOX_IMAGE_TAG=${SANDBOX_IMAGE_TAG}

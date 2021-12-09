@@ -13,5 +13,13 @@ terraform {
 module "docker_registry" {
   source = "./docker_registry"
 
-  project               = var.project
+  project = var.project
+}
+
+module "build" {
+  source = "./build"
+
+  project = var.project
+  github_owner = var.github_owner
+  github_repo = var.github_repo
 }
