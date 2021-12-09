@@ -158,6 +158,13 @@ func main() {
 	imageTag := os.Getenv("OSSF_SANDBOX_IMAGE_TAG")
 	log.Initalize(os.Getenv("LOGGER_ENV"))
 
+	// Log the configuration of the worker at startup so we can observe it.
+	log.Info("Starting worker",
+		log.Label("subscription", subURL),
+		log.Label("package_bucket", packagesBucket),
+		log.Label("results_bucket", resultsBucket),
+		log.Label("image_tag", imageTag))
+
 	for {
 		err := messageLoop(ctx, subURL, packagesBucket, resultsBucket, imageTag)
 		if err != nil {
