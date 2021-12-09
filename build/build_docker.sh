@@ -1,11 +1,7 @@
 #!/bin/bash -ex
 
 nopush=${NOPUSH:-"false"}
-
-tag=""
-if [ "$RELEASE_TAG" != "" ]; then
-  tag=":$RELEASE_TAG"
-fi
+tag=${RELEASE_TAG}
 
 BASE_PATH="$(dirname $(dirname $(realpath $0)))"
 REGISTRY=gcr.io/ossf-malware-analysis
@@ -15,7 +11,11 @@ declare -A ANALYSIS_IMAGES=( [node]=npm [python]=pypi [ruby]=rubygems )
 
 pushd "$BASE_PATH/sandboxes"
 for image in "${!ANALYSIS_IMAGES[@]}"; do
-  docker build -t $REGISTRY/$image$tag ${ANALYSIS_IMAGES[$image]}
+  extra_args=""
+  if [ "$tag" != "" ]; then
+    extra_args="-t $REGISTRY/$image:$tag"
+  fi
+  docker build $extra_args -t $REGISTRY/$image ${ANALYSIS_IMAGES[$image]}
   [[ "$nopush" == "false" ]]  && docker push $REGISTRY/$image
 done
 popd
@@ -25,7 +25,11 @@ declare -A CMD_IMAGES=( [analysis]=analyze [scheduler]=scheduler )
 
 pushd "$BASE_PATH"
 for image in "${!CMD_IMAGES[@]}"; do
-  docker build -t $REGISTRY/$image$tag -f cmd/${CMD_IMAGES[$image]}/Dockerfile .
+  extra_args=""
+  if [ "$tag" != "" ]; then
+    extra_args="-t $REGISTRY/$image:$tag --build-arg=SANDBOX_IMAGE_TAG=$tag"
+  fi
+  docker build $extra_args -t $REGISTRY/$image -f cmd/${CMD_IMAGES[$image]}/Dockerfile .
   [[ "$nopush" == "false" ]] && docker push $REGISTRY/$image
 done
 popd
