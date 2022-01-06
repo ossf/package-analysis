@@ -8,4 +8,6 @@ FROM scratch
 COPY --from=image / /
 WORKDIR /app
 
-ENTRYPOINT [ "/usr/local/bin/analyze.rb" ]
+ENTRYPOINT [ "sleep" ]
+
+CMD [ "30m" ]
