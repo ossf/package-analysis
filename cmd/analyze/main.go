@@ -97,7 +97,7 @@ func main() {
 
 	sb := sandbox.New(manager.Image(), sbOpts...)
 	if err := sb.Start(); err != nil {
-		log.Panic("start failed", "error", err)
+		log.Panic("Failed to start sandbox", "error", err)
 	}
 	defer sb.Stop()
 	results := make(map[string]*analysis.Result)
