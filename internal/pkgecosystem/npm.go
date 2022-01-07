@@ -3,7 +3,6 @@ package pkgecosystem
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 )
 
@@ -13,10 +12,10 @@ type npmJSON struct {
 	} `json:"dist-tags"`
 }
 
-func getNPMLatest(pkg string) string {
+func getNPMLatest(pkg string) (string, error) {
 	resp, err := http.Get(fmt.Sprintf("https://registry.npmjs.org/%s", pkg))
 	if err != nil {
-		log.Panic(err)
+		return "", err
 	}
 	defer resp.Body.Close()
 
@@ -24,14 +23,19 @@ func getNPMLatest(pkg string) string {
 	var details npmJSON
 	err = decoder.Decode(&details)
 	if err != nil {
-		log.Panic(err)
+		return "", err
 	}
 
-	return details.DistTags.Latest
+	return details.DistTags.Latest, nil
 }
 
-var NPMPackageManager = PkgManager{
-	Name:      "npm",
-	Image:     "gcr.io/ossf-malware-analysis/node",
-	GetLatest: getNPMLatest,
+var npmPkgManager = PkgManager{
+	name:    "npm",
+	image:   "gcr.io/ossf-malware-analysis/node",
+	command: "/usr/local/bin/analyze.js",
+	latest:  getNPMLatest,
+	dynamicPhases: []string{
+		"install",
+		"import",
+	},
 }

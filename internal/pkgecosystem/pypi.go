@@ -3,7 +3,6 @@ package pkgecosystem
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 )
 
@@ -13,10 +12,10 @@ type pypiJSON struct {
 	} `json:"info"`
 }
 
-func getPyPILatest(pkg string) string {
+func getPyPILatest(pkg string) (string, error) {
 	resp, err := http.Get(fmt.Sprintf("https://pypi.org/pypi/%s/json", pkg))
 	if err != nil {
-		log.Panic(err)
+		return "", err
 	}
 	defer resp.Body.Close()
 
@@ -24,14 +23,19 @@ func getPyPILatest(pkg string) string {
 	var details pypiJSON
 	err = decoder.Decode(&details)
 	if err != nil {
-		log.Panic(err)
+		return "", err
 	}
 
-	return details.Info.Version
+	return details.Info.Version, nil
 }
 
-var PyPIPackageManager = PkgManager{
-	Name:      "pypi",
-	Image:     "gcr.io/ossf-malware-analysis/python",
-	GetLatest: getPyPILatest,
+var pypiPkgManager = PkgManager{
+	name:    "pypi",
+	image:   "gcr.io/ossf-malware-analysis/python",
+	command: "/usr/local/bin/analyze.py",
+	latest:  getPyPILatest,
+	dynamicPhases: []string{
+		"install",
+		"import",
+	},
 }

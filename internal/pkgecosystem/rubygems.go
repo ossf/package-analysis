@@ -3,7 +3,6 @@ package pkgecosystem
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 )
 
@@ -11,10 +10,10 @@ type rubygemsJSON struct {
 	Version string `json:"version"`
 }
 
-func getRubyGemsLatest(pkg string) string {
+func getRubyGemsLatest(pkg string) (string, error) {
 	resp, err := http.Get(fmt.Sprintf("https://rubygems.org/api/v1/gems/%s.json", pkg))
 	if err != nil {
-		log.Panic(err)
+		return "", err
 	}
 	defer resp.Body.Close()
 
@@ -22,14 +21,19 @@ func getRubyGemsLatest(pkg string) string {
 	var details rubygemsJSON
 	err = decoder.Decode(&details)
 	if err != nil {
-		log.Panic(err)
+		return "", err
 	}
 
-	return details.Version
+	return details.Version, nil
 }
 
-var RubyGemsPackageManager = PkgManager{
-	Name:      "rubygems",
-	Image:     "gcr.io/ossf-malware-analysis/ruby",
-	GetLatest: getRubyGemsLatest,
+var rubygemsPkgManager = PkgManager{
+	name:    "rubygems",
+	image:   "gcr.io/ossf-malware-analysis/ruby",
+	command: "/usr/local/bin/analyze.rb",
+	latest:  getRubyGemsLatest,
+	dynamicPhases: []string{
+		"install",
+		"import",
+	},
 }
