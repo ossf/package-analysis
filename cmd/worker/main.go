@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -80,6 +81,10 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	}
 
 	if pkgPath != "" {
+		if packagesBucket == nil {
+			return errors.New("packages bucket not set")
+		}
+
 		// Copy remote package path to temporary file.
 		r, err := packagesBucket.NewReader(ctx, pkgPath, nil)
 		if err != nil {
@@ -148,11 +153,15 @@ func messageLoop(ctx context.Context, subURL, packagesBucket, resultsBucket, ima
 		return err
 	}
 
-	pkgsBkt, err := blob.OpenBucket(ctx, packagesBucket)
-	if err != nil {
-		return err
+	var pkgsBkt *blob.Bucket
+	if packagesBucket != "" {
+		var err error
+		pkgsBkt, err = blob.OpenBucket(ctx, packagesBucket)
+		if err != nil {
+			return err
+		}
+		defer pkgsBkt.Close()
 	}
-	defer pkgsBkt.Close()
 
 	log.Info("Listening for messages to process...")
 	for {
