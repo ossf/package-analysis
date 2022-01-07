@@ -27,6 +27,8 @@ spec:
           value: gs://ossf-malware-analysis-results
         - name: LOGGER_ENV
           value: prod
+        - name: OSSF_MALWARE_ANALYSIS_PACKAGES
+          value: gs://ossf-malware-analysis-packages
         securityContext:
           privileged: true
         volumeMounts:
