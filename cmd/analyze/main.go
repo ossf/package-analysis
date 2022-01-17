@@ -9,11 +9,12 @@ import (
 	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
+	"github.com/ossf/package-analysis/internal/resultstore"
 	"github.com/ossf/package-analysis/internal/sandbox"
 )
 
 var (
-	pkg       = flag.String("package", "", "package name")
+	pkgName   = flag.String("package", "", "package name")
 	localPkg  = flag.String("local", "", "local package path")
 	ecosystem = flag.String("ecosystem", "", "ecosystem (npm, pypi, or rubygems)")
 	version   = flag.String("version", "", "version")
@@ -40,36 +41,45 @@ func main() {
 		return
 	}
 
-	manager, ok := pkgecosystem.SupportedPkgManagers[*ecosystem]
-	if !ok {
+	manager := pkgecosystem.Manager(*ecosystem)
+	if manager == nil {
 		log.Panic("Unsupported pkg manager",
 			log.Label("ecosystem", *ecosystem))
 	}
 
-	if *pkg == "" {
+	if *pkgName == "" {
 		flag.Usage()
 		return
 	}
 
-	live := true
-	if *localPkg == "" {
-		if *version == "" {
-			*version = manager.GetLatest(*pkg)
-		}
-	} else {
-		live = false
+	log.Info("Got request",
+		log.Label("ecosystem", *ecosystem),
+		log.Label("name", *pkgName),
+		log.Label("localPath", *localPkg),
+		log.Label("version", *version))
+
+	var pkg *pkgecosystem.Pkg
+	var err error
+	if *localPkg != "" {
 		if *version != "" {
 			log.Panic("Unable to specify version for local packages")
+		}
+		pkg = manager.Local(*pkgName, *version, *localPkg)
+	} else if *version != "" {
+		pkg = manager.Package(*pkgName, *version)
+	} else {
+		pkg, err = manager.Latest(*pkgName)
+		if err != nil {
+			log.Panic("Failed to get latest version",
+				log.Label("ecosystem", *ecosystem),
+				log.Label("name", *pkgName))
 		}
 	}
 
 	log.Info("Got request",
 		log.Label("ecosystem", *ecosystem),
-		log.Label("name", *pkg),
-		log.Label("version", *version),
-		"live", live)
-
-	args := manager.Args("all", *pkg, *version, *localPkg)
+		log.Label("name", *pkgName),
+		log.Label("version", *version))
 
 	// Prepare the sandbox:
 	// - Always pass through the tag. An empty tag is the same as "latest".
@@ -81,17 +91,25 @@ func main() {
 	if *noPull {
 		sbOpts = append(sbOpts, sandbox.NoPull())
 	}
-	if !live {
+	if *localPkg != "" {
 		sbOpts = append(sbOpts, sandbox.Volume(*localPkg, *localPkg))
 	}
 
-	sb := sandbox.New(manager.Image, sbOpts...)
-	result := analysis.Run(*ecosystem, *pkg, *version, sb, args)
+	sb := sandbox.New(manager.Image(), sbOpts...)
+	if err := sb.Start(); err != nil {
+		log.Panic("Failed to start sandbox", "error", err)
+	}
+	defer sb.Stop()
+	results := make(map[string]*analysis.Result)
+	for _, phase := range manager.DynamicPhases() {
+		result := analysis.Run(sb, pkg.Command(phase))
+		results[phase] = result
+	}
 
 	ctx := context.Background()
 	if *upload != "" {
 		bucket, path := parseBucketPath(*upload)
-		err := analysis.UploadResults(ctx, bucket, path, result)
+		err := resultstore.New(bucket, resultstore.BasePath(path)).Save(ctx, pkg, results)
 		if err != nil {
 			log.Fatal("Failed to upload results to blobstore",
 				"error", err)

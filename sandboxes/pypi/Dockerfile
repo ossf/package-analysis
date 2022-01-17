@@ -8,4 +8,6 @@ FROM scratch
 COPY --from=image / /
 WORKDIR /app
 
-ENTRYPOINT [ "/usr/local/bin/analyze.py" ]
+ENTRYPOINT [ "sleep" ]
+
+CMD [ "30m" ]

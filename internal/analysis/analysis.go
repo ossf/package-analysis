@@ -1,19 +1,11 @@
 package analysis
 
 import (
-	"context"
-	"encoding/json"
-	"path/filepath"
-
 	"github.com/ossf/package-analysis/internal/dnsanalyzer"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/packetcapture"
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/internal/strace"
-	"gocloud.dev/blob"
-	_ "gocloud.dev/blob/fileblob"
-	_ "gocloud.dev/blob/gcsblob"
-	_ "gocloud.dev/blob/s3blob"
 )
 
 type fileResult struct {
@@ -33,14 +25,7 @@ type commandResult struct {
 	Environment []string
 }
 
-type Package struct {
-	Ecosystem string
-	Name      string
-	Version   string
-}
-
-type AnalysisResult struct {
-	Package  Package
+type Result struct {
 	Files    []fileResult
 	Sockets  []socketResult
 	Commands []commandResult
@@ -50,17 +35,9 @@ const (
 	maxIndexEntries = 10000
 )
 
-func Run(ecosystem, pkgName, version string, sb sandbox.Sandbox, args []string) *AnalysisResult {
+func Run(sb sandbox.Sandbox, args []string) *Result {
 	log.Info("Running analysis",
 		"args", args)
-
-	// Init the sandbox
-	log.Debug("Init the sandbox")
-	err := sb.Init()
-	if err != nil {
-		log.Panic("Failed to init sandbox",
-			"error", err)
-	}
 
 	log.Debug("Preparing packet capture")
 	pcap, err := packetcapture.New()
@@ -103,16 +80,12 @@ func Run(ecosystem, pkgName, version string, sb sandbox.Sandbox, args []string) 
 			"error", err)
 	}
 
-	result := AnalysisResult{}
-	result.setData(ecosystem, pkgName, version, straceResult, dns)
+	result := Result{}
+	result.setData(straceResult, dns)
 	return &result
 }
 
-func (d *AnalysisResult) setData(ecosystem, pkgName, version string, straceResult *strace.Result, dns *dnsanalyzer.DNSAnalyzer) {
-	d.Package.Ecosystem = ecosystem
-	d.Package.Name = pkgName
-	d.Package.Version = version
-
+func (d *Result) setData(straceResult *strace.Result, dns *dnsanalyzer.DNSAnalyzer) {
 	for _, f := range straceResult.Files() {
 		d.Files = append(d.Files, fileResult{
 			Path:  f.Path,
@@ -136,40 +109,4 @@ func (d *AnalysisResult) setData(ecosystem, pkgName, version string, straceResul
 		})
 	}
 
-}
-
-func UploadResults(ctx context.Context, bucket, path string, result *AnalysisResult) error {
-	b, err := json.Marshal(result)
-	if err != nil {
-		return err
-	}
-
-	bkt, err := blob.OpenBucket(ctx, bucket)
-	if err != nil {
-		return err
-	}
-	defer bkt.Close()
-
-	filename := "results.json"
-	if result.Package.Version != "" {
-		filename = result.Package.Version + ".json"
-	}
-
-	uploadPath := filepath.Join(path, filename)
-	log.Info("Uploading results",
-		"bucket", bucket,
-		"path", uploadPath)
-
-	w, err := bkt.NewWriter(ctx, uploadPath, nil)
-	if err != nil {
-		return err
-	}
-	if _, err := w.Write(b); err != nil {
-		return err
-	}
-	if err := w.Close(); err != nil {
-		return err
-	}
-
-	return nil
 }
