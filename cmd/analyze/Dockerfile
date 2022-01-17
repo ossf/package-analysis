@@ -21,11 +21,13 @@ RUN apt-get update && apt-get upgrade -y && \
 
 # Install gVisor.
 RUN curl -fsSL https://gvisor.dev/archive.key | apt-key add - && \
-    add-apt-repository "deb https://storage.googleapis.com/gvisor/releases 20210601 main" && \
+    add-apt-repository "deb https://storage.googleapis.com/gvisor/releases 20211129 main" && \
     apt-get update && apt-get install -y runsc
 
 COPY --from=build /src/analyze /usr/local/bin/analyze
 COPY --from=build /src/worker /usr/local/bin/worker
+COPY --from=build /src/tools/gvisor/runsc_compat.sh /usr/local/bin/runsc_compat.sh
+RUN chmod 755 /usr/local/bin/runsc_compat.sh
 
 ARG SANDBOX_IMAGE_TAG
 ENV OSSF_SANDBOX_IMAGE_TAG=${SANDBOX_IMAGE_TAG}

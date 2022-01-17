@@ -22,6 +22,7 @@ import (
 	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
+	"github.com/ossf/package-analysis/internal/resultstore"
 	"github.com/ossf/package-analysis/internal/sandbox"
 )
 
@@ -49,8 +50,8 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		return nil
 	}
 
-	manager, ok := pkgecosystem.SupportedPkgManagers[ecosystem]
-	if !ok {
+	manager := pkgecosystem.Manager(ecosystem)
+	if manager == nil {
 		log.Warn("Unsupported pkg manager",
 			log.Label("ecosystem", ecosystem),
 			log.Label("name", name))
@@ -59,10 +60,6 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	}
 
 	version := msg.Metadata["version"]
-	if version == "" {
-		version = manager.GetLatest(name)
-	}
-
 	pkgPath := msg.Metadata["package_path"]
 
 	resultsBucketOverride := msg.Metadata["results_bucket_override"]
@@ -113,11 +110,34 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		sbOpts = append(sbOpts, sandbox.Volume(f.Name(), localPkgPath))
 	}
 
-	sb := sandbox.New(manager.Image, sbOpts...)
-	result := analysis.Run(ecosystem, name, version, sb, manager.Args("all", name, version, localPkgPath))
+	var pkg *pkgecosystem.Pkg
+	var err error
+	if localPkgPath != "" {
+		pkg = manager.Local(name, version, localPkgPath)
+	} else if version != "" {
+		pkg = manager.Package(name, version)
+	} else {
+		pkg, err = manager.Latest(name)
+		if err != nil {
+			log.Panic("Failed to get latest version",
+				log.Label("ecosystem", ecosystem),
+				log.Label("name", name))
+		}
+	}
+
+	sb := sandbox.New(manager.Image(), sbOpts...)
+	if err := sb.Start(); err != nil {
+		log.Panic("Failed to start sandbox", "error", err)
+	}
+	defer sb.Stop()
+	results := make(map[string]*analysis.Result)
+	for _, phase := range manager.DynamicPhases() {
+		result := analysis.Run(sb, pkg.Command(phase))
+		results[phase] = result
+	}
 
 	if resultsBucket != "" {
-		err := analysis.UploadResults(ctx, resultsBucket, ecosystem+"/"+name, result)
+		err := resultstore.New(resultsBucket, resultstore.ConstructPath()).Save(ctx, pkg, results)
 		if err != nil {
 			return fmt.Errorf("failed to upload to blobstore = %w", err)
 		}

@@ -70,7 +70,7 @@ def importPkg(package):
 PHASES = {
     "all": [install, importPkg],
     "install": [install],
-    "importPkg": [importPkg]
+    "import": [importPkg]
 }
 
 def main():
@@ -95,7 +95,7 @@ def main():
     package_name = args.pop(0)
 
     if not phase in PHASES:
-        print(f'Unknown phase ${phase} specified.')
+        print(f'Unknown phase {phase} specified.')
         exit(1)
 
     package = Package(name=package_name, version=version, local_path=local_path)
