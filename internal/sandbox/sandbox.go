@@ -2,22 +2,25 @@ package sandbox
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/ossf/package-analysis/internal/log"
 )
 
 const (
-	podmanBin     = "podman"
-	runtimeBin    = "/usr/local/bin/runsc_compat.sh"
-	rootDir       = "/var/run/runsc"
-	logPath       = "/tmp/runsc.log.boot"
-	containerName = "box"
+	podmanBin       = "podman"
+	runtimeBin      = "/usr/local/bin/runsc_compat.sh"
+	rootDir         = "/var/run/runsc"
+	straceFile      = "runsc.log.boot"
+	hostname        = "box"
+	containerPrefix = "box"
+	logDirPattern   = "sandbox_logs_"
 )
 
 type RunStatus uint8
@@ -41,53 +44,30 @@ const (
 )
 
 type RunResult struct {
-	logStart int64
-	logEnd   int64
-	Status   RunStatus
-	Stderr   io.Reader
-	Stdout   io.Reader
+	logPath string
+	Status  RunStatus
+	Stderr  io.Reader
+	Stdout  io.Reader
 }
 
 // Log returns the log file recorded during a run.
 //
 // This log will contain strace data.
 func (r *RunResult) Log() (io.ReadCloser, error) {
-	f, err := os.Open(logPath)
-	if err != nil {
-		return nil, err
-	}
-	if _, err = f.Seek(r.logStart, 0); err != nil {
-		return nil, err
-	}
-	// Use a LimitedReader instead of the file itself to ensure it is truncated
-	// appropriately.
-	return struct {
-		io.Reader
-		io.Closer
-	}{
-		Reader: &io.LimitedReader{
-			R: f,
-			N: r.logEnd,
-		},
-		Closer: f,
-	}, nil
+	return os.Open(r.logPath)
 }
 
 type Sandbox interface {
-	// Start initializes the Sandbox ready for running commands.
-	//
-	// It must be called before Run so that any setup work is complete before
-	// any commands are executed.
-	Start() error
-
 	// Run will run the sandbox for the given args.
 	//
-	// The container used to execute the command will be removed when the command
-	// is completed.
+	// The container used to execute the command will be reused until Clean()
+	// is called.
 	Run(...string) (*RunResult, error)
 
-	// Stop will clean up a started Sandbox.
-	Stop() error
+	// Clean cleans up a Sandbox.
+	//
+	// Once called the Sandbox cannot be used again.
+	Clean() error
 }
 
 // volume represents a volume mapping between a host src and a container dest
@@ -105,13 +85,12 @@ func (v volume) args() []string {
 
 // Implements the Sandbox interface using "podman".
 type podmanSandbox struct {
-	image   string
-	tag     string
-	id      string
-	started bool
-	closer  func()
-	noPull  bool
-	volumes []volume
+	image     string
+	tag       string
+	id        string
+	container string
+	noPull    bool
+	volumes   []volume
 }
 
 type Option interface{ set(*podmanSandbox) }
@@ -120,11 +99,11 @@ func (o option) set(sb *podmanSandbox) { o(sb) }
 
 func New(image string, options ...Option) Sandbox {
 	sb := &podmanSandbox{
-		image:   image,
-		tag:     "",
-		started: false,
-		noPull:  false,
-		volumes: make([]volume, 0),
+		image:     image,
+		tag:       "",
+		container: "",
+		noPull:    false,
+		volumes:   make([]volume, 0),
 	}
 	for _, o := range options {
 		o.set(sb)
@@ -153,69 +132,94 @@ func Tag(tag string) Option {
 	return option(func(sb *podmanSandbox) { sb.tag = tag })
 }
 
-func podmanPull(image string) error {
-	args := []string{"pull", image}
-	cmd := exec.Command(podmanBin, args...)
+func removeAllLogs() error {
+	matches, err := filepath.Glob(path.Join(os.TempDir(), logDirPattern+"*"))
+	if err != nil {
+		return err
+	}
+	for _, m := range matches {
+		if err := os.RemoveAll(m); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func podman(args ...string) *exec.Cmd {
+	args = append([]string{
+		"--cgroup-manager=cgroupfs",
+		"--events-backend=file",
+	}, args...)
+	log.Debug("podman", "args", args)
+	return exec.Command(podmanBin, args...)
+}
+
+func podmanRun(args ...string) error {
+	cmd := podman(args...)
 	return cmd.Run()
 }
 
 func podmanPrune() error {
-	args := []string{"image", "prune", "-f"}
-	cmd := exec.Command(podmanBin, args...)
-	return cmd.Run()
+	return podmanRun("image", "prune", "-f")
 }
 
 func podmanCleanContainers() error {
-	args := []string{"rm", "--all", "--force"}
-	cmd := exec.Command(podmanBin, args...)
-	return cmd.Run()
+	return podmanRun("rm", "--all", "--force")
 }
 
-func podmanRunCmd(image string, extraArgs []string) *exec.Cmd {
+func (s *podmanSandbox) pullImage() error {
+	return podmanRun("pull", s.imageWithTag())
+}
+
+func (s *podmanSandbox) createContainer() (string, error) {
 	args := []string{
-		"run",
+		"create",
 		"--runtime=" + runtimeBin,
-		"--runtime-flag=root=" + rootDir,
-		"--runtime-flag=debug-log=/tmp/runsc.log.%COMMAND%",
+		"--init",
+		"--hostname=" + hostname,
+		s.imageWithTag(),
+	}
+	args = append(args, s.extraArgs()...)
+	cmd := podman(args...)
+	var buf bytes.Buffer
+	cmd.Stdout = &buf
+	if err := cmd.Run(); err != nil {
+		return "", err
+	}
+	return string(bytes.TrimSpace(buf.Bytes())), nil
+}
+
+func (s *podmanSandbox) startContainerCmd(logDir string) *exec.Cmd {
+	return podman(
+		"start",
+		"--runtime="+runtimeBin,
+		"--runtime-flag=root="+rootDir,
+		"--runtime-flag=debug-log="+path.Join(logDir, "runsc.log.%COMMAND%"),
 		"--runtime-flag=net-raw",
 		"--runtime-flag=strace",
 		"--runtime-flag=log-packets",
-		"--cgroup-manager=cgroupfs",
-		"--events-backend=file",
-		"--name=" + containerName,
-		"--init",
-		"--hostname=" + containerName,
-		"--rm",
-		"-d", // detach so we know when the container is ready
-	}
-	args = append(args, extraArgs...)
-	args = append(args, image)
-	log.Debug("podman",
-		"args", args)
-	cmd := exec.Command(podmanBin, args...)
-	return cmd
+		s.container)
 }
 
-func podmanStopCmd() error {
-	args := []string{
+func (s *podmanSandbox) stopContainerCmd() *exec.Cmd {
+	return podman("stop", s.container)
+}
+
+func (s *podmanSandbox) forceStopContainer() error {
+	return podmanRun(
 		"stop",
-		containerName,
-	}
-	log.Debug("podman",
-		"args", args)
-	cmd := exec.Command(podmanBin, args...)
-	return cmd.Run()
+		"-t=5", // Wait a max of 5 seconds for a graceful stop.
+		"-i",   // Ignore any errors of the specified container not being in the store.
+		s.container)
 }
 
-func podmanExecCmd(commandArgs []string) *exec.Cmd {
+func (s *podmanSandbox) execContainerCmd(execArgs []string) *exec.Cmd {
 	args := []string{
 		"exec",
-		containerName,
+		s.container,
 	}
-	args = append(args, commandArgs...)
-	log.Debug("podman",
-		"args", args)
-	return exec.Command(podmanBin, args...)
+	args = append(args, execArgs...)
+	return podman(args...)
 }
 
 func (s *podmanSandbox) extraArgs() []string {
@@ -234,37 +238,28 @@ func (s *podmanSandbox) imageWithTag() string {
 	return fmt.Sprintf("%s:%s", s.image, tag)
 }
 
-// Start implements the Sandbox interface.
-func (s *podmanSandbox) Start() error {
-	if s.started {
+// init initializes the sandbox.
+func (s *podmanSandbox) init() error {
+	if s.container != "" {
 		return nil
 	}
 	// Delete existing logs (if any).
-	// This code uses a fixed log name and is not threadsafe.
-	if err := os.RemoveAll(logPath); err != nil {
+	if err := removeAllLogs(); err != nil {
 		return err
 	}
 	if !s.noPull {
-		if err := podmanPull(s.imageWithTag()); err != nil {
+		if err := s.pullImage(); err != nil {
 			return err
 		}
 	}
 	if err := podmanPrune(); err != nil {
 		return err
 	}
-	cmd := podmanRunCmd(s.imageWithTag(), s.extraArgs())
-	logOut := log.Writer(log.InfoLevel, log.Label("cmd", "run"))
-	logErr := log.Writer(log.WarnLevel, log.Label("cmd", "run"))
-	s.closer = func() {
-		logOut.Close()
-		logErr.Close()
-	}
-	cmd.Stdout = logOut
-	cmd.Stderr = logErr
-	if err := cmd.Run(); err != nil {
+	if id, err := s.createContainer(); err == nil {
+		s.container = id
+	} else {
 		return err
 	}
-	s.started = true
 	return nil
 }
 
@@ -275,69 +270,84 @@ func (s *podmanSandbox) Start() error {
 //
 // This function is useful for running multiple commands in the sandbox.
 func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
-	logStart := int64(0)
-	if fi, err := os.Stat(logPath); err == nil {
-		logStart = fi.Size()
-	} else if !errors.Is(err, os.ErrNotExist) {
+	if err := s.init(); err != nil {
 		return &RunResult{}, err
 	}
 
-	cmd := podmanExecCmd(args)
+	// Create a place to stash the logs for this run.
+	logDir, err := os.MkdirTemp("", logDirPattern)
+	if err != nil {
+		return &RunResult{}, err
+	}
 
+	// Prepare the run result.
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
+	result := &RunResult{
+		logPath: path.Join(logDir, straceFile),
+		Status:  RunStatusUnknown,
+		Stdout:  &stdout,
+		Stderr:  &stderr,
+	}
+
+	// Prepare stdout and stderr writers
 	logOut := log.Writer(log.InfoLevel,
 		"args", args)
 	defer logOut.Close()
 	logErr := log.Writer(log.WarnLevel,
 		"args", args)
 	defer logErr.Close()
-	cmd.Stdout = io.MultiWriter(&stdout, logOut)
-	cmd.Stderr = io.MultiWriter(&stderr, logErr)
+	outWriter := io.MultiWriter(&stdout, logOut)
+	errWriter := io.MultiWriter(&stderr, logErr)
+
+	// Start the container
+	startCmd := s.startContainerCmd(logDir)
+	startCmd.Stdout = outWriter
+	startCmd.Stderr = errWriter
+	if err := startCmd.Run(); err != nil {
+		return result, err
+	}
+
+	// Run the command in the sandbox
+	cmd := s.execContainerCmd(args)
+	cmd.Stdout = outWriter
+	cmd.Stderr = errWriter
 
 	if err := cmd.Start(); err != nil {
-		return &RunResult{}, err
+		return result, err
 	}
 
-	// Wire up the run result.
-	result := &RunResult{
-		logStart: logStart,
-		logEnd:   logStart, // the end must always be >= start
-		Status:   RunStatusSuccess,
-		Stdout:   &stdout,
-		Stderr:   &stderr,
+	err = cmd.Wait()
+	if err == nil {
+		result.Status = RunStatusSuccess
+	} else {
+		result.Status = RunStatusFailure
 	}
 
-	err := cmd.Wait()
-	if err != nil {
+	// Stop the container
+	stopCmd := s.stopContainerCmd()
+	stopCmd.Stdout = outWriter
+	stopCmd.Stderr = errWriter
+	if stopErr := stopCmd.Run(); stopErr != nil {
 		// Ignore the error if stderr contains "gofer is still running"
-		if strings.Contains(stderr.String(), "gofer is still running") {
-			err = nil
-		} else {
-			result.Status = RunStatusFailure
+		if !strings.Contains(stderr.String(), "gofer is still running") {
+			// Don't overwrite the earlier error
+			if err == nil {
+				err = stopErr
+			}
 		}
-	}
-
-	if fi, errStat := os.Stat(logPath); errStat == nil {
-		result.logEnd = fi.Size()
-	} else if err == nil {
-		// Set the err because it is not already set.
-		err = errStat
 	}
 
 	return result, err
 }
 
 // Clean stops and removes all containers.
-func (s *podmanSandbox) Stop() error {
-	if !s.started {
+func (s *podmanSandbox) Clean() error {
+	if s.container == "" {
 		return nil
 	}
-	if err := podmanStopCmd(); err != nil {
+	if err := s.forceStopContainer(); err != nil {
 		return err
 	}
-	s.closer()
-	s.started = false
-	// remove log files too?
 	return podmanCleanContainers()
 }
