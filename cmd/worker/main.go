@@ -126,10 +126,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	}
 
 	sb := sandbox.New(manager.Image(), sbOpts...)
-	if err := sb.Start(); err != nil {
-		log.Panic("Failed to start sandbox", "error", err)
-	}
-	defer sb.Stop()
+	defer sb.Clean()
 	results := make(map[string]*analysis.Result)
 	for _, phase := range manager.DynamicPhases() {
 		result := analysis.Run(sb, pkg.Command(phase))
