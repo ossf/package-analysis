@@ -45,7 +45,7 @@ const (
 
 type RunResult struct {
 	logPath string
-	Status  RunStatus
+	status  RunStatus
 	Stderr  io.Reader
 	Stdout  io.Reader
 }
@@ -57,11 +57,23 @@ func (r *RunResult) Log() (io.ReadCloser, error) {
 	return os.Open(r.logPath)
 }
 
+func (r *RunResult) Status() RunStatus {
+	if r != nil {
+		return r.status
+	}
+	return RunStatusUnknown
+}
+
 type Sandbox interface {
-	// Run will run the sandbox for the given args.
+	// Run will execute the supplied command and args in the sandbox.
 	//
-	// The container used to execute the command will be reused until Clean()
-	// is called.
+	// The container used to execute the command is reused until Clean() is
+	// called.
+	//
+	// If there is an error while using the sandbox an error will be returned.
+	//
+	// The result of the supplied command will be returned in an instance of
+	// RunResult.
 	Run(...string) (*RunResult, error)
 
 	// Clean cleans up a Sandbox.
@@ -263,12 +275,7 @@ func (s *podmanSandbox) init() error {
 	return nil
 }
 
-// Run will run a single command inside the sandbox.
-//
-// The container used to execute the command will be removed when the command
-// is completed.
-//
-// This function is useful for running multiple commands in the sandbox.
+// Run implements the Sandbox interface.
 func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
 	if err := s.init(); err != nil {
 		return &RunResult{}, err
@@ -285,7 +292,7 @@ func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
 	var stderr bytes.Buffer
 	result := &RunResult{
 		logPath: path.Join(logDir, straceFile),
-		Status:  RunStatusUnknown,
+		status:  RunStatusUnknown,
 		Stdout:  &stdout,
 		Stderr:  &stderr,
 	}
@@ -319,9 +326,10 @@ func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
 
 	err = cmd.Wait()
 	if err == nil {
-		result.Status = RunStatusSuccess
-	} else {
-		result.Status = RunStatusFailure
+		result.status = RunStatusSuccess
+	} else if _, ok := err.(*exec.ExitError); ok {
+		result.status = RunStatusFailure
+		err = nil
 	}
 
 	// Stop the container
@@ -341,7 +349,7 @@ func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
 	return result, err
 }
 
-// Clean stops and removes all containers.
+// Clean implements the Sandbox interface.
 func (s *podmanSandbox) Clean() error {
 	if s.container == "" {
 		return nil

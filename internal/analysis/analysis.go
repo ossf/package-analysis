@@ -1,6 +1,8 @@
 package analysis
 
 import (
+	"fmt"
+
 	"github.com/ossf/package-analysis/internal/dnsanalyzer"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/packetcapture"
@@ -35,22 +37,20 @@ const (
 	maxIndexEntries = 10000
 )
 
-func Run(sb sandbox.Sandbox, args []string) *Result {
+func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
 	log.Info("Running analysis",
 		"args", args)
 
 	log.Debug("Preparing packet capture")
 	pcap, err := packetcapture.New()
 	if err != nil {
-		log.Panic("Failed to init packet capture",
-			"error", err)
+		return nil, fmt.Errorf("failed to init packet capture (%w)", err)
 	}
 
 	dns := dnsanalyzer.New()
 	pcap.RegisterReceiver(dns)
 	if err := pcap.Start(); err != nil {
-		log.Panic("Failed to start packet capture",
-			"error", err)
+		return nil, fmt.Errorf("failed to start packet capture (%w)", err)
 	}
 	defer pcap.Close()
 
@@ -59,8 +59,7 @@ func Run(sb sandbox.Sandbox, args []string) *Result {
 		"args", args)
 	r, err := sb.Run(args...)
 	if err != nil {
-		log.Panic("Command exited unsucessfully",
-			"error", err)
+		return nil, fmt.Errorf("sandbox failed (%w)", err)
 	}
 
 	pcap.Close()
@@ -69,20 +68,18 @@ func Run(sb sandbox.Sandbox, args []string) *Result {
 	log.Debug("Parsing the strace log")
 	l, err := r.Log()
 	if err != nil {
-		log.Panic("Failed to open the log",
-			"error", err)
+		return nil, fmt.Errorf("failed to open strace log (%w)", err)
 	}
 	defer l.Close()
 
 	straceResult, err := strace.Parse(l)
 	if err != nil {
-		log.Panic("Failed to parse the strace",
-			"error", err)
+		return nil, fmt.Errorf("strace parsing failed (%w)", err)
 	}
 
 	result := Result{}
 	result.setData(straceResult, dns)
-	return &result
+	return &result, nil
 }
 
 func (d *Result) setData(straceResult *strace.Result, dns *dnsanalyzer.DNSAnalyzer) {
