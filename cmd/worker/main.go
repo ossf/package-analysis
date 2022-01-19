@@ -119,9 +119,11 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	} else {
 		pkg, err = manager.Latest(name)
 		if err != nil {
-			log.Panic("Failed to get latest version",
+			log.Error("Failed to get latest version",
 				log.Label("ecosystem", ecosystem),
-				log.Label("name", name))
+				log.Label("name", name),
+				"error", err)
+			return err
 		}
 	}
 
@@ -129,7 +131,16 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	defer sb.Clean()
 	results := make(map[string]*analysis.Result)
 	for _, phase := range manager.DynamicPhases() {
-		result := analysis.Run(sb, pkg.Command(phase))
+		result, err := analysis.Run(sb, pkg.Command(phase))
+		if err != nil {
+			log.Error("Analysis run failed",
+				"phase", phase,
+				"name", name,
+				"ecosystem", ecosystem,
+				"version", version,
+				"error", err)
+			return err
+		}
 		results[phase] = result
 	}
 

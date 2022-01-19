@@ -99,7 +99,12 @@ func main() {
 	defer sb.Clean()
 	results := make(map[string]*analysis.Result)
 	for _, phase := range manager.DynamicPhases() {
-		result := analysis.Run(sb, pkg.Command(phase))
+		result, err := analysis.Run(sb, pkg.Command(phase))
+		if err != nil {
+			log.Fatal("Analysis phase failed",
+				"phase", phase,
+				"error", err)
+		}
 		results[phase] = result
 	}
 
