@@ -2,6 +2,8 @@ name: "Build docker"
 
 on: [pull_request, push]
 
+permissions: read-all
+
 jobs:
   build_docker:
     runs-on: ubuntu-latest
