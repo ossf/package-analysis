@@ -49,15 +49,28 @@ func Writer(level Level, keysAndValues ...interface{}) io.WriteCloser {
 // level with the supplied keysAndValues.
 //
 // This method will block until r returns an EOF or causes an error.
-func WriteTo(level Level, r io.Reader, keysAndValues ...interface{}) error {
+func WriteTo(level Level, rd io.Reader, keysAndValues ...interface{}) error {
 	logger := defaultLogger.With(keysAndValues...)
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		text := scanner.Text()
+	r := bufio.NewReader(rd)
+	for {
+		line, err := r.ReadBytes('\n')
+		l := len(line)
+		// Trim any trailing \n or \r\n from the buffer.
+		if l > 0 && line[l-1] == '\n' {
+			l = l - 1
+			if l > 0 && line[l-1] == '\r' {
+				l = l - 1
+			}
+		}
 		// Swallow empty lines
-		if len(text) > 0 {
-			logLine(logger, level, text)
+		if l > 0 {
+			logLine(logger, level, string(line[:l]))
+		}
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
 		}
 	}
-	return scanner.Err()
 }
