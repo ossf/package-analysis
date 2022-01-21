@@ -2,7 +2,9 @@ package log
 
 import (
 	"bufio"
+	"bytes"
 	"io"
+	"unicode"
 
 	"go.uber.org/zap"
 )
@@ -49,15 +51,22 @@ func Writer(level Level, keysAndValues ...interface{}) io.WriteCloser {
 // level with the supplied keysAndValues.
 //
 // This method will block until r returns an EOF or causes an error.
-func WriteTo(level Level, r io.Reader, keysAndValues ...interface{}) error {
+func WriteTo(level Level, rd io.Reader, keysAndValues ...interface{}) error {
 	logger := defaultLogger.With(keysAndValues...)
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		text := scanner.Text()
+	r := bufio.NewReader(rd)
+	for {
+		line, err := r.ReadBytes('\n')
+		// Trim any trailing space
+		line = bytes.TrimRightFunc(line, unicode.IsSpace)
 		// Swallow empty lines
-		if len(text) > 0 {
-			logLine(logger, level, text)
+		if len(line) > 0 {
+			logLine(logger, level, string(line))
+		}
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
 		}
 	}
-	return scanner.Err()
 }
