@@ -2,7 +2,9 @@ package log
 
 import (
 	"bufio"
+	"bytes"
 	"io"
+	"unicode"
 
 	"go.uber.org/zap"
 )
@@ -54,17 +56,11 @@ func WriteTo(level Level, rd io.Reader, keysAndValues ...interface{}) error {
 	r := bufio.NewReader(rd)
 	for {
 		line, err := r.ReadBytes('\n')
-		l := len(line)
-		// Trim any trailing \n or \r\n from the buffer.
-		if l > 0 && line[l-1] == '\n' {
-			l = l - 1
-			if l > 0 && line[l-1] == '\r' {
-				l = l - 1
-			}
-		}
+		// Trim any trailing space
+		line = bytes.TrimRightFunc(line, unicode.IsSpace)
 		// Swallow empty lines
-		if l > 0 {
-			logLine(logger, level, string(line[:l]))
+		if len(line) > 0 {
+			logLine(logger, level, string(line))
 		}
 		if err == io.EOF {
 			return nil
