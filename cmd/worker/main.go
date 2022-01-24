@@ -130,18 +130,53 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	sb := sandbox.New(manager.Image(), sbOpts...)
 	defer sb.Clean()
 	results := make(map[string]*analysis.Result)
+	finalStatus := analysis.StatusCompleted
+	lastPhase := ""
 	for _, phase := range manager.DynamicPhases() {
 		result, err := analysis.Run(sb, pkg.Command(phase))
 		if err != nil {
 			log.Error("Analysis run failed",
-				"phase", phase,
-				"name", name,
-				"ecosystem", ecosystem,
-				"version", version,
+				log.Label("ecosystem", ecosystem),
+				log.Label("name", name),
+				log.Label("phase", phase),
+				log.Label("version", version),
 				"error", err)
 			return err
 		}
 		results[phase] = result
+		lastPhase = phase
+		finalStatus = result.Status
+		// Don't continue processing if the phase did not complete successfully.
+		if result.Status != analysis.StatusCompleted {
+			break
+		}
+	}
+	// Produce a log message for the final status to help generate metrics.
+	switch finalStatus {
+	case analysis.StatusCompleted:
+		log.Info("Analysis completed sucessfully",
+			log.Label("ecosystem", ecosystem),
+			log.Label("name", name),
+			log.Label("version", version),
+			log.Label("last_phase", lastPhase))
+	case analysis.StatusErrorAnalysis:
+		log.Warn("Analysis error - analysis",
+			log.Label("ecosystem", ecosystem),
+			log.Label("name", name),
+			log.Label("version", version),
+			log.Label("last_phase", lastPhase))
+	case analysis.StatusErrorTimeout:
+		log.Warn("Analysis error - timeout",
+			log.Label("ecosystem", ecosystem),
+			log.Label("name", name),
+			log.Label("version", version),
+			log.Label("last_phase", lastPhase))
+	case analysis.StatusErrorOther:
+		log.Warn("Analysis error - other",
+			log.Label("ecosystem", ecosystem),
+			log.Label("name", name),
+			log.Label("version", version),
+			log.Label("last_phase", lastPhase))
 	}
 
 	if resultsBucket != "" {
