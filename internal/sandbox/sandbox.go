@@ -46,8 +46,8 @@ const (
 type RunResult struct {
 	logPath string
 	status  RunStatus
-	Stderr  io.Reader
-	Stdout  io.Reader
+	stderr  *bytes.Buffer
+	stdout  *bytes.Buffer
 }
 
 // Log returns the log file recorded during a run.
@@ -62,6 +62,14 @@ func (r *RunResult) Status() RunStatus {
 		return r.status
 	}
 	return RunStatusUnknown
+}
+
+func (r *RunResult) Stdout() []byte {
+	return r.stdout.Bytes()
+}
+
+func (r *RunResult) Stderr() []byte {
+	return r.stderr.Bytes()
 }
 
 type Sandbox interface {
@@ -293,8 +301,8 @@ func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
 	result := &RunResult{
 		logPath: path.Join(logDir, straceFile),
 		status:  RunStatusUnknown,
-		Stdout:  &stdout,
-		Stderr:  &stderr,
+		stdout:  &stdout,
+		stderr:  &stderr,
 	}
 
 	// Prepare stdout and stderr writers
@@ -309,8 +317,8 @@ func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
 
 	// Start the container
 	startCmd := s.startContainerCmd(logDir)
-	startCmd.Stdout = outWriter
-	startCmd.Stderr = errWriter
+	startCmd.Stdout = logOut
+	startCmd.Stderr = logErr
 	if err := startCmd.Run(); err != nil {
 		return result, err
 	}
@@ -334,8 +342,8 @@ func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
 
 	// Stop the container
 	stopCmd := s.stopContainerCmd()
-	stopCmd.Stdout = outWriter
-	stopCmd.Stderr = errWriter
+	stopCmd.Stdout = logOut
+	stopCmd.Stderr = logErr
 	if stopErr := stopCmd.Run(); stopErr != nil {
 		// Ignore the error if stderr contains "gofer is still running"
 		if !strings.Contains(stderr.String(), "gofer is still running") {

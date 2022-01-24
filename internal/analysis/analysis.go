@@ -1,6 +1,7 @@
 package analysis
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/ossf/package-analysis/internal/dnsanalyzer"
@@ -9,6 +10,38 @@ import (
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/internal/strace"
 )
+
+const (
+	maxOutputLines = 20
+	maxOutputBytes = 4 * 1024
+)
+
+type status string
+
+func (s status) MarshalJSON() ([]byte, error) {
+	return json.Marshal(string(s))
+}
+
+// status returned in the analysis result
+const (
+	statusCompleted     = status("completed")
+	statusErrorTimeout  = status("error_timeout")
+	statusErrorAnalysis = status("error_analysis")
+	statusErrorOther    = status("error_other")
+)
+
+func statusForRunResult(r *sandbox.RunResult) status {
+	switch r.Status() {
+	case sandbox.RunStatusSuccess:
+		return statusCompleted
+	case sandbox.RunStatusFailure:
+		return statusErrorAnalysis
+	case sandbox.RunStatusTimeout:
+		return statusErrorTimeout
+	default:
+		return statusErrorOther
+	}
+}
 
 type fileResult struct {
 	Path  string
@@ -28,13 +61,16 @@ type commandResult struct {
 }
 
 type Result struct {
+	Status   status
+	Stdout   []byte
+	Stderr   []byte
 	Files    []fileResult
 	Sockets  []socketResult
 	Commands []commandResult
 }
 
-const (
-	maxIndexEntries = 10000
+var (
+	resultError = &Result{Status: statusErrorOther}
 )
 
 func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
@@ -44,13 +80,13 @@ func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
 	log.Debug("Preparing packet capture")
 	pcap, err := packetcapture.New()
 	if err != nil {
-		return nil, fmt.Errorf("failed to init packet capture (%w)", err)
+		return resultError, fmt.Errorf("failed to init packet capture (%w)", err)
 	}
 
 	dns := dnsanalyzer.New()
 	pcap.RegisterReceiver(dns)
 	if err := pcap.Start(); err != nil {
-		return nil, fmt.Errorf("failed to start packet capture (%w)", err)
+		return resultError, fmt.Errorf("failed to start packet capture (%w)", err)
 	}
 	defer pcap.Close()
 
@@ -59,7 +95,7 @@ func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
 		"args", args)
 	r, err := sb.Run(args...)
 	if err != nil {
-		return nil, fmt.Errorf("sandbox failed (%w)", err)
+		return resultError, fmt.Errorf("sandbox failed (%w)", err)
 	}
 
 	pcap.Close()
@@ -68,16 +104,20 @@ func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
 	log.Debug("Parsing the strace log")
 	l, err := r.Log()
 	if err != nil {
-		return nil, fmt.Errorf("failed to open strace log (%w)", err)
+		return resultError, fmt.Errorf("failed to open strace log (%w)", err)
 	}
 	defer l.Close()
 
 	straceResult, err := strace.Parse(l)
 	if err != nil {
-		return nil, fmt.Errorf("strace parsing failed (%w)", err)
+		return resultError, fmt.Errorf("strace parsing failed (%w)", err)
 	}
 
-	result := Result{}
+	result := Result{
+		Status: statusForRunResult(r),
+		Stdout: lastLines(r.Stdout(), maxOutputLines, maxOutputBytes),
+		Stderr: lastLines(r.Stderr(), maxOutputLines, maxOutputBytes),
+	}
 	result.setData(straceResult, dns)
 	return &result, nil
 }
