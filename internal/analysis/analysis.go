@@ -18,28 +18,41 @@ const (
 
 type status string
 
+// MarshalJSON implements the json.Marshaler interface.
 func (s status) MarshalJSON() ([]byte, error) {
 	return json.Marshal(string(s))
 }
 
-// status returned in the analysis result
 const (
-	statusCompleted     = status("completed")
-	statusErrorTimeout  = status("error_timeout")
-	statusErrorAnalysis = status("error_analysis")
-	statusErrorOther    = status("error_other")
+	// StatusCompleted indicates that the analysis run completed successfully.
+	StatusCompleted = status("completed")
+
+	// StatusErrorTimeout indicates that the analysis was aborted due to a
+	// timeout.
+	StatusErrorTimeout = status("error_timeout")
+
+	// StatusErrorAnalysis indicates that the package being analyzed failed
+	// while running the specified command.
+	//
+	// The Stdout and Stderr in the Result should be consulted to understand
+	// further why it failed.
+	StatusErrorAnalysis = status("error_analysis")
+
+	// StatusErrorOther indicates an error during some part of the analysis
+	// excluding errors covered by other statuses.
+	StatusErrorOther = status("error_other")
 )
 
 func statusForRunResult(r *sandbox.RunResult) status {
 	switch r.Status() {
 	case sandbox.RunStatusSuccess:
-		return statusCompleted
+		return StatusCompleted
 	case sandbox.RunStatusFailure:
-		return statusErrorAnalysis
+		return StatusErrorAnalysis
 	case sandbox.RunStatusTimeout:
-		return statusErrorTimeout
+		return StatusErrorTimeout
 	default:
-		return statusErrorOther
+		return StatusErrorOther
 	}
 }
 
@@ -70,7 +83,7 @@ type Result struct {
 }
 
 var (
-	resultError = &Result{Status: statusErrorOther}
+	resultError = &Result{Status: StatusErrorOther}
 )
 
 func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
