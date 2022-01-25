@@ -23,3 +23,9 @@ module "build" {
   github_owner = var.github_owner
   github_repo = var.github_repo
 }
+
+module "metrics" {
+  source = "./metrics"
+
+  project = var.project
+}
