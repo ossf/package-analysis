@@ -265,20 +265,20 @@ func (s *podmanSandbox) init() error {
 	}
 	// Delete existing logs (if any).
 	if err := removeAllLogs(); err != nil {
-		return err
+		return fmt.Errorf("failed removing all logs: %w", err)
 	}
 	if !s.noPull {
 		if err := s.pullImage(); err != nil {
-			return err
+			return fmt.Errorf("error pulling image: %w", err)
 		}
 	}
 	if err := podmanPrune(); err != nil {
-		return err
+		return fmt.Errorf("error pruning images: %w", err)
 	}
 	if id, err := s.createContainer(); err == nil {
 		s.container = id
 	} else {
-		return err
+		return fmt.Errorf("error creating container: %w", err)
 	}
 	return nil
 }
@@ -292,7 +292,7 @@ func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
 	// Create a place to stash the logs for this run.
 	logDir, err := os.MkdirTemp("", logDirPattern)
 	if err != nil {
-		return &RunResult{}, err
+		return &RunResult{}, fmt.Errorf("failed to create log directory: %w", err)
 	}
 
 	// Prepare the run result.
@@ -320,7 +320,7 @@ func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
 	startCmd.Stdout = logOut
 	startCmd.Stderr = logErr
 	if err := startCmd.Run(); err != nil {
-		return result, err
+		return result, fmt.Errorf("error starting container: %w", err)
 	}
 
 	// Run the command in the sandbox
@@ -329,7 +329,7 @@ func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
 	cmd.Stderr = errWriter
 
 	if err := cmd.Start(); err != nil {
-		return result, err
+		return result, fmt.Errorf("error execing command: %w", err)
 	}
 
 	err = cmd.Wait()
@@ -342,14 +342,17 @@ func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
 
 	// Stop the container
 	stopCmd := s.stopContainerCmd()
+	var stopStderr bytes.Buffer
 	stopCmd.Stdout = logOut
-	stopCmd.Stderr = logErr
+	stopCmd.Stderr = io.MultiWriter(&stopStderr, logErr)
 	if stopErr := stopCmd.Run(); stopErr != nil {
 		// Ignore the error if stderr contains "gofer is still running"
-		if !strings.Contains(stderr.String(), "gofer is still running") {
+		if strings.Contains(stopStderr.String(), "gofer is still running") {
+			log.Debug("ignoring 'stop' error - gofer still running")
+		} else {
 			// Don't overwrite the earlier error
 			if err == nil {
-				err = stopErr
+				err = fmt.Errorf("error stopping container: %w", stopErr)
 			}
 		}
 	}
