@@ -2,12 +2,17 @@ package loader
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"log"
 	"os"
 
 	"cloud.google.com/go/bigquery"
 )
+
+// TODO(ochang): Get this by using `bigquery.InferSchema` on the Go structure instead.
+//go:embed schema.json
+var schemaEncoded []byte
 
 type PubSubMessage struct {
 	Data []byte `json:"data"`
@@ -22,8 +27,13 @@ func Load(ctx context.Context, m PubSubMessage) error {
 		log.Panicf("Failed to create bq client: %v", err)
 	}
 
+	schema, err := bigquery.SchemaFromJSON(schemaEncoded)
+	if err != nil {
+		log.Panicf("Failed to decode schema: %v", err)
+	}
+
 	gcsRef := bigquery.NewGCSReference(fmt.Sprintf("gs://%s/*.json", bucket))
-	gcsRef.AutoDetect = true
+	gcsRef.Schema = schema
 	gcsRef.SourceFormat = bigquery.JSON
 
 	dataset := bq.Dataset("packages")
