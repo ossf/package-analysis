@@ -197,9 +197,9 @@ func (s *podmanSandbox) createContainer() (string, error) {
 		"--runtime=" + runtimeBin,
 		"--init",
 		"--hostname=" + hostname,
-		s.imageWithTag(),
 	}
 	args = append(args, s.extraArgs()...)
+	args = append(args, s.imageWithTag())
 	cmd := podman(args...)
 	var buf bytes.Buffer
 	cmd.Stdout = &buf
