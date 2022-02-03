@@ -103,8 +103,13 @@ def main():
 
   args = parser.parse_args()
 
-  if args.file and (not args.name or not args.version):
-    raise ValueError('Need to specify package name and version for local file.')
+  local_file = None
+  if args.file:
+    if not args.name or not args.version:
+      raise ValueError(
+          'Need to specify package name and version for local file.')
+
+    local_file = args.file
 
   package_names = []
   if args.list:
@@ -125,6 +130,7 @@ def main():
     else:
       _request(
           package, args.ecosystem, args.version,
+          local_file=local_file,
           results_bucket=args.results)
 
 
