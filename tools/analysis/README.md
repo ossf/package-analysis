@@ -34,3 +34,11 @@ $ python3 analysis_runner.py npm --list node.txt
 $ python3 analysis_runner.py npm --name my-npm-package
 $ python3 analysis_runner.py npm --name my-npm-package --version 0.1.1 --file /path/to/local.tgz
 ```
+
+### Bulk backfill
+
+To request a bulk backfill of a list of packages in a particular ecosystem:
+
+```shell
+$ ./backfill.sh <path/to/packages/delimited/by/newlines> <ecosystem>
+```
