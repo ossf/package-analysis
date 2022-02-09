@@ -6,7 +6,7 @@ require (
 	github.com/blendle/zapdriver v1.3.1
 	github.com/google/gopacket v1.1.19
 	github.com/ossf/package-feeds v0.0.0-20211108050428-2ce6d6de33c8
-	go.uber.org/zap v1.20.0
+	go.uber.org/zap v1.21.0
 	gocloud.dev v0.24.0
 	gocloud.dev/pubsub/kafkapubsub v0.24.0
 )
