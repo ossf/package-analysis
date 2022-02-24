@@ -20,27 +20,20 @@ type PacketReceiver interface {
 type Handler func(gopacket.Layer, gopacket.Packet)
 
 type PacketCapture struct {
-	inactiveHandle  *pcap.InactiveHandle
 	handle          *pcap.Handle
-	packetSource    *gopacket.PacketSource
+	done            chan bool
 	packetReceivers map[gopacket.LayerType][]PacketReceiver
 }
 
 // New returns a new Trace instance.
 //
 // Close() must be called on the Trace instance.
-func New() (*PacketCapture, error) {
-	inactiveHandle, err := pcap.NewInactiveHandle(captureDevice)
-	if err != nil {
-		return nil, err
-	}
-
+func New() *PacketCapture {
 	return &PacketCapture{
-		inactiveHandle:  inactiveHandle,
 		handle:          nil,
-		packetSource:    nil,
+		done:            make(chan bool),
 		packetReceivers: make(map[gopacket.LayerType][]PacketReceiver),
-	}, nil
+	}
 }
 
 // RegisterReceiver registers a receiver for a given set of gopacket LayerTypes.
@@ -60,30 +53,39 @@ func (pc *PacketCapture) RegisterReceiver(receiver PacketReceiver) {
 }
 
 func (pc *PacketCapture) Start() error {
-	handle, err := pc.inactiveHandle.Activate()
+	inactive, err := pcap.NewInactiveHandle(captureDevice)
+	if err != nil {
+		return err
+	}
+	defer inactive.CleanUp()
+
+	// Force packets to be sent immediately to ensure we don't miss any.
+	if err := inactive.SetImmediateMode(true); err != nil {
+		return err
+	}
+
+	handle, err := inactive.Activate()
 	if err != nil {
 		return err
 	}
 	pc.handle = handle
-	pc.packetSource = gopacket.NewPacketSource(pc.handle, pc.handle.LinkType())
-	go func() {
-		for packet := range pc.packetSource.Packets() {
+	packetSource := gopacket.NewPacketSource(pc.handle, pc.handle.LinkType())
+	go func(packets chan gopacket.Packet, done chan bool) {
+		for packet := range packets {
 			pc.handlePacket(packet)
 		}
-	}()
+		done <- true
+	}(packetSource.Packets(), pc.done)
 	return nil
 }
 
 func (pc *PacketCapture) Close() {
-	if pc.inactiveHandle != nil {
-		pc.inactiveHandle.CleanUp()
-	}
 	if pc.handle != nil {
 		pc.handle.Close()
+		// Wait for packet processing to be finished.
+		<-pc.done
 	}
-	pc.inactiveHandle = nil
 	pc.handle = nil
-	pc.packetSource = nil
 }
 
 func (pc *PacketCapture) handlePacket(packet gopacket.Packet) {
