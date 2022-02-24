@@ -91,10 +91,7 @@ func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
 		"args", args)
 
 	log.Debug("Preparing packet capture")
-	pcap, err := packetcapture.New()
-	if err != nil {
-		return resultError, fmt.Errorf("failed to init packet capture (%w)", err)
-	}
+	pcap := packetcapture.New()
 
 	dns := dnsanalyzer.New()
 	pcap.RegisterReceiver(dns)
