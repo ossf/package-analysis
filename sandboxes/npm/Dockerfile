@@ -10,7 +10,7 @@ RUN chmod 755 /usr/local/bin/analyze.js
 RUN mkdir -p /app
 
 # If an npm package tries to use bower, make sure bower can run under root.
-RUN echo "{ \"allow-root\": true }" > /app/.bowerrc
+COPY bowerrc /app/.bowerrc
 
 FROM scratch
 COPY --from=image / /
