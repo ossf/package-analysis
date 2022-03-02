@@ -16,15 +16,13 @@ function install(package) {
     throw 'Failed to init npm';
   }
 
-  result = spawnSync('npm', ['install', installPkg], { stdio: 'pipe', encoding: 'utf8' });
-  console.log(result.stdout + result.stderr);
-
+  result = spawnSync('npm', ['install', installPkg], { stdio: 'inherit' });
   if (result.status == 0) {
     console.log('Install succeeded.');
   } else {
-    if (result.stderr.includes('is not in the npm registry.')) {
-      process.exit(0);
-    }
+    // Always exit on failure.
+    // Install failing is either an interesting issue, or an opportunity to
+    // improve the analysis.
     console.log('Install failed.');
     process.exit(1);
   }

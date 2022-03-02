@@ -32,11 +32,10 @@ def install(package)
     return
   end
 
+  # Always exit on failure.
+  # Install failing is either an interesting issue, or an opportunity to
+  # improve the analysis.
   puts "Install failed."
-  if output.include? "Could not find a valid gem"
-    exit 0
-  end
-
   exit 1
 end
 

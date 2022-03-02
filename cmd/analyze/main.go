@@ -102,10 +102,19 @@ func main() {
 		result, err := analysis.Run(sb, pkg.Command(phase))
 		if err != nil {
 			log.Fatal("Analysis phase failed",
-				"phase", phase,
+				log.Label("phase", phase),
 				"error", err)
 		}
 		results[phase] = result
+		// Abort if install failed. No need to continue.
+		if result.Status != analysis.StatusCompleted {
+			log.Error("Analysis phase failed. Cannot continue.",
+				log.Label("phase", phase),
+				log.Label("ecosystem", *ecosystem),
+				log.Label("name", *pkgName),
+				log.Label("version", *version))
+			break
+		}
 	}
 
 	ctx := context.Background()

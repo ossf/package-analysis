@@ -29,17 +29,16 @@ def install(package):
     arg = package.install_arg()
     try:
       output = subprocess.check_output(
-          (sys.executable, '-m', 'pip', 'install', arg),
+          (sys.executable, '-m', 'pip', 'install', '--pre', arg),
           stderr=subprocess.STDOUT)
       print('Install succeeded:')
       print(output.decode())
     except subprocess.CalledProcessError as e:
       print('Failed to install:')
       print(e.output.decode())
-      if b'No matching distribution' in e.output:
-          sys.exit(0)
-
-      # Some other unknown error.
+      # Always raise.
+      # Install failing is either an interesting issue, or an opportunity to
+      # improve the analysis.
       raise
 
 def path_to_import(path):
