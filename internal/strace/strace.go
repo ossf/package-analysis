@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/ossf/package-analysis/internal/log"
 )
@@ -246,15 +247,16 @@ func Parse(r io.Reader) (*Result, error) {
 		commands: make(map[string]*CommandInfo),
 	}
 
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		line := scanner.Text()
-		match := stracePattern.FindStringSubmatch(line)
-		if match == nil {
-			continue
-		}
+	// Use a buffered reader, rather than scanner, to allow for lines with
+	// unlimited length.
+	bufR := bufio.NewReader(r)
+	for {
+		line, err := bufR.ReadString('\n')
+		// Trim any trailing space
+		line = strings.TrimRightFunc(line, unicode.IsSpace)
 
-		if match[2] == "X" {
+		match := stracePattern.FindStringSubmatch(line)
+		if match != nil && match[2] == "X" {
 			// Analyze exit events only.
 			err := result.parseSyscall(match[3], match[4])
 			if err != nil {
@@ -263,10 +265,13 @@ func Parse(r io.Reader) (*Result, error) {
 					"error", err)
 			}
 		}
-	}
 
-	if err := scanner.Err(); err != nil {
-		return nil, err
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return result, nil

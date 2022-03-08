@@ -1,6 +1,7 @@
 package strace_test
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -293,5 +294,21 @@ func TestParseSocketsOneEntry(t *testing.T) {
 				t.Errorf(`Sockets() = %v, want [%v]`, sockets, test.want)
 			}
 		})
+	}
+}
+
+func TestReallyLongLogLine(t *testing.T) {
+	part := "{base=0x4a2ab20, len=1378, \"" + strings.Repeat("\x00", 1378) + "\"...}, "
+	inputTmpl := "I0303 03:31:30.374817     206 strace.go:591] [  60:  79] node E writev(0x13 /tmp/archive.tar.gz, 0x4c45c70 %s0x6a)"
+	input := fmt.Sprintf(inputTmpl, strings.Repeat(part, 1000))
+
+	r := strings.NewReader(input)
+	res, err := strace.Parse(r)
+	if err != nil || res == nil {
+		t.Fatalf(`Parse(r) = %v, %v, want _, nil`, res, err)
+	}
+	files := res.Files()
+	if len(files) != 0 {
+		t.Fatalf(`Files() = %v, want []`, files)
 	}
 }
