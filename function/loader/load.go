@@ -35,6 +35,7 @@ func Load(ctx context.Context, m PubSubMessage) error {
 	gcsRef := bigquery.NewGCSReference(fmt.Sprintf("gs://%s/*.json", bucket))
 	gcsRef.Schema = schema
 	gcsRef.SourceFormat = bigquery.JSON
+	gcsRef.MaxBadRecords = 1000
 
 	dataset := bq.Dataset("packages")
 	loader := dataset.Table("analysis").LoaderFrom(gcsRef)
