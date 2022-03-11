@@ -16,6 +16,8 @@ import (
 const (
 	podmanBin       = "podman"
 	runtimeBin      = "/usr/local/bin/runsc_compat.sh"
+	iptablesLoadBin = "/usr/sbin/iptables-restore"
+	iptablesRules   = "/usr/local/etc/iptables.rules"
 	rootDir         = "/var/run/runsc"
 	straceFile      = "runsc.log.boot"
 	hostname        = "box"
@@ -165,6 +167,11 @@ func removeAllLogs() error {
 	return nil
 }
 
+func loadIptablesRules() error {
+	cmd := exec.Command(iptablesLoadBin, iptablesRules)
+	return cmd.Run()
+}
+
 func podman(args ...string) *exec.Cmd {
 	args = append([]string{
 		"--cgroup-manager=cgroupfs",
@@ -262,6 +269,10 @@ func (s *podmanSandbox) imageWithTag() string {
 func (s *podmanSandbox) init() error {
 	if s.container != "" {
 		return nil
+	}
+	// Load iptables rules to further isolate the sandbox
+	if err := loadIptablesRules(); err != nil {
+		return fmt.Errorf("failed restoring iptables rules: %w", err)
 	}
 	// Delete existing logs (if any).
 	if err := removeAllLogs(); err != nil {
