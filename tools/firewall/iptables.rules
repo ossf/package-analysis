@@ -1,0 +1,6 @@
+# Create the chain used by podman networking for user-defined rules
+*filter
+:CNI-ADMIN - [0:0]
+# Block access to metadata.google.internal/AWS metadata
+-A CNI-ADMIN -d 169.254.169.254/32 -j DROP
+COMMIT
