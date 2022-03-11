@@ -27,6 +27,7 @@ RUN curl -fsSL https://gvisor.dev/archive.key | apt-key add - && \
 COPY --from=build /src/analyze /usr/local/bin/analyze
 COPY --from=build /src/worker /usr/local/bin/worker
 COPY --from=build /src/tools/gvisor/runsc_compat.sh /usr/local/bin/runsc_compat.sh
+COPY --from=build /src/tools/firewall/iptables.rules /usr/local/etc/iptables.rules
 RUN chmod 755 /usr/local/bin/runsc_compat.sh
 
 ARG SANDBOX_IMAGE_TAG
