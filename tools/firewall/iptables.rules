@@ -1,6 +1,13 @@
 # Create the chain used by podman networking for user-defined rules
 *filter
+:INPUT ACCEPT [0:0]
 :CNI-ADMIN - [0:0]
-# Block access to metadata.google.internal/AWS metadata
+# Block access to this host from the container network.
+-A INPUT -s {{ .Subnet }} -j DROP
+# Block access to metadata.google.internal/AWS metadata.
 -A CNI-ADMIN -d 169.254.169.254/32 -j DROP
+# Block access to Private address spaces.
+-A CNI-ADMIN -s {{ .Subnet }} -d 10.0.0.0/8 -j DROP
+-A CNI-ADMIN -s {{ .Subnet }} -d 172.16.0.0/12 -j DROP
+-A CNI-ADMIN -s {{ .Subnet }} -d 192.168.0.0/16 -j DROP
 COMMIT
