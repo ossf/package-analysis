@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"text/template"
 
 	"github.com/ossf/package-analysis/internal/log"
 )
@@ -168,8 +169,34 @@ func removeAllLogs() error {
 }
 
 func loadIptablesRules() error {
-	cmd := exec.Command(iptablesLoadBin, iptablesRules)
-	return cmd.Run()
+	// Get the subnet for the default podman network
+	subnet, err := podmanNetworkSubnet()
+	if err != nil {
+		return err
+	}
+	// Prepare the iptables-restore template
+	t := template.Must(template.ParseFiles(iptablesRules))
+
+	logOut := log.Writer(log.InfoLevel)
+	defer logOut.Close()
+	logErr := log.Writer(log.WarnLevel)
+	defer logErr.Close()
+
+	cmd := exec.Command(iptablesLoadBin)
+	cmd.Stdout = logOut
+	cmd.Stderr = logErr
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return err
+	}
+	defer stdin.Close()
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	// Send the iptables rules to the command via stdin
+	t.Execute(stdin, struct{ Subnet string }{Subnet: subnet})
+	stdin.Close()
+	return cmd.Wait()
 }
 
 func podman(args ...string) *exec.Cmd {
@@ -194,6 +221,20 @@ func podmanCleanContainers() error {
 	return podmanRun("rm", "--all", "--force")
 }
 
+// podmanNetworkSubnet returns the IPv4 subnet of the default "podman" network.
+func podmanNetworkSubnet() (string, error) {
+	args := []string{
+		"network", "inspect", "podman", "-f", "{{range .plugins}}{{with .ipam.subnet}}{{.}}{{end}}{{end}}",
+	}
+	cmd := podman(args...)
+	var buf bytes.Buffer
+	cmd.Stdout = &buf
+	if err := cmd.Run(); err != nil {
+		return "", err
+	}
+	return string(bytes.TrimSpace(buf.Bytes())), nil
+}
+
 func (s *podmanSandbox) pullImage() error {
 	return podmanRun("pull", s.imageWithTag())
 }
@@ -204,6 +245,9 @@ func (s *podmanSandbox) createContainer() (string, error) {
 		"--runtime=" + runtimeBin,
 		"--init",
 		"--hostname=" + hostname,
+		"--dns=8.8.8.8",  // Manually specify DNS to bypass kube-dns and
+		"--dns=8.8.4.4",  // allow for tighter firewall rules that block
+		"--dns-search=.", // network traffic to private IP address ranges.
 	}
 	args = append(args, s.extraArgs()...)
 	args = append(args, s.imageWithTag())
