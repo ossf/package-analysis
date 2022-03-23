@@ -2,6 +2,7 @@ FROM python:3.9.5-slim@sha256:655f71f243ee31eea6774e0b923b990cd400a0689eff049fac
 
 RUN apt-get update && \
     apt-get install -y \
+        curl \
         wget \
         git
 

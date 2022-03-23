@@ -2,6 +2,7 @@ FROM node:16.1.0-slim@sha256:972548af5d81a09288fe9bb1b7291ff0c4e4e41e4b2e5f5ca80
 
 RUN apt-get update && \
     apt-get install -y \
+        curl \
         wget \
         git
 
