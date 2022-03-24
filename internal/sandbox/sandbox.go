@@ -21,8 +21,6 @@ const (
 	iptablesRules   = "/usr/local/etc/iptables.rules"
 	rootDir         = "/var/run/runsc"
 	straceFile      = "runsc.log.boot"
-	hostname        = "box"
-	containerPrefix = "box"
 	logDirPattern   = "sandbox_logs_"
 )
 
@@ -244,7 +242,6 @@ func (s *podmanSandbox) createContainer() (string, error) {
 		"create",
 		"--runtime=" + runtimeBin,
 		"--init",
-		"--hostname=" + hostname,
 		"--dns=8.8.8.8",  // Manually specify DNS to bypass kube-dns and
 		"--dns=8.8.4.4",  // allow for tighter firewall rules that block
 		"--dns-search=.", // network traffic to private IP address ranges.
