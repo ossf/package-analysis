@@ -61,9 +61,9 @@ When the library is imported it queries a server running on the Heroku cloud pla
 
 ![](images/npm_random_vouchercode-generator_2.png)
 
-In the response we observed, the command stopped a process managed by "pm2;" however, this same response can be changed to run any command the attacker wished to execute.
+In the response we observed, the command stopped a process managed by "[pm2](https://pm2.keymetrics.io/);" however, this same response can be changed to run any command the attacker wished to execute.
 
-The library then uses voucher-code-generator to provide the advertised functionality.
+The library then uses [voucher-code-generator](https://www.npmjs.com/package/voucher-code-generator) to provide the advertised functionality.
 
 This package was discovered from the unusual request to the Heroku server.
 
