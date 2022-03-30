@@ -28,8 +28,9 @@ It grabbed the data associated with the token from the Discord API  and exfiltra
 
 Similar to discordcmd above, this NPM package attempts to steal a Windows user's Discord account token and was discovered by identifying calls to the Discord API. This package:
 
-searches through local browser databases for a token;
-queries the Discord server to discover details about the token;and exfiltrates these details to a Discord server controlled by the attacker.
+- searches through local browser databases for a token;
+- queries the Discord server to discover details about the token;
+- and exfiltrates these - details to a Discord server controlled by the attacker.
 
 ## Remote Shell
 
@@ -73,9 +74,9 @@ This package was discovered from the unusual request to the Heroku server.
 
 ## Dependency Confusion / Typosquatting
 
-The vast majority of the malicious packages we detected are [dependency confusion](https://medium.com/@alex.birsan/dependency-confusion-4a5d60fec610) and [typosquatting](https://en.wikipedia.org/wiki/Typosquatting) attacks.
+The vast majority of the malicious packages we detect are [dependency confusion](https://medium.com/@alex.birsan/dependency-confusion-4a5d60fec610) and [typosquatting](https://en.wikipedia.org/wiki/Typosquatting) attacks.
 
-The packages we found usually contain a simple script that runs during an install and calls home with a few details about the host. These packages are most likely the work of security researchers looking for bug bounties, since most are not exfiltrating meaningful data except the name of the machine or a username, and they make no attempt to disguise their behavior.
+The packages found usually contain a simple script that runs during install and calls home with a few details about the host. These packages are most likely the work of security researchers looking for bug bounties, since most are not exfiltrating meaningful data except the name of the machine or a username, and they make no attempt to disguise their behavior.
 
 These dependency confusion attacks were discovered through the domains they used, such as burpcollaborator.net, pipedream.com, interact.sh, which are commonly used for reporting back attacks. The same domains appear across unrelated packages and have no apparent connection to the packages themselves. Many packages also used unusual version numbers that were high (e.g. v5.0.0, v99.10.9) for a package with no previous versions.
   
