@@ -8,7 +8,7 @@ require (
 	github.com/ossf/package-feeds v0.0.0-20211108050428-2ce6d6de33c8
 	go.uber.org/zap v1.21.0
 	gocloud.dev v0.25.0
-	gocloud.dev/pubsub/kafkapubsub v0.24.0
+	gocloud.dev/pubsub/kafkapubsub v0.25.0
 )
 
 require (
@@ -17,7 +17,7 @@ require (
 	cloud.google.com/go/iam v0.3.0 // indirect
 	cloud.google.com/go/pubsub v1.19.0 // indirect
 	cloud.google.com/go/storage v1.21.0 // indirect
-	github.com/Shopify/sarama v1.29.1 // indirect
+	github.com/Shopify/sarama v1.32.0 // indirect
 	github.com/aws/aws-sdk-go v1.43.31 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.16.2 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.1 // indirect
