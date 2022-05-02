@@ -73,8 +73,14 @@ type commandResult struct {
 	Environment []string
 }
 
+type dnsQueries struct {
+	Hostname string
+	Types    []string
+}
+
 type dnsResult struct {
-	Queries map[string]map[string][]string
+	Class   string
+	Queries []dnsQueries
 }
 
 type Result struct {
@@ -84,7 +90,7 @@ type Result struct {
 	Files    []fileResult
 	Sockets  []socketResult
 	Commands []commandResult
-	DNS      dnsResult
+	DNS      []dnsResult
 }
 
 var (
@@ -161,7 +167,14 @@ func (d *Result) setData(straceResult *strace.Result, dns *dnsanalyzer.DNSAnalyz
 		})
 	}
 
-	d.DNS = dnsResult{
-		Queries: dns.Questions(),
+	for dnsClass, queries := range dns.Questions() {
+		c := dnsResult{Class: dnsClass}
+		for host, types := range queries {
+			c.Queries = append(c.Queries, dnsQueries{
+				Hostname: host,
+				Types:    types,
+			})
+		}
+		d.DNS = append(d.DNS, c)
 	}
 }

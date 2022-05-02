@@ -6,6 +6,35 @@
           {
             "fields": [
               {
+                "fields": [
+                  {
+                    "mode": "NULLABLE",
+                    "name": "Hostname",
+                    "type": "STRING"
+                  },
+                  {
+                    "mode": "REPEATED",
+                    "name": "Types",
+                    "type": "STRING"
+                  }
+                ],
+                "mode": "REPEATED",
+                "name": "Queries",
+                "type": "RECORD"
+              },
+              {
+                "mode": "NULLABLE",
+                "name": "Class",
+                "type": "STRING"
+              }
+            ],
+            "mode": "REPEATED",
+            "name": "DNS",
+            "type": "RECORD"
+          },
+          {
+            "fields": [
+              {
                 "mode": "REPEATED",
                 "name": "Environment",
                 "type": "STRING"
