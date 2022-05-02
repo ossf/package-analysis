@@ -73,6 +73,10 @@ type commandResult struct {
 	Environment []string
 }
 
+type dnsResult struct {
+	Queries map[string]map[string][]string
+}
+
 type Result struct {
 	Status   status
 	Stdout   []byte
@@ -80,6 +84,7 @@ type Result struct {
 	Files    []fileResult
 	Sockets  []socketResult
 	Commands []commandResult
+	DNS      dnsResult
 }
 
 var (
@@ -156,4 +161,7 @@ func (d *Result) setData(straceResult *strace.Result, dns *dnsanalyzer.DNSAnalyz
 		})
 	}
 
+	d.DNS = dnsResult{
+		Queries: dns.Questions(),
+	}
 }
