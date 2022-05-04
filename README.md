@@ -69,12 +69,12 @@ Values should follow
 
 To run the analysis code locally, the easiest way is to use the Docker image
 `gcr.io/ossf-malware-analysis/analysis`. This can be built from
-`./build/build_docker.sh`.
+`./build/build_docker.sh`, or the public images can be used instead.
 
 This container uses `podman` to run a nested, sandboxed ([gVisor]) container for
 analysis.
 
-The following commands will dump the JSON result to `/tmp/results`.
+The commands below will dump the JSON result to `/tmp/results`.
 
 [gVisor]: https://gvisor.dev/
 
@@ -87,6 +87,7 @@ To run this on a live package (e.g. the "Django" package on
 $ mkdir /tmp/results
 $ docker run --privileged -ti \
     -v /tmp/results:/results \
+    -v /var/lib/containers:/var/lib/containers \
     gcr.io/ossf-malware-analysis/analysis analyze \
     -package Django -ecosystem pypi \
     -upload file:///results/
@@ -101,11 +102,20 @@ named `test`), it needs to be mounted into the the container.
 $ mkdir /tmp/results
 $ docker run --privileged -ti \
     -v /tmp/results:/results \
+    -v /var/lib/containers:/var/lib/containers \
     -v /path/to/test.whl:/test.whl \
     gcr.io/ossf-malware-analysis/analysis analyze \
     -local /test.whl -package test -ecosystem pypi \
     -upload file:///results/
 ```
+
+### Notes
+
+`--privileged` and a compatible filesystem are required to properly run nested
+containers. `-v /var/lib/containers:/var/lib/containers` is used in the
+examples above as it allows caching the sandbox images and supports local
+developement.
+
 
 ## Development
 
