@@ -21,7 +21,7 @@ RUN apt-get update && apt-get upgrade -y && \
 
 # Install gVisor.
 RUN curl -fsSL https://gvisor.dev/archive.key | apt-key add - && \
-    add-apt-repository "deb https://storage.googleapis.com/gvisor/releases 20211129 main" && \
+    add-apt-repository "deb https://storage.googleapis.com/gvisor/releases 20220425 main" && \
     apt-get update && apt-get install -y runsc
 
 COPY --from=build /src/analyze /usr/local/bin/analyze
