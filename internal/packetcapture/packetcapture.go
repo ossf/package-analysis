@@ -17,8 +17,7 @@ type PacketReceiver interface {
 type Handler func(gopacket.Layer, gopacket.Packet)
 
 type PacketCapture struct {
-	netInterface string
-	//handle          *afpacket.TPacket
+	netInterface    string
 	handle          *pcapgo.EthernetHandle
 	done            chan bool
 	stop            chan bool
@@ -55,7 +54,9 @@ func (pc *PacketCapture) RegisterReceiver(receiver PacketReceiver) {
 }
 
 func (pc *PacketCapture) Start() error {
-	//handle, err := afpacket.NewTPacket(afpacket.OptInterface(pc.netInterface))
+	// Use the pcapgo library for capturing traffic as it is the most reliable.
+	// afpacket is the fastest but segfaults: https://github.com/google/gopacket/issues/717
+	// pcap will block during Cancel(): https://github.com/google/gopacket/issues/890
 	handle, err := pcapgo.NewEthernetHandle(pc.netInterface)
 	if err != nil {
 		return err
