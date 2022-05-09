@@ -102,7 +102,7 @@ func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
 		"args", args)
 
 	log.Debug("Preparing packet capture")
-	pcap := packetcapture.New()
+	pcap := packetcapture.New(sandbox.NetworkInterface)
 
 	dns := dnsanalyzer.New()
 	pcap.RegisterReceiver(dns)
@@ -119,6 +119,7 @@ func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
 		return resultError, fmt.Errorf("sandbox failed (%w)", err)
 	}
 
+	log.Debug("Stop the packet capture")
 	pcap.Close()
 
 	// Grab the log file

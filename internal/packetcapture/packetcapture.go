@@ -2,11 +2,8 @@ package packetcapture
 
 import (
 	"github.com/google/gopacket"
-	"github.com/google/gopacket/pcap"
-)
-
-const (
-	captureDevice = "eth0"
+	"github.com/google/gopacket/layers"
+	"github.com/google/gopacket/pcapgo"
 )
 
 // PacketReceiver implementations can be registered with a PacketCapture to be
@@ -20,18 +17,23 @@ type PacketReceiver interface {
 type Handler func(gopacket.Layer, gopacket.Packet)
 
 type PacketCapture struct {
-	handle          *pcap.Handle
+	netInterface string
+	//handle          *afpacket.TPacket
+	handle          *pcapgo.EthernetHandle
 	done            chan bool
+	stop            chan bool
 	packetReceivers map[gopacket.LayerType][]PacketReceiver
 }
 
-// New returns a new Trace instance.
+// New returns a new PacketCapture instance for the given netInterface
 //
-// Close() must be called on the Trace instance.
-func New() *PacketCapture {
+// Close() must be called on the PacketCapture instance.
+func New(netInterface string) *PacketCapture {
 	return &PacketCapture{
+		netInterface:    netInterface,
 		handle:          nil,
 		done:            make(chan bool),
+		stop:            make(chan bool),
 		packetReceivers: make(map[gopacket.LayerType][]PacketReceiver),
 	}
 }
@@ -53,34 +55,36 @@ func (pc *PacketCapture) RegisterReceiver(receiver PacketReceiver) {
 }
 
 func (pc *PacketCapture) Start() error {
-	inactive, err := pcap.NewInactiveHandle(captureDevice)
-	if err != nil {
-		return err
-	}
-	defer inactive.CleanUp()
-
-	// Force packets to be sent immediately to ensure we don't miss any.
-	if err := inactive.SetImmediateMode(true); err != nil {
-		return err
-	}
-
-	handle, err := inactive.Activate()
+	//handle, err := afpacket.NewTPacket(afpacket.OptInterface(pc.netInterface))
+	handle, err := pcapgo.NewEthernetHandle(pc.netInterface)
 	if err != nil {
 		return err
 	}
 	pc.handle = handle
-	packetSource := gopacket.NewPacketSource(pc.handle, pc.handle.LinkType())
-	go func(packets chan gopacket.Packet, done chan bool) {
-		for packet := range packets {
-			pc.handlePacket(packet)
+	packetSource := gopacket.NewPacketSource(pc.handle, layers.LinkTypeEthernet)
+	go func(packets chan gopacket.Packet, done chan bool, stop chan bool) {
+		defer func() { done <- true }()
+		for {
+			select {
+			case packet, ok := <-packets:
+				if ok {
+					pc.handlePacket(packet)
+				} else {
+					return
+				}
+			case v, ok := <-stop:
+				if !ok || v {
+					return
+				}
+			}
 		}
-		done <- true
-	}(packetSource.Packets(), pc.done)
+	}(packetSource.Packets(), pc.done, pc.stop)
 	return nil
 }
 
 func (pc *PacketCapture) Close() {
 	if pc.handle != nil {
+		pc.stop <- true
 		pc.handle.Close()
 		// Wait for packet processing to be finished.
 		<-pc.done
