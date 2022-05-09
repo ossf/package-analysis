@@ -9,19 +9,22 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"text/template"
 
 	"github.com/ossf/package-analysis/internal/log"
 )
 
 const (
-	podmanBin       = "podman"
-	runtimeBin      = "/usr/local/bin/runsc_compat.sh"
-	iptablesLoadBin = "/usr/sbin/iptables-restore"
-	iptablesRules   = "/usr/local/etc/iptables.rules"
-	rootDir         = "/var/run/runsc"
-	straceFile      = "runsc.log.boot"
-	logDirPattern   = "sandbox_logs_"
+	podmanBin     = "podman"
+	runtimeBin    = "/usr/local/bin/runsc_compat.sh"
+	rootDir       = "/var/run/runsc"
+	straceFile    = "runsc.log.boot"
+	logDirPattern = "sandbox_logs_"
+
+	// networkName is the name of the podman network defined in
+	// tools/network/podman-analysis.conflist. This network is the network
+	// used by the sandbox during analysis to separate the sandbox traffic
+	// from the host.
+	networkName = "analysis-net"
 )
 
 type RunStatus uint8
@@ -166,37 +169,6 @@ func removeAllLogs() error {
 	return nil
 }
 
-func loadIptablesRules() error {
-	// Get the subnet for the default podman network
-	subnet, err := podmanNetworkSubnet()
-	if err != nil {
-		return err
-	}
-	// Prepare the iptables-restore template
-	t := template.Must(template.ParseFiles(iptablesRules))
-
-	logOut := log.Writer(log.InfoLevel)
-	defer logOut.Close()
-	logErr := log.Writer(log.WarnLevel)
-	defer logErr.Close()
-
-	cmd := exec.Command(iptablesLoadBin)
-	cmd.Stdout = logOut
-	cmd.Stderr = logErr
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		return err
-	}
-	defer stdin.Close()
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-	// Send the iptables rules to the command via stdin
-	t.Execute(stdin, struct{ Subnet string }{Subnet: subnet})
-	stdin.Close()
-	return cmd.Wait()
-}
-
 func podman(args ...string) *exec.Cmd {
 	args = append([]string{
 		"--cgroup-manager=cgroupfs",
@@ -219,20 +191,6 @@ func podmanCleanContainers() error {
 	return podmanRun("rm", "--all", "--force")
 }
 
-// podmanNetworkSubnet returns the IPv4 subnet of the default "podman" network.
-func podmanNetworkSubnet() (string, error) {
-	args := []string{
-		"network", "inspect", "podman", "-f", "{{range .plugins}}{{with .ipam.subnet}}{{.}}{{end}}{{end}}",
-	}
-	cmd := podman(args...)
-	var buf bytes.Buffer
-	cmd.Stdout = &buf
-	if err := cmd.Run(); err != nil {
-		return "", err
-	}
-	return string(bytes.TrimSpace(buf.Bytes())), nil
-}
-
 func (s *podmanSandbox) pullImage() error {
 	return podmanRun("pull", s.imageWithTag())
 }
@@ -245,6 +203,7 @@ func (s *podmanSandbox) createContainer() (string, error) {
 		"--dns=8.8.8.8",  // Manually specify DNS to bypass kube-dns and
 		"--dns=8.8.4.4",  // allow for tighter firewall rules that block
 		"--dns-search=.", // network traffic to private IP address ranges.
+		"--network=" + networkName,
 	}
 	args = append(args, s.extraArgs()...)
 	args = append(args, s.imageWithTag())
@@ -310,10 +269,6 @@ func (s *podmanSandbox) imageWithTag() string {
 func (s *podmanSandbox) init() error {
 	if s.container != "" {
 		return nil
-	}
-	// Load iptables rules to further isolate the sandbox
-	if err := loadIptablesRules(); err != nil {
-		return fmt.Errorf("failed restoring iptables rules: %w", err)
 	}
 	// Delete existing logs (if any).
 	if err := removeAllLogs(); err != nil {

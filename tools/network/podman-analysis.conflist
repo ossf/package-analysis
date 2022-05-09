@@ -1,0 +1,28 @@
+{
+  "cniVersion": "0.4.0",
+  "name": "analysis-net",
+  "plugins": [
+    {
+        "type": "bridge",
+        "bridge": "cni-analysis",
+        "isGateway": true,
+        "ipMasq": true,
+        "hairpinMode": true,
+        "ipam": {
+            "type": "host-local",
+            "subnet": "172.16.16.0/24",
+            "routes": [
+                { "dst": "0.0.0.0/0" }
+            ]
+        }
+    },
+    {
+        "type": "portmap",
+        "capabilities": { "portMappings": true }
+    },
+    {
+        "type": "firewall",
+        "backend": "iptables"
+    }
+  ]
+}

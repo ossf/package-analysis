@@ -35,6 +35,8 @@ func parseBucketPath(path string) (string, string) {
 
 func main() {
 	log.Initalize(os.Getenv("LOGGER_ENV"))
+	sandbox.InitEnv()
+
 	flag.Parse()
 	if *ecosystem == "" {
 		flag.Usage()
