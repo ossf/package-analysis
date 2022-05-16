@@ -229,6 +229,7 @@ func main() {
 	resultsBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS")
 	imageTag := os.Getenv("OSSF_SANDBOX_IMAGE_TAG")
 	log.Initalize(os.Getenv("LOGGER_ENV"))
+	sandbox.InitEnv()
 
 	// Log the configuration of the worker at startup so we can observe it.
 	log.Info("Starting worker",

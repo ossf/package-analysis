@@ -13,7 +13,7 @@ RUN apt-get update && apt-get upgrade -y && \
         ca-certificates \
         curl \
         iptables \
-        libpcap0.8 \
+        iproute2 \
         podman \
         software-properties-common && \
     update-alternatives --set iptables /usr/sbin/iptables-legacy && \
@@ -27,8 +27,10 @@ RUN curl -fsSL https://gvisor.dev/archive.key | apt-key add - && \
 COPY --from=build /src/analyze /usr/local/bin/analyze
 COPY --from=build /src/worker /usr/local/bin/worker
 COPY --from=build /src/tools/gvisor/runsc_compat.sh /usr/local/bin/runsc_compat.sh
-COPY --from=build /src/tools/firewall/iptables.rules /usr/local/etc/iptables.rules
-RUN chmod 755 /usr/local/bin/runsc_compat.sh
+COPY --from=build /src/tools/network/iptables.rules /usr/local/etc/iptables.rules
+COPY --from=build /src/tools/network/podman-analysis.conflist /etc/cni/net.d/podman-analysis.conflist
+RUN chmod 755 /usr/local/bin/runsc_compat.sh && \
+    chmod 644 /usr/local/etc/iptables.rules /etc/cni/net.d/podman-analysis.conflist
 
 ARG SANDBOX_IMAGE_TAG
 ENV OSSF_SANDBOX_IMAGE_TAG=${SANDBOX_IMAGE_TAG}

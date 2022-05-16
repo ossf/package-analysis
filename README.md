@@ -85,7 +85,7 @@ To run this on a live package (e.g. the "Django" package on
 
 ```bash
 $ mkdir /tmp/results
-$ docker run --privileged -ti \
+$ docker run --cgroupns=host --privileged -ti \
     -v /tmp/results:/results \
     -v /var/lib/containers:/var/lib/containers \
     gcr.io/ossf-malware-analysis/analysis analyze \
@@ -100,7 +100,7 @@ named `test`), it needs to be mounted into the the container.
 
 ```bash
 $ mkdir /tmp/results
-$ docker run --privileged -ti \
+$ docker run --cgroupns=host --privileged -ti \
     -v /tmp/results:/results \
     -v /var/lib/containers:/var/lib/containers \
     -v /path/to/test.whl:/test.whl \
