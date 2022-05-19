@@ -10,6 +10,9 @@ This code is designed to work with the
 [Package Feeds](https://github.com/ossf/package-feeds) project,
 and originally started there.
 
+## Public Data
+This data is available in the public [BigQuery dataset](https://console.cloud.google.com/bigquery?d=packages&p=ossf-malware-analysis&t=analysis&page=table) 
+
 The components are:
 
 - A [scheduler](./cmd/scheduler/) - creates jobs for the analysis worker from
