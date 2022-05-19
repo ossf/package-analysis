@@ -10,8 +10,7 @@ This code is designed to work with the
 [Package Feeds](https://github.com/ossf/package-feeds) project,
 and originally started there.
 
-## Public Data
-This data is available in the public [BigQuery dataset](https://console.cloud.google.com/bigquery?d=packages&p=ossf-malware-analysis&t=analysis&page=table) 
+
 
 The components are:
 
@@ -27,6 +26,9 @@ community-run infrastructure to study behavior of open source packages and to
 look for malicious software. We also hope that the components can be used
 independently, to provide package feeds or runtime behavior data for anyone
 interested.
+
+## Public Data
+This data is available in the public [BigQuery dataset](https://console.cloud.google.com/bigquery?d=packages&p=ossf-malware-analysis&t=analysis&page=table) 
 
 ## Configuration
 
