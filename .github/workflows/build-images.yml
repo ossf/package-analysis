@@ -1,6 +1,12 @@
 name: "Build docker"
 
-on: [pull_request, push]
+on:
+  pull_request:
+    paths-ignore:
+      - '**.md'
+  push:
+    paths-ignore:
+      - '**.md'
 
 permissions: read-all
 
