@@ -72,7 +72,8 @@ function install($package) {
     );
     $artifactPath = $package->artifactPath();
     if ($artifactPath !== NULL) {
-        $repositoryArg = sprintf('--repository={"type": "artifact", "url": "%s"}', $artifactPath);
+        $arg = array("type" => "artifact", "url" => $artifactPath);
+        $repositoryArg = sprintf('--repository=%s', json_encode($arg));
         $args[] = $repositoryArg;
     }
     $retval = 0;
