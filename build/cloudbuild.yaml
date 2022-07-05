@@ -5,3 +5,4 @@ steps:
   entrypoint: bash
   dir: build
   args: ['-ex', 'build_docker.sh']
+timeout: 1200s
