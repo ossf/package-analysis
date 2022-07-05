@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"regexp"
 	"time"
 
 	"gocloud.dev/pubsub"
@@ -23,10 +24,14 @@ const (
 	retryExpRate  = 1.5
 )
 
-var supportedPkgManagers = map[string]bool{
-	"npm":      true,
-	"pypi":     true,
-	"rubygems": true,
+// supportedPkgManagers lists the package managers Package Analysis can
+// analyze. Each entry can contain zero or more regexp filters that exclude
+// unwanted versions to minimize noise.
+var supportedPkgManagers = map[string][]*regexp.Regexp{
+	"npm":       {},
+	"pypi":      {},
+	"rubygems":  {},
+	"packagist": {regexp.MustCompile(`^dev-`), regexp.MustCompile(`\.x-dev$`)},
 }
 
 func main() {
@@ -79,8 +84,14 @@ func listenLoop(subUrl, topicURL string) error {
 		if err := json.Unmarshal(m.Body, &pkg); err != nil {
 			return nil, fmt.Errorf("error unmarshalling json: %w", err)
 		}
-		if _, ok := supportedPkgManagers[pkg.Type]; !ok {
+		if filters, ok := supportedPkgManagers[pkg.Type]; !ok {
 			return nil, fmt.Errorf("package type is not supported: %v", pkg.Type)
+		} else {
+			for _, filter := range filters {
+				if filter.MatchString(pkg.Version) {
+					return nil, fmt.Errorf("package version '%v' is filtered for type: %v", pkg.Version, pkg.Type)
+				}
+			}
 		}
 		return &pubsub.Message{
 			Body: []byte{},

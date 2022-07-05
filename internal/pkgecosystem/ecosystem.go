@@ -14,9 +14,10 @@ type PkgManager struct {
 
 var (
 	supportedPkgManagers = map[string]*PkgManager{
-		npmPkgManager.name:      &npmPkgManager,
-		pypiPkgManager.name:     &pypiPkgManager,
-		rubygemsPkgManager.name: &rubygemsPkgManager,
+		npmPkgManager.name:       &npmPkgManager,
+		pypiPkgManager.name:      &pypiPkgManager,
+		rubygemsPkgManager.name:  &rubygemsPkgManager,
+		packagistPkgManager.name: &packagistPkgManager,
 	}
 )
 
