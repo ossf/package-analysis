@@ -1,16 +1,21 @@
 # Package Analysis
 
-This repo contains a few components to aid in the analysis of open source
-packages, in particular to look for malicious software.
+The Package Analysis project contains components that analyze the capabilities of packages available on open source repositories. The componenets partiularly look for behaviors that indicate malicious software: 
+
+- What files do they access? 
+- What addresses do they connect to? 
+- What commands do they run? 
+
+The project also tracks changes in how packages behave over time, to identify when previously safe software begins acting suspiciously. 
+
+This effort is meant to improve the security of open source software by detecting malicious behavior, informing consumers selecting packages, and providing researchers with data about the ecosystem. 
 
 For examples of what this project has detected, checkout the
-[case studies](docs/case_studies.md)
+[case studies](docs/case_studies.md).
 
 This code is designed to work with the
 [Package Feeds](https://github.com/ossf/package-feeds) project,
 and originally started there.
-
-
 
 The components are:
 
@@ -27,8 +32,25 @@ look for malicious software. We also hope that the components can be used
 independently, to provide package feeds or runtime behavior data for anyone
 interested.
 
+## How it works
+
+The Package Analysis project currently consists of the following pipeline:
+
+![image](insert_image_url_here)
+
+1. Package repositories are monitored for new packages.
+1. Each new package is scheduled to be analyzed by a pool of workers.
+1. A worker performs dynamic analysis of the package inside a sandbox.
+1. Results are stored and imported into BigQuery for inspection.
+
+Sandboxing via [gVisor](https://gvisor.dev/) containers ensures the packages are
+isolated. Detonating a package inside the sandbox allows us to capture strace
+and packet data that can indicate malicious interactions with the system as well
+as network connections that can be used to leak sensitive data or allow remote
+access.
+
 ## Public Data
-This data is available in the public [BigQuery dataset](https://console.cloud.google.com/bigquery?d=packages&p=ossf-malware-analysis&t=analysis&page=table) 
+This data is available in the public [BigQuery dataset](https://console.cloud.google.com/bigquery?d=packages&p=ossf-malware-analysis&t=analysis&page=table).
 
 ## Configuration
 
