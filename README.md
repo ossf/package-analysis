@@ -1,6 +1,6 @@
 # Package Analysis
 
-The Package Analysis project contains components that analyze the capabilities of packages available on open source repositories. The componenets partiularly look for behaviors that indicate malicious software: 
+The Package Analysis project contains components that analyze the capabilities of packages available on open source repositories. The components partiularly look for behaviors that indicate malicious software: 
 
 - What files do they access? 
 - What addresses do they connect to? 
@@ -10,14 +10,16 @@ The project also tracks changes in how packages behave over time, to identify wh
 
 This effort is meant to improve the security of open source software by detecting malicious behavior, informing consumers selecting packages, and providing researchers with data about the ecosystem. 
 
-For examples of what this project has detected, checkout the
-[case studies](docs/case_studies.md).
-
 This code is designed to work with the
 [Package Feeds](https://github.com/ossf/package-feeds) project,
 and originally started there.
 
-The components are:
+For examples of what this project has detected, check out the
+[case studies](docs/case_studies.md).
+
+## How it works
+
+The project's components are:
 
 - A [scheduler](./cmd/scheduler/) - creates jobs for the analysis worker from
   Package Feeds.
@@ -32,11 +34,9 @@ look for malicious software. We also hope that the components can be used
 independently, to provide package feeds or runtime behavior data for anyone
 interested.
 
-## How it works
-
 The Package Analysis project currently consists of the following pipeline:
 
-![image](insert_image_url_here)
+![image](docs/images/Pipeline%20diagram.png)
 
 1. Package repositories are monitored for new packages.
 1. Each new package is scheduled to be analyzed by a pool of workers.
