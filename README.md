@@ -1,6 +1,6 @@
 # Package Analysis
 
-The Package Analysis project contains components that analyze the capabilities of packages available on open source repositories. The components partiularly look for behaviors that indicate malicious software: 
+The Package Analysis project analyses the capabilities of packages available on open source repositories. The project looks for behaviors that indicate malicious software: 
 
 - What files do they access? 
 - What addresses do they connect to? 
