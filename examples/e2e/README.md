@@ -10,7 +10,7 @@ To build the necessary images yourself for the docker-compose, you can do the fo
 ```
 # In package-analysis
 cd build
-NOPUSH=true ./build_docker.sh
+./build_docker.sh
 
 # In package-feeds
 docker build . -t docker.pkg.github.com/ossf/package-feeds/packagefeeds:latest

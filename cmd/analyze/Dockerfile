@@ -4,7 +4,7 @@ WORKDIR /src
 COPY . ./
 RUN go build -o analyze cmd/analyze/main.go && go build -o worker cmd/worker/main.go
 
-FROM ubuntu:21.04@sha256:be154cc2b1211a9f98f4d708f4266650c9129784d0485d4507d9b0fa05d928b6
+FROM ubuntu:22.04@sha256:42ba2dfce475de1113d55602d40af18415897167d47c2045ec7b6d9746ff148f
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update && apt-get upgrade -y && \
