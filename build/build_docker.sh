@@ -1,6 +1,6 @@
 #!/bin/bash -ex
 
-nopush=${NOPUSH:-"false"}
+nopush=${NOPUSH:-"true"}
 tag=${RELEASE_TAG}
 
 BASE_PATH="$(dirname $(dirname $(realpath $0)))"
