@@ -2,6 +2,7 @@ steps:
 - name: 'gcr.io/cloud-builders/docker'
   env:
   - 'RELEASE_TAG=$TAG_NAME'
+  - 'NOPUSH=false'
   entrypoint: bash
   dir: build
   args: ['-ex', 'build_docker.sh']
