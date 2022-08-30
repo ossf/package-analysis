@@ -1,6 +1,6 @@
 #!/bin/bash -ex
 
-nopush=${NOPUSH:-"true"}
+push=${PUSH:-"false"}
 tag=${RELEASE_TAG}
 
 BASE_PATH="$(dirname $(dirname $(realpath $0)))"
@@ -16,7 +16,7 @@ for image in "${!ANALYSIS_IMAGES[@]}"; do
     extra_args="-t $REGISTRY/$image:$tag"
   fi
   docker build $extra_args -t $REGISTRY/$image ${ANALYSIS_IMAGES[$image]}
-  [[ "$nopush" == "false" ]]  && docker push $REGISTRY/$image
+  [[ "$push" == "true" ]] && docker push $REGISTRY/$image
 done
 popd
 
@@ -30,6 +30,6 @@ for image in "${!CMD_IMAGES[@]}"; do
     extra_args="-t $REGISTRY/$image:$tag --build-arg=SANDBOX_IMAGE_TAG=$tag"
   fi
   docker build $extra_args -t $REGISTRY/$image -f cmd/${CMD_IMAGES[$image]}/Dockerfile .
-  [[ "$nopush" == "false" ]] && docker push $REGISTRY/$image
+  [[ "$push" == "true" ]] && docker push $REGISTRY/$image
 done
 popd
