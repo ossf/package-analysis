@@ -57,9 +57,10 @@ func statusForRunResult(r *sandbox.RunResult) status {
 }
 
 type fileResult struct {
-	Path  string
-	Read  bool
-	Write bool
+	Path   string
+	Read   bool
+	Write  bool
+	Delete bool
 }
 
 type socketResult struct {
@@ -147,9 +148,10 @@ func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
 func (d *Result) setData(straceResult *strace.Result, dns *dnsanalyzer.DNSAnalyzer) {
 	for _, f := range straceResult.Files() {
 		d.Files = append(d.Files, fileResult{
-			Path:  f.Path,
-			Read:  f.Read,
-			Write: f.Write,
+			Path:   f.Path,
+			Read:   f.Read,
+			Write:  f.Write,
+			Delete: f.Delete,
 		})
 	}
 

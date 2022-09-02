@@ -35,12 +35,19 @@ var (
 	// 0x3 socket:[4], 0x55ed873bb510 {Family: AF_INET6, Addr: 2001:67c:1360:8001::24, Port: 80}, 0x1c
 	// 0x3 socket:[16], 0x5568c5caf2d0 {Family: AF_INET, Addr: , Port: 5000}, 0x10
 	socketPattern = regexp.MustCompile(`{Family: ([^,]+), (Addr: ([^,]*), Port: ([0-9]+)|[^}]+)}`)
+
+	// 0x7fe003272980 /tmp/jpu6po61
+	unlinkPatten = regexp.MustCompile(`0x[a-f\d]+ ([^)]+)`)
+
+	// unlinkat(0x4 /tmp/pip-pip-egg-info-ng4_5gp_/temps.egg-info, 0x7fe0031c9a10 top_level.txt, 0x0)
+	unlinkatPattern = regexp.MustCompile(`0x[a-f\d]+ ([^,]+), 0x[a-f\d]+ ([^,]+), 0x[a-f\d]+`)
 )
 
 type FileInfo struct {
-	Path  string
-	Read  bool
-	Write bool
+	Path   string
+	Read   bool
+	Write  bool
+	Delete bool
 }
 
 type SocketInfo struct {
@@ -112,12 +119,13 @@ func parseCmdAndEnv(cmdAndEnv string) ([]string, []string, error) {
 	return cmd, env, nil
 }
 
-func (r *Result) recordFileAccess(file string, read, write bool) {
+func (r *Result) recordFileAccess(file string, read, write, delete bool) {
 	if _, exists := r.files[file]; !exists {
 		r.files[file] = &FileInfo{Path: file}
 	}
 	r.files[file].Read = r.files[file].Read || read
 	r.files[file].Write = r.files[file].Write || write
+	r.files[file].Delete = r.files[file].Delete || delete
 }
 
 func (r *Result) recordSocket(address string, port int) {
@@ -152,7 +160,7 @@ func (r *Result) parseSyscall(syscall, args string) error {
 
 		log.Debug("creat",
 			"path", match[1])
-		r.recordFileAccess(match[1], false, true)
+		r.recordFileAccess(match[1], false, true, false)
 	case "open":
 		match := openPattern.FindStringSubmatch(args)
 		if match == nil {
@@ -164,7 +172,7 @@ func (r *Result) parseSyscall(syscall, args string) error {
 			"path", match[1],
 			"read", read,
 			"write", write)
-		r.recordFileAccess(match[1], read, write)
+		r.recordFileAccess(match[1], read, write, false)
 	case "openat":
 		match := openatPattern.FindStringSubmatch(args)
 		if match == nil {
@@ -177,7 +185,7 @@ func (r *Result) parseSyscall(syscall, args string) error {
 			"path", path,
 			"read", read,
 			"write", write)
-		r.recordFileAccess(path, read, write)
+		r.recordFileAccess(path, read, write, false)
 	case "execve":
 		match := execvePattern.FindStringSubmatch(args)
 		if match == nil {
@@ -224,7 +232,7 @@ func (r *Result) parseSyscall(syscall, args string) error {
 		}
 		log.Debug("stat",
 			"path", match[1])
-		r.recordFileAccess(match[1], true, false)
+		r.recordFileAccess(match[1], true, false, false)
 	case "newfstatat":
 		match := newfstatatPattern.FindStringSubmatch(args)
 		if match == nil {
@@ -233,7 +241,19 @@ func (r *Result) parseSyscall(syscall, args string) error {
 		path := joinPaths(match[1], match[2])
 		log.Debug("newfstatat",
 			"path", path)
-		r.recordFileAccess(path, true, false)
+		r.recordFileAccess(path, true, false, false)
+	case "unlink":
+		match := unlinkPatten.FindStringSubmatch(args)
+		path := match[1]
+		log.Debug("unlink",
+			"path", path)
+		r.recordFileAccess(path, false, false, true)
+	case "unlinkat":
+		match := unlinkatPattern.FindStringSubmatch(args)
+		path := joinPaths(match[1], match[2])
+		log.Debug("unlinkat",
+			"path", path)
+		r.recordFileAccess(path, false, false, true)
 	}
 	return nil
 }
