@@ -186,6 +186,22 @@ func TestParseFilesOneEntry(t *testing.T) {
 				Write: false,
 			},
 		},
+		{
+			name:  "unlink",
+			input: "I0902 01:19:17.729518     303 strace.go:625] [   4:   4] python3 X unlink(0x7ff5f78e4980 /tmp/lbosrzlp) = 0 (0x0) (58.552Âµs)",
+			want: strace.FileInfo{
+				Path:   "/tmp/lbosrzlp",
+				Delete: true,
+			},
+		},
+		{
+			name:  "unlinkat",
+			input: "I0902 01:19:18.991729     303 strace.go:631] [   4:   4] python3 X unlinkat(0x3 /tmp/pip-unpack-7xfj8327, 0x7ff5f790c410 temps-0.3.0.tar.gz, 0x0) = 0 (0x0) (39.914Âµs)",
+			want: strace.FileInfo{
+				Path:   "/tmp/pip-unpack-7xfj8327/temps-0.3.0.tar.gz",
+				Delete: true,
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

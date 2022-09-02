@@ -80,6 +80,11 @@
             "fields": [
               {
                 "mode": "NULLABLE",
+                "name": "Delete",
+                "type": "BOOLEAN"
+              },
+              {
+                "mode": "NULLABLE",
                 "name": "Write",
                 "type": "BOOLEAN"
               },
