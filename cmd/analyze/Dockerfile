@@ -20,8 +20,9 @@ RUN apt-get update && apt-get upgrade -y && \
     update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
 
 # Install gVisor.
-RUN curl -fsSL https://gvisor.dev/archive.key | apt-key add - && \
-    add-apt-repository "deb https://storage.googleapis.com/gvisor/releases 20220425 main" && \
+RUN mkdir -p /etc/apt/keyrings && \
+    curl -fsSL https://gvisor.dev/archive.key -o /etc/apt/keyrings/gvisor.key && \
+    echo "deb [signed-by=/etc/apt/keyrings/gvisor.key] https://storage.googleapis.com/gvisor/releases 20220425 main" > /etc/apt/sources.list.d/gvisor.list && \
     apt-get update && apt-get install -y runsc
 
 COPY --from=build /src/analyze /usr/local/bin/analyze
