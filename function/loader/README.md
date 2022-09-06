@@ -6,7 +6,7 @@ BigQuery.
 We use this instead of the BigQuery Data Transfer service as it does not support
 load jobs with WRITE_TRUNCATE.
 
-To deploy this:
+To deploy, run the following command in this directory (/function/loader):
 
 ```bash
 gcloud functions deploy load-data \
