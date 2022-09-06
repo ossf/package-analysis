@@ -2,8 +2,8 @@ name: "Build docker"
 
 on:
   pull_request:
-    paths-ignore:
-      - '**.md'
+    #paths-ignore:
+    #  - '**.md'
   push:
     paths-ignore:
       - '**.md'
