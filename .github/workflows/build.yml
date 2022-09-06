@@ -1,9 +1,6 @@
 name: "Build"
 
 on:
-  pull_request:
-    #paths-ignore:
-    # - '**.md'
 
 permissions: read-all
 
