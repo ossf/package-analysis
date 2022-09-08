@@ -40,7 +40,8 @@ var (
 	unlinkPatten = regexp.MustCompile(`0x[a-f\d]+ ([^)]+)`)
 
 	// unlinkat(0x4 /tmp/pip-pip-egg-info-ng4_5gp_/temps.egg-info, 0x7fe0031c9a10 top_level.txt, 0x0)
-	unlinkatPattern = regexp.MustCompile(`0x[a-f\d]+ ([^,]+), 0x[a-f\d]+ ([^,]+), 0x[a-f\d]+`)
+	// unlinkat(AT_FDCWD /app, 0x5569a7e83380 /app/vendor/composer/e06632ca, 0x200)
+	unlinkatPattern = regexp.MustCompile(`\S+ ([^,]+), 0x[a-f\d]+ ([^,]+), 0x[a-f\d]+`)
 )
 
 type FileInfo struct {
@@ -244,12 +245,18 @@ func (r *Result) parseSyscall(syscall, args string) error {
 		r.recordFileAccess(path, true, false, false)
 	case "unlink":
 		match := unlinkPatten.FindStringSubmatch(args)
+		if match == nil {
+			return fmt.Errorf("Failed to parse unlink args: %s", args)
+		}
 		path := match[1]
 		log.Debug("unlink",
 			"path", path)
 		r.recordFileAccess(path, false, false, true)
 	case "unlinkat":
 		match := unlinkatPattern.FindStringSubmatch(args)
+		if match == nil {
+			return fmt.Errorf("Failed to parse unlinkat args: %s", args)
+		}
 		path := joinPaths(match[1], match[2])
 		log.Debug("unlinkat",
 			"path", path)
