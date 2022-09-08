@@ -16,7 +16,7 @@ for image in "${!ANALYSIS_IMAGES[@]}"; do
     extra_args="-t $REGISTRY/$image:$tag"
   fi
   docker build $extra_args -t $REGISTRY/$image ${ANALYSIS_IMAGES[$image]}
-  [[ "$push" == "true" ]] && docker push $REGISTRY/$image
+  [[ "$push" == "true" ]] && docker push --all-tags $REGISTRY/$image
 done
 popd
 
@@ -30,6 +30,6 @@ for image in "${!CMD_IMAGES[@]}"; do
     extra_args="-t $REGISTRY/$image:$tag --build-arg=SANDBOX_IMAGE_TAG=$tag"
   fi
   docker build $extra_args -t $REGISTRY/$image -f cmd/${CMD_IMAGES[$image]}/Dockerfile .
-  [[ "$push" == "true" ]] && docker push $REGISTRY/$image
+  [[ "$push" == "true" ]] && docker push --all-tags $REGISTRY/$image
 done
 popd
