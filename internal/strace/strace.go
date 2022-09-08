@@ -41,7 +41,7 @@ var (
 
 	// unlinkat(0x4 /tmp/pip-pip-egg-info-ng4_5gp_/temps.egg-info, 0x7fe0031c9a10 top_level.txt, 0x0)
 	// unlinkat(AT_FDCWD /app, 0x5569a7e83380 /app/vendor/composer/e06632ca, 0x200)
-	unlinkatPattern = regexp.MustCompile(`\S+ ([^,]+), 0x[a-f\d]+ ([^,]+), 0x[a-f\d]+`)
+	unlinkatPattern = regexp.MustCompile(`[^\s]+ ([^,]+), 0x[a-f\d]+ ([^,]+), 0x[a-f\d]+`)
 )
 
 type FileInfo struct {
