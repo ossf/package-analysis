@@ -202,6 +202,14 @@ func TestParseFilesOneEntry(t *testing.T) {
 				Delete: true,
 			},
 		},
+		{
+			name:  "unlinkat_2",
+			input: "I0907 23:56:32.113900     302 strace.go:631] [  48:  48] rm X unlinkat(AT_FDCWD /app, 0x5569a7e83380 /app/vendor/composer/e06632ca, 0x200) = 0 (0x0) (69.951µs)",
+			want: strace.FileInfo{
+				Path:   "/app/vendor/composer/e06632ca",
+				Delete: true,
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
