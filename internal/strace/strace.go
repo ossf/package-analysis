@@ -17,19 +17,19 @@ import (
 
 var (
 	// 510 06:34:52.506847   43512 strace.go:587] [   2] python3 E openat(AT_FDCWD /app, 0x7f13f2254c50 /root/.ssh, O_RDONLY|O_CLOEXEC|O_DIRECTORY|O_NONBLOCK, 0o0)
-	stracePattern = regexp.MustCompile(`.*strace.go:\d+\] \[.*?\] (.+) (E|X) ([^\s]+)\((.*)\)`)
+	stracePattern = regexp.MustCompile(`.*strace.go:\d+\] \[.*?\] (.+) (E|X) (\S+)\((.*)\)`)
 	// 0x7f1c3a0a2620 /usr/bin/uname, 0x7f1c39e12930 ["uname", "-rs"], 0x55bbefc2d070 ["HOSTNAME=63d5c9dbacb6", "PYTHON_PIP_VERSION=21.0.1", "HOME=/root"]
 	execvePattern = regexp.MustCompile(`.*?(\[.*\])`)
 	//0x7f13f201a0a3 /path, 0x0
-	creatPattern = regexp.MustCompile(`[^\s]+ ([^,]+)`)
+	creatPattern = regexp.MustCompile(`\S+ ([^,]+)`)
 	//0x7f13f201a0a3 /proc/self/fd, O_RDONLY|O_CLOEXEC,
-	openPattern = regexp.MustCompile(`[^\s]+ ([^,]+), ([^,]+)`)
+	openPattern = regexp.MustCompile(`\S+ ([^,]+), ([^,]+)`)
 	// AT_FDCWD /app, 0x7f13f201a0a3 /proc/self/fd, O_RDONLY|O_CLOEXEC, 0o0
-	openatPattern = regexp.MustCompile(`[^\s]+ ([^,]+), [^\s]+ ([^,]+), ([^,]+)`)
+	openatPattern = regexp.MustCompile(`\S+ ([^,]+), \S+ ([^,]+), ([^,]+)`)
 	// 0x561c42f5be30 /usr/local/bin/Modules/Setup.local, 0x7fdfb323c180
-	statPattern = regexp.MustCompile(`[^\s]+ ([^,]+),`)
+	statPattern = regexp.MustCompile(`\S+ ([^,]+),`)
 	// 0x3 /tmp/pip-install-398qx_i7/build/bdist.linux-x86_64/wheel, 0x7ff1e4a30620 mal, 0x7fae4d8741f0, 0x100
-	newfstatatPattern = regexp.MustCompile(`[^\s]+ ([^,]+), [^\s]+ ([^,]+)`)
+	newfstatatPattern = regexp.MustCompile(`\S+ ([^,]+), \S+ ([^,]+)`)
 	// 0x3 socket:[2], 0x7f1bc9e7b914 {Family: AF_INET, Addr: 8.8.8.8, Port: 53}, 0x10
 	// 0x3 socket:[1], 0x7f27cbd0ac50 {Family: AF_INET, Addr: , Port: 0}, 0x10
 	// 0x3 socket:[4], 0x55ed873bb510 {Family: AF_INET6, Addr: 2001:67c:1360:8001::24, Port: 80}, 0x1c
@@ -41,7 +41,7 @@ var (
 
 	// unlinkat(0x4 /tmp/pip-pip-egg-info-ng4_5gp_/temps.egg-info, 0x7fe0031c9a10 top_level.txt, 0x0)
 	// unlinkat(AT_FDCWD /app, 0x5569a7e83380 /app/vendor/composer/e06632ca, 0x200)
-	unlinkatPattern = regexp.MustCompile(`[^\s]+ ([^,]+), 0x[a-f\d]+ ([^,]+), 0x[a-f\d]+`)
+	unlinkatPattern = regexp.MustCompile(`\S+ ([^,]+), 0x[a-f\d]+ ([^,]+), 0x[a-f\d]+`)
 )
 
 type FileInfo struct {
