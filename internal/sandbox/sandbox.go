@@ -301,6 +301,10 @@ func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
 	if err != nil {
 		return &RunResult{}, fmt.Errorf("failed to create log directory: %w", err)
 	}
+	// Chmod the log dir so it can be read by non-root users.
+	if err := os.Chmod(logDir, 0o775); err != nil {
+		return &RunResult{}, fmt.Errorf("failed to chmod log directory: %w", err)
+	}
 
 	// Prepare the run result.
 	var stdout bytes.Buffer
