@@ -1,4 +1,3 @@
-
 #!/bin/bash -ex
 
 # Rebuilds the local analysis image only

@@ -1,5 +1,4 @@
-#! /bin/bash
-
+#!/bin/bash
 
 ECOSYSTEM="$1"
 PACKAGE="$2"
