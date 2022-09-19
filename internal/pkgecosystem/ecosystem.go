@@ -18,6 +18,7 @@ var (
 		pypiPkgManager.name:      &pypiPkgManager,
 		rubygemsPkgManager.name:  &rubygemsPkgManager,
 		packagistPkgManager.name: &packagistPkgManager,
+		cratesIoPkgManager.name:  &cratesIoPkgManager,
 	}
 )
 
