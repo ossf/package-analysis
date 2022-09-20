@@ -29,7 +29,7 @@ func getCratesIoLatest(pkg string) (string, error) {
 	return details.Versions[0].Num, nil
 }
 
-var cratesIoPkgManager = PkgManager{
+var cratesPkgManager = PkgManager{
 	name:    "crates.io",
 	image:   "gcr.io/ossf-malware-analysis/crates.io",
 	command: "/usr/local/bin/analyze.py",
