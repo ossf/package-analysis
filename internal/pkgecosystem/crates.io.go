@@ -6,13 +6,13 @@ import (
 	"net/http"
 )
 
-type cratesIoJSON struct {
+type cratesJSON struct {
 	Versions []struct {
 		Num string `json:"num"`
 	} `json:"versions"`
 }
 
-func getCratesIoLatest(pkg string) (string, error) {
+func getCratesLatest(pkg string) (string, error) {
 	resp, err := http.Get(fmt.Sprintf("https://crates.io/api/v1/crates/%s/versions", pkg))
 	if err != nil {
 		return "", err
@@ -20,7 +20,7 @@ func getCratesIoLatest(pkg string) (string, error) {
 	defer resp.Body.Close()
 
 	decoder := json.NewDecoder(resp.Body)
-	var details cratesIoJSON
+	var details cratesJSON
 	err = decoder.Decode(&details)
 	if err != nil {
 		return "", err
@@ -33,7 +33,7 @@ var cratesPkgManager = PkgManager{
 	name:    "crates.io",
 	image:   "gcr.io/ossf-malware-analysis/crates.io",
 	command: "/usr/local/bin/analyze.py",
-	latest:  getCratesIoLatest,
+	latest:  getCratesLatest,
 	dynamicPhases: []string{
 		"install",
 	},
