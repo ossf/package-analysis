@@ -4,8 +4,6 @@ import sys
 import subprocess
 from typing import Optional
 
-# PY_EXTENSION = '.py'
-
 @dataclass
 class Package:
     """Class for tracking a package."""
@@ -41,14 +39,9 @@ def install(package: Package):
       raise
 
 
-def importPkg(package):
-    """Import phase for analyzing the package."""
-    pass
-
 PHASES = {
-    "all": [install, importPkg],
+    "all": [install],
     "install": [install],
-    "import": [importPkg]
 }
 
 def main():

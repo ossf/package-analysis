@@ -31,7 +31,7 @@ func getCratesIoLatest(pkg string) (string, error) {
 
 var cratesIoPkgManager = PkgManager{
 	name:    "crates.io",
-	image:   "gcr.io/ossf-malware-analysis/cratesio",
+	image:   "gcr.io/ossf-malware-analysis/crates.io",
 	command: "/usr/local/bin/analyze.py",
 	latest:  getCratesIoLatest,
 	dynamicPhases: []string{

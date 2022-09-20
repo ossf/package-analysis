@@ -7,7 +7,7 @@ BASE_PATH="$(dirname $(dirname $(realpath $0)))"
 REGISTRY=gcr.io/ossf-malware-analysis
 
 # Mapping from the container name to the path containing the Dockerfile.
-declare -A ANALYSIS_IMAGES=( [node]=npm [python]=pypi [ruby]=rubygems [packagist]=packagist [cratesio]=cratesio )
+declare -A ANALYSIS_IMAGES=( [node]=npm [python]=pypi [ruby]=rubygems [packagist]=packagist [crates.io]=crates.io )
 
 pushd "$BASE_PATH/sandboxes"
 for image in "${!ANALYSIS_IMAGES[@]}"; do
