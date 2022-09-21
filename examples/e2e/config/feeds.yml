@@ -1,5 +1,9 @@
 feeds:
   - type: pypi
+  - type: rubygems
+  - type: packagist
+  - type: npm
+  - type: crates
 publisher:
   type: kafka
   config:
