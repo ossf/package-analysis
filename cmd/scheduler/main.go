@@ -25,8 +25,9 @@ const (
 )
 
 type ManagerConfig struct {
-	// ExcludeVersions is a list of regexp expressions that will ignore a
-	// specific version of a package if it is matched by any of the expressions.
+	// ExcludeVersions is a list of regexp expressions, where if a version of
+	// any package has a version string matching an expression in this list,
+	// that package version will be ignored.
 	ExcludeVersions []*regexp.Regexp
 
 	// Ecosystem is the internal name of the ecosystem.
