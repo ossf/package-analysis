@@ -24,14 +24,43 @@ const (
 	retryExpRate  = 1.5
 )
 
+type ManagerConfig struct {
+	// ExcludeVersions is a list of regexp expressions, where if a version of
+	// any package has a version string matching an expression in this list,
+	// that package version will be ignored.
+	ExcludeVersions []*regexp.Regexp
+
+	// Ecosystem is the internal name of the ecosystem.
+	Ecosystem string
+}
+
+func (m *ManagerConfig) SkipVersion(version string) bool {
+	if m == nil {
+		return true
+	}
+	if m.ExcludeVersions == nil || len(m.ExcludeVersions) == 0 {
+		return false
+	}
+	for _, f := range m.ExcludeVersions {
+		if f.MatchString(version) {
+			return true
+		}
+	}
+	return false
+}
+
 // supportedPkgManagers lists the package managers Package Analysis can
-// analyze. Each entry can contain zero or more regexp filters that exclude
-// unwanted versions to minimize noise.
-var supportedPkgManagers = map[string][]*regexp.Regexp{
-	"npm":       {},
-	"pypi":      {},
-	"rubygems":  {},
-	"packagist": {regexp.MustCompile(`^dev-`), regexp.MustCompile(`\.x-dev$`)},
+// analyze. It is a map from ossf/package-feeds package types, to a
+// config for the package manager's feed.
+var supportedPkgManagers = map[string]*ManagerConfig{
+	"npm":      {Ecosystem: "npm"},
+	"pypi":     {Ecosystem: "pypi"},
+	"rubygems": {Ecosystem: "rubygems"},
+	"packagist": {
+		Ecosystem:       "packagist",
+		ExcludeVersions: []*regexp.Regexp{regexp.MustCompile(`^dev-`), regexp.MustCompile(`\.x-dev$`)},
+	},
+	"crates": {Ecosystem: "crates.io"},
 }
 
 func main() {
@@ -84,20 +113,19 @@ func listenLoop(subUrl, topicURL string) error {
 		if err := json.Unmarshal(m.Body, &pkg); err != nil {
 			return nil, fmt.Errorf("error unmarshalling json: %w", err)
 		}
-		if filters, ok := supportedPkgManagers[pkg.Type]; !ok {
+		config, ok := supportedPkgManagers[pkg.Type]
+		if !ok {
 			return nil, fmt.Errorf("package type is not supported: %v", pkg.Type)
 		} else {
-			for _, filter := range filters {
-				if filter.MatchString(pkg.Version) {
-					return nil, fmt.Errorf("package version '%v' is filtered for type: %v", pkg.Version, pkg.Type)
-				}
+			if config.SkipVersion(pkg.Version) {
+				return nil, fmt.Errorf("package version '%v' is filtered for type: %v", pkg.Version, pkg.Type)
 			}
 		}
 		return &pubsub.Message{
 			Body: []byte{},
 			Metadata: map[string]string{
 				"name":      pkg.Name,
-				"ecosystem": pkg.Type,
+				"ecosystem": config.Ecosystem,
 				"version":   pkg.Version,
 			},
 		}, nil

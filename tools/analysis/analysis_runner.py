@@ -6,6 +6,7 @@ import subprocess
 import urllib.parse
 import urllib.request
 
+_ECOSYSTEMS = ('npm', 'pypi', 'rubygems', 'packagist', 'crates.io')
 _TOPIC = os.getenv(
     'OSSMALWARE_WORKER_TOPIC',
     'gcppubsub://projects/ossf-malware-analysis/topics/workers')
@@ -40,11 +41,31 @@ def _rubygems_versions_for_package(pkg):
   return [v['number'] for v in data]
 
 
+def _packagist_versions_for_package(pkg):
+  safe_pkg = urllib.parse.quote_plus(pkg)
+  url = f'https://repo.packagist.org/p2/{safe_pkg}.json'
+  resp = urllib.request.urlopen(url)
+  data = json.loads(resp.read())
+  packages = data.get('packages', {})
+  return [v['version'] for p in packages.values() for v in p]
+
+
+def _crates_versions_for_package(pkg):
+  safe_pkg = urllib.parse.quote_plus(pkg)
+  url = f'https://crates.io/api/v1/crates/{safe_pkg}/versions'
+  resp = urllib.request.urlopen(url)
+  data = json.loads(resp.read())
+  versions = data.get('versions', [])
+  return [v['num'] for v in versions]
+
+
 def _versions_for_package(ecosystem, pkg):
     return {
         'npm': _npm_versions_for_package,
         'pypi': _pypi_versions_for_package,
         'rubygems': _rubygems_versions_for_package,
+        'packagist': _packagist_versions_for_package,
+        'crates.io': _crates_versions_for_package,
     }[ecosystem](pkg)
 
 
@@ -85,7 +106,7 @@ def _request(name, ecosystem, version, local_file=None, results_bucket=None):
 def main():
   parser = argparse.ArgumentParser(description='Analysis runner')
   parser.add_argument(
-      'ecosystem', choices=('npm', 'pypi', 'rubygems'),
+      'ecosystem', choices=_ECOSYSTEMS,
       help='Package ecosystem')
 
   group = parser.add_mutually_exclusive_group(required=True)
