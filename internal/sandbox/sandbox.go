@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/ossf/package-analysis/internal/log"
 )
@@ -300,6 +302,14 @@ func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
 	logDir, err := os.MkdirTemp("", logDirPattern)
 	if err != nil {
 		return &RunResult{}, fmt.Errorf("failed to create log directory: %w", err)
+	}
+	// Chmod the log dir so it can be read by non-root users. Make the behaviour
+	// mimic Mkdir called with 0o777 before umask is applied by applying the
+	// umask manually to the permissions.
+	umask := syscall.Umask(0)
+	syscall.Umask(umask)
+	if err := os.Chmod(logDir, fs.FileMode(0o777 & ^umask)); err != nil {
+		return &RunResult{}, fmt.Errorf("failed to chmod log directory: %w", err)
 	}
 
 	// Prepare the run result.
