@@ -36,8 +36,8 @@ spec:
             name: image-storage
         resources:
           requests:
-            cpu: 500m
-            memory: 512Mi
+            cpu: 750m
+            memory: 768Mi
           limits:
             cpu: 1
             memory: 2Gi
