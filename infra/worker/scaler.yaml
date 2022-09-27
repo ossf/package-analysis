@@ -4,7 +4,7 @@ metadata:
   name: pubsub
 spec:
   minReplicas: 1
-  maxReplicas: 200
+  maxReplicas: 750
   metrics:
   - external:
       metric:
