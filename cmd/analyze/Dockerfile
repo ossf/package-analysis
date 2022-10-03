@@ -1,4 +1,4 @@
-FROM golang@sha256:3c4de86eec9cbc619cdd72424abd88326ffcf5d813a8338a7743c55e5898734f as build
+FROM golang@sha256:122f3484f844467ebe0674cf57272e61981770eb0bc7d316d1f0be281a88229f as build
 RUN apt-get update && apt-get install -y libpcap-dev
 WORKDIR /src
 
