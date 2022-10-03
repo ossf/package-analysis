@@ -150,7 +150,7 @@ developement.
 
 ### Required Dependencies
 
-- Go v1.17
+- Go v1.19
 - Docker
 - libpcap-dev
 

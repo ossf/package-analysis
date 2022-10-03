@@ -1,6 +1,6 @@
 module github.com/ossf/package-analysis
 
-go 1.17
+go 1.19
 
 require (
 	github.com/blendle/zapdriver v1.3.1
