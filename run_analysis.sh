@@ -54,6 +54,7 @@ DOCKER_EXIT_CODE=$?
 
 echo
 
+echo $LINE
 if [[ $DOCKER_EXIT_CODE == 0 ]]; then
 	echo "Finished"
 	echo "Results dir: $RESULTS_DIR"
@@ -64,3 +65,4 @@ else
 	rmdir --ignore-fail-on-non-empty "$LOGS_DIR"
 	exit $DOCKER_EXIT_CODE
 fi
+echo $LINE
