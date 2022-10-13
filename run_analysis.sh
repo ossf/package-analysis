@@ -56,10 +56,11 @@ echo
 
 echo $LINE
 if [[ $DOCKER_EXIT_CODE == 0 ]]; then
-	echo "Finished"
+	echo "Finished analysis of $ECOSYSTEM package $PACKAGE"
 	echo "Results dir: $RESULTS_DIR"
 	echo "Logs dir: $LOGS_DIR"
 else
+	echo "Failed to analyse $ECOSYSTEM package $PACKAGE"
 	echo "Docker process exited with nonzero exit code $DOCKER_EXIT_CODE"
 	rmdir --ignore-fail-on-non-empty "$RESULTS_DIR"
 	rmdir --ignore-fail-on-non-empty "$LOGS_DIR"
