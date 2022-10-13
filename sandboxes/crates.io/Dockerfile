@@ -6,16 +6,16 @@ RUN apt-get update && \
         wget \
         git \
         python \
-		sudo
+        sudo
+
+# Configure sudo for passwordless execution
+RUN echo "ALL ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 COPY analyze.py /usr/local/bin/
 RUN chmod 755 /usr/local/bin/analyze.py
 RUN mkdir -p /app
 WORKDIR /app
 RUN cargo init
-
-# Configure sudo for passwordless execution
-RUN echo "ALL ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 FROM scratch
 COPY --from=image / /

@@ -5,13 +5,13 @@ RUN apt-get update && \
         curl \
         wget \
         git \
-		sudo
-
-# Some Python packages expect certain dependencies to already be installed.
-RUN pip install requests urllib3
+        sudo
 
 # Configure sudo for passwordless execution
 RUN echo "ALL ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+# Some Python packages expect certain dependencies to already be installed.
+RUN pip install requests urllib3
 
 COPY analyze.py /usr/local/bin/
 RUN chmod 755 /usr/local/bin/analyze.py

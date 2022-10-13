@@ -5,14 +5,14 @@ RUN apt-get update && \
         curl \
         wget \
         git \
-		sudo
+        sudo
+
+# Configure sudo for passwordless execution
+RUN echo "ALL ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 COPY analyze.rb /usr/local/bin/
 RUN chmod 755 /usr/local/bin/analyze.rb
 RUN mkdir -p /app
-
-# Configure sudo for passwordless execution
-RUN echo "ALL ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 FROM scratch
 COPY --from=image / /
