@@ -14,10 +14,14 @@ RUN apt-get update && \
         git \
         unzip \
         libzip-dev \
-        libpng-dev
+        libpng-dev \
+		sudo
 
 RUN docker-php-ext-install zip && \
     docker-php-ext-install gd
+
+# Configure sudo for passwordless execution
+RUN echo "ALL ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 COPY analyze.php /usr/local/bin/
 RUN chmod 755 /usr/local/bin/analyze.php

@@ -4,11 +4,15 @@ RUN apt-get update && \
     apt-get install -y \
         curl \
         wget \
-        git
+        git \
+		sudo
 
 COPY analyze.js /usr/local/bin/
 RUN chmod 755 /usr/local/bin/analyze.js
 RUN mkdir -p /app
+
+# Configure sudo for passwordless execution
+RUN echo "ALL ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 # If an npm package tries to use bower, make sure bower can run under root.
 COPY bowerrc /app/.bowerrc
