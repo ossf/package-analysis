@@ -4,7 +4,11 @@ RUN apt-get update && \
     apt-get install -y \
         curl \
         wget \
-        git
+        git \
+        sudo
+
+# Configure sudo for passwordless execution
+RUN echo "ALL ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 COPY analyze.rb /usr/local/bin/
 RUN chmod 755 /usr/local/bin/analyze.rb
