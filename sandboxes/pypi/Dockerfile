@@ -4,7 +4,11 @@ RUN apt-get update && \
     apt-get install -y \
         curl \
         wget \
-        git
+        git \
+        sudo
+
+# Configure sudo for passwordless execution
+RUN echo "ALL ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 # Some Python packages expect certain dependencies to already be installed.
 RUN pip install requests urllib3
