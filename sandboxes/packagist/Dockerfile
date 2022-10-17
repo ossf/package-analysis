@@ -14,7 +14,11 @@ RUN apt-get update && \
         git \
         unzip \
         libzip-dev \
-        libpng-dev
+        libpng-dev \
+        sudo
+
+# Configure sudo for passwordless execution
+RUN echo "ALL ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 RUN docker-php-ext-install zip && \
     docker-php-ext-install gd
