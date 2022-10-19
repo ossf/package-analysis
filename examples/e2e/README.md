@@ -10,7 +10,7 @@ $ docker-compose up -d
 $ curl localhost:8080
 ```
 
-Requesting `localhost:8080` will trigger package-feeds to poll it's feeds and send the packages downstream to package-analysis.
+Requesting `localhost:8080` will trigger package-feeds to poll its feeds and send the packages downstream to package-analysis.
 
 You may need to run `curl` again if package-feeds is not yet running.
 
@@ -49,7 +49,7 @@ $ chmod ugo+r ./config/feeds.yml
 
 ### Sandbox container is not starting (cgroups v2)
 
-If the `analysis` logs show failures when trying to start the sandbox container, your machine may be configured to us cgroups v2.
+If the `analysis` logs show failures when trying to start the sandbox container, your machine may need to be configured to use cgroups v2.
 
 To work with cgroups v2 you will need to:
 
@@ -61,7 +61,11 @@ To work with cgroups v2 you will need to:
 }
 ```
 
-2. restart dockerd (if it is running)
+2. restart dockerd (if it is running). e.g.:
+
+```shell
+$ systemctl restart docker.service
+```
 
 ### Obtaining the necessary images (Optional)
 
