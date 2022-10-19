@@ -66,7 +66,7 @@ services:
 
   feeds:
     restart: "on-failure"
-    image: docker.pkg.github.com/ossf/package-feeds/packagefeeds:latest
+    image: gcr.io/ossf-malware-analysis/scheduled-feeds:latest
     ports:
       - 8080:8080
     depends_on:
