@@ -81,14 +81,15 @@ echo $LINE
 if [[ $DRYRUN -eq 1 ]]; then
 	echo "Analysis command (dry run)"
 	echo
-	echo docker ${DOCKER_OPTS[@]} ${DOCKER_MOUNTS[@]} $ANALYSIS_IMAGE ${ANALYSIS_ARGS[@]}
+	echo docker "${DOCKER_OPTS[@]}" "${DOCKER_MOUNTS[@]}" "$ANALYSIS_IMAGE" "${ANALYSIS_ARGS[@]}"
+
 	echo
 	exit 0
 else
 	echo "Analysing package"
 	echo
 
-	if [[ ! -f "$PKG_PATH" || ! -r "$PKG_PATH" ]]; then
+	if [[ -n "$PKG_PATH" ]] && [[ ! -f "$PKG_PATH" || ! -r "$PKG_PATH" ]]; then
 		echo "Error: path $PKG_PATH does not refer to a file or is not readable"
 		exit 1
 	fi
@@ -98,7 +99,7 @@ else
 	mkdir -p "$RESULTS_DIR"
 	mkdir -p "$LOGS_DIR"
 
-	docker ${DOCKER_OPTS[@]} ${DOCKER_MOUNTS[@]} $ANALYSIS_IMAGE ${ANALYSIS_ARGS[@]}
+	docker "${DOCKER_OPTS[@]}" "${DOCKER_MOUNTS[@]}" "$ANALYSIS_IMAGE" "${ANALYSIS_ARGS[@]}"
 fi
 
 DOCKER_EXIT_CODE=$?
@@ -106,7 +107,7 @@ DOCKER_EXIT_CODE=$?
 echo
 echo $LINE
 
-PACKAGE_SUMMARY="$PACKAGE [$ECOSYSTEM]"
+PACKAGE_SUMMARY="$PACKAGE, from $ECOSYSTEM"
 
 if [[ $DOCKER_EXIT_CODE -eq 0 ]]; then
 	echo "Finished analysis"
