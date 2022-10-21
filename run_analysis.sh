@@ -8,8 +8,6 @@ shift
 PACKAGE="$1"
 shift
 
-#PKG_PATH=""
-
 while [[ $# -gt 0 ]]; do
 	case "$1" in
 		"--nopull")
@@ -33,7 +31,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$ECOSYSTEM" || -z "$PACKAGE" ]]; then
-	echo "Usage: $0 (npm|packagist|pypi|rubygems) <package name> [/path/to/local/package.file] [--nopull]"
+	echo "Usage: $0 (npm|packagist|pypi|rubygems) <package name> [/path/to/local/package.file] [--nopull] [-d|--dryrun]"
 	exit 255
 fi
 
@@ -106,12 +104,11 @@ fi
 DOCKER_EXIT_CODE=$?
 
 echo
-
 echo $LINE
 
 PACKAGE_SUMMARY="$PACKAGE [$ECOSYSTEM]"
 
-if [[ $DOCKER_EXIT_CODE == 0 ]]; then
+if [[ $DOCKER_EXIT_CODE -eq 0 ]]; then
 	echo "Finished analysis"
 	echo "Package:     $PACKAGE_SUMMARY"
 	echo "Results dir: $RESULTS_DIR"
@@ -119,8 +116,7 @@ if [[ $DOCKER_EXIT_CODE == 0 ]]; then
 else
 	echo "Docker process exited with nonzero exit code $DOCKER_EXIT_CODE"
 	echo
-	echo "Analysis failed"
-	echo "Package: $PACKAGE_SUMMARY"
+	echo "Analysis failed for package $PACKAGE_SUMMARY"
 	rmdir --ignore-fail-on-non-empty "$RESULTS_DIR"
 	rmdir --ignore-fail-on-non-empty "$LOGS_DIR"
 	exit $DOCKER_EXIT_CODE
