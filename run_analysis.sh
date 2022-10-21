@@ -1,22 +1,46 @@
 #!/bin/bash
 
-ECOSYSTEM="$1"
-PACKAGE="$2"
-PKG_PATH="$3"
+NOPULL=0
+DRYRUN=0
 
-if [[ $# != 2 && $# != 3 ]]; then
-	echo "Usage: $0 (npm|packagist|pypi|rubygems) <package name> [/path/to/local/package.file]"
+ECOSYSTEM="$1"
+shift
+PACKAGE="$1"
+shift
+
+while [[ $# -gt 0 ]]; do
+	case "$1" in
+		"--nopull")
+			NOPULL=1
+			shift
+			;;
+		"-d"|"--dryrun")
+			DRYRUN=1
+			shift
+			;;
+		*)
+			if [[ -z "$PKG_PATH" ]]; then
+				PKG_PATH=$(realpath "$1")
+				shift
+			else
+				echo "Extra/unrecognised argument $1 (local package path already set to $PKG_PATH)"
+				exit 255
+			fi
+			;;
+	esac
+done
+
+if [[ -z "$ECOSYSTEM" || -z "$PACKAGE" ]]; then
+	echo "Usage: $0 (npm|packagist|pypi|rubygems) <package name> [/path/to/local/package.file] [--nopull] [-d|--dryrun]"
 	exit 255
 fi
+
+
 
 RESULTS_DIR="/tmp/results"
 LOGS_DIR="/tmp/dockertmp"
 
 LINE="-----------------------------------------"
-
-mkdir -p "$RESULTS_DIR"
-mkdir -p "$LOGS_DIR"
-
 
 DOCKER_OPTS=(run --cgroupns=host --privileged -ti)
 
@@ -26,13 +50,16 @@ ANALYSIS_IMAGE=gcr.io/ossf-malware-analysis/analysis
 
 ANALYSIS_ARGS=(analyze -package "$PACKAGE" -ecosystem "$ECOSYSTEM" -upload file:///results/)
 
-echo $LINE
+if [[ $NOPULL -eq 1 ]]; then
+	ANALYSIS_ARGS+=(-nopull)
+fi
 
-if [[ -n "$PKG_PATH" ]]; then 
+
+if [[ -n "$PKG_PATH" ]]; then
 	# local mode
+
 	PKG_FILE=$(basename "$PKG_PATH")
-	echo "Analysing $ECOSYSTEM package $PACKAGE from local file $PKG_FILE"
-	echo "Path: $PKG_PATH"
+	LOCATION="$PKG_PATH"
 
 	# mount local package file in root of docker image
 	DOCKER_MOUNTS+=(-v "$PKG_PATH:/$PKG_FILE")
@@ -41,27 +68,55 @@ if [[ -n "$PKG_PATH" ]]; then
 	ANALYSIS_ARGS+=(-local "/$PKG_FILE")
 else
 	# remote mode
-	echo "Analysing $ECOSYSTEM package $PACKAGE (remote)"
+	LOCATION="remote (upstream $ECOSYSTEM)"
 fi
 
 echo $LINE
-echo
+echo "Package Details"
+echo "Ecosystem: $ECOSYSTEM"
+echo "Name:      $PACKAGE"
+echo "Location:  $LOCATION"
+echo $LINE
 
-sleep 1
+if [[ $DRYRUN -eq 1 ]]; then
+	echo "Analysis command (dry run)"
+	echo
+	echo docker ${DOCKER_OPTS[@]} ${DOCKER_MOUNTS[@]} $ANALYSIS_IMAGE ${ANALYSIS_ARGS[@]}
+	echo
+	exit 0
+else
+	echo "Analysing package"
+	echo
 
-docker ${DOCKER_OPTS[@]} ${DOCKER_MOUNTS[@]} $ANALYSIS_IMAGE ${ANALYSIS_ARGS[@]}
+	if [[ ! -f "$PKG_PATH" || ! -r "$PKG_PATH" ]]; then
+		echo "Error: path $PKG_PATH does not refer to a file or is not readable"
+		exit 1
+	fi
+
+	sleep 1 # Allow time to read info above before executing
+
+	mkdir -p "$RESULTS_DIR"
+	mkdir -p "$LOGS_DIR"
+
+	docker ${DOCKER_OPTS[@]} ${DOCKER_MOUNTS[@]} $ANALYSIS_IMAGE ${ANALYSIS_ARGS[@]}
+fi
+
 DOCKER_EXIT_CODE=$?
 
 echo
-
 echo $LINE
-if [[ $DOCKER_EXIT_CODE == 0 ]]; then
-	echo "Finished analysis of $ECOSYSTEM package $PACKAGE"
+
+PACKAGE_SUMMARY="$PACKAGE [$ECOSYSTEM]"
+
+if [[ $DOCKER_EXIT_CODE -eq 0 ]]; then
+	echo "Finished analysis"
+	echo "Package:     $PACKAGE_SUMMARY"
 	echo "Results dir: $RESULTS_DIR"
-	echo "Logs dir: $LOGS_DIR"
+	echo "Logs dir:    $LOGS_DIR"
 else
-	echo "Failed to analyse $ECOSYSTEM package $PACKAGE"
 	echo "Docker process exited with nonzero exit code $DOCKER_EXIT_CODE"
+	echo
+	echo "Analysis failed for package $PACKAGE_SUMMARY"
 	rmdir --ignore-fail-on-non-empty "$RESULTS_DIR"
 	rmdir --ignore-fail-on-non-empty "$LOGS_DIR"
 	exit $DOCKER_EXIT_CODE
