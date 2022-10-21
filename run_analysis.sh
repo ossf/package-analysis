@@ -24,7 +24,7 @@ while [[ $# -gt 0 ]]; do
 				shift
 			else
 				echo "Extra/unrecognised argument $1 (local package path already set to $PKG_PATH)"
-				exit 1
+				exit 255
 			fi
 			;;
 	esac
