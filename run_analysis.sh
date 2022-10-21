@@ -1,31 +1,48 @@
 #!/bin/bash
 
-ECOSYSTEM="$1"
-PACKAGE="$2"
-PKG_PATH="$3"
-
 NOPULL=0
-# Check for --nopull as last arg
-if [[ ${@:$#:$#} == "--nopull" ]]; then
-	NOPULL=1
-	# remove last arg (set args to arg[0:arg[-1]])
-	set -- "${@:1:$(($#-1))}"
-fi
+DRYRUN=0
 
+ECOSYSTEM="$1"
+shift
+PACKAGE="$1"
+shift
 
-if [[ $# != 2 && $# != 3 ]]; then
-	echo "Usage: $0 (npm|packagist|pypi|rubygems) <package name> [/path/to/local/package.file]"
+#PKG_PATH=""
+
+while [[ $# -gt 0 ]]; do
+	case "$1" in
+		"--nopull")
+			NOPULL=1
+			shift
+			;;
+		"-d"|"--dryrun")
+			DRYRUN=1
+			shift
+			;;
+		*)
+			if [[ -z "$PKG_PATH" ]]; then
+				PKG_PATH=$(realpath "$1")
+				shift
+			else
+				echo "Extra/unrecognised argument $1 (local package path already set to $PKG_PATH)"
+				exit 1
+			fi
+			;;
+	esac
+done
+
+if [[ -z "$ECOSYSTEM" || -z "$PACKAGE" ]]; then
+	echo "Usage: $0 (npm|packagist|pypi|rubygems) <package name> [/path/to/local/package.file] [--nopull]"
 	exit 255
 fi
+
+
 
 RESULTS_DIR="/tmp/results"
 LOGS_DIR="/tmp/dockertmp"
 
 LINE="-----------------------------------------"
-
-mkdir -p "$RESULTS_DIR"
-mkdir -p "$LOGS_DIR"
-
 
 DOCKER_OPTS=(run --cgroupns=host --privileged -ti)
 
@@ -40,14 +57,8 @@ if [[ $NOPULL -eq 1 ]]; then
 fi
 
 
-
 if [[ -n "$PKG_PATH" ]]; then
 	# local mode
-
-	if [[ ! -f "$PKG_PATH" || ! -r "$PKG_PATH" ]]; then
-		echo "Error: path $PKG_PATH does not refer to a file or is not readable"
-		exit 1
-	fi
 
 	PKG_FILE=$(basename "$PKG_PATH")
 	LOCATION="$PKG_PATH"
@@ -69,14 +80,28 @@ echo "Name:      $PACKAGE"
 echo "Location:  $LOCATION"
 echo $LINE
 
-echo "Analysing package"
-echo
+if [[ $DRYRUN -eq 1 ]]; then
+	echo "Analysis command (dry run)"
+	echo
+	echo docker ${DOCKER_OPTS[@]} ${DOCKER_MOUNTS[@]} $ANALYSIS_IMAGE ${ANALYSIS_ARGS[@]}
+	echo
+	exit 0
+else
+	echo "Analysing package"
+	echo
 
-# Print out command and allow time to read
-echo docker ${DOCKER_OPTS[@]} ${DOCKER_MOUNTS[@]} $ANALYSIS_IMAGE ${ANALYSIS_ARGS[@]}
-sleep 1
+	if [[ ! -f "$PKG_PATH" || ! -r "$PKG_PATH" ]]; then
+		echo "Error: path $PKG_PATH does not refer to a file or is not readable"
+		exit 1
+	fi
 
-docker ${DOCKER_OPTS[@]} ${DOCKER_MOUNTS[@]} $ANALYSIS_IMAGE ${ANALYSIS_ARGS[@]}
+	sleep 1 # Allow time to read info above before executing
+
+	mkdir -p "$RESULTS_DIR"
+	mkdir -p "$LOGS_DIR"
+
+	docker ${DOCKER_OPTS[@]} ${DOCKER_MOUNTS[@]} $ANALYSIS_IMAGE ${ANALYSIS_ARGS[@]}
+fi
 
 DOCKER_EXIT_CODE=$?
 
