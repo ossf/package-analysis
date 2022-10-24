@@ -1,4 +1,4 @@
-package analysis
+package dynamicanalysis
 
 import (
 	"encoding/json"
