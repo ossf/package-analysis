@@ -3,6 +3,7 @@ package analysis
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ossf/package-analysis/internal/pkgecosystem"
 
 	"github.com/ossf/package-analysis/internal/dnsanalyzer"
 	"github.com/ossf/package-analysis/internal/log"
@@ -97,6 +98,28 @@ type Result struct {
 var (
 	resultError = &Result{Status: StatusErrorOther}
 )
+
+// RunAllPhases
+// Runs the given phases of dynamic analysis (e.g. import, install) of the given package
+// in the sandbox provided, and returns the result.
+func RunAllPhases(sb sandbox.Sandbox, pkg *pkgecosystem.Pkg) (map[pkgecosystem.RunPhase]*Result, error) {
+	results := make(map[pkgecosystem.RunPhase]*Result)
+	phases := pkg.Manager().RunPhases()
+	for _, phase := range phases {
+		result, err := Run(sb, pkg.Command(phase))
+		results[phase] = result
+		if err != nil || result.Status != StatusCompleted {
+			log.Error("Analysis phase failed",
+				log.Label("ecosystem", pkg.Ecosystem()),
+				log.Label("name", pkg.Name()),
+				log.Label("phase", string(phase)),
+				log.Label("version", pkg.Version()),
+				"error", err)
+			return results, err
+		}
+	}
+	return results, nil
+}
 
 func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
 	log.Info("Running analysis",

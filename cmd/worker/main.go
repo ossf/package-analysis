@@ -129,28 +129,19 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 
 	sb := sandbox.New(manager.Image(), sbOpts...)
 	defer sb.Clean()
-	results := make(map[string]*analysis.Result)
-	finalStatus := analysis.StatusCompleted
+
+	results, err := analysis.RunAllPhases(sb, pkg)
+
 	lastPhase := ""
-	for _, phase := range manager.DynamicPhases() {
-		result, err := analysis.Run(sb, pkg.Command(phase))
-		if err != nil {
-			log.Error("Analysis run failed",
-				log.Label("ecosystem", ecosystem),
-				log.Label("name", name),
-				log.Label("phase", phase),
-				log.Label("version", version),
-				"error", err)
-			return err
-		}
-		results[phase] = result
-		lastPhase = phase
-		finalStatus = result.Status
-		// Don't continue processing if the phase did not complete successfully.
-		if result.Status != analysis.StatusCompleted {
+	finalStatus := analysis.StatusCompleted
+	for _, phase := range pkg.Manager().RunPhases() {
+		if results[phase] == nil {
 			break
 		}
+		lastPhase = string(phase)
+		finalStatus = results[phase].Status
 	}
+
 	// Produce a log message for the final status to help generate metrics.
 	switch finalStatus {
 	case analysis.StatusCompleted:

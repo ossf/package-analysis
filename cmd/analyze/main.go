@@ -99,24 +99,11 @@ func main() {
 
 	sb := sandbox.New(manager.Image(), sbOpts...)
 	defer sb.Clean()
-	results := make(map[string]*analysis.Result)
-	for _, phase := range manager.DynamicPhases() {
-		result, err := analysis.Run(sb, pkg.Command(phase))
-		if err != nil {
-			log.Fatal("Analysis phase failed",
-				log.Label("phase", phase),
-				"error", err)
-		}
-		results[phase] = result
-		// Abort if install failed. No need to continue.
-		if result.Status != analysis.StatusCompleted {
-			log.Error("Analysis phase failed. Cannot continue.",
-				log.Label("phase", phase),
-				log.Label("ecosystem", *ecosystem),
-				log.Label("name", *pkgName),
-				log.Label("version", *version))
-			break
-		}
+
+	results, err := analysis.RunAllPhases(sb, pkg)
+
+	if err != nil {
+		log.Fatal("Analysis failed with error", "error", err)
 	}
 
 	ctx := context.Background()

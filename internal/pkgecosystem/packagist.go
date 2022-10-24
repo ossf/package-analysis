@@ -51,8 +51,8 @@ var packagistPkgManager = PkgManager{
 	image:   "gcr.io/ossf-malware-analysis/packagist",
 	command: "/usr/local/bin/analyze.php",
 	latest:  getPackagistLatest,
-	dynamicPhases: []string{
-		"install",
-		"import",
+	runPhases: []RunPhase{
+		Install,
+		Import,
 	},
 }
