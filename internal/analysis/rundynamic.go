@@ -15,7 +15,6 @@ type DynamicAnalysisResults map[pkgecosystem.RunPhase]*dynamicanalysis.Result
 // The return value maps each successfully run phase to the corresponding dynamic analysis result.
 func RunDynamicAnalysis(sb sandbox.Sandbox, pkg *pkgecosystem.Pkg, logStatus bool) (results DynamicAnalysisResults, err error) {
 	var lastNonErrorPhase pkgecosystem.RunPhase
-	var lastNonErrorResult *dynamicanalysis.Result
 
 	for _, phase := range phasesToAnalyze(pkg) {
 		result, err := dynamicanalysis.Run(sb, pkg.Command(phase))
@@ -30,18 +29,16 @@ func RunDynamicAnalysis(sb sandbox.Sandbox, pkg *pkgecosystem.Pkg, logStatus boo
 
 		results[phase] = result
 		lastNonErrorPhase = phase
-		lastNonErrorResult = result
 
-		if result.Status != dynamicanalysis.StatusCompleted {
+		if result == nil || result.Status != dynamicanalysis.StatusCompleted {
 			// Error caused by an issue with the package (probably).
 			// Don't continue processing subsequent phases if this one did not complete successfully.
 			break
 		}
 	}
-
 	if logStatus {
 		// Produce a log message for the final status to help generate metrics.
-		logDynamicAnalysisResult(pkg, lastNonErrorPhase, lastNonErrorResult)
+		logDynamicAnalysisResult(pkg, lastNonErrorPhase, results[lastNonErrorPhase])
 	}
 
 	return results, nil
@@ -67,9 +64,17 @@ func logDynamicAnalysisResult(pkg *pkgecosystem.Pkg, finalPhase pkgecosystem.Run
 	name := pkg.Name()
 	version := pkg.Version()
 	lastPhase := string(finalPhase)
-	finalStatus := finalResult.Status
 
-	switch finalStatus {
+	if finalResult == nil {
+		log.Warn("Analysis error - no result for last phase",
+			log.Label("ecosystem", ecosystem),
+			log.Label("name", name),
+			log.Label("version", version),
+			log.Label("last_phase", lastPhase))
+		return
+	}
+
+	switch finalResult.Status {
 	case dynamicanalysis.StatusCompleted:
 		log.Info("Analysis completed sucessfully",
 			log.Label("ecosystem", ecosystem),
