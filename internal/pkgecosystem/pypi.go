@@ -34,8 +34,8 @@ var pypiPkgManager = PkgManager{
 	image:   "gcr.io/ossf-malware-analysis/python",
 	command: "/usr/local/bin/analyze.py",
 	latest:  getPyPILatest,
-	dynamicPhases: []string{
-		"install",
-		"import",
+	runPhases: []RunPhase{
+		Install,
+		Import,
 	},
 }
