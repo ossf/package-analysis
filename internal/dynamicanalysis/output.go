@@ -1,4 +1,4 @@
-package analysis
+package dynamicanalysis
 
 // lastLines returns a byte array containing only the last maxLines of lines
 // in b.

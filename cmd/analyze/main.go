@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/ossf/package-analysis/internal/analysis"
+	"github.com/ossf/package-analysis/internal/dynamicanalysis"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 	"github.com/ossf/package-analysis/internal/resultstore"
@@ -99,9 +99,9 @@ func main() {
 
 	sb := sandbox.New(manager.Image(), sbOpts...)
 	defer sb.Clean()
-	results := make(map[string]*analysis.Result)
+	results := make(map[string]*dynamicanalysis.Result)
 	for _, phase := range manager.DynamicPhases() {
-		result, err := analysis.Run(sb, pkg.Command(phase))
+		result, err := dynamicanalysis.Run(sb, pkg.Command(phase))
 		if err != nil {
 			log.Fatal("Analysis phase failed",
 				log.Label("phase", phase),
@@ -109,7 +109,7 @@ func main() {
 		}
 		results[phase] = result
 		// Abort if install failed. No need to continue.
-		if result.Status != analysis.StatusCompleted {
+		if result.Status != dynamicanalysis.StatusCompleted {
 			log.Error("Analysis phase failed. Cannot continue.",
 				log.Label("phase", phase),
 				log.Label("ecosystem", *ecosystem),

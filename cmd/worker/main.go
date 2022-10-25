@@ -19,7 +19,7 @@ import (
 	_ "gocloud.dev/pubsub/gcppubsub"
 	_ "gocloud.dev/pubsub/kafkapubsub"
 
-	"github.com/ossf/package-analysis/internal/analysis"
+	"github.com/ossf/package-analysis/internal/dynamicanalysis"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 	"github.com/ossf/package-analysis/internal/resultstore"
@@ -129,11 +129,11 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 
 	sb := sandbox.New(manager.Image(), sbOpts...)
 	defer sb.Clean()
-	results := make(map[string]*analysis.Result)
-	finalStatus := analysis.StatusCompleted
+	results := make(map[string]*dynamicanalysis.Result)
+	finalStatus := dynamicanalysis.StatusCompleted
 	lastPhase := ""
 	for _, phase := range manager.DynamicPhases() {
-		result, err := analysis.Run(sb, pkg.Command(phase))
+		result, err := dynamicanalysis.Run(sb, pkg.Command(phase))
 		if err != nil {
 			log.Error("Analysis run failed",
 				log.Label("ecosystem", ecosystem),
@@ -147,31 +147,31 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		lastPhase = phase
 		finalStatus = result.Status
 		// Don't continue processing if the phase did not complete successfully.
-		if result.Status != analysis.StatusCompleted {
+		if result.Status != dynamicanalysis.StatusCompleted {
 			break
 		}
 	}
 	// Produce a log message for the final status to help generate metrics.
 	switch finalStatus {
-	case analysis.StatusCompleted:
+	case dynamicanalysis.StatusCompleted:
 		log.Info("Analysis completed sucessfully",
 			log.Label("ecosystem", ecosystem),
 			log.Label("name", name),
 			log.Label("version", version),
 			log.Label("last_phase", lastPhase))
-	case analysis.StatusErrorAnalysis:
+	case dynamicanalysis.StatusErrorAnalysis:
 		log.Warn("Analysis error - analysis",
 			log.Label("ecosystem", ecosystem),
 			log.Label("name", name),
 			log.Label("version", version),
 			log.Label("last_phase", lastPhase))
-	case analysis.StatusErrorTimeout:
+	case dynamicanalysis.StatusErrorTimeout:
 		log.Warn("Analysis error - timeout",
 			log.Label("ecosystem", ecosystem),
 			log.Label("name", name),
 			log.Label("version", version),
 			log.Label("last_phase", lastPhase))
-	case analysis.StatusErrorOther:
+	case dynamicanalysis.StatusErrorOther:
 		log.Warn("Analysis error - other",
 			log.Label("ecosystem", ecosystem),
 			log.Label("name", name),
