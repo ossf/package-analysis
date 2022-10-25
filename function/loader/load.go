@@ -11,6 +11,7 @@ import (
 )
 
 // TODO(ochang): Get this by using `bigquery.InferSchema` on the Go structure instead.
+//
 //go:embed schema.json
 var schemaEncoded []byte
 
@@ -35,11 +36,15 @@ func Load(ctx context.Context, m PubSubMessage) error {
 	gcsRef := bigquery.NewGCSReference(fmt.Sprintf("gs://%s/*.json", bucket))
 	gcsRef.Schema = schema
 	gcsRef.SourceFormat = bigquery.JSON
-	gcsRef.MaxBadRecords = 100000
+	gcsRef.MaxBadRecords = 10000
 
 	dataset := bq.Dataset("packages")
 	loader := dataset.Table("analysis").LoaderFrom(gcsRef)
 	loader.WriteDisposition = bigquery.WriteTruncate
+	loader.TimePartitioning = &bigquery.TimePartitioning{
+		Type:  bigquery.DayPartitioningType,
+		Field: "CreatedTimestamp",
+	}
 
 	job, err := loader.Run(ctx)
 	if err != nil {

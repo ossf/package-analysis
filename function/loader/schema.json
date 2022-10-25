@@ -243,7 +243,7 @@
   {
     "mode": "NULLABLE",
     "name": "CreatedTimestamp",
-    "type": "INTEGER"
+    "type": "TIMESTAMP"
   },
   {
     "fields": [
