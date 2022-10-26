@@ -130,9 +130,13 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	sb := sandbox.New(manager.Image(), sbOpts...)
 	defer sb.Clean()
 
-	results, err := analysis.RunDynamicAnalysis(sb, pkg)
+	results, lastRunPhase, err := analysis.RunDynamicAnalysis(sb, pkg)
 	if err != nil {
+		analysis.LogDynamicAnalysisError(pkg, lastRunPhase, err)
 		return err
+	} else {
+		// Produce a log message for the final status to help generate metrics.
+		analysis.LogDynamicAnalysisResult(pkg, lastRunPhase, results[lastRunPhase])
 	}
 
 	if resultsBucket != "" {

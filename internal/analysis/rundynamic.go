@@ -11,24 +11,26 @@ type DynamicAnalysisResults map[pkgecosystem.RunPhase]*dynamicanalysis.Result
 
 // RunDynamicAnalysis runs dynamic analysis on the given package in the sandbox
 // provided, across all phases (e.g. import, install) valid in the package ecosystem.
-// Status and errors are logged to stdout. The return value maps each successfully
-// run phase to the corresponding dynamic analysis result. If any errors occur,
-// no further phases are run and the error is immediately returned along with the
-// results so far.
-func RunDynamicAnalysis(sb sandbox.Sandbox, pkg *pkgecosystem.Pkg) (results DynamicAnalysisResults, err error) {
-	var lastNonErrorPhase pkgecosystem.RunPhase
-
+// Status and errors are logged to stdout. There are 3 return values:
+// results: Map of each successfully run phase to the corresponding dynamic analysis result.
+// If error is not nil, then results[lastRunPhase] is nil.
+// lastRunPhase: the last phase that was run. If error is non-nil, this phase did not complete successfully
+// and the results for this phase are not recorded. Otherwise, results[lastRunPhase] contains
+// the corresponding results this phase, including any abnormal termination of the sandboxed process.
+// error: Any error that occurred in the runtime/sandbox infrastructure. This does not include errors caused
+// by the package under analysis.
+func RunDynamicAnalysis(sb sandbox.Sandbox, pkg *pkgecosystem.Pkg) (results DynamicAnalysisResults, lastRunPhase pkgecosystem.RunPhase, err error) {
 	for _, phase := range pkg.Manager().RunPhases() {
 		result, err := dynamicanalysis.Run(sb, pkg.Command(phase))
+		lastRunPhase = phase
+
 		if err != nil {
 			// Error when trying to actually run; don't record the result for this phase
 			// or attempt subsequent phases
-			logDynamicAnalysisError(pkg, phase, err)
-			return results, err
+			break
 		}
 
 		results[phase] = result
-		lastNonErrorPhase = phase
 
 		if result.Status != dynamicanalysis.StatusCompleted {
 			// Error caused by an issue with the package (probably).
@@ -37,16 +39,13 @@ func RunDynamicAnalysis(sb sandbox.Sandbox, pkg *pkgecosystem.Pkg) (results Dyna
 		}
 	}
 
-	// Produce a log message for the final status to help generate metrics.
-	logDynamicAnalysisResult(pkg, lastNonErrorPhase, results[lastNonErrorPhase])
-
-	return results, nil
+	return results, lastRunPhase, err
 }
 
-// logDynamicAnalysisError indicates some error happened while attempting to run
+// LogDynamicAnalysisError indicates some error happened while attempting to run
 // the package code, which was not caused by the package itself. This means it was
 // not possible to analyse the package properly, and the results are invalid.
-func logDynamicAnalysisError(pkg *pkgecosystem.Pkg, errorPhase pkgecosystem.RunPhase, err error) {
+func LogDynamicAnalysisError(pkg *pkgecosystem.Pkg, errorPhase pkgecosystem.RunPhase, err error) {
 	log.Error("Analysis run failed",
 		log.Label("ecosystem", pkg.Ecosystem()),
 		log.Label("name", pkg.Name()),
@@ -55,10 +54,10 @@ func logDynamicAnalysisError(pkg *pkgecosystem.Pkg, errorPhase pkgecosystem.RunP
 		"error", err)
 }
 
-// logDynamicAnalysisResult indicates that the package code was run successfully,
+// LogDynamicAnalysisResult indicates that the package code was run successfully,
 // and what happened when it was run. This may include errors in the analysis
 // of the package, but not errors in the running itself.
-func logDynamicAnalysisResult(pkg *pkgecosystem.Pkg, finalPhase pkgecosystem.RunPhase, finalResult *dynamicanalysis.Result) {
+func LogDynamicAnalysisResult(pkg *pkgecosystem.Pkg, finalPhase pkgecosystem.RunPhase, finalResult *dynamicanalysis.Result) {
 	ecosystem := pkg.Ecosystem()
 	name := pkg.Name()
 	version := pkg.Version()
