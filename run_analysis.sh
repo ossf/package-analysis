@@ -110,18 +110,21 @@ echo $LINE
 
 if [[ $DOCKER_EXIT_CODE -eq 0 ]]; then
 	echo "Finished analysis"
+	echo
 	echo "Ecosystem:   $ECOSYSTEM"
 	echo "Package:     $PACKAGE"
 	echo "Results dir: $RESULTS_DIR"
 	echo "Logs dir:    $LOGS_DIR"
 else
-	echo "Docker process exited with nonzero exit code $DOCKER_EXIT_CODE"
-	echo
 	echo "Analysis failed"
+	echo
+	echo "docker process exited with code $DOCKER_EXIT_CODE"
+	echo
 	echo "Ecosystem:   $ECOSYSTEM"
 	echo "Package:     $PACKAGE"
 	rmdir --ignore-fail-on-non-empty "$RESULTS_DIR"
 	rmdir --ignore-fail-on-non-empty "$LOGS_DIR"
-	exit $DOCKER_EXIT_CODE
 fi
+
 echo $LINE
+exit $DOCKER_EXIT_CODE
