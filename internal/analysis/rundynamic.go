@@ -62,13 +62,13 @@ func LogDynamicAnalysisError(pkg *pkgecosystem.Pkg, errorPhase pkgecosystem.RunP
 // LogDynamicAnalysisResult indicates that the package code was run successfully,
 // and what happened when it was run. This may include errors in the analysis
 // of the package, but not errors in the running itself.
-func LogDynamicAnalysisResult(pkg *pkgecosystem.Pkg, finalPhase pkgecosystem.RunPhase, finalResult *dynamicanalysis.Result) {
+func LogDynamicAnalysisResult(pkg *pkgecosystem.Pkg, finalPhase pkgecosystem.RunPhase, finalStatus dynamicanalysis.Status) {
 	ecosystem := pkg.Ecosystem()
 	name := pkg.Name()
 	version := pkg.Version()
 	lastPhase := string(finalPhase)
 
-	switch finalResult.Status {
+	switch finalStatus {
 	case dynamicanalysis.StatusCompleted:
 		log.Info("Analysis completed sucessfully",
 			log.Label("ecosystem", ecosystem),

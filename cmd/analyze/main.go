@@ -105,7 +105,7 @@ func main() {
 		analysis.LogDynamicAnalysisError(pkg, lastRunPhase, err)
 		log.Fatal("Aborting due to run error", "error", err)
 	} else {
-		analysis.LogDynamicAnalysisResult(pkg, lastRunPhase, results[lastRunPhase])
+		analysis.LogDynamicAnalysisResult(pkg, lastRunPhase, results[lastRunPhase].Status)
 	}
 
 	ctx := context.Background()

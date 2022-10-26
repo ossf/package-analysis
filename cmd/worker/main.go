@@ -136,7 +136,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		return err
 	} else {
 		// Produce a log message for the final status to help generate metrics.
-		analysis.LogDynamicAnalysisResult(pkg, lastRunPhase, results[lastRunPhase])
+		analysis.LogDynamicAnalysisResult(pkg, lastRunPhase, results[lastRunPhase].Status)
 	}
 
 	if resultsBucket != "" {
