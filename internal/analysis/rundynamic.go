@@ -9,16 +9,21 @@ import (
 
 type DynamicAnalysisResults map[pkgecosystem.RunPhase]*dynamicanalysis.Result
 
-// RunDynamicAnalysis runs dynamic analysis on the given package in the sandbox
-// provided, across all phases (e.g. import, install) valid in the package ecosystem.
-// Status and errors are logged to stdout. There are 3 return values:
-// results: Map of each successfully run phase to the corresponding dynamic analysis result.
-// If error is not nil, then results[lastRunPhase] is nil.
-// lastRunPhase: the last phase that was run. If error is non-nil, this phase did not complete successfully
-// and the results for this phase are not recorded. Otherwise, results[lastRunPhase] contains
-// the corresponding results this phase, including any abnormal termination of the sandboxed process.
-// error: Any error that occurred in the runtime/sandbox infrastructure. This does not include errors caused
-// by the package under analysis.
+/*
+RunDynamicAnalysis runs dynamic analysis on the given package in the sandbox
+provided, across all phases (e.g. import, install) valid in the package ecosystem.
+Status and errors are logged to stdout. There are 3 return values:
+
+results: Map of each successfully run phase to the corresponding dynamic analysis result.
+If error is not nil, then results[lastRunPhase] is nil.
+
+lastRunPhase: the last phase that was run. If error is non-nil, this phase did not complete successfully
+and the results for this phase are not recorded. Otherwise, results[lastRunPhase] contains
+the corresponding results this phase, including any abnormal termination of the sandboxed process.
+
+error: Any error that occurred in the runtime/sandbox infrastructure. This does not include errors caused
+by the package under analysis.
+*/
 func RunDynamicAnalysis(sb sandbox.Sandbox, pkg *pkgecosystem.Pkg) (results DynamicAnalysisResults, lastRunPhase pkgecosystem.RunPhase, err error) {
 	for _, phase := range pkg.Manager().RunPhases() {
 		result, err := dynamicanalysis.Run(sb, pkg.Command(phase))
