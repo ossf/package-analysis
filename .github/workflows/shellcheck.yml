@@ -1,0 +1,23 @@
+
+name: 'Shellcheck'
+
+on:
+  push:
+    paths:
+      - '**.sh'
+
+  pull_request:
+    paths:
+      - '**.sh'
+
+permissions:
+  contents: read
+
+jobs:
+  check-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Check scripts in top-level directory'
+        run: shellcheck *.sh
+      - name: 'Check scripts in build/ directory'
+        run: shellcheck build/*.sh
