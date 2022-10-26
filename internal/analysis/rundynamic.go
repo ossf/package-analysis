@@ -25,6 +25,7 @@ error: Any error that occurred in the runtime/sandbox infrastructure. This does 
 by the package under analysis.
 */
 func RunDynamicAnalysis(sb sandbox.Sandbox, pkg *pkgecosystem.Pkg) (results DynamicAnalysisResults, lastRunPhase pkgecosystem.RunPhase, err error) {
+	results = make(DynamicAnalysisResults)
 	for _, phase := range pkg.Manager().RunPhases() {
 		result, err := dynamicanalysis.Run(sb, pkg.Command(phase))
 		lastRunPhase = phase
@@ -68,31 +69,21 @@ func LogDynamicAnalysisResult(pkg *pkgecosystem.Pkg, finalPhase pkgecosystem.Run
 	version := pkg.Version()
 	lastPhase := string(finalPhase)
 
+	labels := []interface{}{
+		log.Label("ecosystem", ecosystem),
+		log.Label("name", name),
+		log.Label("version", version),
+		log.Label("last_phase", lastPhase),
+	}
+
 	switch finalStatus {
 	case dynamicanalysis.StatusCompleted:
-		log.Info("Analysis completed sucessfully",
-			log.Label("ecosystem", ecosystem),
-			log.Label("name", name),
-			log.Label("version", version),
-			log.Label("last_phase", lastPhase))
-
+		log.Info("Analysis completed sucessfully", labels...)
 	case dynamicanalysis.StatusErrorAnalysis:
-		log.Warn("Analysis error - analysis",
-			log.Label("ecosystem", ecosystem),
-			log.Label("name", name),
-			log.Label("version", version),
-			log.Label("last_phase", lastPhase))
+		log.Warn("Analysis error - analysis", labels...)
 	case dynamicanalysis.StatusErrorTimeout:
-		log.Warn("Analysis error - timeout",
-			log.Label("ecosystem", ecosystem),
-			log.Label("name", name),
-			log.Label("version", version),
-			log.Label("last_phase", lastPhase))
+		log.Warn("Analysis error - timeout", labels...)
 	case dynamicanalysis.StatusErrorOther:
-		log.Warn("Analysis error - other",
-			log.Label("ecosystem", ecosystem),
-			log.Label("name", name),
-			log.Label("version", version),
-			log.Label("last_phase", lastPhase))
+		log.Warn("Analysis error - other", labels...)
 	}
 }
