@@ -20,7 +20,8 @@ while [[ $# -gt 0 ]]; do
 			;;
 		*)
 			if [[ -z "$PKG_PATH" ]]; then
-				PKG_PATH=$(realpath "$1")
+				# -m preserves invalid/non-existent paths (which will be detected below)
+				PKG_PATH=$(realpath -m "$1")
 				shift
 			else
 				echo "Extra/unrecognised argument $1 (local package path already set to $PKG_PATH)"
@@ -107,17 +108,18 @@ DOCKER_EXIT_CODE=$?
 echo
 echo $LINE
 
-PACKAGE_SUMMARY="$PACKAGE, from $ECOSYSTEM"
-
 if [[ $DOCKER_EXIT_CODE -eq 0 ]]; then
 	echo "Finished analysis"
-	echo "Package:     $PACKAGE_SUMMARY"
+	echo "Ecosystem:   $ECOSYSTEM"
+	echo "Package:     $PACKAGE"
 	echo "Results dir: $RESULTS_DIR"
 	echo "Logs dir:    $LOGS_DIR"
 else
 	echo "Docker process exited with nonzero exit code $DOCKER_EXIT_CODE"
 	echo
-	echo "Analysis failed for package $PACKAGE_SUMMARY"
+	echo "Analysis failed"
+	echo "Ecosystem:   $ECOSYSTEM"
+	echo "Package:     $PACKAGE"
 	rmdir --ignore-fail-on-non-empty "$RESULTS_DIR"
 	rmdir --ignore-fail-on-non-empty "$LOGS_DIR"
 	exit $DOCKER_EXIT_CODE
