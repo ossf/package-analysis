@@ -34,8 +34,8 @@ var npmPkgManager = PkgManager{
 	image:   "gcr.io/ossf-malware-analysis/node",
 	command: "/usr/local/bin/analyze.js",
 	latest:  getNPMLatest,
-	dynamicPhases: []string{
-		"install",
-		"import",
+	runPhases: []RunPhase{
+		Install,
+		Import,
 	},
 }

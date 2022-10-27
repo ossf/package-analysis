@@ -32,8 +32,8 @@ var rubygemsPkgManager = PkgManager{
 	image:   "gcr.io/ossf-malware-analysis/ruby",
 	command: "/usr/local/bin/analyze.rb",
 	latest:  getRubyGemsLatest,
-	dynamicPhases: []string{
-		"install",
-		"import",
+	runPhases: []RunPhase{
+		Install,
+		Import,
 	},
 }

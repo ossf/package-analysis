@@ -34,7 +34,7 @@ var cratesPkgManager = PkgManager{
 	image:   "gcr.io/ossf-malware-analysis/crates.io",
 	command: "/usr/local/bin/analyze.py",
 	latest:  getCratesLatest,
-	dynamicPhases: []string{
-		"install",
+	runPhases: []RunPhase{
+		Install,
 	},
 }

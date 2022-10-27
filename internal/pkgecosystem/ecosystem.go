@@ -4,12 +4,24 @@ import (
 	"strings"
 )
 
+// RunPhase
+// Represents a way to 'run' a package during its usage lifecycle
+// This is relevant to dynamic analysis
+type RunPhase string
+
+const (
+	Import  RunPhase = "import"
+	Install RunPhase = "install"
+)
+
+// PkgManager
+// Represents how packages from a common ecosystem are accessed
 type PkgManager struct {
-	name          string
-	image         string
-	command       string
-	latest        func(string) (string, error)
-	dynamicPhases []string
+	name      string
+	image     string
+	command   string
+	latest    func(string) (string, error)
+	runPhases []RunPhase
 }
 
 var (
@@ -35,8 +47,8 @@ func (p *PkgManager) Image() string {
 	return p.image
 }
 
-func (p *PkgManager) DynamicPhases() []string {
-	return p.dynamicPhases
+func (p *PkgManager) RunPhases() []RunPhase {
+	return p.runPhases
 }
 
 func (p *PkgManager) Latest(name string) (*Pkg, error) {

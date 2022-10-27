@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/ossf/package-analysis/internal/analysis"
+	"github.com/ossf/package-analysis/internal/dynamicanalysis"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 	"github.com/ossf/package-analysis/internal/resultstore"
@@ -99,24 +100,10 @@ func main() {
 
 	sb := sandbox.New(manager.Image(), sbOpts...)
 	defer sb.Clean()
-	results := make(map[string]*analysis.Result)
-	for _, phase := range manager.DynamicPhases() {
-		result, err := analysis.Run(sb, pkg.Command(phase))
-		if err != nil {
-			log.Fatal("Analysis phase failed",
-				log.Label("phase", phase),
-				"error", err)
-		}
-		results[phase] = result
-		// Abort if install failed. No need to continue.
-		if result.Status != analysis.StatusCompleted {
-			log.Error("Analysis phase failed. Cannot continue.",
-				log.Label("phase", phase),
-				log.Label("ecosystem", *ecosystem),
-				log.Label("name", *pkgName),
-				log.Label("version", *version))
-			break
-		}
+
+	results, lastRunPhase, err := analysis.RunDynamicAnalysis(sb, pkg)
+	if err != nil {
+		log.Fatal("Aborting due to run error", "error", err)
 	}
 
 	ctx := context.Background()
@@ -127,5 +114,13 @@ func main() {
 			log.Fatal("Failed to upload results to blobstore",
 				"error", err)
 		}
+	}
+
+	// this is only valid if RunDynamicAnalysis() returns nil err
+	lastStatus := results[lastRunPhase].Status
+	if lastStatus != dynamicanalysis.StatusCompleted {
+		log.Fatal("Analysis phase did not complete successfully",
+			"lastRunPhase", lastRunPhase,
+			"status", lastStatus)
 	}
 }
