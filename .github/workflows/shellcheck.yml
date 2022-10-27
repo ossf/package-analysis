@@ -19,6 +19,4 @@ jobs:
     steps:
       - name: 'Check scripts in all directories'
         shell: bash
-        run: |
-          shopt -s globstar
-          shellcheck ./**/*.sh
+        run: shellcheck $(find -name "**.sh")
