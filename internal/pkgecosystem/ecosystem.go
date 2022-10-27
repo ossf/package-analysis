@@ -47,17 +47,6 @@ func (p *PkgManager) Image() string {
 	return p.image
 }
 
-// DynamicPhases
-// Returns runPhases as slice of strings
-// TODO remove after refactoring worker/main.go and analyze/main.go to use RunPhases()
-func (p *PkgManager) DynamicPhases() []string {
-	dynamicPhases := make([]string, len(p.runPhases))
-	for i, phase := range p.runPhases {
-		dynamicPhases[i] = string(phase)
-	}
-	return dynamicPhases
-}
-
 func (p *PkgManager) RunPhases() []RunPhase {
 	return p.runPhases
 }

@@ -29,7 +29,7 @@ func (p *Pkg) Manager() *PkgManager {
 }
 
 // Command returns the analysis command for the package.
-func (p *Pkg) Command(phase string) []string {
+func (p *Pkg) Command(phase RunPhase) []string {
 	args := make([]string, 0)
 	args = append(args, p.manager.command)
 
@@ -42,7 +42,7 @@ func (p *Pkg) Command(phase string) []string {
 	if phase == "" {
 		args = append(args, "all")
 	} else {
-		args = append(args, phase)
+		args = append(args, string(phase))
 	}
 
 	args = append(args, p.name)
