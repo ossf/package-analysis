@@ -21,4 +21,4 @@ jobs:
         shell: bash
         run: |
           shopt -s globstar
-          shellcheck **/*.sh
+          shellcheck ./**/*.sh
