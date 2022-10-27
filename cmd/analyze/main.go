@@ -100,12 +100,9 @@ func main() {
 	sb := sandbox.New(manager.Image(), sbOpts...)
 	defer sb.Clean()
 
-	results, lastRunPhase, err := analysis.RunDynamicAnalysis(sb, pkg)
+	results, _, err := analysis.RunDynamicAnalysis(sb, pkg)
 	if err != nil {
-		analysis.LogDynamicAnalysisError(pkg, lastRunPhase, err)
 		log.Fatal("Aborting due to run error", "error", err)
-	} else {
-		analysis.LogDynamicAnalysisResult(pkg, lastRunPhase, results[lastRunPhase].Status)
 	}
 
 	ctx := context.Background()
