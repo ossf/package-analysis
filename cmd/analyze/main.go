@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/ossf/package-analysis/internal/analysis"
+	"github.com/ossf/package-analysis/internal/dynamicanalysis"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 	"github.com/ossf/package-analysis/internal/resultstore"
@@ -100,7 +101,7 @@ func main() {
 	sb := sandbox.New(manager.Image(), sbOpts...)
 	defer sb.Clean()
 
-	results, _, err := analysis.RunDynamicAnalysis(sb, pkg)
+	results, lastRunPhase, err := analysis.RunDynamicAnalysis(sb, pkg)
 	if err != nil {
 		log.Fatal("Aborting due to run error", "error", err)
 	}
@@ -113,5 +114,12 @@ func main() {
 			log.Fatal("Failed to upload results to blobstore",
 				"error", err)
 		}
+	}
+
+	lastStatus := results[lastRunPhase].Status
+	if lastStatus != dynamicanalysis.StatusCompleted {
+		log.Fatal("Analysis phase did not complete successfully",
+			log.Label("lastRunPhase", string(lastRunPhase)),
+			log.Label("status", string(lastStatus)))
 	}
 }
