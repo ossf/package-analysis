@@ -19,4 +19,5 @@ jobs:
     steps:
       - name: 'Check scripts in all directories'
         shell: bash
-        run: shellcheck $(find -name "**.sh")
+        # ensure there are actually .sh files in the repo before running shellcheck
+        run: test -n '$(find -name "*.sh")' && shellcheck $(find -name "*.sh")
