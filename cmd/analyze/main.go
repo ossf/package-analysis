@@ -120,7 +120,7 @@ func main() {
 	lastStatus := results[lastRunPhase].Status
 	if lastStatus != dynamicanalysis.StatusCompleted {
 		log.Fatal("Analysis phase did not complete successfully",
-			log.Label("lastRunPhase", string(lastRunPhase)),
-			log.Label("status", string(lastStatus)))
+			"lastRunPhase", lastRunPhase,
+			"status", lastStatus)
 	}
 }
