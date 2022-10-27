@@ -116,6 +116,7 @@ func main() {
 		}
 	}
 
+	// this is only valid if RunDynamicAnalysis() returns nil err
 	lastStatus := results[lastRunPhase].Status
 	if lastStatus != dynamicanalysis.StatusCompleted {
 		log.Fatal("Analysis phase did not complete successfully",
