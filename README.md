@@ -103,7 +103,8 @@ To run the analysis code locally, the easiest way is to use the Docker image
 This container uses `podman` to run a nested, sandboxed ([gVisor]) container for
 analysis.
 
-The commands below will dump the JSON result to `/tmp/results`.
+The commands below will dump the JSON results to `/tmp/results`
+and full logs to `/tmp/dockertmp`.
 
 [gVisor]: https://gvisor.dev/
 
@@ -113,38 +114,24 @@ To run this on a live package (e.g. the "Django" package on
 [pypi.org](https://pypi.org))
 
 ```bash
-$ mkdir /tmp/results
-$ docker run --cgroupns=host --privileged -ti \
-    -v /tmp/results:/results \
-    -v /var/lib/containers:/var/lib/containers \
-    gcr.io/ossf-malware-analysis/analysis analyze \
-    -package Django -ecosystem pypi \
-    -upload file:///results/
+$ ./run_analysis.sh pypi Django
 ```
 
 ### Local package
 
-To run this on a local package archive (e.g. `/path/to/test.whl` for a package
-named `test`), it needs to be mounted into the the container.
+To run analysis on a local PyPi package named 'test',
+located in local archive `/path/to/test.whl`
+
 
 ```bash
-$ mkdir /tmp/results
-$ docker run --cgroupns=host --privileged -ti \
-    -v /tmp/results:/results \
-    -v /var/lib/containers:/var/lib/containers \
-    -v /path/to/test.whl:/test.whl \
-    gcr.io/ossf-malware-analysis/analysis analyze \
-    -local /test.whl -package test -ecosystem pypi \
-    -upload file:///results/
+$ ./run_analysis.sh pypi test /path/to/test.whl
 ```
 
-### Notes
+### Docker notes
 
 `--privileged` and a compatible filesystem are required to properly run nested
-containers. `-v /var/lib/containers:/var/lib/containers` is used in the
-examples above as it allows caching the sandbox images and supports local
-developement.
-
+containers. `-v /var/lib/containers:/var/lib/containers` is used in `run_analysis.sh`
+as it allows caching the sandbox images and supports local developement.
 
 ## Development
 
