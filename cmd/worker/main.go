@@ -110,21 +110,13 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		sbOpts = append(sbOpts, sandbox.Volume(f.Name(), localPkgPath))
 	}
 
-	var pkg *pkgecosystem.Pkg
-	var err error
-	if localPkgPath != "" {
-		pkg = manager.Local(name, version, localPkgPath)
-	} else if version != "" {
-		pkg = manager.Package(name, version)
-	} else {
-		pkg, err = manager.Latest(name)
-		if err != nil {
-			log.Error("Failed to get latest version",
-				log.Label("ecosystem", ecosystem),
-				log.Label("name", name),
-				"error", err)
-			return err
-		}
+	pkg, err := manager.ResolvePackage(name, version, localPkgPath)
+	if err != nil {
+		log.Error("Error resolving package",
+			log.Label("ecosystem", ecosystem),
+			log.Label("name", name),
+			"error", err)
+		return err
 	}
 
 	sb := sandbox.New(manager.Image(), sbOpts...)
