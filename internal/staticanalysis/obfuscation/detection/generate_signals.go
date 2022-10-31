@@ -38,8 +38,7 @@ func getIdentifierNames(data *parsing.ParseResult) []string {
 	return identifierNames
 }
 
-// characterAnalysis
-// Performs analysis on a collection of string symbols, returning:
+// characterAnalysis performs analysis on a collection of string symbols, returning:
 // - Stats summary of symbol (string) lengths
 // - Stats summary of symbol (string) entropies
 // - Entropy of all symbols concatenated together
@@ -64,8 +63,8 @@ func characterAnalysis(symbols []string) (
 	return
 }
 
-// GenerateSignals
-// Generates some data from parsing the given input (source file or raw source string).
+// GenerateSignals parses the given input (source file or raw source string) and computes
+// signals which may be useful to determine whether the code is obfuscated.
 // The input is assumed to be valid JavaScript source
 // If jsSourceFile is empty, the string will be parsed.
 //
