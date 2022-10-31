@@ -26,9 +26,7 @@ function logLiteralJSON(subtype, value, pos, inArray, extra = null) {
 }
 
 function logParameters(node) {
-    const n = node
-    for (let i = 0; i < n.params.length; i++) {
-        p = n.params[i]
+    for (let p of node.params) {
         switch (p.type) {
             // simple function parameter name:
             // function f(x)
@@ -48,14 +46,14 @@ function logParameters(node) {
                 break
         }
     }
-
 }
 
 function multiWalkAst(nodeList, isInArray = false) {
-    if (nodeList !== null) {
-        for (let i = 0; i < nodeList.length; i++) {
-            walkAst(nodeList[i], isInArray)
-        }
+    if (nodeList == null) {
+        return
+    }
+    for (let n of nodeList) {
+        walkAst(n, isInArray)
     }
 }
 
