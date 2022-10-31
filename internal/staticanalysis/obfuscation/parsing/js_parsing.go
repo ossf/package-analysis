@@ -53,7 +53,7 @@ func runParser(parserPath, jsFilePath, jsSource string) (string, error) {
 
 }
 
-// ParseJS
+// ParseJS extracts source code identifiers and string literals from JavaScript code
 // if sourcePath is empty, sourceString will be parsed as JS code
 func ParseJS(parserPath string, filePath string, sourceString string, printJson bool) (*ParseResult, error) {
 	parserOutput, err := runParser(parserPath, filePath, sourceString)
