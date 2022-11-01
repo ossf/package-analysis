@@ -3,8 +3,8 @@
 // jshint esversion: 6
 "use strict";
 
-import parser from "@babel/parser";
-import traverse from "@babel/traverse";
+const parser = require("@babel/parser");
+const traverse = require("@babel/traverse");
 const fs = require("fs");
 
 function locationString(node) {
