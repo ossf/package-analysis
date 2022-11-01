@@ -61,28 +61,13 @@ func main() {
 		log.Label("localPath", *localPkg),
 		log.Label("version", *version))
 
-	var pkg *pkgecosystem.Pkg
-	var err error
-	if *localPkg != "" {
-		if *version != "" {
-			log.Panic("Unable to specify version for local packages")
-		}
-		pkg = manager.Local(*pkgName, *version, *localPkg)
-	} else if *version != "" {
-		pkg = manager.Package(*pkgName, *version)
-	} else {
-		pkg, err = manager.Latest(*pkgName)
-		if err != nil {
-			log.Panic("Failed to get latest version",
-				log.Label("ecosystem", *ecosystem),
-				log.Label("name", *pkgName))
-		}
+	pkg, err := manager.ResolvePackage(*pkgName, *version, *localPkg)
+	if err != nil {
+		log.Panic("Error resolving package",
+			log.Label("ecosystem", *ecosystem),
+			log.Label("name", *pkgName),
+			"error", err)
 	}
-
-	log.Info("Got request",
-		log.Label("ecosystem", *ecosystem),
-		log.Label("name", *pkgName),
-		log.Label("version", *version))
 
 	// Prepare the sandbox:
 	// - Always pass through the tag. An empty tag is the same as "latest".
