@@ -7,13 +7,15 @@ import (
 type IdentifierType string
 
 const (
-	Function  IdentifierType = "Function"
-	Variable  IdentifierType = "Variable"
-	Parameter IdentifierType = "Parameter"
-	Class     IdentifierType = "Class"
-	Member    IdentifierType = "Member"
-	Other     IdentifierType = "Other"
-	Unknown   IdentifierType = "Unknown"
+	Function       IdentifierType = "Function"
+	Variable       IdentifierType = "Variable"
+	Parameter      IdentifierType = "Parameter"
+	Class          IdentifierType = "Class"
+	Member         IdentifierType = "Member"
+	Property       IdentifierType = "Property"
+	StatementLabel IdentifierType = "StatementLabel"
+	Other          IdentifierType = "Other"
+	Unknown        IdentifierType = "Unknown"
 )
 
 var allTypes = []IdentifierType{
@@ -21,7 +23,9 @@ var allTypes = []IdentifierType{
 	Variable,
 	Parameter,
 	Member,
+	Property,
 	Class,
+	StatementLabel,
 	Other,
 	Unknown,
 }
@@ -47,6 +51,7 @@ func (i ParsedIdentifier) String() string {
 
 type ParsedLiteral[T any] struct {
 	Type     string
+	GoType   string
 	Value    T
 	RawValue string
 	InArray  bool
@@ -54,7 +59,11 @@ type ParsedLiteral[T any] struct {
 }
 
 func (l ParsedLiteral[T]) String() string {
-	return fmt.Sprintf("%s %v (%s) [pos %d:%d]", l.Type, l.Value, l.RawValue, l.Pos.Row(), l.Pos.Col())
+	s := fmt.Sprintf("%s %v (%s) pos %d:%d", l.Type, l.Value, l.RawValue, l.Pos.Row(), l.Pos.Col())
+	if l.InArray {
+		s += " [array]"
+	}
+	return s
 }
 
 type ParseResult struct {

@@ -3,6 +3,7 @@ package parsing
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os/exec"
 	"strings"
 )
@@ -27,7 +28,8 @@ func runParser(parserPath, jsFilePath, jsSource string) (string, error) {
 		out, err = cmd.Output()
 	} else {
 		cmd := exec.Command(parserPath)
-		pipe, err := cmd.StdinPipe()
+		var pipe io.WriteCloser
+		pipe, err = cmd.StdinPipe()
 		if err == nil {
 			var bytesWritten int
 			//fmt.Printf("Writing %s\n", jsSource)
@@ -45,7 +47,6 @@ func runParser(parserPath, jsFilePath, jsSource string) (string, error) {
 		}
 	}
 	if err == nil {
-		//fmt.Printf("Returned output %s\n", string(out))
 		return string(out), nil
 	} else {
 		return "", err
@@ -55,26 +56,21 @@ func runParser(parserPath, jsFilePath, jsSource string) (string, error) {
 
 // ParseJS extracts source code identifiers and string literals from JavaScript code
 // if sourcePath is empty, sourceString will be parsed as JS code
-func ParseJS(parserPath string, filePath string, sourceString string, printJson bool) (*ParseResult, error) {
+func ParseJS(parserPath string, filePath string, sourceString string) (*ParseResult, string, error) {
 	parserOutput, err := runParser(parserPath, filePath, sourceString)
 	if err != nil {
-		return nil, err
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			parserOutput = string(exitErr.Stderr)
+		}
+		return nil, parserOutput, err
 	}
 
-	jsonString := parserOutput
-	println("Decoding JSON")
 	// parse JSON to get results as Go struct
-	decoder := json.NewDecoder(strings.NewReader(jsonString))
+	decoder := json.NewDecoder(strings.NewReader(parserOutput))
 	var storage []ParserOutputElement
 	err = decoder.Decode(&storage)
 	if err != nil {
-		println("Failed on decoding the following JSON")
-		println(jsonString)
-		return nil, err
-	} else {
-		if printJson {
-			println(jsonString)
-		}
+		return nil, parserOutput, err
 	}
 
 	// convert the elements into more natural data structure
@@ -89,25 +85,29 @@ func ParseJS(parserPath string, filePath string, sourceString string, printJson 
 			result.Identifiers = append(result.Identifiers, ParsedIdentifier{
 				Type: checkIdentifierType(element.SymbolSubtype),
 				Name: element.Data.(string),
-				Pos:  TextPosition{element.Pos[0], element.Pos[1]},
+				Pos:  element.Pos,
 			})
 		case "Literal":
 			result.Literals = append(result.Literals, ParsedLiteral[any]{
-				Type:     fmt.Sprintf("%T", element.Data),
+				Type:     element.SymbolSubtype,
+				GoType:   fmt.Sprintf("%T", element.Data),
 				Value:    element.Data,
 				RawValue: element.Extra["raw"].(string),
 				InArray:  element.Array,
-				Pos:      TextPosition{element.Pos[0], element.Pos[1]},
+				Pos:      element.Pos,
 			})
 		default:
 			panic(fmt.Errorf("unknown element type for parsed symbol: %s", element.SymbolType))
 		}
 	}
-	return &result, nil
+	return &result, parserOutput, nil
 }
 
-func RunExampleParsing(jsParserPath, jsFilePath string) {
-	parseResult, err := ParseJS(jsParserPath, jsFilePath, "", true)
+func RunExampleParsing(jsParserPath, jsFilePath string, jsSourceString string) {
+	parseResult, jsonString, err := ParseJS(jsParserPath, jsFilePath, jsSourceString)
+	if jsonString != "" {
+		println("\nRaw JSON:\n", jsonString)
+	}
 	if err != nil {
 		fmt.Printf("Error: %s\n", err)
 		if ee, ok := err.(*exec.ExitError); ok {

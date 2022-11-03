@@ -11,11 +11,8 @@ import (
 func getStrings(data *parsing.ParseResult) []string {
 	var extractedStrings []string
 	for _, d := range data.Literals {
-		switch d.Type {
-		case "string":
+		if d.GoType == "string" {
 			extractedStrings = append(extractedStrings, d.Value.(string))
-		case "float64":
-		case "bool":
 		}
 	}
 	return extractedStrings
@@ -75,7 +72,10 @@ func characterAnalysis(symbols []string) (
 // TODO Planned signals
 //   - analysis of numeric arrays (entropy)
 func GenerateSignals(jsParserPath, jsSourceFile string, jsSourceString string, printDebug bool) (*Signals, error) {
-	data, err := parsing.ParseJS(jsParserPath, jsSourceFile, jsSourceString, printDebug)
+	data, rawJson, err := parsing.ParseJS(jsParserPath, jsSourceFile, jsSourceString)
+	if printDebug {
+		println("\nRaw JSON:\n", rawJson)
+	}
 	if err != nil && data == nil {
 		fmt.Printf("Error occured while reading %s: %v\n", jsSourceFile, err)
 		return nil, err
