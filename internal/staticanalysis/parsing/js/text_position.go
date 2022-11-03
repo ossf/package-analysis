@@ -1,4 +1,4 @@
-package parsing
+package js
 
 type TextPosition [2]int
 

@@ -1,5 +1,5 @@
 {
-  "name": "obfuscation-detection",
+  "name": "package-analysis-parsing",
   "version": "1.0.0",
   "type": "module",
   "dependencies": {

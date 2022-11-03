@@ -1,11 +1,11 @@
-package parsing
+package js
 
 import (
 	"reflect"
 	"testing"
 )
 
-const jsParserPath = "../parsing/babel-parser.js"
+const jsParserPath = "./babel-parser.js"
 
 type jsTestCase struct {
 	name      string

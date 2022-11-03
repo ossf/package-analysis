@@ -2,13 +2,13 @@ package detection
 
 import (
 	"fmt"
-	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/parsing"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stats"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stringentropy"
+	"github.com/ossf/package-analysis/internal/staticanalysis/parsing/js"
 	"strings"
 )
 
-func getStrings(data *parsing.ParseResult) []string {
+func getStrings(data *js.ParseResult) []string {
 	var extractedStrings []string
 	for _, d := range data.Literals {
 		if d.GoType == "string" {
@@ -18,17 +18,17 @@ func getStrings(data *parsing.ParseResult) []string {
 	return extractedStrings
 }
 
-func getIdentifierNames(data *parsing.ParseResult) []string {
+func getIdentifierNames(data *js.ParseResult) []string {
 	var identifierNames []string
 	for _, ident := range data.Identifiers {
 		switch ident.Type {
-		case parsing.Function:
+		case js.Function:
 			fallthrough
-		case parsing.Class:
+		case js.Class:
 			fallthrough
-		case parsing.Parameter:
+		case js.Parameter:
 			fallthrough
-		case parsing.Variable:
+		case js.Variable:
 			identifierNames = append(identifierNames, ident.Name)
 		}
 	}
@@ -72,7 +72,7 @@ func characterAnalysis(symbols []string) (
 // TODO Planned signals
 //   - analysis of numeric arrays (entropy)
 func GenerateSignals(jsParserPath, jsSourceFile string, jsSourceString string, printDebug bool) (*Signals, error) {
-	data, rawJson, err := parsing.ParseJS(jsParserPath, jsSourceFile, jsSourceString)
+	data, rawJson, err := js.ParseJS(jsParserPath, jsSourceFile, jsSourceString)
 	if printDebug {
 		println("\nRaw JSON:\n", rawJson)
 	}
