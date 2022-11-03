@@ -19,7 +19,7 @@ jobs:
       with:
         node-version: 18
         cache: 'npm'
-        cache-dependency-path: internal/staticanalysis/obfuscation/package-lock.json
+        cache-dependency-path: internal/staticanalysis/parsing/js/package-lock.json
     - name: Install libpcap-dev
       run: sudo apt-get install -y libpcap-dev
     - name: Install babel parser
