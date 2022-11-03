@@ -5,9 +5,7 @@ import (
 )
 
 /*
-CalculateEntropy
-
-Calculates entropy of a string S of characters over an alphabet A, which is defined as
+CalculateEntropy calculates entropy of a string S of characters over an alphabet A, which is defined as
 
 	E(S) = - sum(i in A) { (p(i)) * log(p(i)) },
 
@@ -48,10 +46,9 @@ func CalculateEntropy(s string, prob *map[rune]float64) float64 {
 }
 
 /*
-CalculateNormalisedEntropy
-Returns string entropy normalised by the log of the length of the string. This quantity is used
-because for log(N) is the maximum possible entropy out of all strings with length N, where N > 0.
-If the string has one or fewer characters, the ratio is defined to be 1.
+CalculateNormalisedEntropy returns the string entropy normalised by the log of the length of the string.
+This quantity is used because for log(N) is the maximum possible entropy out of all strings with length N,
+where N > 0. If the string has one or fewer characters, the ratio is defined to be 1.
 As a formula:
 
 	E_n(S) := {
@@ -75,7 +72,6 @@ func CalculateNormalisedEntropy(s string, prob *map[rune]float64) float64 {
 
 func CharacterCounts(strs []string) *map[rune]int {
 	counts := make(map[rune]int)
-
 	for _, s := range strs {
 		for _, b := range s {
 			// if b is not in map, the read value will be zero, which is what we want
@@ -98,8 +94,8 @@ func CharacterProbabilitiesFromCounts(counts *map[rune]int) *map[rune]float64 {
 	return &prob
 }
 
-// CharacterProbabilities
-// Just a convenience function that chains together the other fwo function calls.
+// CharacterProbabilities is just a convenience function that chains together CharacterCounts
+// and CharacterProbabilitiesFromCounts
 func CharacterProbabilities(strs []string) *map[rune]float64 {
 	counts := CharacterCounts(strs)
 	return CharacterProbabilitiesFromCounts(counts)
