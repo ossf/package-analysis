@@ -3,9 +3,14 @@ package stats
 import (
 	"fmt"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/utils"
+	"golang.org/x/exp/constraints"
+	"golang.org/x/exp/slices"
 	"math"
-	"sort"
 )
+
+type RealNumber interface {
+	constraints.Integer | constraints.Float
+}
 
 type SampleStatistics struct {
 	Size      int
@@ -145,9 +150,9 @@ func quartiles[T RealNumber](sample []T) [5]float64 {
 	result := [5]float64{nan, nan, nan, nan, nan}
 
 	if len(sample) > 0 {
-		sortedSample := make(RealNumberSlice[T], len(sample))
+		sortedSample := make([]T, len(sample))
 		copy(sortedSample, sample)
-		sort.Stable(sortedSample)
+		slices.Sort(sortedSample)
 
 		for i := 0; i <= 4; i++ {
 			result[i] = quartile(sortedSample, i)
