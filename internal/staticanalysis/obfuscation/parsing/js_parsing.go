@@ -8,8 +8,7 @@ import (
 	"strings"
 )
 
-// ParserOutputElement
-// Output JSON format of JS parser
+// ParserOutputElement represents the output JSON format of the JS parser
 type ParserOutputElement struct {
 	SymbolType    string         `json:"type"`
 	SymbolSubtype string         `json:"subtype"`

@@ -50,8 +50,7 @@ func (s SampleStatistics) Equals(other SampleStatistics, absTol float64) bool {
 	return true
 }
 
-// mean
-// sample mean
+// mean computes the sample mean
 func mean[T RealNumber](sample []T) float64 {
 	if len(sample) < 1 {
 		return math.NaN()
@@ -64,8 +63,7 @@ func mean[T RealNumber](sample []T) float64 {
 	}
 }
 
-// variance
-// calculates sample variance with bias correction
+// variance calculates sample variance with bias correction
 // mean is the value returned by the mean() function above
 func variance[T RealNumber](sample []T, mean float64) float64 {
 	if len(sample) < 2 {
@@ -86,8 +84,7 @@ func squareRootCubed(x float64) float64 {
 	return y * y * y
 }
 
-// skewness
-// Calculates sample skewness using the G1 estimator from
+// skewness calculates sample skewness using the G1 estimator from
 // https://en.wikipedia.org/wiki/Skewness#Sample_skewness
 // mean and variance respectively are the values returned by the
 // mean() and (bias-corrected) variance() functions above
@@ -107,8 +104,7 @@ func skewness[T RealNumber](sample []T, mean, variance float64) float64 {
 	}
 }
 
-// quartile
-// Calculates sample quartiles of a dataset, which is assumed to be sorted.
+// quartile calculates sample quartiles of a dataset, which is assumed to be sorted.
 // quartile zero is defined as the minimum and quartile 4 is defined as the maximum.
 //
 // Implements 'type 2' calculation from https://en.wikipedia.org/wiki/Quartile,
