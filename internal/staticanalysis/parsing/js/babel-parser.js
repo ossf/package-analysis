@@ -53,7 +53,21 @@ function logParameters(node) {
 }
 
 function traverseAst(ast, printDebug = false) {
-    const state = { isInArray: false };
+    /*
+      The way this function is currently structured, the visitor finds identifiers by visiting every different type
+      of relevant symbol, and then logging the relevant identifier node (e.g. id, label) for that symbol.
+      This structure was kept from the previous switch statement version.
+
+      However, a simpler way to do it would be to just traverse until an actual Identifier node is found,
+      then figure what kind of identifier it is by inverting the logic for each case that currently is here.
+      This should be possible since babel-traverse lets you access parent nodes,
+      and it may simplify the code a little bit.
+
+      TODO
+       1. If this code needs to be extended much more, we should switch to the second way above.
+       2. Consider adding state to allow distinction between elements from different arrays
+       3. Consider logging names of decorators
+     */
 
     const arrayVisitor = {
         StringLiteral: function(path) {
@@ -86,7 +100,6 @@ function traverseAst(ast, printDebug = false) {
             if (path.node.id !== null) {
                 logIdentifierJSON("Class", path.node.id.name, locationString(path.node.id));
             }
-            // TODO superclass, decorators?
         },
         ClassMethod: function (path) {
             if (path.node.kind !== "Constructor" && path.node.key.type === "Identifier") {
@@ -151,9 +164,8 @@ function traverseAst(ast, printDebug = false) {
             logLiteralJSON("StringTemplate", path.node.value.raw, loc, false, path.node.value);
         }
     };
-    traverse(ast, astVisitor, state);
+    traverse(ast, astVisitor);
 }
-
 
 function findLiteralsAndIdentifiers(source, printDebug) {
     const ast = parser.parse(source);

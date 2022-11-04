@@ -18,7 +18,9 @@ type ParserOutputElement struct {
 	Extra         map[string]any `json:"extra"`
 }
 
-// if sourcePath is empty, sourceString will be parsed as JS code
+// runParser handles calling a parser program and provide the specified Javascript source to it, either
+// by filename (jsFilePath) or piping jsSource to the program's stdin
+// sourcePath is empty, sourceString will be parsed as JS code
 func runParser(parserPath, jsFilePath, jsSource string) (string, error) {
 	var out []byte
 	var err error
@@ -45,12 +47,12 @@ func runParser(parserPath, jsFilePath, jsSource string) (string, error) {
 			out, err = cmd.Output()
 		}
 	}
+
 	if err == nil {
 		return string(out), nil
-	} else {
-		return "", err
 	}
 
+	return "", err
 }
 
 // ParseJS extracts source code identifiers and string literals from JavaScript code
