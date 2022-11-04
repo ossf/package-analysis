@@ -3,6 +3,7 @@ package js
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"io"
 	"os/exec"
 	"strings"
@@ -57,7 +58,7 @@ func runParser(parserPath, jsFilePath, jsSource string) (string, error) {
 
 // ParseJS extracts source code identifiers and string literals from JavaScript code
 // if sourcePath is empty, sourceString will be parsed as JS code
-func ParseJS(parserPath string, filePath string, sourceString string) (*ParseResult, string, error) {
+func ParseJS(parserPath string, filePath string, sourceString string) (*parsing.ParseResult, string, error) {
 	parserOutput, err := runParser(parserPath, filePath, sourceString)
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
@@ -75,21 +76,21 @@ func ParseJS(parserPath string, filePath string, sourceString string) (*ParseRes
 	}
 
 	// convert the elements into more natural data structure
-	result := ParseResult{}
+	result := parsing.ParseResult{}
 	for _, element := range storage {
 		switch element.SymbolType {
 		case "Identifier":
-			symbolSubtype := checkIdentifierType(element.SymbolSubtype)
-			if symbolSubtype == Other || symbolSubtype == Unknown {
+			symbolSubtype := parsing.CheckIdentifierType(element.SymbolSubtype)
+			if symbolSubtype == parsing.Other || symbolSubtype == parsing.Unknown {
 				break
 			}
-			result.Identifiers = append(result.Identifiers, ParsedIdentifier{
-				Type: checkIdentifierType(element.SymbolSubtype),
+			result.Identifiers = append(result.Identifiers, parsing.ParsedIdentifier{
+				Type: parsing.CheckIdentifierType(element.SymbolSubtype),
 				Name: element.Data.(string),
 				Pos:  element.Pos,
 			})
 		case "Literal":
-			result.Literals = append(result.Literals, ParsedLiteral[any]{
+			result.Literals = append(result.Literals, parsing.ParsedLiteral[any]{
 				Type:     element.SymbolSubtype,
 				GoType:   fmt.Sprintf("%T", element.Data),
 				Value:    element.Data,

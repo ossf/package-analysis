@@ -28,7 +28,7 @@ func compareSummary(t *testing.T, name string, expected, actual stats.SampleStat
 	}
 }
 
-func testSignals(t *testing.T, signals *Signals, stringLiterals, identifiers []string) {
+func testSignals(t *testing.T, signals Signals, stringLiterals, identifiers []string) {
 	expectedStringEntropySummary := symbolEntropySummary(stringLiterals)
 	expectedStringLengthSummary := symbolLengthSummary(stringLiterals)
 	expectedIdentifierEntropySummary := symbolEntropySummary(identifiers)
@@ -54,10 +54,11 @@ func testSignals(t *testing.T, signals *Signals, stringLiterals, identifiers []s
 
 func TestBasic(t *testing.T) {
 	jsSource := `var a = "hello"`
-	signals, err := GenerateSignals(jsParserPath, "", jsSource, true)
+	rawData, err := CollectData(jsParserPath, "", jsSource, true)
 	if err != nil {
 		t.Error(err)
 	} else {
+		signals := ComputeSignals(*rawData)
 		stringLiterals := []string{"hello"}
 		identifiers := []string{"a"}
 		testSignals(t, signals, stringLiterals, identifiers)
@@ -76,10 +77,11 @@ func TestBasic2(t *testing.T) {
 			}
 		}
 	`
-	signals, err := GenerateSignals(jsParserPath, "", jsSource, true)
+	rawData, err := CollectData(jsParserPath, "", jsSource, true)
 	if err != nil {
 		t.Error(err)
 	} else {
+		signals := ComputeSignals(*rawData)
 		stringLiterals := []string{"hello", "apple"}
 		identifiers := []string{"test", "a", "b", "c"}
 		testSignals(t, signals, stringLiterals, identifiers)

@@ -1,6 +1,7 @@
 package js
 
 import (
+	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"reflect"
 	"testing"
 )
@@ -10,7 +11,7 @@ const jsParserPath = "./babel-parser.js"
 type jsTestCase struct {
 	name      string
 	inputJs   string
-	want      ParseResult
+	want      parsing.ParseResult
 	printJson bool // set to true to see raw parser output
 }
 
@@ -32,41 +33,41 @@ function test() {
 //"'11"'` + "`" + `;
 	var mystring12 = ` + "`hello\"'${5.6 + 6.4}\"'`" + `;
 }`,
-	want: ParseResult{
-		Identifiers: []ParsedIdentifier{
-			{Function, "test", TextPosition{2, 9}},
-			{Variable, "mystring1", TextPosition{3, 8}},
-			{Variable, "mystring2", TextPosition{4, 8}},
-			{Variable, "mystring3", TextPosition{5, 8}},
-			{Variable, "mystring4", TextPosition{6, 8}},
-			{Variable, "mystring5", TextPosition{7, 8}},
-			{Variable, "mystring6", TextPosition{8, 8}},
-			{Variable, "mystring7", TextPosition{9, 8}},
-			{Variable, "mystring8", TextPosition{10, 8}},
-			{Variable, "mystring9", TextPosition{11, 8}},
-			{Variable, "mystring10", TextPosition{12, 8}},
-			{Variable, "mystring11", TextPosition{13, 5}},
-			{Variable, "mystring12", TextPosition{15, 5}},
+	want: parsing.ParseResult{
+		Identifiers: []parsing.ParsedIdentifier{
+			{parsing.Function, "test", parsing.TextPosition{2, 9}},
+			{parsing.Variable, "mystring1", parsing.TextPosition{3, 8}},
+			{parsing.Variable, "mystring2", parsing.TextPosition{4, 8}},
+			{parsing.Variable, "mystring3", parsing.TextPosition{5, 8}},
+			{parsing.Variable, "mystring4", parsing.TextPosition{6, 8}},
+			{parsing.Variable, "mystring5", parsing.TextPosition{7, 8}},
+			{parsing.Variable, "mystring6", parsing.TextPosition{8, 8}},
+			{parsing.Variable, "mystring7", parsing.TextPosition{9, 8}},
+			{parsing.Variable, "mystring8", parsing.TextPosition{10, 8}},
+			{parsing.Variable, "mystring9", parsing.TextPosition{11, 8}},
+			{parsing.Variable, "mystring10", parsing.TextPosition{12, 8}},
+			{parsing.Variable, "mystring11", parsing.TextPosition{13, 5}},
+			{parsing.Variable, "mystring12", parsing.TextPosition{15, 5}},
 		},
-		Literals: []ParsedLiteral[any]{
-			{"String", "string", "hello1", `"hello1"`, false, TextPosition{3, 20}},
-			{"String", "string", "hello2", `'hello2'`, false, TextPosition{4, 20}},
-			{"String", "string", "hello'3'", `"hello'3'"`, false, TextPosition{5, 20}},
-			{"String", "string", "hello\"4\"", `'hello"4"'`, false, TextPosition{6, 20}},
-			{"String", "string", "hello\"5\"", `"hello\"5\""`, false, TextPosition{7, 20}},
-			{"String", "string", "hello'6'", `"hello\'6\'"`, false, TextPosition{8, 20}},
-			{"String", "string", "hello'7'", `'hello\'7\''`, false, TextPosition{9, 20}},
-			{"String", "string", "hello", `"hello"`, false, TextPosition{10, 20}},
-			{"String", "string", "8", `"8"`, false, TextPosition{10, 30}},
-			{"StringTemplate", "string", "hello9", `hello9`, false, TextPosition{11, 21}},
-			{"StringTemplate", "string", "hello\"'", `hello"'`, false, TextPosition{12, 22}},
-			{"StringTemplate", "string", "\"'", `"'`, false, TextPosition{12, 34}},
-			{"Numeric", "float64", 10.0, "10", false, TextPosition{12, 31}},
-			{"StringTemplate", "string", "hello\n//\"'11\"'", `hello` + "\n" + `//"'11"'`, false, TextPosition{13, 19}},
-			{"StringTemplate", "string", "hello\"'", `hello"'`, false, TextPosition{15, 19}},
-			{"StringTemplate", "string", "\"'", `"'`, false, TextPosition{15, 38}},
-			{"Numeric", "float64", 5.6, "5.6", false, TextPosition{15, 28}},
-			{"Numeric", "float64", 6.4, "6.4", false, TextPosition{15, 34}},
+		Literals: []parsing.ParsedLiteral[any]{
+			{"String", "string", "hello1", `"hello1"`, false, parsing.TextPosition{3, 20}},
+			{"String", "string", "hello2", `'hello2'`, false, parsing.TextPosition{4, 20}},
+			{"String", "string", "hello'3'", `"hello'3'"`, false, parsing.TextPosition{5, 20}},
+			{"String", "string", "hello\"4\"", `'hello"4"'`, false, parsing.TextPosition{6, 20}},
+			{"String", "string", "hello\"5\"", `"hello\"5\""`, false, parsing.TextPosition{7, 20}},
+			{"String", "string", "hello'6'", `"hello\'6\'"`, false, parsing.TextPosition{8, 20}},
+			{"String", "string", "hello'7'", `'hello\'7\''`, false, parsing.TextPosition{9, 20}},
+			{"String", "string", "hello", `"hello"`, false, parsing.TextPosition{10, 20}},
+			{"String", "string", "8", `"8"`, false, parsing.TextPosition{10, 30}},
+			{"StringTemplate", "string", "hello9", `hello9`, false, parsing.TextPosition{11, 21}},
+			{"StringTemplate", "string", "hello\"'", `hello"'`, false, parsing.TextPosition{12, 22}},
+			{"StringTemplate", "string", "\"'", `"'`, false, parsing.TextPosition{12, 34}},
+			{"Numeric", "float64", 10.0, "10", false, parsing.TextPosition{12, 31}},
+			{"StringTemplate", "string", "hello\n//\"'11\"'", `hello` + "\n" + `//"'11"'`, false, parsing.TextPosition{13, 19}},
+			{"StringTemplate", "string", "hello\"'", `hello"'`, false, parsing.TextPosition{15, 19}},
+			{"StringTemplate", "string", "\"'", `"'`, false, parsing.TextPosition{15, 38}},
+			{"Numeric", "float64", 5.6, "5.6", false, parsing.TextPosition{15, 28}},
+			{"Numeric", "float64", 6.4, "6.4", false, parsing.TextPosition{15, 34}},
 		},
 	},
 }
@@ -77,15 +78,15 @@ var test2 = jsTestCase{
 function test2(param1, param2, param3 = "ahd") {
 	return param1 + param2 + param3;
 }`,
-	want: ParseResult{
-		Identifiers: []ParsedIdentifier{
-			{Function, "test2", TextPosition{2, 9}},
-			{Parameter, "param1", TextPosition{2, 15}},
-			{Parameter, "param2", TextPosition{2, 23}},
-			{Parameter, "param3", TextPosition{2, 31}},
+	want: parsing.ParseResult{
+		Identifiers: []parsing.ParsedIdentifier{
+			{parsing.Function, "test2", parsing.TextPosition{2, 9}},
+			{parsing.Parameter, "param1", parsing.TextPosition{2, 15}},
+			{parsing.Parameter, "param2", parsing.TextPosition{2, 23}},
+			{parsing.Parameter, "param3", parsing.TextPosition{2, 31}},
 		},
-		Literals: []ParsedLiteral[any]{
-			{"String", "string", "ahd", `"ahd"`, false, TextPosition{2, 40}},
+		Literals: []parsing.ParsedLiteral[any]{
+			{"String", "string", "ahd", `"ahd"`, false, parsing.TextPosition{2, 40}},
 		},
 	},
 }
@@ -111,28 +112,28 @@ outer:
     }
     console.log("End");
 }`,
-	want: ParseResult{
-		Identifiers: []ParsedIdentifier{
-			{Function, "test3", TextPosition{2, 9}},
-			{Parameter, "a", TextPosition{2, 15}},
-			{Parameter, "b", TextPosition{2, 18}},
-			{Parameter, "c", TextPosition{2, 21}},
-			{Variable, "i", TextPosition{3, 13}},
-			{StatementLabel, "outer", TextPosition{4, 0}},
-			{Variable, "j", TextPosition{5, 17}},
-			{Variable, "k", TextPosition{6, 21}},
-			{Member, "log", TextPosition{16, 16}},
-			{Member, "log", TextPosition{18, 12}},
+	want: parsing.ParseResult{
+		Identifiers: []parsing.ParsedIdentifier{
+			{parsing.Function, "test3", parsing.TextPosition{2, 9}},
+			{parsing.Parameter, "a", parsing.TextPosition{2, 15}},
+			{parsing.Parameter, "b", parsing.TextPosition{2, 18}},
+			{parsing.Parameter, "c", parsing.TextPosition{2, 21}},
+			{parsing.Variable, "i", parsing.TextPosition{3, 13}},
+			{parsing.StatementLabel, "outer", parsing.TextPosition{4, 0}},
+			{parsing.Variable, "j", parsing.TextPosition{5, 17}},
+			{parsing.Variable, "k", parsing.TextPosition{6, 21}},
+			{parsing.Member, "log", parsing.TextPosition{16, 16}},
+			{parsing.Member, "log", parsing.TextPosition{18, 12}},
 		},
-		Literals: []ParsedLiteral[any]{
-			{"Numeric", "float64", 1.0, "1", false, TextPosition{5, 21}},
-			{"Numeric", "float64", 3.0, "3", false, TextPosition{5, 28}},
-			{"Numeric", "float64", 10.0, "10", false, TextPosition{6, 36}},
-			{"Numeric", "float64", 2.0, "2", false, TextPosition{7, 26}},
-			{"Numeric", "float64", 32.0, "32", false, TextPosition{13, 16}},
-			{"Numeric", "float64", 0.0, "0", false, TextPosition{13, 23}},
-			{"String", "string", "here", `"here"`, false, TextPosition{16, 20}},
-			{"String", "string", "End", `"End"`, false, TextPosition{18, 16}},
+		Literals: []parsing.ParsedLiteral[any]{
+			{"Numeric", "float64", 1.0, "1", false, parsing.TextPosition{5, 21}},
+			{"Numeric", "float64", 3.0, "3", false, parsing.TextPosition{5, 28}},
+			{"Numeric", "float64", 10.0, "10", false, parsing.TextPosition{6, 36}},
+			{"Numeric", "float64", 2.0, "2", false, parsing.TextPosition{7, 26}},
+			{"Numeric", "float64", 32.0, "32", false, parsing.TextPosition{13, 16}},
+			{"Numeric", "float64", 0.0, "0", false, parsing.TextPosition{13, 23}},
+			{"String", "string", "here", `"here"`, false, parsing.TextPosition{16, 20}},
+			{"String", "string", "End", `"End"`, false, parsing.TextPosition{18, 16}},
 		},
 	},
 }
@@ -164,35 +165,35 @@ function test4() {
             break;
     }
 }`,
-	want: ParseResult{
-		Identifiers: []ParsedIdentifier{
-			{Function, "test4", TextPosition{2, 9}},
-			{Variable, "a", TextPosition{3, 10}},
-			{Member, "log", TextPosition{6, 20}},
-			{Member, "log", TextPosition{8, 20}},
-			{Member, "log", TextPosition{10, 20}},
-			{Parameter, "e", TextPosition{12, 13}},
-			{Variable, "f", TextPosition{13, 12}},
-			{Member, "log", TextPosition{14, 16}},
-			{Member, "log", TextPosition{19, 20}},
-			{Member, "log", TextPosition{22, 20}},
+	want: parsing.ParseResult{
+		Identifiers: []parsing.ParsedIdentifier{
+			{parsing.Function, "test4", parsing.TextPosition{2, 9}},
+			{parsing.Variable, "a", parsing.TextPosition{3, 10}},
+			{parsing.Member, "log", parsing.TextPosition{6, 20}},
+			{parsing.Member, "log", parsing.TextPosition{8, 20}},
+			{parsing.Member, "log", parsing.TextPosition{10, 20}},
+			{parsing.Parameter, "e", parsing.TextPosition{12, 13}},
+			{parsing.Variable, "f", parsing.TextPosition{13, 12}},
+			{parsing.Member, "log", parsing.TextPosition{14, 16}},
+			{parsing.Member, "log", parsing.TextPosition{19, 20}},
+			{parsing.Member, "log", parsing.TextPosition{22, 20}},
 		},
-		Literals: []ParsedLiteral[any]{
-			{"Numeric", "float64", 1.0, "1", true, TextPosition{3, 15}},
-			{"Numeric", "float64", 2.0, "2", true, TextPosition{3, 18}},
-			{"Numeric", "float64", 3.0, "3", true, TextPosition{3, 21}},
-			{"Numeric", "float64", 1.0, "1", false, TextPosition{5, 14}},
-			{"Numeric", "float64", 3.0, "3", false, TextPosition{5, 21}},
-			{"Numeric", "float64", 1.0, "1", false, TextPosition{6, 27}},
-			{"Numeric", "float64", 1.0, "1", false, TextPosition{7, 21}},
-			{"Numeric", "float64", 2.0, "2", false, TextPosition{7, 28}},
-			{"Numeric", "float64", 1.0, "1", false, TextPosition{8, 26}},
-			{"Numeric", "float64", 2.0, "2", false, TextPosition{10, 26}},
-			{"String", "string", "abc", `"abc"`, false, TextPosition{13, 16}},
-			{"Numeric", "float64", 0.0, "0", false, TextPosition{17, 14}},
-			{"Numeric", "float64", 1.0, "1", false, TextPosition{18, 13}},
-			{"String", "string", "Hp", `"Hp"`, false, TextPosition{19, 24}},
-			{"String", "string", "Hq", `"Hq"`, false, TextPosition{22, 24}},
+		Literals: []parsing.ParsedLiteral[any]{
+			{"Numeric", "float64", 1.0, "1", true, parsing.TextPosition{3, 15}},
+			{"Numeric", "float64", 2.0, "2", true, parsing.TextPosition{3, 18}},
+			{"Numeric", "float64", 3.0, "3", true, parsing.TextPosition{3, 21}},
+			{"Numeric", "float64", 1.0, "1", false, parsing.TextPosition{5, 14}},
+			{"Numeric", "float64", 3.0, "3", false, parsing.TextPosition{5, 21}},
+			{"Numeric", "float64", 1.0, "1", false, parsing.TextPosition{6, 27}},
+			{"Numeric", "float64", 1.0, "1", false, parsing.TextPosition{7, 21}},
+			{"Numeric", "float64", 2.0, "2", false, parsing.TextPosition{7, 28}},
+			{"Numeric", "float64", 1.0, "1", false, parsing.TextPosition{8, 26}},
+			{"Numeric", "float64", 2.0, "2", false, parsing.TextPosition{10, 26}},
+			{"String", "string", "abc", `"abc"`, false, parsing.TextPosition{13, 16}},
+			{"Numeric", "float64", 0.0, "0", false, parsing.TextPosition{17, 14}},
+			{"Numeric", "float64", 1.0, "1", false, parsing.TextPosition{18, 13}},
+			{"String", "string", "Hp", `"Hp"`, false, parsing.TextPosition{19, 24}},
+			{"String", "string", "Hq", `"Hq"`, false, parsing.TextPosition{22, 24}},
 		},
 	},
 }
@@ -221,26 +222,26 @@ Rectangle = class Rectangle2 {
 console.log(Rectangle.name);
 // output: "Rectangle2"
 `,
-	want: ParseResult{
-		Identifiers: []ParsedIdentifier{
-			{Variable, "Rectangle", TextPosition{3, 4}},
-			{Parameter, "height", TextPosition{4, 16}},
-			{Parameter, "width", TextPosition{4, 24}},
-			{Member, "height", TextPosition{5, 13}},
-			{Member, "width", TextPosition{6, 13}},
-			{Member, "log", TextPosition{9, 8}},
-			{Member, "name", TextPosition{9, 22}},
+	want: parsing.ParseResult{
+		Identifiers: []parsing.ParsedIdentifier{
+			{parsing.Variable, "Rectangle", parsing.TextPosition{3, 4}},
+			{parsing.Parameter, "height", parsing.TextPosition{4, 16}},
+			{parsing.Parameter, "width", parsing.TextPosition{4, 24}},
+			{parsing.Member, "height", parsing.TextPosition{5, 13}},
+			{parsing.Member, "width", parsing.TextPosition{6, 13}},
+			{parsing.Member, "log", parsing.TextPosition{9, 8}},
+			{parsing.Member, "name", parsing.TextPosition{9, 22}},
 			//{Variable, "Rectangle", TextPosition{4, 22}},
-			{Class, "Rectangle2", TextPosition{13, 18}},
-			{Property, "test", TextPosition{14, 5}},
-			{Parameter, "height", TextPosition{15, 16}},
-			{Parameter, "width", TextPosition{15, 24}},
-			{Member, "height", TextPosition{16, 13}},
-			{Member, "width", TextPosition{17, 13}},
-			{Member, "log", TextPosition{20, 8}},
-			{Member, "name", TextPosition{20, 22}},
+			{parsing.Class, "Rectangle2", parsing.TextPosition{13, 18}},
+			{parsing.Property, "test", parsing.TextPosition{14, 5}},
+			{parsing.Parameter, "height", parsing.TextPosition{15, 16}},
+			{parsing.Parameter, "width", parsing.TextPosition{15, 24}},
+			{parsing.Member, "height", parsing.TextPosition{16, 13}},
+			{parsing.Member, "width", parsing.TextPosition{17, 13}},
+			{parsing.Member, "log", parsing.TextPosition{20, 8}},
+			{parsing.Member, "name", parsing.TextPosition{20, 22}},
 		},
-		Literals: []ParsedLiteral[any]{},
+		Literals: []parsing.ParsedLiteral[any]{},
 	},
 }
 

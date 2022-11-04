@@ -1,4 +1,4 @@
-package js
+package parsing
 
 import (
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/utils"

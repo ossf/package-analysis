@@ -1,4 +1,4 @@
-package js
+package parsing
 
 import (
 	"fmt"
@@ -7,14 +7,14 @@ import (
 type IdentifierType string
 
 const (
-	Function       IdentifierType = "Function"
-	Variable       IdentifierType = "Variable"
-	Parameter      IdentifierType = "Parameter"
-	Class          IdentifierType = "Class"
-	Member         IdentifierType = "Member"
-	Property       IdentifierType = "Property"
-	StatementLabel IdentifierType = "StatementLabel"
-	Other          IdentifierType = "Other"
+	Function       IdentifierType = "Function"       // function declaration / definition
+	Variable       IdentifierType = "Variable"       // variable declaration / definition
+	Parameter      IdentifierType = "Parameter"      // parameters to functions, constructors, catch blocks
+	Class          IdentifierType = "Class"          // class declaration / definition
+	Member         IdentifierType = "Member"         // access/mutation of an object member
+	Property       IdentifierType = "Property"       // declaration of class property
+	StatementLabel IdentifierType = "StatementLabel" // loop label
+	Other          IdentifierType = "Other"          // the parser picked up that isn't accounted for above
 	Unknown        IdentifierType = "Unknown"
 )
 
@@ -30,7 +30,7 @@ var allTypes = []IdentifierType{
 	Unknown,
 }
 
-func checkIdentifierType(s string) IdentifierType {
+func CheckIdentifierType(s string) IdentifierType {
 	for _, typeName := range allTypes {
 		if s == string(typeName) {
 			return typeName
