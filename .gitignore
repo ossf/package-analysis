@@ -16,3 +16,8 @@
 
 .terraform*
 *.tfstate
+
+# node_modules folders containing JS dependencies
+# these should be pre-installed where needed
+node_modules/
+

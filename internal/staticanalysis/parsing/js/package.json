@@ -1,0 +1,9 @@
+{
+  "name": "package-analysis-parsing",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "@babel/parser": "^7.19.1",
+    "@babel/traverse": "^7.20.0"
+  }
+}
