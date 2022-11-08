@@ -52,7 +52,7 @@ func testSignals(t *testing.T, signals Signals, stringLiterals, identifiers []st
 	}
 }
 
-func TestBasic(t *testing.T) {
+func TestBasicSignals(t *testing.T) {
 	jsSource := `var a = "hello"`
 	rawData, err := CollectData(jsParserPath, "", jsSource, true)
 	if err != nil {
@@ -65,7 +65,7 @@ func TestBasic(t *testing.T) {
 	}
 }
 
-func TestBasic2(t *testing.T) {
+func TestBasicSignals2(t *testing.T) {
 	jsSource := `
 		function test(a, b = 2) {
 			console.log("hello")
