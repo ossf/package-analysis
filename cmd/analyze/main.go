@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/ossf/package-analysis/internal/analysis"
-	"github.com/ossf/package-analysis/internal/dynamicanalysis"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 	"github.com/ossf/package-analysis/internal/resultstore"
@@ -83,7 +82,7 @@ func main() {
 		sbOpts = append(sbOpts, sandbox.Volume(*localPkg, *localPkg))
 	}
 
-	sb := sandbox.New(manager.Image(), sbOpts...)
+	sb := sandbox.New(manager.DynamicAnalysisImage(), sbOpts...)
 	defer sb.Clean()
 
 	results, lastRunPhase, err := analysis.RunDynamicAnalysis(sb, pkg)
@@ -103,7 +102,7 @@ func main() {
 
 	// this is only valid if RunDynamicAnalysis() returns nil err
 	lastStatus := results[lastRunPhase].Status
-	if lastStatus != dynamicanalysis.StatusCompleted {
+	if lastStatus != analysis.StatusCompleted {
 		log.Fatal("Analysis phase did not complete successfully",
 			"lastRunPhase", lastRunPhase,
 			"status", lastStatus)
