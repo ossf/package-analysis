@@ -1,7 +1,7 @@
 package stringentropy
 
 import (
-	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/utils"
+	"github.com/ossf/package-analysis/internal/utils"
 	"math"
 	"testing"
 )

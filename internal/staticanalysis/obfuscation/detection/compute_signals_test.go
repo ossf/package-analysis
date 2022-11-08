@@ -3,7 +3,7 @@ package detection
 import (
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stats"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stringentropy"
-	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/utils"
+	"github.com/ossf/package-analysis/internal/utils"
 	"strings"
 	"testing"
 )

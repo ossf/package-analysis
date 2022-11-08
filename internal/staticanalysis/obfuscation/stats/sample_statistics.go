@@ -2,7 +2,7 @@ package stats
 
 import (
 	"fmt"
-	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/utils"
+	"github.com/ossf/package-analysis/internal/utils"
 	"golang.org/x/exp/constraints"
 	"golang.org/x/exp/slices"
 	"math"
