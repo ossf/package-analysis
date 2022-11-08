@@ -67,7 +67,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		resultsBucket = resultsBucketOverride
 	}
 
-	log.Info("Got request",
+	log.Info(analysis.GotRequestLogMsg,
 		log.Label("ecosystem", ecosystem),
 		log.Label("name", name),
 		log.Label("version", version),

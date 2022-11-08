@@ -2,7 +2,6 @@ package analysis
 
 import (
 	"github.com/ossf/package-analysis/internal/dynamicanalysis"
-	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 	"github.com/ossf/package-analysis/internal/sandbox"
 )
@@ -38,7 +37,7 @@ func RunDynamicAnalysis(sb sandbox.Sandbox, pkg *pkgecosystem.Pkg) (results Dyna
 
 		results[phase] = result
 
-		if result.Status != dynamicanalysis.StatusCompleted {
+		if result.Status != StatusCompleted {
 			// Error caused by an issue with the package (probably).
 			// Don't continue with phases if this one did not complete successfully.
 			break
@@ -46,51 +45,11 @@ func RunDynamicAnalysis(sb sandbox.Sandbox, pkg *pkgecosystem.Pkg) (results Dyna
 	}
 
 	if err != nil {
-		logDynamicAnalysisError(pkg, lastRunPhase, err)
+		LogDynamicAnalysisError(pkg, lastRunPhase, err)
 	} else {
 		// Produce a log message for the final status to help generate metrics.
-		logDynamicAnalysisResult(pkg, lastRunPhase, results[lastRunPhase].Status)
+		LogDynamicAnalysisResult(pkg, lastRunPhase, results[lastRunPhase].Status)
 	}
 
 	return results, lastRunPhase, err
-}
-
-// logDynamicAnalysisError indicates some error happened while attempting to run
-// the package code, which was not caused by the package itself. This means it was
-// not possible to analyse the package properly, and the results are invalid.
-func logDynamicAnalysisError(pkg *pkgecosystem.Pkg, errorPhase pkgecosystem.RunPhase, err error) {
-	log.Error("Analysis run failed",
-		log.Label("ecosystem", pkg.Ecosystem()),
-		log.Label("name", pkg.Name()),
-		log.Label("phase", string(errorPhase)),
-		log.Label("version", pkg.Version()),
-		"error", err)
-}
-
-// logDynamicAnalysisResult indicates that the package code was run successfully,
-// and what happened when it was run. This may include errors in the analysis
-// of the package, but not errors in the running itself.
-func logDynamicAnalysisResult(pkg *pkgecosystem.Pkg, finalPhase pkgecosystem.RunPhase, finalStatus dynamicanalysis.Status) {
-	ecosystem := pkg.Ecosystem()
-	name := pkg.Name()
-	version := pkg.Version()
-	lastPhase := string(finalPhase)
-
-	labels := []interface{}{
-		log.Label("ecosystem", ecosystem),
-		log.Label("name", name),
-		log.Label("version", version),
-		log.Label("last_phase", lastPhase),
-	}
-
-	switch finalStatus {
-	case dynamicanalysis.StatusCompleted:
-		log.Info("Analysis completed sucessfully", labels...)
-	case dynamicanalysis.StatusErrorAnalysis:
-		log.Warn("Analysis error - analysis", labels...)
-	case dynamicanalysis.StatusErrorTimeout:
-		log.Warn("Analysis error - timeout", labels...)
-	case dynamicanalysis.StatusErrorOther:
-		log.Warn("Analysis error - other", labels...)
-	}
 }
