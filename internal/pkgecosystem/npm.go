@@ -87,5 +87,5 @@ func (p npmPkg) String() string {
 }
 
 func (p npmPkg) baseCommand() string {
-	return "/usr/local/bin/analyse.js"
+	return "/usr/local/bin/analyze.js"
 }

@@ -92,5 +92,5 @@ func (p pypiPkg) Validate() error {
 }
 
 func (p pypiPkg) baseCommand() string {
-	return "/usr/local/bin/analyse.py"
+	return "/usr/local/bin/analyze.py"
 }

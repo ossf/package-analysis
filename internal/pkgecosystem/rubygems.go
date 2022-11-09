@@ -90,5 +90,5 @@ func (p rubygemsPkg) Validate() error {
 }
 
 func (p rubygemsPkg) baseCommand() string {
-	return "/usr/local/bin/analyse.rb"
+	return "/usr/local/bin/analyze.rb"
 }

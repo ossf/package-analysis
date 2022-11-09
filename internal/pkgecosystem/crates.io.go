@@ -92,5 +92,5 @@ func (p cratesPkg) Validate() error {
 }
 
 func (p cratesPkg) baseCommand() string {
-	return "/usr/local/bin/analyse.py"
+	return "/usr/local/bin/analyze.py"
 }

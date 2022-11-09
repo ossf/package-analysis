@@ -109,5 +109,5 @@ func (p packagistPkg) Validate() error {
 }
 
 func (p packagistPkg) baseCommand() string {
-	return "/usr/local/bin/analyse.php"
+	return "/usr/local/bin/analyze.php"
 }
