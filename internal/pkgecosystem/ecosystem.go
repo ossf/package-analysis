@@ -16,12 +16,16 @@ const (
 	Import  RunPhase = "import"
 	Install RunPhase = "install"
 
-	NPM       Ecosystem = "npm"
-	PyPi      Ecosystem = "pypi"
 	CratesIO  Ecosystem = "crates.io"
+	NPM       Ecosystem = "npm"
 	Packagist Ecosystem = "packagist"
+	PyPi      Ecosystem = "pypi"
 	Rubygems  Ecosystem = "rubygems"
 )
+
+func IsSupportedEcosystem(ecosystemName string) bool {
+	return getPackageFactory(Ecosystem(ecosystemName)) != nil
+}
 
 // packageFactory groups together ecosystem-specific logic for querying package metadata from remote repositories
 // and local files, and handles creation of Package instances for its associated ecosystem

@@ -44,6 +44,11 @@ func main() {
 		return
 	}
 
+	if !pkgecosystem.IsSupportedEcosystem(*ecosystem) {
+		log.Panic("Unsupported package ecosystem",
+			log.Label("ecosystem", *ecosystem))
+	}
+
 	pkg, err := pkgecosystem.MakePackage(*ecosystem, *pkgName, *version, *localPkg)
 	if err != nil {
 		log.Panic("Error resolving package",
