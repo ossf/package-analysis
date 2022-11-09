@@ -23,6 +23,11 @@ type fileResult struct {
 	Delete bool
 }
 
+type FileWrites struct {
+	Path      string
+	WriteInfo []strace.WriteInfo
+}
+
 type socketResult struct {
 	Address   string
 	Port      int
@@ -44,7 +49,7 @@ type dnsResult struct {
 	Queries []dnsQueries
 }
 
-type Result struct {
+type StraceSummary struct {
 	Status   analysis.Status
 	Stdout   []byte
 	Stderr   []byte
@@ -54,9 +59,16 @@ type Result struct {
 	DNS      []dnsResult
 }
 
-var (
-	resultError = &Result{Status: analysis.StatusErrorOther}
-)
+type Result struct {
+	StraceSummary StraceSummary
+	FileWrites    []FileWrites
+}
+
+var resultError = &Result{
+	StraceSummary: StraceSummary{
+		Status: analysis.StatusErrorOther,
+	},
+}
 
 func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
 	log.Info("Running dynamic analysis",
@@ -97,9 +109,11 @@ func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
 	}
 
 	result := Result{
-		Status: analysis.StatusForRunResult(r),
-		Stdout: lastLines(r.Stdout(), maxOutputLines, maxOutputBytes),
-		Stderr: lastLines(r.Stderr(), maxOutputLines, maxOutputBytes),
+		StraceSummary: StraceSummary{
+			Status: analysis.StatusForRunResult(r),
+			Stdout: lastLines(r.Stdout(), maxOutputLines, maxOutputBytes),
+			Stderr: lastLines(r.Stderr(), maxOutputLines, maxOutputBytes),
+		},
 	}
 	result.setData(straceResult, dns)
 	return &result, nil
@@ -107,16 +121,19 @@ func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
 
 func (d *Result) setData(straceResult *strace.Result, dns *dnsanalyzer.DNSAnalyzer) {
 	for _, f := range straceResult.Files() {
-		d.Files = append(d.Files, fileResult{
+		d.StraceSummary.Files = append(d.StraceSummary.Files, fileResult{
 			Path:   f.Path,
 			Read:   f.Read,
 			Write:  f.Write,
 			Delete: f.Delete,
 		})
+		if len(f.WriteInfo) > 0 {
+			d.FileWrites = append(d.FileWrites, FileWrites{f.Path, f.WriteInfo})
+		}
 	}
 
 	for _, s := range straceResult.Sockets() {
-		d.Sockets = append(d.Sockets, socketResult{
+		d.StraceSummary.Sockets = append(d.StraceSummary.Sockets, socketResult{
 			Address:   s.Address,
 			Port:      s.Port,
 			Hostnames: dns.Hostnames(s.Address),
@@ -124,7 +141,7 @@ func (d *Result) setData(straceResult *strace.Result, dns *dnsanalyzer.DNSAnalyz
 	}
 
 	for _, c := range straceResult.Commands() {
-		d.Commands = append(d.Commands, commandResult{
+		d.StraceSummary.Commands = append(d.StraceSummary.Commands, commandResult{
 			Command:     c.Command,
 			Environment: c.Env,
 		})
@@ -138,6 +155,6 @@ func (d *Result) setData(straceResult *strace.Result, dns *dnsanalyzer.DNSAnalyz
 				Types:    types,
 			})
 		}
-		d.DNS = append(d.DNS, c)
+		d.StraceSummary.DNS = append(d.StraceSummary.DNS, c)
 	}
 }

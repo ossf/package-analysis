@@ -34,7 +34,7 @@ const (
 	localPkgPathFmt = "/local/%s"
 )
 
-func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blob.Bucket, resultsBucket, imageTag string) error {
+func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blob.Bucket, resultsBucket, fileWritesBucket, imageTag string) error {
 	name := msg.Metadata["name"]
 	if name == "" {
 		log.Warn("name is empty")
@@ -122,9 +122,15 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	}
 
 	if resultsBucket != "" {
-		err := resultstore.New(resultsBucket, resultstore.ConstructPath()).Save(ctx, pkg, results)
+		err := resultstore.New(resultsBucket, resultstore.ConstructPath()).Save(ctx, pkg, results.StraceSummary)
 		if err != nil {
 			return fmt.Errorf("failed to upload to blobstore = %w", err)
+		}
+	}
+	if fileWritesBucket != "" {
+		err := resultstore.New(fileWritesBucket, resultstore.ConstructPath()).Save(ctx, pkg, results.FileWrites)
+		if err != nil {
+			return fmt.Errorf("failed to upload file write analysis to blobstore = %w", err)
 		}
 	}
 
@@ -132,7 +138,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	return nil
 }
 
-func messageLoop(ctx context.Context, subURL, packagesBucket, resultsBucket, imageTag string) error {
+func messageLoop(ctx context.Context, subURL, packagesBucket, resultsBucket, fileWritesBucket, imageTag string) error {
 	sub, err := pubsub.OpenSubscription(ctx, subURL)
 	if err != nil {
 		return err
@@ -156,7 +162,7 @@ func messageLoop(ctx context.Context, subURL, packagesBucket, resultsBucket, ima
 			return fmt.Errorf("error receiving message: %w", err)
 		}
 
-		if err := handleMessage(ctx, msg, pkgsBkt, resultsBucket, imageTag); err != nil {
+		if err := handleMessage(ctx, msg, pkgsBkt, resultsBucket, fileWritesBucket, imageTag); err != nil {
 			log.Error("Failed to process message",
 				"error", err)
 		}
@@ -169,6 +175,7 @@ func main() {
 	subURL := os.Getenv("OSSMALWARE_WORKER_SUBSCRIPTION")
 	packagesBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_PACKAGES")
 	resultsBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS")
+	fileWritesBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_FILE_WRITE_RESULTS")
 	imageTag := os.Getenv("OSSF_SANDBOX_IMAGE_TAG")
 	log.Initalize(os.Getenv("LOGGER_ENV"))
 	sandbox.InitEnv()
@@ -178,10 +185,11 @@ func main() {
 		log.Label("subscription", subURL),
 		log.Label("package_bucket", packagesBucket),
 		log.Label("results_bucket", resultsBucket),
+		log.Label("file_write_results_bucket", fileWritesBucket),
 		log.Label("image_tag", imageTag))
 
 	for {
-		err := messageLoop(ctx, subURL, packagesBucket, resultsBucket, imageTag)
+		err := messageLoop(ctx, subURL, packagesBucket, resultsBucket, fileWritesBucket, imageTag)
 		if err != nil {
 			if retryCount++; retryCount >= maxRetries {
 				log.Error("Retries exceeded",

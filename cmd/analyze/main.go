@@ -29,6 +29,7 @@ var (
 	listModes     = flag.Bool("list-modes", false, "prints out a list of available analysis modes")
 	analysisMode  = utils.CommaSeparatedFlags("analysis-mode", "dynamic",
 		"single or comma separated list of analysis modes to run. Use -list-modes to see available options")
+	uploadFileWriteInfo = flag.String("upload-file-write-info", "", "bucket path for uploading information from file writes")
 )
 
 func parseBucketPath(path string) (string, string) {
@@ -90,15 +91,23 @@ func dynamicAnalysis(manager *pkgecosystem.PkgManager, pkg *pkgecosystem.Pkg) {
 	ctx := context.Background()
 	if *dynamicUpload != "" {
 		bucket, path := parseBucketPath(*dynamicUpload)
-		err := resultstore.New(bucket, resultstore.BasePath(path)).Save(ctx, pkg, results)
+		err := resultstore.New(bucket, resultstore.BasePath(path)).Save(ctx, pkg, results.StraceSummary)
 		if err != nil {
 			log.Fatal("Failed to upload dynamic analysis results to blobstore",
 				"error", err)
 		}
 	}
 
+	if *uploadFileWriteInfo != "" {
+		bucket, path := parseBucketPath(*uploadFileWriteInfo)
+		err := resultstore.New(bucket, resultstore.BasePath(path)).Save(ctx, pkg, results.FileWrites)
+		if err != nil {
+			log.Fatal("Failed to upload file write analysis results to blobstore", "error", err)
+		}
+	}
+
 	// this is only valid if RunDynamicAnalysis() returns nil err
-	lastStatus := results[lastRunPhase].Status
+	lastStatus := results.StraceSummary[lastRunPhase].Status
 	if lastStatus != analysis.StatusCompleted {
 		log.Fatal("Dynamic analysis phase did not complete successfully",
 			"lastRunPhase", lastRunPhase,

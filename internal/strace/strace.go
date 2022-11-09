@@ -42,13 +42,23 @@ var (
 	// unlinkat(0x4 /tmp/pip-pip-egg-info-ng4_5gp_/temps.egg-info, 0x7fe0031c9a10 top_level.txt, 0x0)
 	// unlinkat(AT_FDCWD /app, 0x5569a7e83380 /app/vendor/composer/e06632ca, 0x200)
 	unlinkatPattern = regexp.MustCompile(`\S+ ([^,]+), 0x[a-f\d]+ ([^,]+), 0x[a-f\d]+`)
+
+	// This regex captures 1) the file path and 2) the write buffer and bytes written together. #2 will be parsed further before used.
+	// write(0x1 host:[5], 0x557f2cfde7c0 "django.template.base\nImporting django.template...", 0xe64)
+	writePattern = regexp.MustCompile(`\S+ ([^,]+), 0x[a-f\d]+ (".+)`)
 )
 
 type FileInfo struct {
-	Path   string
-	Read   bool
-	Write  bool
-	Delete bool
+	Path      string
+	Read      bool
+	Write     bool
+	Delete    bool
+	WriteInfo []WriteInfo
+}
+
+type WriteInfo struct {
+	// TODO: A future PR will add to the WriteInfo struct a reference to a file. That file referenced will save the contents of the write buffer.
+	BytesWritten int64
 }
 
 type SocketInfo struct {
@@ -129,6 +139,18 @@ func (r *Result) recordFileAccess(file string, read, write, delete bool) {
 	r.files[file].Delete = r.files[file].Delete || delete
 }
 
+func (r *Result) recordFileWrite(file string, bytesWritten int64) {
+	if bytesWritten > 0 {
+		if _, exists := r.files[file]; !exists {
+			r.files[file] = &FileInfo{Path: file, WriteInfo: []WriteInfo{}}
+		}
+		var writeContentsAndBytes WriteInfo
+		writeContentsAndBytes.BytesWritten = bytesWritten
+		r.files[file].Write = true
+		r.files[file].WriteInfo = append(r.files[file].WriteInfo, writeContentsAndBytes)
+	}
+}
+
 func (r *Result) recordSocket(address string, port int) {
 	// Use a '-' dash as the address may contain colons if IPv6
 	// Pad the integer field so that keys can be sorted.
@@ -151,7 +173,30 @@ func (r *Result) recordCommand(cmd, env []string) {
 	}
 }
 
-func (r *Result) parseSyscall(syscall, args string) error {
+func (r *Result) parseEnterSyscall(syscall, args string) error {
+	switch syscall {
+	case "write":
+		match := writePattern.FindStringSubmatch(args)
+		// Example: django.template.base\nImporting django.template"..., 0xe64
+		writeBufAndBytesWritten := match[2]
+		for i := len(writeBufAndBytesWritten) - 1; i >= 0; i-- {
+			// TODO: A future PR will use the index right before the comma to get the end of the write buffer.
+			if writeBufAndBytesWritten[i] == ',' {
+				// Use the index after the space and "0x" to get to the first index of the bytes written.
+				bytesWritten, err := strconv.ParseInt(writeBufAndBytesWritten[i+4:len(writeBufAndBytesWritten)], 16, 64)
+				r.recordFileWrite(match[1], bytesWritten)
+				if err != nil {
+					log.Debug("Could not parse")
+				}
+				break
+			}
+		}
+
+	}
+	return nil
+}
+
+func (r *Result) parseExitSyscall(syscall, args string) error {
 	switch syscall {
 	case "creat":
 		match := creatPattern.FindStringSubmatch(args)
@@ -283,13 +328,24 @@ func Parse(r io.Reader) (*Result, error) {
 		line = strings.TrimRightFunc(line, unicode.IsSpace)
 
 		match := stracePattern.FindStringSubmatch(line)
-		if match != nil && match[2] == "X" {
-			// Analyze exit events only.
-			err := result.parseSyscall(match[3], match[4])
-			if err != nil {
-				// Log errors and continue.
-				log.Warn("Failed to parse syscall",
-					"error", err)
+		if match != nil {
+			// Analyze entry events.
+			if match[2] == "E" {
+				err := result.parseEnterSyscall(match[3], match[4])
+				if err != nil {
+					// Log errors and continue.
+					log.Warn("Failed to parse entry syscall", "error", err)
+				}
+			}
+			// Analyze exit events.
+			if match[2] == "X" {
+				// Analyze exit events.
+				err := result.parseExitSyscall(match[3], match[4])
+				if err != nil {
+					// Log errors and continue.
+					log.Warn("Failed to parse exit syscall",
+						"error", err)
+				}
 			}
 		}
 
