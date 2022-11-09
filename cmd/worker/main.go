@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ossf/package-analysis/internal/worker"
 	"io"
 	"io/ioutil"
 	"math"
@@ -19,7 +20,6 @@ import (
 	_ "gocloud.dev/pubsub/gcppubsub"
 	_ "gocloud.dev/pubsub/kafkapubsub"
 
-	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 	"github.com/ossf/package-analysis/internal/resultstore"
@@ -67,7 +67,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		resultsBucket = resultsBucketOverride
 	}
 
-	log.Info(analysis.GotRequestLogMsg,
+	log.Info(worker.GotRequestLogMsg,
 		log.Label("ecosystem", ecosystem),
 		log.Label("name", name),
 		log.Label("version", version),
@@ -122,7 +122,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	sb := sandbox.New(manager.DynamicAnalysisImage(), sbOpts...)
 	defer sb.Clean()
 
-	results, _, err := analysis.RunDynamicAnalysis(sb, pkg)
+	results, _, err := worker.RunDynamicAnalysis(sb, pkg)
 	if err != nil {
 		return err
 	}

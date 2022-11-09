@@ -1,6 +1,7 @@
-package analysis
+package worker
 
 import (
+	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 )
@@ -33,7 +34,7 @@ func LogDynamicAnalysisError(pkg *pkgecosystem.Pkg, errorPhase pkgecosystem.RunP
 // LogDynamicAnalysisResult indicates that the package code was run successfully,
 // and what happened when it was run. This may include errors in the analysis
 // of the package, but not errors in the running itself.
-func LogDynamicAnalysisResult(pkg *pkgecosystem.Pkg, finalPhase pkgecosystem.RunPhase, finalStatus Status) {
+func LogDynamicAnalysisResult(pkg *pkgecosystem.Pkg, finalPhase pkgecosystem.RunPhase, finalStatus analysis.Status) {
 	ecosystem := pkg.Ecosystem()
 	name := pkg.Name()
 	version := pkg.Version()
@@ -47,13 +48,13 @@ func LogDynamicAnalysisResult(pkg *pkgecosystem.Pkg, finalPhase pkgecosystem.Run
 	}
 
 	switch finalStatus {
-	case StatusCompleted:
+	case analysis.StatusCompleted:
 		log.Info(analysisCompleteLogMsg, labels...)
-	case StatusErrorAnalysis:
+	case analysis.StatusErrorAnalysis:
 		log.Warn(analysisErrorLogMsg, labels...)
-	case StatusErrorTimeout:
+	case analysis.StatusErrorTimeout:
 		log.Warn(timeoutErrorLogMsg, labels...)
-	case StatusErrorOther:
+	case analysis.StatusErrorOther:
 		log.Warn(otherErrorLogMsg, labels...)
 	}
 }

@@ -1,6 +1,7 @@
-package analysis
+package worker
 
 import (
+	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/dynamicanalysis"
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 	"github.com/ossf/package-analysis/internal/sandbox"
@@ -37,7 +38,7 @@ func RunDynamicAnalysis(sb sandbox.Sandbox, pkg *pkgecosystem.Pkg) (results Dyna
 
 		results[phase] = result
 
-		if result.Status != StatusCompleted {
+		if result.Status != analysis.StatusCompleted {
 			// Error caused by an issue with the package (probably).
 			// Don't continue with phases if this one did not complete successfully.
 			break

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"github.com/ossf/package-analysis/internal/worker"
 	"net/url"
 	"os"
 
@@ -85,7 +86,7 @@ func main() {
 	sb := sandbox.New(manager.DynamicAnalysisImage(), sbOpts...)
 	defer sb.Clean()
 
-	results, lastRunPhase, err := analysis.RunDynamicAnalysis(sb, pkg)
+	results, lastRunPhase, err := worker.RunDynamicAnalysis(sb, pkg)
 	if err != nil {
 		log.Fatal("Aborting due to run error", "error", err)
 	}
