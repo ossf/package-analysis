@@ -29,13 +29,68 @@ func getPyPILatest(pkg string) (string, error) {
 	return details.Info.Version, nil
 }
 
-var pypiPkgManager = PkgManager{
-	name:    "pypi",
-	image:   "gcr.io/ossf-malware-analysis/python",
-	command: "/usr/local/bin/analyze.py",
-	latest:  getPyPILatest,
-	runPhases: []RunPhase{
-		Install,
-		Import,
-	},
+type pypiPkgFactory struct{}
+
+func (f pypiPkgFactory) Ecosystem() Ecosystem {
+	return PyPi
+}
+
+func (f pypiPkgFactory) constructPackage(name, version, localPath string) Package {
+	return pypiPkg{name, version, localPath}
+}
+
+func (f pypiPkgFactory) getLatestVersion(name string) (string, error) {
+	return getPyPILatest(name)
+}
+
+type pypiPkg struct {
+	name      string
+	version   string
+	localPath string
+}
+
+func (p pypiPkg) Name() string {
+	return p.name
+}
+
+func (p pypiPkg) Ecosystem() string {
+	return string(PyPi)
+}
+
+func (p pypiPkg) Version() string {
+	return p.version
+}
+
+func (p pypiPkg) LocalPath() string {
+	return p.localPath
+}
+
+func (p pypiPkg) Download() (string, error) {
+	notImplemented()
+	return "", nil
+}
+
+func (p pypiPkg) Command(phase RunPhase) []string {
+	return phaseCommand(p, phase)
+}
+
+func (p pypiPkg) DynamicAnalysisImage() string {
+	return "gcr.io/ossf-malware-analysis/python"
+}
+
+func (p pypiPkg) DynamicRunPhases() []RunPhase {
+	return []RunPhase{Install, Import}
+}
+
+func (p pypiPkg) String() string {
+	return packageToString(p)
+}
+
+func (p pypiPkg) Validate() error {
+	notImplemented()
+	return nil
+}
+
+func (p pypiPkg) baseCommand() string {
+	return "/usr/local/bin/analyse.py"
 }

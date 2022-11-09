@@ -46,13 +46,68 @@ func getPackagistLatest(pkg string) (string, error) {
 	return latestVersion, nil
 }
 
-var packagistPkgManager = PkgManager{
-	name:    "packagist",
-	image:   "gcr.io/ossf-malware-analysis/packagist",
-	command: "/usr/local/bin/analyze.php",
-	latest:  getPackagistLatest,
-	runPhases: []RunPhase{
-		Install,
-		Import,
-	},
+type packagistPkgFactory struct{}
+
+func (f packagistPkgFactory) Ecosystem() Ecosystem {
+	return Packagist
+}
+
+func (f packagistPkgFactory) constructPackage(name, version, localPath string) Package {
+	return packagistPkg{name, version, localPath}
+}
+
+func (f packagistPkgFactory) getLatestVersion(name string) (string, error) {
+	return getPackagistLatest(name)
+}
+
+type packagistPkg struct {
+	name      string
+	version   string
+	localPath string
+}
+
+func (p packagistPkg) Name() string {
+	return p.name
+}
+
+func (p packagistPkg) Ecosystem() string {
+	return string(Packagist)
+}
+
+func (p packagistPkg) Version() string {
+	return p.version
+}
+
+func (p packagistPkg) LocalPath() string {
+	return p.localPath
+}
+
+func (p packagistPkg) Download() (string, error) {
+	notImplemented()
+	return "", nil
+}
+
+func (p packagistPkg) Command(phase RunPhase) []string {
+	return phaseCommand(p, phase)
+}
+
+func (p packagistPkg) DynamicAnalysisImage() string {
+	return "gcr.io/ossf-malware-analysis/packagist"
+}
+
+func (p packagistPkg) DynamicRunPhases() []RunPhase {
+	return []RunPhase{Install, Import}
+}
+
+func (p packagistPkg) String() string {
+	return packageToString(p)
+}
+
+func (p packagistPkg) Validate() error {
+	notImplemented()
+	return nil
+}
+
+func (p packagistPkg) baseCommand() string {
+	return "/usr/local/bin/analyse.php"
 }

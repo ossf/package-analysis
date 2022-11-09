@@ -5,96 +5,83 @@ import (
 	"strings"
 )
 
-// RunPhase
-// Represents a way to 'run' a package during its usage lifecycle
+// RunPhase represents a way to 'run' a package during its usage lifecycle
 // This is relevant to dynamic analysis
 type RunPhase string
+
+// Ecosystem denotes a package ecosystem
+type Ecosystem string
 
 const (
 	Import  RunPhase = "import"
 	Install RunPhase = "install"
+
+	NPM       Ecosystem = "npm"
+	PyPi      Ecosystem = "pypi"
+	CratesIO  Ecosystem = "crates.io"
+	Packagist Ecosystem = "packagist"
+	Rubygems  Ecosystem = "rubygems"
 )
 
-// PkgManager
-// Represents how packages from a common ecosystem are accessed
-type PkgManager struct {
-	name      string
-	image     string
-	command   string
-	latest    func(string) (string, error)
-	runPhases []RunPhase
+// packageFactory groups together ecosystem-specific logic for querying package metadata from remote repositories
+// and local files, and handles creation of Package instances for its associated ecosystem
+type packageFactory interface {
+	// Ecosystem returns the name of the package ecosystem associated with this packageFactory, i.e. the type of
+	// package that it will create
+	Ecosystem() Ecosystem
+
+	// constructPackage constructs a concrete Package object corresponding to this ecosystem; no checks are done
+	constructPackage(name, version, localPath string) Package
+	// getLatestVersion retrieves the latest available version for the given package name
+	getLatestVersion(name string) (string, error)
 }
 
-var (
-	supportedPkgManagers = map[string]*PkgManager{
-		npmPkgManager.name:       &npmPkgManager,
-		pypiPkgManager.name:      &pypiPkgManager,
-		rubygemsPkgManager.name:  &rubygemsPkgManager,
-		packagistPkgManager.name: &packagistPkgManager,
-		cratesPkgManager.name:    &cratesPkgManager,
+func getPackageFactory(ecosystem Ecosystem) packageFactory {
+	switch ecosystem {
+	case CratesIO:
+		return cratesPkgFactory{}
+	case NPM:
+		return npmPkgFactory{}
+	case Packagist:
+		return packagistPkgFactory{}
+	case PyPi:
+		return pypiPkgFactory{}
+	case Rubygems:
+		return rubygemsPkgFactory{}
+	default:
+		return nil
 	}
-)
-
-func Manager(ecosystem string) *PkgManager {
-	return supportedPkgManagers[ecosystem]
 }
 
-// String implements the Stringer interface to support pretty printing.
-func (p *PkgManager) String() string {
-	return p.name
-}
+// MakePackage initialises a package record
+// If version == "", the latest available version for the package will be fetched and used.
+// If localPath != "", the file pointed to by that path is assumed to be an archive containing the package.
+func MakePackage(ecosystem, name, version, localPath string) (pkg Package, err error) {
+	factory := getPackageFactory(Ecosystem(ecosystem))
+	if factory == nil {
+		return nil, fmt.Errorf("unsupported package ecosystem: " + string(ecosystem))
+	}
 
-func (p *PkgManager) DynamicAnalysisImage() string {
-	return p.image
-}
-
-func (p *PkgManager) RunPhases() []RunPhase {
-	return p.runPhases
-}
-
-func (p *PkgManager) Latest(name string) (*Pkg, error) {
 	name = normalizePkgName(name)
-	version, err := p.latest(name)
-	if err != nil {
-		return nil, err
-	}
-	return &Pkg{
-		name:    name,
-		version: version,
-		manager: p,
-	}, nil
-}
 
-func (p *PkgManager) Local(name, version, localPath string) *Pkg {
-	return &Pkg{
-		name:    normalizePkgName(name),
-		version: version,
-		local:   localPath,
-		manager: p,
-	}
-}
-
-func (p *PkgManager) Package(name, version string) *Pkg {
-	return &Pkg{
-		name:    normalizePkgName(name),
-		version: version,
-		manager: p,
-	}
-}
-
-func (p *PkgManager) ResolvePackage(name, version, localPath string) (pkg *Pkg, err error) {
-	if localPath != "" {
-		// TODO version should be cross-checked with actual version parsed from package file
-		pkg = p.Local(name, version, localPath)
-	} else if version != "" {
-		pkg = p.Package(name, version)
-	} else {
-		pkg, err = p.Latest(name)
+	needLatestVersion := localPath == "" && version == ""
+	if needLatestVersion {
+		version, err = factory.getLatestVersion(name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get latest version for package %s: %v", name, err)
 		}
+	} else {
+		// TODO check if desired package name/version exists in ecosystem, before creating package.
+		//  If a local package file is specified, the version argument given here should be
+		//  cross-checked with actual version parsed from package file
+
+		//err = pkg.Validate()
+		err = nil
 	}
-	return pkg, nil
+
+	pkg = factory.constructPackage(name, version, localPath)
+
+	return
 }
 
 func normalizePkgName(pkg string) string {

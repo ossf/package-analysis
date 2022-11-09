@@ -39,20 +39,17 @@ func main() {
 	sandbox.InitEnv()
 
 	flag.Parse()
-	if *ecosystem == "" {
+	if *ecosystem == "" || *pkgName == "" {
 		flag.Usage()
 		return
 	}
 
-	manager := pkgecosystem.Manager(*ecosystem)
-	if manager == nil {
-		log.Panic("Unsupported pkg manager",
-			log.Label("ecosystem", *ecosystem))
-	}
-
-	if *pkgName == "" {
-		flag.Usage()
-		return
+	pkg, err := pkgecosystem.MakePackage(*ecosystem, *pkgName, *version, *localPkg)
+	if err != nil {
+		log.Panic("Error resolving package",
+			log.Label("ecosystem", *ecosystem),
+			log.Label("name", *pkgName),
+			"error", err)
 	}
 
 	log.Info("Got request",
@@ -60,14 +57,6 @@ func main() {
 		log.Label("name", *pkgName),
 		log.Label("localPath", *localPkg),
 		log.Label("version", *version))
-
-	pkg, err := manager.ResolvePackage(*pkgName, *version, *localPkg)
-	if err != nil {
-		log.Panic("Error resolving package",
-			log.Label("ecosystem", *ecosystem),
-			log.Label("name", *pkgName),
-			"error", err)
-	}
 
 	// Prepare the sandbox:
 	// - Always pass through the tag. An empty tag is the same as "latest".
@@ -83,7 +72,7 @@ func main() {
 		sbOpts = append(sbOpts, sandbox.Volume(*localPkg, *localPkg))
 	}
 
-	sb := sandbox.New(manager.DynamicAnalysisImage(), sbOpts...)
+	sb := sandbox.New(pkg.DynamicAnalysisImage(), sbOpts...)
 	defer sb.Clean()
 
 	results, lastRunPhase, err := worker.RunDynamicAnalysis(sb, pkg)

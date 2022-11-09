@@ -24,9 +24,9 @@ the corresponding results this phase, including any abnormal termination of the 
 error: Any error that occurred in the runtime/sandbox infrastructure. This does not include errors caused
 by the package under analysis.
 */
-func RunDynamicAnalysis(sb sandbox.Sandbox, pkg *pkgecosystem.Pkg) (results DynamicAnalysisResults, lastRunPhase pkgecosystem.RunPhase, err error) {
+func RunDynamicAnalysis(sb sandbox.Sandbox, pkg pkgecosystem.Package) (results DynamicAnalysisResults, lastRunPhase pkgecosystem.RunPhase, err error) {
 	results = make(DynamicAnalysisResults)
-	for _, phase := range pkg.Manager().RunPhases() {
+	for _, phase := range pkg.DynamicRunPhases() {
 		result, err := dynamicanalysis.Run(sb, pkg.Command(phase))
 		lastRunPhase = phase
 
