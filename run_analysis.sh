@@ -14,6 +14,7 @@ VERSION="latest"
 PKG_PATH=""
 
 RESULTS_DIR="/tmp/results"
+FILE_WRITE_RESULTS_DIR="/tmp/writeResults"
 LOGS_DIR="/tmp/dockertmp"
 
 # for pretty printing
@@ -26,21 +27,22 @@ function print_usage {
 
 
 function print_package_details {
-	echo "Ecosystem:   $ECOSYSTEM"
-	echo "Package:     $PACKAGE"
-	echo "Version:     $VERSION"
+	echo "Ecosystem:              $ECOSYSTEM"
+	echo "Package:                $PACKAGE"
+	echo "Version:                $VERSION"
 	if [[ $LOCAL -eq 1 ]]; then
 		LOCATION="$PKG_PATH"
 	else
 		LOCATION="remote"
 	fi
 
-	echo "Location:    $LOCATION"
+	echo "Location:               $LOCATION"
 }
 
 function print_results_dirs {
-	echo "Results dir: $RESULTS_DIR"
-	echo "Logs dir:    $LOGS_DIR"
+	echo "Results dir:            $RESULTS_DIR"
+	echo "File Write Results dir: $FILE_WRITE_RESULTS_DIR"
+	echo "Logs dir:               $LOGS_DIR"
 }
 
 
@@ -85,13 +87,14 @@ fi
 
 
 
+
 DOCKER_OPTS=("run" "--cgroupns=host" "--privileged" "-ti")
 
-DOCKER_MOUNTS=("-v" "/var/lib/containers:/var/lib/containers" "-v" "$RESULTS_DIR:/results" "-v" "$LOGS_DIR:/tmp")
+DOCKER_MOUNTS=("-v" "/var/lib/containers:/var/lib/containers" "-v" "$RESULTS_DIR:/results" "-v" "$FILE_WRITE_RESULTS_DIR:/writeResults" "-v" "$LOGS_DIR:/tmp")
 
 ANALYSIS_IMAGE=gcr.io/ossf-malware-analysis/analysis
 
-ANALYSIS_ARGS=("analyze" "-package" "$PACKAGE" "-ecosystem" "$ECOSYSTEM" "-upload" "file:///results/")
+ANALYSIS_ARGS=("analyze" "-package" "$PACKAGE" "-ecosystem" "$ECOSYSTEM" "-upload" "file:///results/" "-upload-file-write-info" "file:///writeResults/")
 
 if [[ "$VERSION" != "latest" ]]; then
 	ANALYSIS_ARGS+=("-version" "$VERSION")
@@ -139,6 +142,7 @@ else
 	sleep 1 # Allow time to read info above before executing
 
 	mkdir -p "$RESULTS_DIR"
+	mkdir -p "$FILE_WRITE_RESULTS_DIR"
 	mkdir -p "$LOGS_DIR"
 
 	docker "${DOCKER_OPTS[@]}" "${DOCKER_MOUNTS[@]}" "$ANALYSIS_IMAGE" "${ANALYSIS_ARGS[@]}"
@@ -161,6 +165,7 @@ else
 	echo
 	print_package_details
 	rmdir --ignore-fail-on-non-empty "$RESULTS_DIR"
+	rmdir --ignore-fail-on-non-empty "$FILE_WRITE_RESULTS_DIR"
 	rmdir --ignore-fail-on-non-empty "$LOGS_DIR"
 fi
 
