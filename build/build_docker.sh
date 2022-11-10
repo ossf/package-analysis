@@ -3,7 +3,7 @@
 push=${PUSH:-"false"}
 tag=${RELEASE_TAG}
 
-BASE_PATH="$(dirname $(dirname $(realpath $0)))"
+BASE_PATH="$(dirname "$(dirname "$(realpath "$0")")")"
 REGISTRY=gcr.io/ossf-malware-analysis
 
 # Mapping from the container name to the path containing the Dockerfile.
