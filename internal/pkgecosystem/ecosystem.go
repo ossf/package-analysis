@@ -1,7 +1,6 @@
 package pkgecosystem
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -80,21 +79,6 @@ func (p *PkgManager) Package(name, version string) *Pkg {
 		version: version,
 		manager: p,
 	}
-}
-
-func (p *PkgManager) ResolvePackage(name, version, localPath string) (pkg *Pkg, err error) {
-	if localPath != "" {
-		// TODO version should be cross-checked with actual version parsed from package file
-		pkg = p.Local(name, version, localPath)
-	} else if version != "" {
-		pkg = p.Package(name, version)
-	} else {
-		pkg, err = p.Latest(name)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get latest version for package %s: %v", name, err)
-		}
-	}
-	return pkg, nil
 }
 
 func normalizePkgName(pkg string) string {
