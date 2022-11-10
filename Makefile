@@ -13,7 +13,7 @@ analysis_docker:
 	docker build -t ${REGISTRY}/analysis -f cmd/analyze/Dockerfile .
 
 check_scripts:
-	find -type f -name '*.sh' | xargs --no-run-if-empty shellcheck
+	find -type f -name '*.sh' | xargs --no-run-if-empty shellcheck -S warning
 
 run:
 	@echo "To perform a local analysis, please use ./run_analysis.sh"
