@@ -55,11 +55,7 @@ func main() {
 		return
 	}
 
-	log.Info("Got request",
-		log.Label("ecosystem", *ecosystem),
-		log.Label("name", *pkgName),
-		log.Label("localPath", *localPkg),
-		log.Label("version", *version))
+	worker.LogRequest(*ecosystem, *pkgName, *version, *localPkg, "")
 
 	pkg, err := manager.ResolvePackage(*pkgName, *version, *localPkg)
 	if err != nil {

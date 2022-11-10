@@ -67,13 +67,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		resultsBucket = resultsBucketOverride
 	}
 
-	log.Info(worker.GotRequestLogMsg,
-		log.Label("ecosystem", ecosystem),
-		log.Label("name", name),
-		log.Label("version", version),
-		log.Label("package_path", pkgPath),
-		log.Label("results_bucket_override", resultsBucketOverride),
-	)
+	worker.LogRequest(ecosystem, name, version, pkgPath, resultsBucketOverride)
 
 	localPkgPath := ""
 	sbOpts := []sandbox.Option{

@@ -17,7 +17,7 @@ const analysisErrorLogMsg = "Analysis error - analysis"
 const timeoutErrorLogMsg = "Analysis error - timeout"
 const otherErrorLogMsg = "Analysis error - other"
 const runErrorLogMsg = "Analysis run failed"
-const GotRequestLogMsg = "Got request"
+const gotRequestLogMsg = "Got request"
 
 // LogDynamicAnalysisError indicates some error happened while attempting to run
 // the package code, which was not caused by the package itself. This means it was
@@ -57,4 +57,15 @@ func LogDynamicAnalysisResult(pkg *pkgecosystem.Pkg, finalPhase pkgecosystem.Run
 	case analysis.StatusErrorOther:
 		log.Warn(otherErrorLogMsg, labels...)
 	}
+}
+
+// LogRequest records that a request for analysis was received by the worker.
+func LogRequest(ecosystem, name, version, localPath, resultsBucketOverride string) {
+	log.Info(gotRequestLogMsg,
+		log.Label("ecosystem", ecosystem),
+		log.Label("name", name),
+		log.Label("version", version),
+		log.Label("package_path", localPath),
+		log.Label("results_bucket_override", resultsBucketOverride),
+	)
 }
