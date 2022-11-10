@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/ossf/package-analysis/internal/worker"
 	"io"
 	"io/ioutil"
 	"math"
@@ -24,6 +23,7 @@ import (
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 	"github.com/ossf/package-analysis/internal/resultstore"
 	"github.com/ossf/package-analysis/internal/sandbox"
+	"github.com/ossf/package-analysis/internal/worker"
 )
 
 const (

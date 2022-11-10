@@ -3,10 +3,11 @@ package js
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"io"
 	"os/exec"
 	"strings"
+
+	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 )
 
 // parserOutputElement represents the output JSON format of the JS parser

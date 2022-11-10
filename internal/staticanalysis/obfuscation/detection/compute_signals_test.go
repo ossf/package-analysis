@@ -1,11 +1,12 @@
 package detection
 
 import (
+	"strings"
+	"testing"
+
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stats"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stringentropy"
 	"github.com/ossf/package-analysis/internal/utils"
-	"strings"
-	"testing"
 )
 
 const jsParserPath = "../../parsing/js/babel-parser.js"

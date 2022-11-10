@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/ossf/package-analysis/internal/worker"
 	"net/url"
 	"os"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 	"github.com/ossf/package-analysis/internal/resultstore"
 	"github.com/ossf/package-analysis/internal/sandbox"
+	"github.com/ossf/package-analysis/internal/worker"
 )
 
 var (

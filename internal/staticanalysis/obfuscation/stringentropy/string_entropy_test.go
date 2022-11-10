@@ -1,9 +1,10 @@
 package stringentropy
 
 import (
-	"github.com/ossf/package-analysis/internal/utils"
 	"math"
 	"testing"
+
+	"github.com/ossf/package-analysis/internal/utils"
 )
 
 type entropyTestCase struct {

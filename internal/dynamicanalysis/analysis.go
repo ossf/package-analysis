@@ -2,6 +2,7 @@ package dynamicanalysis
 
 import (
 	"fmt"
+
 	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/dnsanalyzer"
 	"github.com/ossf/package-analysis/internal/log"

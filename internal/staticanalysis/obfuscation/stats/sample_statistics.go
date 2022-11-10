@@ -2,10 +2,12 @@ package stats
 
 import (
 	"fmt"
-	"github.com/ossf/package-analysis/internal/utils"
+	"math"
+
 	"golang.org/x/exp/constraints"
 	"golang.org/x/exp/slices"
-	"math"
+
+	"github.com/ossf/package-analysis/internal/utils"
 )
 
 type RealNumber interface {

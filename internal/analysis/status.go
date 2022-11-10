@@ -2,6 +2,7 @@ package analysis
 
 import (
 	"encoding/json"
+
 	"github.com/ossf/package-analysis/internal/sandbox"
 )
 
