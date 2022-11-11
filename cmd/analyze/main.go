@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/ossf/package-analysis/internal/analysis"
-	"github.com/ossf/package-analysis/internal/dynamicanalysis"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 	"github.com/ossf/package-analysis/internal/resultstore"
