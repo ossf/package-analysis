@@ -57,7 +57,7 @@ func main() {
 
 	worker.LogRequest(*ecosystem, *pkgName, *version, *localPkg, "")
 
-	pkg, err := manager.ResolvePackage(*pkgName, *version, *localPkg)
+	pkg, err := worker.ResolvePkg(manager, *pkgName, *version, *localPkg)
 	if err != nil {
 		log.Panic("Error resolving package",
 			log.Label("ecosystem", *ecosystem),

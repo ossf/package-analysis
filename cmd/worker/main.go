@@ -104,7 +104,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		sbOpts = append(sbOpts, sandbox.Volume(f.Name(), localPkgPath))
 	}
 
-	pkg, err := manager.ResolvePackage(name, version, localPkgPath)
+	pkg, err := worker.ResolvePkg(manager, name, version, localPkgPath)
 	if err != nil {
 		log.Error("Error resolving package",
 			log.Label("ecosystem", ecosystem),
