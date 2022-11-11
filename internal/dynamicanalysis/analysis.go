@@ -1,9 +1,9 @@
 package dynamicanalysis
 
 import (
-	"encoding/json"
 	"fmt"
 
+	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/dnsanalyzer"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/packetcapture"
@@ -15,46 +15,6 @@ const (
 	maxOutputLines = 20
 	maxOutputBytes = 4 * 1024
 )
-
-type Status string
-
-// MarshalJSON implements the json.Marshaler interface.
-func (s Status) MarshalJSON() ([]byte, error) {
-	return json.Marshal(string(s))
-}
-
-const (
-	// StatusCompleted indicates that the analysis run completed successfully.
-	StatusCompleted = Status("completed")
-
-	// StatusErrorTimeout indicates that the analysis was aborted due to a
-	// timeout.
-	StatusErrorTimeout = Status("error_timeout")
-
-	// StatusErrorAnalysis indicates that the package being analyzed failed
-	// while running the specified command.
-	//
-	// The Stdout and Stderr in the Result should be consulted to understand
-	// further why it failed.
-	StatusErrorAnalysis = Status("error_analysis")
-
-	// StatusErrorOther indicates an error during some part of the analysis
-	// excluding errors covered by other statuses.
-	StatusErrorOther = Status("error_other")
-)
-
-func statusForRunResult(r *sandbox.RunResult) Status {
-	switch r.Status() {
-	case sandbox.RunStatusSuccess:
-		return StatusCompleted
-	case sandbox.RunStatusFailure:
-		return StatusErrorAnalysis
-	case sandbox.RunStatusTimeout:
-		return StatusErrorTimeout
-	default:
-		return StatusErrorOther
-	}
-}
 
 type fileResult struct {
 	Path   string
@@ -85,8 +45,8 @@ type dnsResult struct {
 }
 
 type Result struct {
-	Status Status
-	Stdout []byte
+	Status   analysis.Status
+	Stdout   []byte
 	Stderr   []byte
 	Files    []fileResult
 	Sockets  []socketResult
@@ -95,11 +55,11 @@ type Result struct {
 }
 
 var (
-	resultError = &Result{Status: StatusErrorOther}
+	resultError = &Result{Status: analysis.StatusErrorOther}
 )
 
 func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
-	log.Info("Running analysis",
+	log.Info("Running dynamic analysis",
 		"args", args)
 
 	log.Debug("Preparing packet capture")
@@ -113,7 +73,7 @@ func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
 	defer pcap.Close()
 
 	// Run the command
-	log.Debug("Running the command",
+	log.Debug("Running dynamic analysis command",
 		"args", args)
 	r, err := sb.Run(args...)
 	if err != nil {
@@ -137,7 +97,7 @@ func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
 	}
 
 	result := Result{
-		Status: statusForRunResult(r),
+		Status: analysis.StatusForRunResult(r),
 		Stdout: lastLines(r.Stdout(), maxOutputLines, maxOutputBytes),
 		Stderr: lastLines(r.Stderr(), maxOutputLines, maxOutputBytes),
 	}

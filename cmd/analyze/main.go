@@ -7,11 +7,11 @@ import (
 	"os"
 
 	"github.com/ossf/package-analysis/internal/analysis"
-	"github.com/ossf/package-analysis/internal/dynamicanalysis"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 	"github.com/ossf/package-analysis/internal/resultstore"
 	"github.com/ossf/package-analysis/internal/sandbox"
+	"github.com/ossf/package-analysis/internal/worker"
 )
 
 var (
@@ -55,11 +55,7 @@ func main() {
 		return
 	}
 
-	log.Info("Got request",
-		log.Label("ecosystem", *ecosystem),
-		log.Label("name", *pkgName),
-		log.Label("localPath", *localPkg),
-		log.Label("version", *version))
+	worker.LogRequest(*ecosystem, *pkgName, *version, *localPkg, "")
 
 	pkg, err := manager.ResolvePackage(*pkgName, *version, *localPkg)
 	if err != nil {
@@ -83,10 +79,10 @@ func main() {
 		sbOpts = append(sbOpts, sandbox.Volume(*localPkg, *localPkg))
 	}
 
-	sb := sandbox.New(manager.Image(), sbOpts...)
+	sb := sandbox.New(manager.DynamicAnalysisImage(), sbOpts...)
 	defer sb.Clean()
 
-	results, lastRunPhase, err := analysis.RunDynamicAnalysis(sb, pkg)
+	results, lastRunPhase, err := worker.RunDynamicAnalysis(sb, pkg)
 	if err != nil {
 		log.Fatal("Aborting due to run error", "error", err)
 	}
@@ -103,7 +99,7 @@ func main() {
 
 	// this is only valid if RunDynamicAnalysis() returns nil err
 	lastStatus := results[lastRunPhase].Status
-	if lastStatus != dynamicanalysis.StatusCompleted {
+	if lastStatus != analysis.StatusCompleted {
 		log.Fatal("Analysis phase did not complete successfully",
 			"lastRunPhase", lastRunPhase,
 			"status", lastStatus)

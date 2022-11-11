@@ -1,9 +1,10 @@
 package js
 
 import (
-	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"reflect"
 	"testing"
+
+	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 )
 
 const jsParserPath = "./babel-parser.js"

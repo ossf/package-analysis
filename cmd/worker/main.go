@@ -19,11 +19,11 @@ import (
 	_ "gocloud.dev/pubsub/gcppubsub"
 	_ "gocloud.dev/pubsub/kafkapubsub"
 
-	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 	"github.com/ossf/package-analysis/internal/resultstore"
 	"github.com/ossf/package-analysis/internal/sandbox"
+	"github.com/ossf/package-analysis/internal/worker"
 )
 
 const (
@@ -67,13 +67,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		resultsBucket = resultsBucketOverride
 	}
 
-	log.Info("Got request",
-		log.Label("ecosystem", ecosystem),
-		log.Label("name", name),
-		log.Label("version", version),
-		log.Label("package_path", pkgPath),
-		log.Label("results_bucket_override", resultsBucketOverride),
-	)
+	worker.LogRequest(ecosystem, name, version, pkgPath, resultsBucketOverride)
 
 	localPkgPath := ""
 	sbOpts := []sandbox.Option{
@@ -119,10 +113,10 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		return err
 	}
 
-	sb := sandbox.New(manager.Image(), sbOpts...)
+	sb := sandbox.New(manager.DynamicAnalysisImage(), sbOpts...)
 	defer sb.Clean()
 
-	results, _, err := analysis.RunDynamicAnalysis(sb, pkg)
+	results, _, err := worker.RunDynamicAnalysis(sb, pkg)
 	if err != nil {
 		return err
 	}

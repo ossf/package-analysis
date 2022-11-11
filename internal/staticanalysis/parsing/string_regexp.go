@@ -1,10 +1,11 @@
 package parsing
 
 import (
-	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/utils"
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/ossf/package-analysis/internal/utils"
 )
 
 // General reference for matching string literals

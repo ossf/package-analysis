@@ -44,7 +44,7 @@ func (p *PkgManager) String() string {
 	return p.name
 }
 
-func (p *PkgManager) Image() string {
+func (p *PkgManager) DynamicAnalysisImage() string {
 	return p.image
 }
 
