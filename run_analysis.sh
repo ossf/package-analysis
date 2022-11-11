@@ -85,20 +85,20 @@ fi
 
 
 
-DOCKER_OPTS=(run --cgroupns=host --privileged -ti)
+DOCKER_OPTS=("run" "--cgroupns=host" "--privileged" "-ti")
 
-DOCKER_MOUNTS=(-v /var/lib/containers:/var/lib/containers -v "$RESULTS_DIR":/results -v "$LOGS_DIR":/tmp)
+DOCKER_MOUNTS=("-v" "/var/lib/containers:/var/lib/containers" "-v" "$RESULTS_DIR:/results" "-v" "$LOGS_DIR:/tmp")
 
 ANALYSIS_IMAGE=gcr.io/ossf-malware-analysis/analysis
 
-ANALYSIS_ARGS=(analyze -package "$PACKAGE" -ecosystem "$ECOSYSTEM" -upload file:///results/)
+ANALYSIS_ARGS=("analyze" "-package" "$PACKAGE" "-ecosystem" "$ECOSYSTEM" "-upload" "file:///results/")
 
 if [[ "$VERSION" != "latest" ]]; then
-	ANALYSIS_ARGS+=(-version "$VERSION")
+	ANALYSIS_ARGS+=("-version" "$VERSION")
 fi
 
 if [[ $NOPULL -eq 1 ]]; then
-	ANALYSIS_ARGS+=(-nopull)
+	ANALYSIS_ARGS+=("-nopull")
 fi
 
 if [[ $LOCAL -eq 1 ]]; then
@@ -106,10 +106,10 @@ if [[ $LOCAL -eq 1 ]]; then
 	LOCATION="$PKG_PATH"
 
 	# mount local package file in root of docker image
-	DOCKER_MOUNTS+=(-v "$PKG_PATH:/$PKG_FILE")
+	DOCKER_MOUNTS+=("-v" "$PKG_PATH:/$PKG_FILE")
 
 	# tell analyis to use mounted package file
-	ANALYSIS_ARGS+=(-local "/$PKG_FILE")
+	ANALYSIS_ARGS+=("-local" "/$PKG_FILE")
 else
 	LOCATION="remote"
 fi
