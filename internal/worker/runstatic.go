@@ -10,7 +10,7 @@ type StaticAnalysisResults map[staticanalysis.Task]any
 
 func RunStaticAnalyses(sb sandbox.Sandbox, pkg *pkgecosystem.Pkg, tasks ...staticanalysis.Task) (results StaticAnalysisResults, err error) {
 	if len(tasks) == 0 {
-		tasks = staticanalysis.AllTasks
+		tasks = staticanalysis.AllTasks()
 	}
 
 	results = make(StaticAnalysisResults)

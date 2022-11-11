@@ -1,6 +1,6 @@
 package analysis
 
-// Mode is used to distinguish between whether static or dynamic analysis is being performed
+// Mode (analysis mode) is used to distinguish between whether static or dynamic analysis is being performed
 type Mode string
 
 const (
