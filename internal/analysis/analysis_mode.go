@@ -4,22 +4,21 @@ package analysis
 type Mode string
 
 const (
-	Dynamic     Mode = "dynamic"
-	Static      Mode = "static"
-	InvalidMode Mode = ""
+	Dynamic Mode = "dynamic"
+	Static  Mode = "static"
 )
 
 func AllModes() []Mode {
 	return []Mode{Dynamic, Static}
 }
 
-func ModeFromString(s string) Mode {
+func ModeFromString(s string) (Mode, bool) {
 	switch Mode(s) {
 	case Dynamic:
-		return Dynamic
+		return Dynamic, true
 	case Static:
-		return Static
+		return Static, true
 	default:
-		return InvalidMode
+		return "", false
 	}
 }

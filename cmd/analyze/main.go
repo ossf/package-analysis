@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"net/url"
 	"os"
 	"strings"
@@ -19,17 +18,16 @@ import (
 )
 
 var (
-	pkgName         = flag.String("package", "", "package name")
-	localPkg        = flag.String("local", "", "local package path")
-	ecosystem       = flag.String("ecosystem", "", "ecosystem (npm, pypi, or rubygems)")
-	version         = flag.String("version", "", "version")
-	noPull          = flag.Bool("nopull", false, "disables pulling down sandbox images")
-	dynamicUpload   = flag.String("upload", "", "bucket path for uploading dynamic analysis results")
-	dynamicImageTag = flag.String("image-tag", "", "set image tag for dynamic analysis")
-	staticUpload    = flag.String("upload-static", "", "bucket path for uploading static analysis results")
-	staticImageTag  = flag.String("image-tag-static", "", "set image tag for static analysis")
-	listModes       = flag.Bool("list-modes", false, "prints out a list of available analysis modes")
-	analysisMode    = utils.CommaSeparatedFlags("analysis-mode", "dynamic",
+	pkgName       = flag.String("package", "", "package name")
+	localPkg      = flag.String("local", "", "local package path")
+	ecosystem     = flag.String("ecosystem", "", "ecosystem (npm, pypi, or rubygems)")
+	version       = flag.String("version", "", "version")
+	noPull        = flag.Bool("nopull", false, "disables pulling down sandbox images")
+	dynamicUpload = flag.String("upload", "", "bucket path for uploading dynamic analysis results")
+	imageTag      = flag.String("image-tag", "", "set image tag for analysis sandboxes")
+	staticUpload  = flag.String("upload-static", "", "bucket path for uploading static analysis results")
+	listModes     = flag.Bool("list-modes", false, "prints out a list of available analysis modes")
+	analysisMode  = utils.CommaSeparatedFlags("analysis-mode", "dynamic",
 		"single or comma separated list of analysis modes to run. Use -list-modes to see available options")
 )
 
@@ -64,14 +62,10 @@ makeSandboxOpts prepares options for the sandbox based on command line arguments
 2. Respect the "-nopull" option.
 3. Ensure any local package is mapped through.
 */
-func makeSandboxOpts(mode analysis.Mode) []sandbox.Option {
+func makeSandboxOpts() []sandbox.Option {
 	var sbOpts []sandbox.Option
 
-	if mode == analysis.Static {
-		sbOpts = append(sbOpts, sandbox.Tag(*staticImageTag))
-	} else {
-		sbOpts = append(sbOpts, sandbox.Tag(*dynamicImageTag))
-	}
+	sbOpts = append(sbOpts, sandbox.Tag(*imageTag))
 
 	if *noPull {
 		sbOpts = append(sbOpts, sandbox.NoPull())
@@ -84,7 +78,7 @@ func makeSandboxOpts(mode analysis.Mode) []sandbox.Option {
 }
 
 func dynamicAnalysis(manager *pkgecosystem.PkgManager, pkg *pkgecosystem.Pkg) {
-	sbOpts := makeSandboxOpts(analysis.Static)
+	sbOpts := makeSandboxOpts()
 	sb := sandbox.New(manager.DynamicAnalysisImage(), sbOpts...)
 	defer cleanupSandbox(sb)
 
@@ -113,7 +107,7 @@ func dynamicAnalysis(manager *pkgecosystem.PkgManager, pkg *pkgecosystem.Pkg) {
 }
 
 func staticAnalysis(manager *pkgecosystem.PkgManager, pkg *pkgecosystem.Pkg) {
-	sbOpts := makeSandboxOpts(analysis.Dynamic)
+	sbOpts := makeSandboxOpts()
 	image := "gcr.io/ossf-malware-analysis/static-analysis"
 
 	sb := sandbox.New(image, sbOpts...)
@@ -165,9 +159,9 @@ func main() {
 
 	runMode := make(map[analysis.Mode]bool)
 	for _, analysisName := range analysisMode.Values {
-		mode := analysis.ModeFromString(strings.ToLower(analysisName))
-		if mode == analysis.InvalidMode {
-			fmt.Printf("Unknown analysis mode: %s\n", analysisName)
+		mode, ok := analysis.ModeFromString(strings.ToLower(analysisName))
+		if !ok {
+			log.Error("Unknown analysis mode: " + analysisName)
 			printAnalysisModes()
 			return
 		}
