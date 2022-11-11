@@ -3,14 +3,15 @@ package js
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"io"
 	"os/exec"
 	"strings"
+
+	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 )
 
-// ParserOutputElement represents the output JSON format of the JS parser
-type ParserOutputElement struct {
+// parserOutputElement represents the output JSON format of the JS parser
+type parserOutputElement struct {
 	SymbolType    string         `json:"type"`
 	SymbolSubtype string         `json:"subtype"`
 	Data          any            `json:"data"`
@@ -69,7 +70,7 @@ func ParseJS(parserPath string, filePath string, sourceString string) (*parsing.
 
 	// parse JSON to get results as Go struct
 	decoder := json.NewDecoder(strings.NewReader(parserOutput))
-	var storage []ParserOutputElement
+	var storage []parserOutputElement
 	err = decoder.Decode(&storage)
 	if err != nil {
 		return nil, parserOutput, err

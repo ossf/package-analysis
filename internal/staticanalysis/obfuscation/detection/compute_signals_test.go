@@ -1,11 +1,12 @@
 package detection
 
 import (
-	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stats"
-	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stringentropy"
-	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/utils"
 	"strings"
 	"testing"
+
+	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stats"
+	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stringentropy"
+	"github.com/ossf/package-analysis/internal/utils"
 )
 
 const jsParserPath = "../../parsing/js/babel-parser.js"
@@ -52,7 +53,7 @@ func testSignals(t *testing.T, signals Signals, stringLiterals, identifiers []st
 	}
 }
 
-func TestBasic(t *testing.T) {
+func TestBasicSignals(t *testing.T) {
 	jsSource := `var a = "hello"`
 	rawData, err := CollectData(jsParserPath, "", jsSource, true)
 	if err != nil {
@@ -65,7 +66,7 @@ func TestBasic(t *testing.T) {
 	}
 }
 
-func TestBasic2(t *testing.T) {
+func TestBasicSignals2(t *testing.T) {
 	jsSource := `
 		function test(a, b = 2) {
 			console.log("hello")

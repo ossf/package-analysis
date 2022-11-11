@@ -2,12 +2,13 @@ package detection
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stats"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stringentropy"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing/js"
-	"strconv"
-	"strings"
 )
 
 // characterAnalysis performs analysis on a collection of string symbols, returning:
