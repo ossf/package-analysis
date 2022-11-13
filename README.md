@@ -110,11 +110,17 @@ and full logs to `/tmp/dockertmp`.
 
 ### Live package
 
-To run this on a live package (e.g. the "Django" package on
+To run this on a live package (e.g. the latest version of the "Django" package on
 [pypi.org](https://pypi.org))
 
 ```bash
 $ ./run_analysis.sh pypi Django
+```
+
+Or with a specific version
+
+```bash
+$ ./run_analysis.sh pypi Django 4.1.3
 ```
 
 ### Local package
@@ -124,7 +130,7 @@ located in local archive `/path/to/test.whl`
 
 
 ```bash
-$ ./run_analysis.sh pypi test /path/to/test.whl
+$ ./run_analysis.sh pypi test --local /path/to/test.whl
 ```
 
 ### Docker notes
