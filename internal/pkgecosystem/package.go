@@ -5,7 +5,6 @@ type Pkg struct {
 	version string
 	manager *PkgManager
 	local   string
-	command string
 }
 
 func (p *Pkg) Name() string {
