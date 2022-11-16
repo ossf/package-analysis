@@ -1,7 +1,6 @@
 package pkgecosystem
 
 import (
-	"fmt"
 	"os"
 	"testing"
 )
@@ -13,31 +12,93 @@ func TestDownloadNpmArchive(t *testing.T) {
 		pkgVersion string
 		wantErr    bool
 	}{
-		{"download 'abc' with latest version", "abc", "", false},
-		{"download 'abc' with valid version", "abc", "0.4", false},
-		{"download 'abc' with invalid version", "abc", "0.4333", true},
-		{"download invalid package", "abcdddddddd", "", true},
+		{"pkgname=async version='latest'", "async", "latest", false},
+		{"pkgname=async version=(valid)", "async", "3.2.4", false},
+		{"pkgname=async version=(invalid)", "async", "3.2.4444444", true},
+		{"pkgname=(invalid)", "fr(2t5j923)", "latest", true},
 	}
 	tmpDir, err := os.MkdirTemp("", "package-analysis-test-npm-dl")
-	fmt.Printf("Using temp dir %s\n", tmpDir)
 	if err != nil {
 		t.Fatalf("Could not create temp dir for downloads: %v", err)
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotPath, err := downloadNpmArchive(tt.pkgName, tt.pkgVersion, tmpDir)
+			downloadPath, err := downloadNPMArchive(tt.pkgName, tt.pkgVersion, tmpDir)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Want error: %v; got error: %v", tt.wantErr, err)
+				return
+			}
+
 			if err != nil {
-				if !tt.wantErr {
-					t.Error("Unexpected error")
-				}
-				fmt.Printf("%v\n", err)
-			} else if gotPath == "" {
-				t.Errorf("downloadNpmArchive() got empty path")
+				// File wasn't meant to download properly
+				return
+			}
+
+			if downloadPath == "" {
+				t.Errorf("downloadNPMArchive() returned no error but empty path")
+				return
+			}
+
+			err = os.Remove(downloadPath)
+			if err != nil {
+				t.Errorf("Error removing file: %v", err)
 			}
 		})
 	}
 	err = os.RemoveAll(tmpDir)
 	if err != nil {
-		t.Errorf("error removing temp dir: %v", err)
+		t.Errorf("error removing temp dir (%s): %v", tmpDir, err)
+	}
+}
+
+func TestDownloadToDirectory(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "package-analysis-test-dl")
+	if err != nil {
+		t.Fatalf("Could not create temp dir for downloads: %v", err)
+	}
+
+	testURL := "https://google.com/robots.txt"
+
+	tests := []struct {
+		name     string
+		url      string
+		dir      string
+		filename string
+		wantErr  bool
+	}{
+		{testURL + " (plain)", testURL, tmpDir, "robots.txt", false},
+		{testURL + "123 (invalid URL)", testURL + "123", tmpDir, testURL + "123", true},
+		{testURL + " (invalid dir)", testURL, "/tmp/does/not/exist", "robots.txt", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			downloadedFile, err := downloadToDirectory(tt.dir, tt.url)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Want error: %v; got error: %v", tt.wantErr, err)
+				return
+			}
+
+			if err != nil {
+				// File wasn't meant to download properly
+				return
+			}
+
+			stat, err := os.Stat(downloadedFile)
+			if err != nil {
+				t.Errorf("stat() returned error: %v", err)
+				return
+			}
+			if stat.Name() != tt.filename {
+				t.Errorf("Expected filename %s, got filename %s", tt.filename, stat.Name())
+			}
+			err = os.Remove(downloadedFile)
+			if err != nil {
+				t.Errorf("Error removing file: %v", err)
+			}
+		})
+	}
+	err = os.RemoveAll(tmpDir)
+	if err != nil {
+		t.Errorf("error removing temp dir (%s): %v", tmpDir, err)
 	}
 }
