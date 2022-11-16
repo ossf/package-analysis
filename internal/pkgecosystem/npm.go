@@ -43,52 +43,36 @@ func getNPMLatest(pkg string) (string, error) {
 	return details.DistTags.Latest, nil
 }
 
-func downloadNPMArchive(pkgName string, version string, directory string) (path string, err error) {
-	funcName := "downloadNPMArchive"
-	if directory == "" {
-		return "", fmt.Errorf("%s: no directory specified", funcName)
-	}
-
-	url := fmt.Sprintf("https://registry.npmjs.org/%s/%s", pkgName, version)
-
-	resp, err := http.Get(url)
-
+func getNPMArchiveURL(pkgName, version string) (string, error) {
+	resp, err := http.Get(fmt.Sprintf("https://registry.npmjs.org/%s/%s", pkgName, version))
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
 
 	responseBytes, err := io.ReadAll(resp.Body)
-
 	if err != nil {
-		return "", fmt.Errorf("%s: error reading HTTP response: %v", funcName, err)
+		return "", fmt.Errorf("error reading HTTP response: %v", err)
 	}
 
 	responseString := string(responseBytes)
 	decoder := json.NewDecoder(strings.NewReader(responseString))
-	var details npmVersionJSON
-	err = decoder.Decode(&details)
+	var packageInfo npmVersionJSON
+	err = decoder.Decode(&packageInfo)
 	if err != nil {
-		return "", fmt.Errorf("%s: %v. Response: %s", funcName, err, responseString)
+		// invalid version, non-existent package, etc. Details in responseString
+		return "", fmt.Errorf("%v. NPM response: %s", err, responseString)
 	}
 
-	downloadURL := details.Dist.Tarball
-
-	// get filename from last element of NPM download url
-	archivePath, err := downloadToDirectory(directory, downloadURL)
-
-	if err != nil {
-		return "", err
-	}
-
-	return archivePath, nil
+	return packageInfo.Dist.Tarball, nil
 }
 
 var npmPkgManager = PkgManager{
-	name:    "npm",
-	image:   "gcr.io/ossf-malware-analysis/node",
-	command: "/usr/local/bin/analyze.js",
-	latest:  getNPMLatest,
+	name:       "npm",
+	image:      "gcr.io/ossf-malware-analysis/node",
+	command:    "/usr/local/bin/analyze.js",
+	latest:     getNPMLatest,
+	archiveUrl: getNPMArchiveURL,
 	runPhases: []RunPhase{
 		Install,
 		Import,
