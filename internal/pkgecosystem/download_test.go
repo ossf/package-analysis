@@ -57,7 +57,7 @@ func TestDownloadNpmArchive(t *testing.T) {
 		{"pkgname=(invalid)", "fr(2t5j923)", "latest", true},
 	}
 
-	testDownload(t, tests, Manager("npm"))
+	testDownload(t, tests, Manager(NPM))
 }
 
 func TestDownloadPyPIArchive(t *testing.T) {
@@ -67,7 +67,7 @@ func TestDownloadPyPIArchive(t *testing.T) {
 		{"pkgname=(invalid)", "fr(2t5j923)", "123", true},
 	}
 
-	testDownload(t, tests, Manager("pypi"))
+	testDownload(t, tests, Manager(PyPI))
 }
 
 func TestDownloadToDirectory(t *testing.T) {
