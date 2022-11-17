@@ -1,6 +1,7 @@
 package pkgecosystem
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -17,11 +18,12 @@ const (
 // PkgManager
 // Represents how packages from a common ecosystem are accessed
 type PkgManager struct {
-	name      string
-	image     string
-	command   string
-	latest    func(string) (string, error)
-	runPhases []RunPhase
+	name       string
+	image      string
+	command    string
+	latest     func(string) (string, error)
+	archiveUrl func(string, string) (string, error)
+	runPhases  []RunPhase
 }
 
 var (
@@ -79,6 +81,24 @@ func (p *PkgManager) Package(name, version string) *Pkg {
 		version: version,
 		manager: p,
 	}
+}
+
+func (p *PkgManager) DownloadArchive(name, version, directory string) (string, error) {
+	if directory == "" {
+		return "", fmt.Errorf("no directory specified")
+	}
+
+	downloadURL, err := p.archiveUrl(name, version)
+	if err != nil {
+		return "", err
+	}
+
+	archivePath, err := downloadToDirectory(directory, downloadURL)
+	if err != nil {
+		return "", err
+	}
+
+	return archivePath, nil
 }
 
 func normalizePkgName(pkg string) string {
