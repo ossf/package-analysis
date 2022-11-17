@@ -5,20 +5,28 @@ import (
 	"strings"
 )
 
-// RunPhase
-// Represents a way to 'run' a package during its usage lifecycle
-// This is relevant to dynamic analysis
+// Ecosystem represents an open source package ecosystem from which packages can be downloaded
+type Ecosystem string
+
+// RunPhase represents a way to 'run' a package during its usage lifecycle.
+// This is relevant to dynamic analysis.
 type RunPhase string
 
 const (
 	Import  RunPhase = "import"
 	Install RunPhase = "install"
+
+	CratesIO  Ecosystem = "crates.io"
+	NPM       Ecosystem = "npm"
+	Packagist Ecosystem = "packagist"
+	PyPi      Ecosystem = "pypi"
+	Rubygems  Ecosystem = "rubygems"
 )
 
 // PkgManager
 // Represents how packages from a common ecosystem are accessed
 type PkgManager struct {
-	name       string
+	ecosystem  Ecosystem
 	image      string
 	command    string
 	latest     func(string) (string, error)
@@ -27,22 +35,22 @@ type PkgManager struct {
 }
 
 var (
-	supportedPkgManagers = map[string]*PkgManager{
-		npmPkgManager.name:       &npmPkgManager,
-		pypiPkgManager.name:      &pypiPkgManager,
-		rubygemsPkgManager.name:  &rubygemsPkgManager,
-		packagistPkgManager.name: &packagistPkgManager,
-		cratesPkgManager.name:    &cratesPkgManager,
+	supportedPkgManagers = map[Ecosystem]*PkgManager{
+		npmPkgManager.ecosystem:       &npmPkgManager,
+		pypiPkgManager.ecosystem:      &pypiPkgManager,
+		rubygemsPkgManager.ecosystem:  &rubygemsPkgManager,
+		packagistPkgManager.ecosystem: &packagistPkgManager,
+		cratesPkgManager.ecosystem:    &cratesPkgManager,
 	}
 )
 
 func Manager(ecosystem string) *PkgManager {
-	return supportedPkgManagers[ecosystem]
+	return supportedPkgManagers[Ecosystem(ecosystem)]
 }
 
 // String implements the Stringer interface to support pretty printing.
 func (p *PkgManager) String() string {
-	return p.name
+	return string(p.ecosystem)
 }
 
 func (p *PkgManager) DynamicAnalysisImage() string {

@@ -68,7 +68,7 @@ func getNPMArchiveURL(pkgName, version string) (string, error) {
 }
 
 var npmPkgManager = PkgManager{
-	name:       "npm",
+	ecosystem:  NPM,
 	image:      "gcr.io/ossf-malware-analysis/node",
 	command:    "/usr/local/bin/analyze.js",
 	latest:     getNPMLatest,

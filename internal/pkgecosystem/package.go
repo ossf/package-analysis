@@ -16,7 +16,7 @@ func (p *Pkg) Version() string {
 }
 
 func (p *Pkg) Ecosystem() string {
-	return p.manager.name
+	return string(p.manager.ecosystem)
 }
 
 func (p *Pkg) IsLocal() bool {
