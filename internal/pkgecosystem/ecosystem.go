@@ -19,8 +19,8 @@ const (
 	CratesIO  Ecosystem = "crates.io"
 	NPM       Ecosystem = "npm"
 	Packagist Ecosystem = "packagist"
-	PyPi      Ecosystem = "pypi"
-	Rubygems  Ecosystem = "rubygems"
+	PyPI      Ecosystem = "pypi"
+	RubyGems  Ecosystem = "rubygems"
 )
 
 // PkgManager
@@ -44,8 +44,8 @@ var (
 	}
 )
 
-func Manager(ecosystem string) *PkgManager {
-	return supportedPkgManagers[Ecosystem(ecosystem)]
+func Manager(ecosystem Ecosystem) *PkgManager {
+	return supportedPkgManagers[ecosystem]
 }
 
 // String implements the Stringer interface to support pretty printing.

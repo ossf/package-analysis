@@ -5,9 +5,10 @@ package resultstore
 type Pkg interface {
 	Name() string
 	Version() string
-	Ecosystem() string
+	EcosystemName() string
 }
 
+// pkg is an internal representation of a Pkg, which can be marshalled into JSON
 type pkg struct {
 	Name      string
 	Version   string

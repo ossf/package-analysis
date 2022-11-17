@@ -146,7 +146,7 @@ func main() {
 		return
 	}
 
-	manager := pkgecosystem.Manager(*ecosystem)
+	manager := pkgecosystem.Manager(pkgecosystem.Ecosystem(*ecosystem))
 	if manager == nil {
 		log.Panic("Unsupported pkg manager",
 			log.Label("ecosystem", *ecosystem))

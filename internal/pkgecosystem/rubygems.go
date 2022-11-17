@@ -28,7 +28,7 @@ func getRubyGemsLatest(pkg string) (string, error) {
 }
 
 var rubygemsPkgManager = PkgManager{
-	ecosystem: Rubygems,
+	ecosystem: RubyGems,
 	image:     "gcr.io/ossf-malware-analysis/ruby",
 	command:   "/usr/local/bin/analyze.rb",
 	latest:    getRubyGemsLatest,
