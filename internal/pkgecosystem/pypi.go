@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// pyPIPackageInfoJSON represents relevant JSON data from the PyPI web API response
+// pypiPackageInfoJSON represents relevant JSON data from the PyPI web API response
 // when package information is requested. The differences in response format between
 // (valid) requests made with a specific package version and with no package version
 // are not significant in our case.
@@ -16,7 +16,7 @@ import (
 // holding information for that package version. If the version is unspecified, Urls contains
 // an entry corresponding to each version of the package available on PyPI.)
 // See https://warehouse.pypa.io/api-reference/json.html and https://peps.python.org/pep-0691
-type pyPIPackageInfoJSON struct {
+type pypiPackageInfoJSON struct {
 	Info struct {
 		Version string `json:"version"`
 	} `json:"info"`
@@ -34,7 +34,7 @@ func getPyPILatest(pkg string) (string, error) {
 	defer resp.Body.Close()
 
 	decoder := json.NewDecoder(resp.Body)
-	var details pyPIPackageInfoJSON
+	var details pypiPackageInfoJSON
 	err = decoder.Decode(&details)
 	if err != nil {
 		return "", err
@@ -57,7 +57,7 @@ func getPyPIArchiveURL(pkgName, version string) (string, error) {
 
 	responseString := string(responseBytes)
 	decoder := json.NewDecoder(strings.NewReader(responseString))
-	var packageInfo pyPIPackageInfoJSON
+	var packageInfo pypiPackageInfoJSON
 	err = decoder.Decode(&packageInfo)
 	if err != nil {
 		// invalid version, non-existent package, etc. Details in responseString
