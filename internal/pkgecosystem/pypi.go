@@ -76,7 +76,7 @@ func getPyPIArchiveURL(pkgName, version string) (string, error) {
 }
 
 var pypiPkgManager = PkgManager{
-	name:       "pypi",
+	ecosystem:  PyPi,
 	image:      "gcr.io/ossf-malware-analysis/python",
 	command:    "/usr/local/bin/analyze.py",
 	latest:     getPyPILatest,
