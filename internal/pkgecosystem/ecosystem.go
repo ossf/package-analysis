@@ -26,12 +26,13 @@ const (
 // PkgManager
 // Represents how packages from a common ecosystem are accessed
 type PkgManager struct {
-	ecosystem  Ecosystem
-	image      string
-	command    string
-	latest     func(string) (string, error)
-	archiveUrl func(string, string) (string, error)
-	runPhases  []RunPhase
+	ecosystem      Ecosystem
+	image          string
+	command        string
+	latestVersion  func(string) (string, error)
+	archiveUrl     func(string, string) (string, error)
+	extractArchive func(string, string) error
+	runPhases      []RunPhase
 }
 
 var (
@@ -63,7 +64,7 @@ func (p *PkgManager) RunPhases() []RunPhase {
 
 func (p *PkgManager) Latest(name string) (*Pkg, error) {
 	name = normalizePkgName(name)
-	version, err := p.latest(name)
+	version, err := p.latestVersion(name)
 	if err != nil {
 		return nil, err
 	}
@@ -107,6 +108,10 @@ func (p *PkgManager) DownloadArchive(name, version, directory string) (string, e
 	}
 
 	return archivePath, nil
+}
+
+func (p *PkgManager) ExtractArchive(archivePath, extractDir string) error {
+	return p.extractArchive(archivePath, extractDir)
 }
 
 func normalizePkgName(pkg string) string {
