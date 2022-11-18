@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/ossf/package-analysis/internal/utils"
 )
 
 // pypiPackageInfoJSON represents relevant JSON data from the PyPI web API response
@@ -76,11 +78,12 @@ func getPyPIArchiveURL(pkgName, version string) (string, error) {
 }
 
 var pypiPkgManager = PkgManager{
-	ecosystem:     PyPI,
-	image:         "gcr.io/ossf-malware-analysis/python",
-	command:       "/usr/local/bin/analyze.py",
-	latestVersion: getPyPILatest,
-	archiveUrl:    getPyPIArchiveURL,
+	ecosystem:      PyPI,
+	image:          "gcr.io/ossf-malware-analysis/python",
+	command:        "/usr/local/bin/analyze.py",
+	latestVersion:  getPyPILatest,
+	archiveUrl:     getPyPIArchiveURL,
+	extractArchive: utils.ExtractTarGzFile,
 	runPhases: []RunPhase{
 		Install,
 		Import,
