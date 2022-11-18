@@ -24,7 +24,7 @@ const gotRequestLogMsg = "Got request"
 // not possible to analyse the package properly, and the results are invalid.
 func LogDynamicAnalysisError(pkg *pkgecosystem.Pkg, errorPhase pkgecosystem.RunPhase, err error) {
 	log.Error(runErrorLogMsg,
-		log.Label("ecosystem", pkg.Ecosystem()),
+		log.Label("ecosystem", pkg.EcosystemName()),
 		log.Label("name", pkg.Name()),
 		log.Label("phase", string(errorPhase)),
 		log.Label("version", pkg.Version()),
@@ -35,7 +35,7 @@ func LogDynamicAnalysisError(pkg *pkgecosystem.Pkg, errorPhase pkgecosystem.RunP
 // and what happened when it was run. This may include errors in the analysis
 // of the package, but not errors in the running itself.
 func LogDynamicAnalysisResult(pkg *pkgecosystem.Pkg, finalPhase pkgecosystem.RunPhase, finalStatus analysis.Status) {
-	ecosystem := pkg.Ecosystem()
+	ecosystem := pkg.EcosystemName()
 	name := pkg.Name()
 	version := pkg.Version()
 	lastPhase := string(finalPhase)

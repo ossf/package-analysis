@@ -6,11 +6,12 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/ossf/package-analysis/internal/log"
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/fileblob"
 	_ "gocloud.dev/blob/gcsblob"
 	_ "gocloud.dev/blob/s3blob"
+
+	"github.com/ossf/package-analysis/internal/log"
 )
 
 type ResultStore struct {
@@ -23,7 +24,7 @@ type Option interface{ set(*ResultStore) }
 type option func(*ResultStore)       // option implements Option.
 func (o option) set(sb *ResultStore) { o(sb) }
 
-// ConstructPath will cause Save() to generate the path based on Pkg.Ecosystem()
+// ConstructPath will cause Save() to generate the path based on Pkg.EcosystemName()
 // and Pkg.Name().
 func ConstructPath() Option {
 	return option(func(rs *ResultStore) { rs.constructPath = true })
@@ -47,7 +48,7 @@ func New(bucket string, options ...Option) *ResultStore {
 func (rs *ResultStore) generatePath(p Pkg) string {
 	path := rs.basePath
 	if rs.constructPath {
-		path = filepath.Join(path, p.Ecosystem(), p.Name())
+		path = filepath.Join(path, p.EcosystemName(), p.Name())
 	}
 	return path
 }
@@ -57,7 +58,7 @@ func (rs *ResultStore) Save(ctx context.Context, p Pkg, analysis interface{}) er
 	result := &result{
 		Package: pkg{
 			Name:      p.Name(),
-			Ecosystem: p.Ecosystem(),
+			Ecosystem: p.EcosystemName(),
 			Version:   version,
 		},
 		CreatedTimestamp: time.Now().UTC().Unix(),

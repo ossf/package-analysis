@@ -28,10 +28,10 @@ func getRubyGemsLatest(pkg string) (string, error) {
 }
 
 var rubygemsPkgManager = PkgManager{
-	name:    "rubygems",
-	image:   "gcr.io/ossf-malware-analysis/ruby",
-	command: "/usr/local/bin/analyze.rb",
-	latest:  getRubyGemsLatest,
+	ecosystem: RubyGems,
+	image:     "gcr.io/ossf-malware-analysis/ruby",
+	command:   "/usr/local/bin/analyze.rb",
+	latest:    getRubyGemsLatest,
 	runPhases: []RunPhase{
 		Install,
 		Import,
