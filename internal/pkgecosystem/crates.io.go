@@ -30,10 +30,10 @@ func getCratesLatest(pkg string) (string, error) {
 }
 
 var cratesPkgManager = PkgManager{
-	ecosystem: CratesIO,
-	image:     "gcr.io/ossf-malware-analysis/crates.io",
-	command:   "/usr/local/bin/analyze.py",
-	latest:    getCratesLatest,
+	ecosystem:     CratesIO,
+	image:         "gcr.io/ossf-malware-analysis/crates.io",
+	command:       "/usr/local/bin/analyze.py",
+	latestVersion: getCratesLatest,
 	runPhases: []RunPhase{
 		Install,
 	},
