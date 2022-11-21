@@ -181,3 +181,44 @@ func TestExtractZipSlip(t *testing.T) {
 		t.Errorf("Error should be about path escaping output dir, instead got %v", err)
 	}
 }
+
+func TestExtractAbsolutePathTarGzFile(t *testing.T) {
+	testName := "package-analysis-test-tgz-abs-path"
+
+	testHeaders := []*tar.Header{
+		makeDirHeader("/test"),
+		makeFileHeader("/test/2.txt", 0),
+	}
+
+	err := doExtractionTest(testName, testHeaders, func(extractDir string) error {
+		dirInfo, err := os.Stat(path.Join(extractDir, "test"))
+		if err != nil {
+			return fmt.Errorf("stat extracted dir: %v", err)
+		}
+		if dirInfo.Name() != "test" {
+			return fmt.Errorf("expected extracted directory name 'test', got %s", dirInfo.Name())
+		}
+		if !dirInfo.IsDir() {
+			return fmt.Errorf("expected to extract directory but it was not a directory")
+		}
+
+		fileInfo, err := os.Stat(path.Join(extractDir, "test", "2.txt"))
+		if err != nil {
+			return fmt.Errorf("stat extracted file: %v", err)
+		}
+		if fileInfo.Name() != "2.txt" {
+			return fmt.Errorf("expected to extract file with name '1.txt' but it has name %s", fileInfo.Name())
+		}
+		if fileInfo.Size() != 0 {
+			return fmt.Errorf("expected to extract file with size 0 but it has size %d", fileInfo.Size())
+		}
+		if fileInfo.IsDir() {
+			return fmt.Errorf("expected to extract file but it was a directory")
+		}
+		return nil
+	})
+
+	if err != nil {
+		t.Errorf("Error: %v", err)
+	}
+}
