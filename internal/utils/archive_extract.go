@@ -59,8 +59,9 @@ func extractTar(tarStream io.Reader, outputDir string) error {
 	var err error
 	for header, err = tarReader.Next(); err == nil; header, err = tarReader.Next() {
 		outputPath := filepath.Join(outputDir, header.Name)
-		// check for ZipSlip: https://snyk.io/research/zip-slip-vulnerability
-		if !strings.HasPrefix(outputPath, filepath.Clean(outputDir)) {
+		// check for ZipSlip (https://snyk.io/research/zip-slip-vulnerability) by ensuring
+		// outputPath (cleaned) actually is inside output directory that was specified
+		if !strings.HasPrefix(outputPath, filepath.Join(outputDir)+string(os.PathSeparator)) {
 			// Note: this error string is used in a test
 			return fmt.Errorf("archive path escapes output dir: %s", header.Name)
 		}

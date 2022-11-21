@@ -37,10 +37,10 @@ func makeFileHeader(name string, size int) *tar.Header {
 
 }
 
-func createTgzFile(name string, headers []*tar.Header) (path string, err error) {
-	tgzFile, err := os.CreateTemp("", name)
+func createTgzFile(path string, headers []*tar.Header) (err error) {
+	tgzFile, err := os.Create(path)
 	if err != nil {
-		return "", fmt.Errorf("failed to create temp file: %v", err)
+		return fmt.Errorf("failed to create temp archive file: %v", err)
 	}
 
 	path = tgzFile.Name()
@@ -48,7 +48,7 @@ func createTgzFile(name string, headers []*tar.Header) (path string, err error) 
 	defer func() {
 		closeErr := tgzFile.Close()
 		if closeErr != nil && err == nil {
-			err = fmt.Errorf("failed to close tgz file: %v", closeErr)
+			err = fmt.Errorf("failed to close temp archive file: %v", closeErr)
 		}
 	}()
 
@@ -57,7 +57,7 @@ func createTgzFile(name string, headers []*tar.Header) (path string, err error) 
 	defer func() {
 		closeErr := gzWriter.Close()
 		if closeErr != nil && err == nil {
-			err = fmt.Errorf("failed to close gz writer: %v", err)
+			err = fmt.Errorf("failed to close gzip writer: %v", err)
 		}
 	}()
 
@@ -65,7 +65,7 @@ func createTgzFile(name string, headers []*tar.Header) (path string, err error) 
 
 	for _, header := range headers {
 		if err = tarWriter.WriteHeader(header); err != nil {
-			return
+			return err
 		}
 		size := int(header.Size) // constrained to int
 		if size > 0 {
@@ -74,65 +74,81 @@ func createTgzFile(name string, headers []*tar.Header) (path string, err error) 
 			for i := 0; i < size; i++ {
 				bytes[i] = '\n'
 			}
-			l, writeErr := tarWriter.Write(bytes)
+			n, writeErr := tarWriter.Write(bytes)
 			if writeErr != nil {
-				err = writeErr
-				return
+				return writeErr
 			}
-			if l != size {
-				err = fmt.Errorf("expected to write %d bytes but wrote %d bytes", size, l)
-				return
+			if n != size {
+				return fmt.Errorf("expected to write %d bytes but wrote %d bytes", size, n)
 			}
 		}
 	}
 
-	err = tarWriter.Close()
+	if err = tarWriter.Close(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func makePaths(testName string) (workDir, archivePath, extractPath string, err error) {
+	workDir, err = os.MkdirTemp("", testName)
+	if err != nil {
+		return "", "", "", fmt.Errorf("failed to create working dir for test: %v", err)
+	}
+	archivePath = path.Join(workDir, testName+".tar.gz")
+	extractPath = path.Join(workDir, "extracted")
+
+	if err = os.Mkdir(extractPath, 0700); err != nil {
+		_ = os.Remove(workDir)
+		return "", "", "", fmt.Errorf("failed to create dir for extraction: %v", err)
+	}
+
 	return
 }
 
-func doExtractionTest(testName string, testHeaders []*tar.Header, runChecks func(outputDir string) error) (err error) {
-	testFile, err := createTgzFile(testName, testHeaders)
+func cleanupWorkDir(t *testing.T, workDir string) {
+	if removeErr := os.RemoveAll(workDir); removeErr != nil {
+		t.Errorf("failed to remove test files: %v", removeErr)
+	}
+}
 
-	if testFile == "" || err != nil {
+func doExtractionTest(archivePath, extractPath string, archiveHeaders []*tar.Header, runChecks func() error) (err error) {
+	if err = createTgzFile(archivePath, archiveHeaders); err != nil {
 		return fmt.Errorf("failed to create test tgz file: %v", err)
 	}
 
-	defer func() {
-		if removeErr := os.Remove(testFile); removeErr != nil && err == nil {
-			err = fmt.Errorf("failed to remove test tgz file: %v", removeErr)
-		}
-	}()
-
-	extractDir, err := os.MkdirTemp("", testName)
-	if err != nil {
-		return fmt.Errorf("failed to create temp dir for extraction: %v", err)
-	}
-
-	defer func() {
-		if removeErr := os.RemoveAll(extractDir); removeErr != nil && err == nil {
-			err = fmt.Errorf("failed to remove extracted files dir: %v", removeErr)
-		}
-	}()
-
 	log.Initalize("")
-	err = ExtractTarGzFile(testFile, extractDir)
-	if err != nil {
+
+	if err = ExtractTarGzFile(archivePath, extractPath); err != nil {
 		return fmt.Errorf("extract failed: %v", err)
 	}
 
-	return runChecks(extractDir)
+	if err = runChecks(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func TestExtractSimpleTarGzFile(t *testing.T) {
-	testName := "package-analysis-test-tgz-simple"
+	testName := "simple"
+
+	workDir, archivePath, extractPath, err := makePaths(testName)
+	if err != nil {
+		t.Errorf("%v", err)
+		return
+	}
+
+	defer cleanupWorkDir(t, workDir)
 
 	testHeaders := []*tar.Header{
 		makeDirHeader("test"),
 		makeFileHeader("test/1.txt", 10),
 	}
 
-	err := doExtractionTest(testName, testHeaders, func(extractDir string) error {
-		dirInfo, err := os.Stat(path.Join(extractDir, "test"))
+	err = doExtractionTest(archivePath, extractPath, testHeaders, func() error {
+		dirInfo, err := os.Stat(path.Join(extractPath, "test"))
 		if err != nil {
 			return fmt.Errorf("stat extracted dir: %v", err)
 		}
@@ -143,7 +159,7 @@ func TestExtractSimpleTarGzFile(t *testing.T) {
 			return fmt.Errorf("expected to extract directory but it was not a directory")
 		}
 
-		fileInfo, err := os.Stat(path.Join(extractDir, "test", "1.txt"))
+		fileInfo, err := os.Stat(path.Join(extractPath, "test", "1.txt"))
 		if err != nil {
 			return fmt.Errorf("stat extracted file: %v", err)
 		}
@@ -164,34 +180,24 @@ func TestExtractSimpleTarGzFile(t *testing.T) {
 	}
 }
 
-func TestExtractZipSlip(t *testing.T) {
-	testName := "package-analysis-test-tgz-zipslip"
-
-	testHeaders := []*tar.Header{
-		makeDirHeader("test"),
-		makeFileHeader("test/../../bad.txt", 1),
-	}
-
-	err := doExtractionTest(testName, testHeaders, func(outputDir string) error {
-		t.Fatal("Extraction should have returned an error")
-		return nil
-	})
-
-	if err == nil || !strings.Contains(err.Error(), "archive path escapes output dir") {
-		t.Errorf("Error should be about path escaping output dir, instead got %v", err)
-	}
-}
-
 func TestExtractAbsolutePathTarGzFile(t *testing.T) {
-	testName := "package-analysis-test-tgz-abs-path"
+	testName := "abs-path"
+
+	workDir, archivePath, extractPath, err := makePaths(testName)
+	if err != nil {
+		t.Errorf("%v", err)
+		return
+	}
+
+	defer cleanupWorkDir(t, workDir)
 
 	testHeaders := []*tar.Header{
 		makeDirHeader("/test"),
-		makeFileHeader("/test/2.txt", 0),
+		makeFileHeader("/2.txt", 0),
 	}
 
-	err := doExtractionTest(testName, testHeaders, func(extractDir string) error {
-		dirInfo, err := os.Stat(path.Join(extractDir, "test"))
+	err = doExtractionTest(archivePath, extractPath, testHeaders, func() error {
+		dirInfo, err := os.Stat(path.Join(extractPath, "test"))
 		if err != nil {
 			return fmt.Errorf("stat extracted dir: %v", err)
 		}
@@ -202,7 +208,7 @@ func TestExtractAbsolutePathTarGzFile(t *testing.T) {
 			return fmt.Errorf("expected to extract directory but it was not a directory")
 		}
 
-		fileInfo, err := os.Stat(path.Join(extractDir, "test", "2.txt"))
+		fileInfo, err := os.Stat(path.Join(extractPath, "2.txt"))
 		if err != nil {
 			return fmt.Errorf("stat extracted file: %v", err)
 		}
@@ -220,5 +226,93 @@ func TestExtractAbsolutePathTarGzFile(t *testing.T) {
 
 	if err != nil {
 		t.Errorf("Error: %v", err)
+	}
+}
+
+func TestExtractZipSlip(t *testing.T) {
+	testName := "zipslip"
+
+	workDir, archivePath, extractPath, err := makePaths(testName)
+	if err != nil {
+		t.Errorf("%v", err)
+		return
+	}
+
+	defer cleanupWorkDir(t, workDir)
+
+	testHeaders := []*tar.Header{
+		makeDirHeader("test"),
+		makeFileHeader("test/../../bad.txt", 1),
+	}
+
+	err = doExtractionTest(archivePath, extractPath, testHeaders, func() error {
+		t.Fatal("Extraction should have returned an error")
+		return nil
+	})
+
+	if err == nil || !strings.Contains(err.Error(), "archive path escapes output dir") {
+		t.Errorf("Error should be about path escaping output dir, instead got %v", err)
+	}
+}
+
+func TestExtractZipSlip2(t *testing.T) {
+	testName := "zipslip2"
+
+	workDir, archivePath, extractPath, err := makePaths(testName)
+	if err != nil {
+		t.Errorf("%v", err)
+		return
+	}
+
+	defer cleanupWorkDir(t, workDir)
+
+	// try and force writing into a similarly named directory
+	similarlyNamedDir := extractPath + "FOO"
+	err = os.Mkdir(similarlyNamedDir, 0700)
+
+	testHeaders := []*tar.Header{
+		makeFileHeader(path.Join("..", path.Base(similarlyNamedDir), "bad2.txt"), 1),
+	}
+
+	err = doExtractionTest(archivePath, extractPath, testHeaders, func() error {
+		bad2Info, err := os.Stat(path.Join(similarlyNamedDir, "bad2.txt"))
+		if err == nil && bad2Info.Size() == 1 {
+			t.Errorf("Found file in similarly named directory")
+		}
+		t.Fatal("Extraction should have returned an error")
+		return nil
+	})
+
+	if err == nil || !strings.Contains(err.Error(), "archive path escapes output dir") {
+		t.Errorf("Error should be about path escaping output dir, instead got %v", err)
+	}
+}
+
+func TestExtractZipSlip3(t *testing.T) {
+	testName := "zipslip3"
+
+	workDir, archivePath, extractPath, err := makePaths(testName)
+	if err != nil {
+		t.Errorf("%v", err)
+		return
+	}
+
+	defer cleanupWorkDir(t, workDir)
+
+	testHeaders := []*tar.Header{
+		makeFileHeader("../bad3.txt", 1),
+	}
+
+	err = doExtractionTest(archivePath, extractPath, testHeaders, func() error {
+		bad3Info, err := os.Stat(path.Join(workDir, "bad3.txt"))
+		if err == nil && bad3Info.Size() == 1 {
+			t.Errorf("Found file in parent directory")
+		}
+		t.Fatal("Extraction should have returned an error")
+		return nil
+	})
+
+	if err == nil || !strings.Contains(err.Error(), "archive path escapes output dir") {
+		t.Errorf("Error should be about path escaping output dir, instead got %v", err)
 	}
 }
