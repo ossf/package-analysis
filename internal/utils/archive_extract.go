@@ -6,15 +6,17 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/ossf/package-analysis/internal/log"
 )
 
-// ExtractTarGzFile extracts a .tar.gz / .tgz file located at path, optionally
-// accompanied by a temporary change to the given directory during extraction.
-func ExtractTarGzFile(path string, chdir string) error {
+// ExtractTarGzFile extracts a .tar.gz / .tgz file located at path, using
+// outputDir as the root of the extracted files.
+func ExtractTarGzFile(path string, outputDir string) error {
 	return processGzipFile(path, func(reader io.Reader) error {
-		return extractTar(reader, chdir)
+		return extractTar(reader, outputDir)
 	})
 }
 
@@ -30,8 +32,8 @@ func processGzipFile(path string, process func(io.Reader) error) error {
 	}
 
 	defer func() {
-		if err = unzippedBytes.Close(); err != nil {
-			log.Error("failed to close gzip reader: %w", err)
+		if closeErr := unzippedBytes.Close(); closeErr != nil {
+			log.Error("failed to close gzip reader", "error", closeErr)
 		}
 	}()
 
@@ -42,43 +44,40 @@ func processGzipFile(path string, process func(io.Reader) error) error {
 	return nil
 }
 
-// extractTar extracts the contents of the given stream of bytes of a tar archive.
-// If chdir is non-empty, the working directory will be temporarily changed to the
-// specified one before the extraction takes place, so that relative paths are resolved
-// relative to that directory. Otherwise, relative paths will be resolved relative to
-// the current working directory.
-func extractTar(tarStream io.Reader, chdir string) error {
-	var header *tar.Header
-	var err error
-
-	if chdir != "" {
-		var originalDir string
-		if originalDir, err = os.Getwd(); err != nil {
-			return fmt.Errorf("cannot get working directory: %w", err)
-		}
-		if err = os.Chdir(chdir); err != nil {
-			return fmt.Errorf("cannot change working directory to %s: %w", chdir, err)
-		}
-
-		defer func() {
-			if chDirErr := os.Chdir(originalDir); chDirErr != nil {
-				log.Error("failed to restore working directory", "original dir", originalDir, "error", err)
-			}
-		}()
+/*
+extractTar extracts the contents of the given stream of bytes of a tar archive, using
+outputDir as the root of the extracted files.
+*/
+func extractTar(tarStream io.Reader, outputDir string) error {
+	if outputDir == "" {
+		return fmt.Errorf("outputDir is empty")
 	}
 
 	tarReader := tar.NewReader(tarStream)
+
+	var header *tar.Header
+	var err error
 	for header, err = tarReader.Next(); err == nil; header, err = tarReader.Next() {
+		outputPath := filepath.Join(outputDir, header.Name)
+		// check for ZipSlip: https://snyk.io/research/zip-slip-vulnerability
+		if !strings.HasPrefix(outputPath, filepath.Clean(outputDir)) {
+			// Note: this error string is used in a test
+			return fmt.Errorf("archive path escapes output dir: %s", header.Name)
+		}
+
 		switch header.Typeflag {
 		case tar.TypeDir:
 			// make dir only readable by current user
-			if err = os.Mkdir(header.Name, 0700); err != nil {
+			if err = os.Mkdir(outputPath, os.FileMode(header.Mode)); err != nil {
 				return fmt.Errorf("mkdir failed: %w", err)
 			}
 		case tar.TypeReg:
+			fileInfo := header.FileInfo()
+			openFlags := os.O_RDWR | os.O_CREATE | os.O_TRUNC // copied from os.Create()
+
 			var extractedFile *os.File
-			if extractedFile, err = os.Create(header.Name); err != nil {
-				return fmt.Errorf("create failed: %w", err)
+			if extractedFile, err = os.OpenFile(outputPath, openFlags, fileInfo.Mode()); err != nil {
+				return fmt.Errorf("create file failed: %w", err)
 			}
 
 			if _, err = io.Copy(extractedFile, tarReader); err != nil {

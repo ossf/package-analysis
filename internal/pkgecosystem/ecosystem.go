@@ -110,8 +110,8 @@ func (p *PkgManager) DownloadArchive(name, version, directory string) (string, e
 	return archivePath, nil
 }
 
-func (p *PkgManager) ExtractArchive(archivePath, extractDir string) error {
-	return p.extractArchive(archivePath, extractDir)
+func (p *PkgManager) ExtractArchive(archivePath, outputDir string) error {
+	return p.extractArchive(archivePath, outputDir)
 }
 
 func normalizePkgName(pkg string) string {
