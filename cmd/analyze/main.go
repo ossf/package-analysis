@@ -85,7 +85,7 @@ func dynamicAnalysis(manager *pkgecosystem.PkgManager, pkg *pkgecosystem.Pkg) {
 
 	results, lastRunPhase, err := worker.RunDynamicAnalysis(sb, pkg)
 	if err != nil {
-		log.Fatal("Dynamic analysis aborted due (run error)", "error", err)
+		log.Fatal("Dynamic analysis aborted (run error)", "error", err)
 	}
 
 	ctx := context.Background()
