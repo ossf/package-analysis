@@ -84,11 +84,7 @@ func createTgzFile(path string, headers []*tar.Header) (err error) {
 		}
 	}
 
-	if err = tarWriter.Close(); err != nil {
-		return err
-	}
-
-	return nil
+	return tarWriter.Close()
 }
 
 func makePaths(testName string) (workDir, archivePath, extractPath string, err error) {
@@ -124,11 +120,7 @@ func doExtractionTest(archivePath, extractPath string, archiveHeaders []*tar.Hea
 		return fmt.Errorf("extract failed: %v", err)
 	}
 
-	if err = runChecks(); err != nil {
-		return err
-	}
-
-	return nil
+	return runChecks()
 }
 
 func TestExtractSimpleTarGzFile(t *testing.T) {
