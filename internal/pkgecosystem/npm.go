@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/ossf/package-analysis/internal/utils"
 )
 
 // npmPackageJSON represents relevant JSON data from the NPM registry response
@@ -68,11 +70,12 @@ func getNPMArchiveURL(pkgName, version string) (string, error) {
 }
 
 var npmPkgManager = PkgManager{
-	ecosystem:     NPM,
-	image:         "gcr.io/ossf-malware-analysis/node",
-	command:       "/usr/local/bin/analyze.js",
-	latestVersion: getNPMLatest,
-	archiveUrl:    getNPMArchiveURL,
+	ecosystem:      NPM,
+	image:          "gcr.io/ossf-malware-analysis/node",
+	command:        "/usr/local/bin/analyze.js",
+	latestVersion:  getNPMLatest,
+	archiveUrl:     getNPMArchiveURL,
+	extractArchive: utils.ExtractTarGzFile,
 	runPhases: []RunPhase{
 		Install,
 		Import,
