@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stats"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stringentropy"
 	"github.com/ossf/package-analysis/internal/utils"
@@ -29,7 +30,7 @@ func compareSummary(t *testing.T, name string, expected, actual stats.SampleStat
 	}
 }
 
-func testSignals(t *testing.T, signals Signals, stringLiterals, identifiers []string) {
+func testSignals(t *testing.T, signals obfuscation.Signals, stringLiterals, identifiers []string) {
 	expectedStringEntropySummary := symbolEntropySummary(stringLiterals)
 	expectedStringLengthSummary := symbolLengthSummary(stringLiterals)
 	expectedIdentifierEntropySummary := symbolEntropySummary(identifiers)
@@ -55,7 +56,7 @@ func testSignals(t *testing.T, signals Signals, stringLiterals, identifiers []st
 
 func TestBasicSignals(t *testing.T) {
 	jsSource := `var a = "hello"`
-	rawData, err := CollectData(jsParserPath, "", jsSource, true)
+	rawData, err := obfuscation.CollectData(jsParserPath, "", jsSource, true)
 	if err != nil {
 		t.Error(err)
 	} else {
@@ -78,7 +79,7 @@ func TestBasicSignals2(t *testing.T) {
 			}
 		}
 	`
-	rawData, err := CollectData(jsParserPath, "", jsSource, true)
+	rawData, err := obfuscation.CollectData(jsParserPath, "", jsSource, true)
 	if err != nil {
 		t.Error(err)
 	} else {

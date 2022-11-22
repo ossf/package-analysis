@@ -1,4 +1,4 @@
-package detection
+package obfuscation
 
 import "github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stats"
 
