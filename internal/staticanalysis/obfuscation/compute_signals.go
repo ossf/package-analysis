@@ -1,9 +1,8 @@
-package detection
+package obfuscation
 
 import (
 	"strings"
 
-	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stats"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stringentropy"
 )
@@ -44,8 +43,8 @@ Current signals:
 TODO Planned signals
   - analysis of numeric literal arrays (entropy)
 */
-func ComputeSignals(rawData obfuscation.RawData) obfuscation.Signals {
-	signals := obfuscation.Signals{}
+func ComputeSignals(rawData RawData) Signals {
+	signals := Signals{}
 	signals.StringLengthSummary, signals.StringEntropySummary, signals.CombinedStringEntropy =
 		characterAnalysis(rawData.StringLiterals)
 
