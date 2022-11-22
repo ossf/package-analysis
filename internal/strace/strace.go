@@ -53,11 +53,13 @@ type FileInfo struct {
 	Read      bool
 	Write     bool
 	Delete    bool
-	WriteInfo []WriteInfo
+	WriteInfo WriteInfo
 }
 
-type WriteInfo struct {
-	// TODO: A future PR will add to the WriteInfo struct a reference to a file. That file referenced will save the contents of the write buffer.
+type WriteInfo []WriteContentInfo
+
+type WriteContentInfo struct {
+	// TODO: A future PR will add to the WriteContentInfo struct a reference to a file. That file referenced will save the contents of the write buffer.
 	BytesWritten int64
 }
 
@@ -142,10 +144,9 @@ func (r *Result) recordFileAccess(file string, read, write, delete bool) {
 func (r *Result) recordFileWrite(file string, bytesWritten int64) {
 	if bytesWritten > 0 {
 		if _, exists := r.files[file]; !exists {
-			r.files[file] = &FileInfo{Path: file, WriteInfo: []WriteInfo{}}
+			r.files[file] = &FileInfo{Path: file, WriteInfo: []WriteContentInfo{}}
 		}
-		var writeContentsAndBytes WriteInfo
-		writeContentsAndBytes.BytesWritten = bytesWritten
+		writeContentsAndBytes := WriteContentInfo{BytesWritten: bytesWritten}
 		r.files[file].Write = true
 		r.files[file].WriteInfo = append(r.files[file].WriteInfo, writeContentsAndBytes)
 	}
@@ -186,7 +187,7 @@ func (r *Result) parseEnterSyscall(syscall, args string) error {
 				bytesWritten, err := strconv.ParseInt(writeBufAndBytesWritten[i+4:len(writeBufAndBytesWritten)], 16, 64)
 				r.recordFileWrite(match[1], bytesWritten)
 				if err != nil {
-					log.Debug("Could not parse")
+					return err
 				}
 				break
 			}

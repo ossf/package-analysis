@@ -8,7 +8,7 @@ import (
 )
 
 type DynamicAnalysisStraceSummary map[pkgecosystem.RunPhase]*dynamicanalysis.StraceSummary
-type DynamicAnalysisFileWrites map[pkgecosystem.RunPhase]*[]dynamicanalysis.FileWrites
+type DynamicAnalysisFileWrites map[pkgecosystem.RunPhase]*dynamicanalysis.FileWrites
 type DynamicAnalysisResults struct {
 	StraceSummary DynamicAnalysisStraceSummary
 	FileWrites    DynamicAnalysisFileWrites

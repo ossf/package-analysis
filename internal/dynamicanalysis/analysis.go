@@ -23,10 +23,12 @@ type fileResult struct {
 	Delete bool
 }
 
-type FileWrites struct {
+type fileWriteResult struct {
 	Path      string
-	WriteInfo []strace.WriteInfo
+	WriteInfo strace.WriteInfo
 }
+
+type FileWrites []fileWriteResult
 
 type socketResult struct {
 	Address   string
@@ -61,7 +63,7 @@ type StraceSummary struct {
 
 type Result struct {
 	StraceSummary StraceSummary
-	FileWrites    []FileWrites
+	FileWrites    FileWrites
 }
 
 var resultError = &Result{
@@ -128,7 +130,7 @@ func (d *Result) setData(straceResult *strace.Result, dns *dnsanalyzer.DNSAnalyz
 			Delete: f.Delete,
 		})
 		if len(f.WriteInfo) > 0 {
-			d.FileWrites = append(d.FileWrites, FileWrites{f.Path, f.WriteInfo})
+			d.FileWrites = append(d.FileWrites, fileWriteResult{f.Path, f.WriteInfo})
 		}
 	}
 
