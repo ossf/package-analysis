@@ -8,6 +8,7 @@ import parser from "@babel/parser";
 
 // See https://github.com/babel/babel/issues/13855
 import _traverse from "@babel/traverse";
+
 const traverse = _traverse.default;
 
 
@@ -25,35 +26,37 @@ function logJSON(type, subtype, name, pos, array, extra = null) {
     parseOutputLines.push(json);
 }
 
-function logIdentifierJSON(subtype, name, pos, extra = null) {
-    if (name === undefined) {
-        console.log("Error: undefined identifier name at pos " + pos);
-        return;
-    }
-    logJSON("Identifier", subtype, name, pos, null, extra);
-}
-
-// node is an Identifier node or PrivateName (which has a key attribute holding an Identifier)
-function logIdentifierNodeJSON(subtype, node) {
+function logIdentifierOrPrivateName(identifierType, node) {
+    // if node is a PrivateName, the corresponding Identifier can be found as node.id
+    let identifierNode;
     switch (node.type) {
         case "Identifier":
-            logIdentifierJSON(subtype, node.name, locationString(node));
+            identifierNode = node;
             break;
         case "PrivateName":
-            logIdentifierJSON(subtype, node.id.name, locationString(node.id));
+            identifierNode = node.id;
             break;
         default:
             console.log("Error: logIdentifierNodeJSON passed a node of type " + node.type);
-            break;
+            return;
     }
+
+    let name = identifierNode.name;
+    let pos = locationString(identifierNode)
+
+    if (identifierNode.name === undefined) {
+        console.log("Error: undefined identifier name at pos " + pos);
+    }
+
+    logJSON("Identifier", identifierType, name, pos, null, null);
 }
 
-function logLiteralJSON(subtype, value, pos, inArray, extra = null) {
+function logLiteral(literalType, value, pos, inArray, extra = null) {
     if (value === undefined) {
         console.log("Error: undefined literal value at pos " + pos);
         return;
     }
-    logJSON("Literal", subtype, value, pos, inArray, extra);
+    logJSON("Literal", literalType, value, pos, inArray, extra);
 }
 
 function visitIdentifierOrPrivateName(path) {
@@ -65,67 +68,67 @@ function visitIdentifierOrPrivateName(path) {
         case "ObjectProperty":
         // fall through
             if (node === parentNode.key) {
-                logIdentifierNodeJSON("Variable", node);
+                logIdentifierOrPrivateName("Variable", node);
             }
             break;
         case "ArrayPattern":
-            logIdentifierNodeJSON("Variable", node);
+            logIdentifierOrPrivateName("Variable", node);
             break;
         case "VariableDeclarator":
             if (node === parentNode.id) {
-                logIdentifierNodeJSON("Variable", node);
+                logIdentifierOrPrivateName("Variable", node);
             }
             break;
         case "FunctionDeclaration":
             if (node === parentNode.id) {
-                logIdentifierNodeJSON("Function", node);
+                logIdentifierOrPrivateName("Function", node);
             } else {
-                logIdentifierNodeJSON("Parameter", node);
+                logIdentifierOrPrivateName("Parameter", node);
             }
             break;
         case "LabeledStatement":
-            logIdentifierNodeJSON("StatementLabel", node);
+            logIdentifierOrPrivateName("StatementLabel", node);
             break;
         case "PrivateName":
             // processed already
             break;
         case "MemberExpression":
             if (node === parentNode.property) {
-                logIdentifierNodeJSON("Member", node);
+                logIdentifierOrPrivateName("Member", node);
             }
             break;
         case "CatchClause":
-            logIdentifierNodeJSON("Parameter", node);
+            logIdentifierOrPrivateName("Parameter", node);
             break;
         case "ClassPrivateMethod":
             // fall through
         case "ClassMethod":
             if (node === parentNode.key) {
                 if (parentNode.kind !== "constructor") {
-                    logIdentifierNodeJSON("Method", node);
+                    logIdentifierOrPrivateName("Method", node);
                 }
             } else {
-                logIdentifierNodeJSON("Parameter", node);
+                logIdentifierOrPrivateName("Parameter", node);
             }
             break;
         case "ClassPrivateProperty":
             // fall through
         case "ClassProperty":
-            logIdentifierNodeJSON("Property", node);
+            logIdentifierOrPrivateName("Property", node);
             break;
         case "AssignmentPattern":
             if (node === parentNode.left && parentParentNode.type === "FunctionDeclaration") {
                 // function parameter with default value
-                logIdentifierNodeJSON("Parameter", node);
+                logIdentifierOrPrivateName("Parameter", node);
             }
             break;
         case "AssignmentExpression":
             if (node === parentNode.left) {
-                logIdentifierNodeJSON("AssignmentTarget", node);
+                logIdentifierOrPrivateName("AssignmentTarget", node);
             }
             break;
         case "ClassExpression":
-            logIdentifierNodeJSON("Class", node);
+            logIdentifierOrPrivateName("Class", node);
             break;
     }
 }
@@ -139,15 +142,15 @@ function traverseAst(ast) {
     const arrayVisitor = {
         StringLiteral: function(path) {
             const loc = locationString(path.node);
-            logLiteralJSON("String", path.node.value, loc, true, path.node.extra);
+            logLiteral("String", path.node.value, loc, true, path.node.extra);
         },
         NumericLiteral: function(path) {
             const loc = locationString(path.node);
-            logLiteralJSON("Numeric", path.node.value, loc, true, path.node.extra);
+            logLiteral("Numeric", path.node.value, loc, true, path.node.extra);
         },
         TemplateElement: function(path) {
             const loc = locationString(path.node);
-            logLiteralJSON("StringTemplate", path.node.value.raw, loc, true, path.node.value);
+            logLiteral("StringTemplate", path.node.value.raw, loc, true, path.node.value);
         }
     };
 
@@ -156,17 +159,17 @@ function traverseAst(ast) {
         PrivateName: visitIdentifierOrPrivateName,
         StringLiteral: function (path) {
             const loc = locationString(path.node);
-            logLiteralJSON("String", path.node.value, loc, false, path.node.extra);
+            logLiteral("String", path.node.value, loc, false, path.node.extra);
         },
         DirectiveLiteral: function (path) {
             // same as string literal
             const loc = locationString(path.node);
-            logLiteralJSON("String", path.node.value, loc, false, path.node.extra);
+            logLiteral("String", path.node.value, loc, false, path.node.extra);
 
         },
         NumericLiteral: function (path) {
             const loc = locationString(path.node);
-            logLiteralJSON("Numeric", path.node.value, loc, false, path.node.extra);
+            logLiteral("Numeric", path.node.value, loc, false, path.node.extra);
         },
         ArrayExpression: function (path) {
             path.traverse(arrayVisitor);
@@ -174,7 +177,7 @@ function traverseAst(ast) {
         },
         TemplateElement: function (path) {
             const loc = locationString(path.node);
-            logLiteralJSON("StringTemplate", path.node.value.raw, loc, false, path.node.value);
+            logLiteral("StringTemplate", path.node.value.raw, loc, false, path.node.value);
         }
     };
     traverse(ast, astVisitor);
