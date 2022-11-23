@@ -1,4 +1,4 @@
-package detection
+package obfuscation
 
 import (
 	"strings"
@@ -9,7 +9,7 @@ import (
 	"github.com/ossf/package-analysis/internal/utils"
 )
 
-const jsParserPath = "../../parsing/js/babel-parser.js"
+const jsParserPath = "../parsing/js/babel-parser.js"
 
 func symbolEntropySummary(symbols []string) stats.SampleStatistics {
 	probs := stringentropy.CharacterProbabilities(symbols)
