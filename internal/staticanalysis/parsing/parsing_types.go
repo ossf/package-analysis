@@ -67,6 +67,9 @@ func (l ParsedLiteral[T]) String() string {
 }
 
 type ParseResult struct {
+	ValidInput  bool
 	Identifiers []ParsedIdentifier
 	Literals    []ParsedLiteral[any]
 }
+
+var InvalidInput = ParseResult{ValidInput: false}
