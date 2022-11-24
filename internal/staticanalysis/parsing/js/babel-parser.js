@@ -8,6 +8,7 @@ import parser from "@babel/parser";
 
 // See https://github.com/babel/babel/issues/13855
 import _traverse from "@babel/traverse";
+
 const traverse = _traverse.default;
 
 
@@ -25,135 +26,150 @@ function logJSON(type, subtype, name, pos, array, extra = null) {
     parseOutputLines.push(json);
 }
 
-function logIdentifierJSON(subtype, name, pos, extra = null) {
-    logJSON("Identifier", subtype, name, pos, null, extra);
+function logIdentifierOrPrivateName(identifierType, node) {
+    // if node is a PrivateName, the corresponding Identifier can be found as node.id
+    let identifierNode;
+    switch (node.type) {
+        case "Identifier":
+            identifierNode = node;
+            break;
+        case "PrivateName":
+            identifierNode = node.id;
+            break;
+        default:
+            console.log("Error: logIdentifierNodeJSON passed a node of type " + node.type);
+            return;
+    }
+
+    let name = identifierNode.name;
+    let pos = locationString(identifierNode)
+
+    if (identifierNode.name === undefined) {
+        console.log("Error: undefined identifier name at pos " + pos);
+    }
+
+    logJSON("Identifier", identifierType, name, pos, null, null);
 }
 
-function logLiteralJSON(subtype, value, pos, inArray, extra = null) {
-    logJSON("Literal", subtype, value, pos, inArray, extra);
-}
-
-function logParameter(p) {
-    if (p === null) {
+function logLiteral(literalType, value, pos, inArray, extra = null) {
+    if (value === undefined) {
+        console.log("Error: undefined literal value at pos " + pos);
         return;
     }
-    if (p.type === "Identifier") {
-        // simple function parameter name: function f(x)
-        logIdentifierJSON("Parameter", p.name, locationString(p));
-    } else if (p.type === "AssignmentPattern" && p.left.type === "Identifier") {
-        // parameter with default value: function f(x = 3)
-        logIdentifierJSON("Parameter", p.left.name, locationString(p));
+    logJSON("Literal", literalType, value, pos, inArray, extra);
+}
+
+function visitIdentifierOrPrivateName(path) {
+    const node = path.node;
+    const parentNode = path.parentPath.node;
+    const parentParentNode = path.parentPath.parentPath.node;
+
+    switch (parentNode.type) {
+        case "ObjectProperty":
+        // fall through
+            if (node === parentNode.key) {
+                logIdentifierOrPrivateName("Variable", node);
+            }
+            break;
+        case "ArrayPattern":
+            logIdentifierOrPrivateName("Variable", node);
+            break;
+        case "VariableDeclarator":
+            if (node === parentNode.id) {
+                logIdentifierOrPrivateName("Variable", node);
+            }
+            break;
+        case "FunctionDeclaration":
+            if (node === parentNode.id) {
+                logIdentifierOrPrivateName("Function", node);
+            } else {
+                logIdentifierOrPrivateName("Parameter", node);
+            }
+            break;
+        case "LabeledStatement":
+            logIdentifierOrPrivateName("StatementLabel", node);
+            break;
+        case "PrivateName":
+            // processed already
+            break;
+        case "MemberExpression":
+            if (node === parentNode.property) {
+                logIdentifierOrPrivateName("Member", node);
+            }
+            break;
+        case "CatchClause":
+            logIdentifierOrPrivateName("Parameter", node);
+            break;
+        case "ClassPrivateMethod":
+            // fall through
+        case "ClassMethod":
+            if (node === parentNode.key) {
+                if (parentNode.kind !== "constructor") {
+                    logIdentifierOrPrivateName("Method", node);
+                }
+            } else {
+                logIdentifierOrPrivateName("Parameter", node);
+            }
+            break;
+        case "ClassPrivateProperty":
+            // fall through
+        case "ClassProperty":
+            logIdentifierOrPrivateName("Property", node);
+            break;
+        case "AssignmentPattern":
+            if (node === parentNode.left && parentParentNode.type === "FunctionDeclaration") {
+                // function parameter with default value
+                logIdentifierOrPrivateName("Parameter", node);
+            }
+            break;
+        case "AssignmentExpression":
+            if (node === parentNode.left) {
+                logIdentifierOrPrivateName("AssignmentTarget", node);
+            }
+            break;
+        case "ClassExpression":
+            logIdentifierOrPrivateName("Class", node);
+            break;
     }
 }
 
-function logParameters(node) {
-    for (let p of node.params) {
-        logParameter(p);
-    }
-}
-
-function traverseAst(ast, printDebug = false) {
+function traverseAst(ast) {
     /*
-      The way this function is currently structured, the visitor finds identifiers by visiting every different type
-      of relevant symbol, and then logging the relevant identifier node (e.g. id, label) for that symbol.
-      This structure was kept from the previous switch statement version.
-
-      However, a simpler way to do it would be to just traverse until an actual Identifier node is found,
-      then figure what kind of identifier it is by inverting the logic for each case that currently is here.
-      This should be possible since babel-traverse lets you access parent nodes,
-      and it may simplify the code a little bit.
-
       TODO
-       1. If this code needs to be extended much more, we should switch to the second way above.
-       2. Consider adding state to allow distinction between elements from different arrays
-       3. Consider logging names of decorators
+       1. Consider adding state to allow distinction between elements from different arrays
+       2. Consider logging names of decorators
      */
-
     const arrayVisitor = {
         StringLiteral: function(path) {
             const loc = locationString(path.node);
-            logLiteralJSON("String", path.node.value, loc, true, path.node.extra);
+            logLiteral("String", path.node.value, loc, true, path.node.extra);
         },
         NumericLiteral: function(path) {
             const loc = locationString(path.node);
-            logLiteralJSON("Numeric", path.node.value, loc, true, path.node.extra);
+            logLiteral("Numeric", path.node.value, loc, true, path.node.extra);
         },
         TemplateElement: function(path) {
             const loc = locationString(path.node);
-            logLiteralJSON("StringTemplate", path.node.value.raw, loc, true, path.node.value);
+            logLiteral("StringTemplate", path.node.value.raw, loc, true, path.node.value);
         }
     };
 
     const astVisitor = {
-        FunctionDeclaration: function (path) {
-            if (path.node.id !== null) {
-                logIdentifierJSON("Function", path.node.id.name, locationString(path.node.id));
-            }
-            logParameters(path.node);
-        },
-        AssignmentExpression: function (path) {
-            if (path.node.left.type === "Identifier") {
-                logIdentifierJSON("AssignmentTarget", path.node.left.name, locationString(path.node.left));
-            }
-        },
-        ClassExpression: function (path) {
-            if (path.node.id !== null) {
-                logIdentifierJSON("Class", path.node.id.name, locationString(path.node.id));
-            }
-        },
-        ClassMethod: function (path) {
-            if (path.node.kind !== "Constructor" && path.node.key.type === "Identifier") {
-                logIdentifierJSON("Method", path.node.key.name, locationString(path.node.key));
-            }
-            logParameters(path.node);
-        },
-        ClassPrivateMethod: function (path) {
-            // path.node.key has type PrivateName
-            logIdentifierJSON("Method", path.node.key.id.name, locationString(path.node.key.id));
-            logParameters(path.node);
-        },
-        ClassProperty: function (path) {
-            if (path.node.key.type === "Identifier") {
-                logIdentifierJSON("Property", path.node.key.name, locationString(path.node.key));
-            }
-        },
-        ClassPrivateProperty: function (path) {
-            // path.node.key is PrivateName
-            logIdentifierJSON("Property", path.node.key.id.name, locationString(path.node.key.id));
-        },
-        MemberExpression: function (path) {
-            // Should be either Identifier or PrivateName if static (a.b) property
-            // else Expression if computed (a[b]) property
-            let identifier = null;
-            if (path.node.property.type === "Identifier") {
-                identifier = path.node.property;
-            } else if (path.node.property.type === "PrivateName") {
-                identifier = path.node.property.id;
-            }
-            if (identifier !== null) {
-                logIdentifierJSON("Member", identifier.name, locationString(identifier));
-            }
-        },
-        CatchClause: function(path) {
-            logParameter(path.node.param);
-        },
-        LabeledStatement: function (path) {
-            logIdentifierJSON("StatementLabel", path.node.label.name, locationString(path.node.label));
-        },
-        VariableDeclarator: function (path) {
-            logIdentifierJSON("Variable", path.node.id.name, locationString(path.node.id));
-        },
-        //Identifier: function (path) {
-        //    const loc = locationString(path.node);
-        //    logIdentifierJSON("Unrecognised", path.node.name, loc);
-        //},
+        Identifier: visitIdentifierOrPrivateName,
+        PrivateName: visitIdentifierOrPrivateName,
         StringLiteral: function (path) {
             const loc = locationString(path.node);
-            logLiteralJSON("String", path.node.value, loc, false, path.node.extra);
+            logLiteral("String", path.node.value, loc, false, path.node.extra);
+        },
+        DirectiveLiteral: function (path) {
+            // same as string literal
+            const loc = locationString(path.node);
+            logLiteral("String", path.node.value, loc, false, path.node.extra);
+
         },
         NumericLiteral: function (path) {
             const loc = locationString(path.node);
-            logLiteralJSON("Numeric", path.node.value, loc, false, path.node.extra);
+            logLiteral("Numeric", path.node.value, loc, false, path.node.extra);
         },
         ArrayExpression: function (path) {
             path.traverse(arrayVisitor);
@@ -161,14 +177,14 @@ function traverseAst(ast, printDebug = false) {
         },
         TemplateElement: function (path) {
             const loc = locationString(path.node);
-            logLiteralJSON("StringTemplate", path.node.value.raw, loc, false, path.node.value);
+            logLiteral("StringTemplate", path.node.value.raw, loc, false, path.node.value);
         }
     };
     traverse(ast, astVisitor);
 }
 
 function findLiteralsAndIdentifiers(source, printDebug) {
-    const ast = parser.parse(source);
+    const ast = parser.parse(source, { errorRecovery: true });
 
     // walk the AST and print out any literals
     if (printDebug) {
@@ -182,19 +198,32 @@ function findLiteralsAndIdentifiers(source, printDebug) {
 }
 
 function main() {
-    const printDebug = false;
+    const syntaxErrorExitCode = 33;
+    let printDebug = false;
     // https://github.com/nodejs/help/issues/2663
     // Referencing process.stdin.fd (actually just process.stdin) causes stdin to become nonblocking
     // Therefore running this in a terminal in interactive mode with no file piped into stdin will
     // cause the read to fail with EAGAIN
     // Passing the raw '0' as the fd avoids this issue.
     const sourceFile = process.argv.length >= 3 ? process.argv[2] : 0;
+    if (process.argv[process.argv.length - 1] === "debug") {
+        printDebug = true;
+    }
+
     const sourceCode = fs.readFileSync(sourceFile, "utf8");
     if (printDebug) {
         console.log("Read source:");
         console.log(sourceCode);
     }
-    findLiteralsAndIdentifiers(sourceCode, printDebug);
+    try {
+        findLiteralsAndIdentifiers(sourceCode, printDebug);
+    } catch (e) {
+        if (e instanceof SyntaxError) {
+            process.exit(syntaxErrorExitCode);
+        } else {
+            throw(e);
+        }
+    }
 }
 
 main();

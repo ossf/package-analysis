@@ -246,9 +246,60 @@ console.log(Rectangle.name);
 	},
 }
 
+var test6 = jsTestCase{
+	name: "test use strict",
+	inputJs: `
+'use strict';
+console.log("Hello");
+`,
+	want: parsing.ParseResult{
+		Identifiers: []parsing.ParsedIdentifier{
+			{parsing.Member, "log", parsing.TextPosition{3, 8}},
+		},
+		Literals: []parsing.ParsedLiteral[any]{
+			{"String", "string", "use strict", `'use strict'`, false, parsing.TextPosition{2, 0}},
+			{"String", "string", "Hello", `"Hello"`, false, parsing.TextPosition{3, 12}},
+		},
+	},
+}
+
+var test7 = jsTestCase{
+	name: "test exotic assignments",
+	inputJs: `
+let [a, b] = [1, 2];
+let [_, c] = [3, 4];
+var index = 0,
+    completed = 0,
+    {length, width} = 10,
+    cancelled = false;
+`,
+	want: parsing.ParseResult{
+		Identifiers: []parsing.ParsedIdentifier{
+			{parsing.Variable, "a", parsing.TextPosition{2, 5}},
+			{parsing.Variable, "b", parsing.TextPosition{2, 8}},
+			{parsing.Variable, "_", parsing.TextPosition{3, 5}},
+			{parsing.Variable, "c", parsing.TextPosition{3, 8}},
+			{parsing.Variable, "index", parsing.TextPosition{4, 4}},
+			{parsing.Variable, "completed", parsing.TextPosition{5, 4}},
+			{parsing.Variable, "length", parsing.TextPosition{6, 5}},
+			{parsing.Variable, "width", parsing.TextPosition{6, 13}},
+			{parsing.Variable, "cancelled", parsing.TextPosition{7, 4}},
+		},
+		Literals: []parsing.ParsedLiteral[any]{
+			{"Numeric", "float64", 1.0, "1", true, parsing.TextPosition{2, 14}},
+			{"Numeric", "float64", 2.0, "2", true, parsing.TextPosition{2, 17}},
+			{"Numeric", "float64", 3.0, "3", true, parsing.TextPosition{3, 14}},
+			{"Numeric", "float64", 4.0, "4", true, parsing.TextPosition{3, 17}},
+			{"Numeric", "float64", 0.0, "0", false, parsing.TextPosition{4, 12}},
+			{"Numeric", "float64", 0.0, "0", false, parsing.TextPosition{5, 16}},
+			{"Numeric", "float64", 10.0, "10", false, parsing.TextPosition{6, 22}},
+		},
+	},
+}
+
 func TestParseJS(t *testing.T) {
 	const printAllJson = false
-	var tests = []jsTestCase{test1, test2, test3, test4, test5}
+	var tests = []jsTestCase{test1, test2, test3, test4, test5, test6, test7}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

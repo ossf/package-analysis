@@ -9,9 +9,13 @@ import (
 )
 
 /*
-CollectData parses the given input (source file or raw source string) and records data which can be
-later processed into signals that which may be useful to determine whether the code is obfuscated.
-The input is assumed to be valid JavaScript source. If jsSourceFile is empty, the string will be parsed.
+CollectData parses the given JavaScript input (source file or raw source string) and records raw data
+which is needed for processing by ComputeSignals. To parse a file, specify its path using jsSourceFile.
+In this case, the value of jsSourceString is ignored. If jsSourceFile is empty, then jsSourceString
+is parsed directly as JavaScript code. The input is assumed to be valid JavaScript source.
+
+If a syntax error is found, a nil pointer is returned with no error. This indicates that
+the file may not be JavaScript and could be parsed using other methods.
 
 In Javascript, there is little distinction between integer and floating point literals - they are
 all parsed as floating point. This function will record a numeric literal as an integer if it can be
@@ -25,13 +29,16 @@ TODO planned data
   - recording of arrays of either string literals or numeric data
 */
 func CollectData(jsParserPath, jsSourceFile string, jsSourceString string, printDebug bool) (*RawData, error) {
-	parseResult, rawJson, err := js.ParseJS(jsParserPath, jsSourceFile, jsSourceString)
+	parseResult, parserOutput, err := js.ParseJS(jsParserPath, jsSourceFile, jsSourceString)
 	if printDebug {
-		println("\nRaw JSON:\n", rawJson)
+		println("\nRaw JSON:\n", parserOutput)
 	}
-	if err != nil && parseResult == nil {
+	if err != nil {
 		fmt.Printf("Error occured while reading %s: %v\n", jsSourceFile, err)
 		return nil, err
+	}
+	if !parseResult.ValidInput {
+		return nil, nil
 	}
 
 	data := RawData{}
