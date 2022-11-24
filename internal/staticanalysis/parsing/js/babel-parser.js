@@ -184,7 +184,7 @@ function traverseAst(ast) {
 }
 
 function findLiteralsAndIdentifiers(source, printDebug) {
-    const ast = parser.parse(source);
+    const ast = parser.parse(source, { errorRecovery: true });
 
     // walk the AST and print out any literals
     if (printDebug) {
