@@ -16,7 +16,6 @@ type parserOutputElement struct {
 	SymbolSubtype string         `json:"subtype"`
 	Data          any            `json:"data"`
 	Pos           [2]int         `json:"pos"`
-	Array         bool           `json:"array"`
 	Extra         map[string]any `json:"extra"`
 }
 
@@ -110,11 +109,9 @@ func ParseJS(parserPath string, filePath string, sourceString string) (result pa
 				GoType:   fmt.Sprintf("%T", element.Data),
 				Value:    element.Data,
 				RawValue: element.Extra["raw"].(string),
-				InArray:  element.Array,
+				InArray:  element.Extra["array"] == true,
 				Pos:      element.Pos,
 			})
-		default:
-			panic(fmt.Errorf("unknown element type for parsed symbol: %s", element.SymbolType))
 		}
 	}
 	return

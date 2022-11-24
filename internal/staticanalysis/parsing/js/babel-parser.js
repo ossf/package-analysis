@@ -11,6 +11,9 @@ import _traverse from "@babel/traverse";
 
 const traverse = _traverse.default;
 
+// If the parser encounters an unrecoverable syntax error (which may indicate
+// that the input is not JavaScript, the program will exit with this exit code.
+const SYNTAX_ERROR_EXIT_CODE = 33;
 
 function locationString(node) {
     return (node.loc !== null) ? `[${node.loc.start.line},${node.loc.start.column}]` : "[]";
@@ -18,12 +21,23 @@ function locationString(node) {
 
 const parseOutputLines = [];
 
-function logJSON(type, subtype, name, pos, array, extra = null) {
+function logJSON(type, subtype, data, pos, extra = null) {
     const extraValue = (extra !== null) ? `${JSON.stringify(extra)}` : "{}";
-    const arrayValue = (array !== null) ? array : false;
-    const json = `{"type":"${type}","subtype":"${subtype}","data":${JSON.stringify(name)},"pos":${pos},` +
-        `"array":${arrayValue}, "extra":${extraValue}}`;
+    const json = `{"type":"${type}","subtype":"${subtype}","data":${JSON.stringify(data)},` +
+        `"pos":${pos},"extra":${extraValue}}`;
     parseOutputLines.push(json);
+}
+
+function logError(errorType, message, pos) {
+    logJSON("Error", errorType, message, pos);
+}
+
+function logInfo(infoType, message) {
+    logJSON("Info", infoType, message, "[]");
+}
+
+function logComment(commentType, comment, pos) {
+    logJSON("Comment", commentType, comment, pos);
 }
 
 function logIdentifierOrPrivateName(identifierType, node) {
@@ -42,13 +56,13 @@ function logIdentifierOrPrivateName(identifierType, node) {
     }
 
     let name = identifierNode.name;
-    let pos = locationString(identifierNode)
+    let pos = locationString(identifierNode);
 
     if (identifierNode.name === undefined) {
         console.log("Error: undefined identifier name at pos " + pos);
     }
 
-    logJSON("Identifier", identifierType, name, pos, null, null);
+    logJSON("Identifier", identifierType, name, pos);
 }
 
 function logLiteral(literalType, value, pos, inArray, extra = null) {
@@ -56,7 +70,13 @@ function logLiteral(literalType, value, pos, inArray, extra = null) {
         console.log("Error: undefined literal value at pos " + pos);
         return;
     }
-    logJSON("Literal", literalType, value, pos, inArray, extra);
+
+    if (extra === null) {
+        extra = {"array": inArray};
+    } else {
+        extra.array = inArray;
+    }
+    logJSON("Literal", literalType, value, pos, extra);
 }
 
 function visitIdentifierOrPrivateName(path) {
@@ -66,7 +86,6 @@ function visitIdentifierOrPrivateName(path) {
 
     switch (parentNode.type) {
         case "ObjectProperty":
-        // fall through
             if (node === parentNode.key) {
                 logIdentifierOrPrivateName("Variable", node);
             }
@@ -133,13 +152,19 @@ function visitIdentifierOrPrivateName(path) {
     }
 }
 
-function traverseAst(ast) {
+/*
+ disableScope prevents tracking of parsing context during traversal.
+ In particular, this redeclared variables from crashing the traversal
+ when the AST was produced from parsing with errorRecovery: true.
+ */
+function traverseAst(ast, disableScope) {
     /*
       TODO
        1. Consider adding state to allow distinction between elements from different arrays
        2. Consider logging names of decorators
      */
     const arrayVisitor = {
+        noScope: disableScope,
         StringLiteral: function(path) {
             const loc = locationString(path.node);
             logLiteral("String", path.node.value, loc, true, path.node.extra);
@@ -155,6 +180,7 @@ function traverseAst(ast) {
     };
 
     const astVisitor = {
+        noScope: disableScope,
         Identifier: visitIdentifierOrPrivateName,
         PrivateName: visitIdentifierOrPrivateName,
         StringLiteral: function (path) {
@@ -180,49 +206,80 @@ function traverseAst(ast) {
             logLiteral("StringTemplate", path.node.value.raw, loc, false, path.node.value);
         }
     };
+
     traverse(ast, astVisitor);
 }
 
-function findLiteralsAndIdentifiers(source, printDebug) {
-    const ast = parser.parse(source, { errorRecovery: true });
-
-    // walk the AST and print out any literals
-    if (printDebug) {
-        console.log(JSON.stringify(ast, null, "  "));
-    }
-
-    traverseAst(ast);
-
-    const allJson = "[\n" + parseOutputLines.join(",\n") + "\n]";
-    console.log(allJson);
-}
-
 function main() {
-    const syntaxErrorExitCode = 33;
+    /*
+     If false, syntax errors result in immediate termination of the program with
+     SYNTAX_ERROR_EXIT_CODE, and JSON output will be suppressed.
+     If true, the parser will recover from minor syntax errors where possible, and
+     record error details in the output JSON. If not possible to recover, the program
+     will still terminate with SYNTAX_ERROR_EXIT_CODE.
+     */
+    let allowSyntaxErrors = false;
+
     let printDebug = false;
-    // https://github.com/nodejs/help/issues/2663
-    // Referencing process.stdin.fd (actually just process.stdin) causes stdin to become nonblocking
-    // Therefore running this in a terminal in interactive mode with no file piped into stdin will
-    // cause the read to fail with EAGAIN
-    // Passing the raw '0' as the fd avoids this issue.
+
+    /*
+     Referencing process.stdin.fd (actually just process.stdin) causes stdin to become nonblocking
+     Therefore running this in a terminal in interactive mode with no file piped into stdin will
+     cause the read to fail with EAGAIN. Passing the raw '0' as the fd avoids this issue.
+     See https://github.com/nodejs/help/issues/2663
+     */
     const sourceFile = process.argv.length >= 3 ? process.argv[2] : 0;
     if (process.argv[process.argv.length - 1] === "debug") {
         printDebug = true;
     }
 
     const sourceCode = fs.readFileSync(sourceFile, "utf8");
-    if (printDebug) {
-        console.log("Read source:");
-        console.log(sourceCode);
-    }
+    logInfo("InputLength", sourceCode.length);
+
+    let unrecoverableSyntaxError = false;
+
     try {
-        findLiteralsAndIdentifiers(sourceCode, printDebug);
+        const ast = parser.parse(sourceCode, {
+            errorRecovery: allowSyntaxErrors,
+            sourceType: "unambiguous" // parser is allowed to parse input as either script or module
+        });
+
+        if (printDebug) {
+            console.log("AST");
+            console.log(JSON.stringify(ast, null, "  "));
+        }
+
+        for (let e of ast.errors) {
+            let pos = `[${e.loc.line},${e.loc.column}]`;
+            logError(e.name, `${e.code}: ${e.reasonCode}`, pos);
+        }
+
+        for (let c of ast.comments) {
+            let loc = locationString(c);
+            logComment(c.type, c.value, loc);
+        }
+
+        traverseAst(ast, allowSyntaxErrors);
+
     } catch (e) {
         if (e instanceof SyntaxError) {
-            process.exit(syntaxErrorExitCode);
+            unrecoverableSyntaxError = true;
+            let pos = `[${e.loc.line},${e.loc.column}]`;
+            logError(e.name, `${e.code}: ${e.reasonCode}`, pos);
         } else {
             throw(e);
         }
+    }
+
+    const allJSON = "[\n" + parseOutputLines.join(",\n") + "\n]";
+
+    const suppressJSON = !allowSyntaxErrors && unrecoverableSyntaxError;
+    if (!suppressJSON) {
+        console.log(allJSON);
+    }
+
+    if (unrecoverableSyntaxError) {
+        process.exit(SYNTAX_ERROR_EXIT_CODE);
     }
 }
 
