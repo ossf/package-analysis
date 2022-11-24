@@ -103,7 +103,7 @@ func doObfuscationDetection(extractedPackageDir string) (*obfuscation.AnalysisRe
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Error while walking package files", "error", err)
+		return nil, fmt.Errorf("error while walking package files: %v", err)
 	}
 
 	return result, nil
