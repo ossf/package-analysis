@@ -172,6 +172,54 @@ func TestExtractSimpleTarGzFile(t *testing.T) {
 	}
 }
 
+func TestExtractMissingParentDir(t *testing.T) {
+	testName := "simple"
+
+	workDir, archivePath, extractPath, err := makePaths(testName)
+	if err != nil {
+		t.Errorf("%v", err)
+		return
+	}
+
+	defer cleanupWorkDir(t, workDir)
+
+	testHeaders := []*tar.Header{
+		makeFileHeader("test/1.txt", 10),
+	}
+
+	err = doExtractionTest(archivePath, extractPath, testHeaders, func() error {
+		dirInfo, err := os.Stat(path.Join(extractPath, "test"))
+		if err != nil {
+			return fmt.Errorf("stat extracted dir: %v", err)
+		}
+		if dirInfo.Name() != "test" {
+			return fmt.Errorf("expected extracted directory name 'test', got %s", dirInfo.Name())
+		}
+		if !dirInfo.IsDir() {
+			return fmt.Errorf("expected to extract directory but it was not a directory")
+		}
+
+		fileInfo, err := os.Stat(path.Join(extractPath, "test", "1.txt"))
+		if err != nil {
+			return fmt.Errorf("stat extracted file: %v", err)
+		}
+		if fileInfo.Name() != "1.txt" {
+			return fmt.Errorf("expected to extract file with name '1.txt' but it has name %s", fileInfo.Name())
+		}
+		if fileInfo.Size() != 10 {
+			return fmt.Errorf("expected to extract file with size 10 but it has size %d", fileInfo.Size())
+		}
+		if fileInfo.IsDir() {
+			return fmt.Errorf("expected to extract file but it was a directory")
+		}
+		return nil
+	})
+
+	if err != nil {
+		t.Errorf("Error: %v", err)
+	}
+}
+
 func TestExtractAbsolutePathTarGzFile(t *testing.T) {
 	testName := "abs-path"
 

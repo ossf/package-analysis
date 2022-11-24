@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -75,6 +76,13 @@ func extractTar(tarStream io.Reader, outputDir string) error {
 		case tar.TypeReg:
 			fileInfo := header.FileInfo()
 			openFlags := os.O_RDWR | os.O_CREATE | os.O_TRUNC // copied from os.Create()
+
+			// ensure containing directories exist; some archives don't include an explicit entry
+			// for parent directories
+			parentDir := path.Dir(outputPath)
+			if err = os.MkdirAll(parentDir, 0755); err != nil {
+				return fmt.Errorf("create parent dirs for %s failed: %w", header.Name, err)
+			}
 
 			var extractedFile *os.File
 			if extractedFile, err = os.OpenFile(outputPath, openFlags, fileInfo.Mode()); err != nil {
