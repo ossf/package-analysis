@@ -25,10 +25,22 @@ var (
 	analyses    = utils.CommaSeparatedFlags("analyses", "obfuscation", "comma-separated list of static analyses to perform")
 )
 
-const defaultJsParserPath = "internal/staticanalysis/parsing/js/babel-parser.js"
+type workDirs struct {
+	baseDir    string
+	archiveDir string
+	extractDir string
+}
 
-func getJsParserPath() (string, error) {
-	parserPath := defaultJsParserPath
+func (wd *workDirs) cleanup() {
+	if err := os.RemoveAll(wd.baseDir); err != nil {
+		log.Error("Failed to remove work dirs", "baseDir", wd.baseDir, "error", err)
+	}
+}
+
+const defaultJSParserPath = "internal/staticanalysis/parsing/js/babel-parser.js"
+
+func getJSParserPath() (string, error) {
+	parserPath := defaultJSParserPath
 	parserType := "default"
 
 	customParserPath := os.Getenv("JS_PARSER")
@@ -68,7 +80,7 @@ func printAnalyses() {
 }
 
 func doObfuscationDetection(extractedPackageDir string) (*obfuscation.AnalysisResult, error) {
-	jsParserPath, err := getJsParserPath()
+	jsParserPath, err := getJSParserPath()
 	if err != nil {
 		return nil, err
 	}
@@ -109,32 +121,34 @@ func doObfuscationDetection(extractedPackageDir string) (*obfuscation.AnalysisRe
 	return result, nil
 }
 
-func cleanupTmpDir(dir string) {
-	err := os.RemoveAll(dir)
+func makeWorkDirs() (*workDirs, error) {
+	baseDir, err := os.MkdirTemp("", "package-analysis-staticanalyze")
 	if err != nil {
-		fmt.Printf("Failed to remove temp work dir: %v\n", err)
+		return nil, err
 	}
+
+	dirs := workDirs{baseDir: baseDir}
+
+	archiveDir, err := os.MkdirTemp(baseDir, "archive")
+	if err != nil {
+		dirs.cleanup()
+		return nil, err
+	}
+
+	dirs.archiveDir = archiveDir
+
+	extractDir, err := os.MkdirTemp(baseDir, "extracted")
+	if err != nil {
+		dirs.cleanup()
+		return nil, err
+	}
+
+	dirs.extractDir = extractDir
+
+	return &dirs, nil
 }
 
-func makeWorkDirs() (tmpDir, archiveDir, extractDir string, err error) {
-	if tmpDir, err = os.MkdirTemp("", "package-analysis-staticanalyze"); err != nil {
-		return "", "", "", err
-	}
-
-	if archiveDir, err = os.MkdirTemp(tmpDir, "archive"); err != nil {
-		cleanupTmpDir(tmpDir)
-		return "", "", "", err
-	}
-
-	if extractDir, err = os.MkdirTemp(tmpDir, "extracted"); err != nil {
-		cleanupTmpDir(tmpDir)
-		return "", "", "", err
-	}
-
-	return
-}
-
-func mainReturningError() (err error) {
+func run() (err error) {
 	log.Initalize(os.Getenv("LOGGER_ENV"))
 	analyses.InitFlag()
 	flag.Parse()
@@ -157,7 +171,6 @@ func mainReturningError() (err error) {
 	}
 
 	pkg, err := worker.ResolvePkg(manager, *packageName, *version, *localFile)
-
 	if err != nil {
 		return fmt.Errorf("package error: %v", err)
 	}
@@ -167,7 +180,7 @@ func mainReturningError() (err error) {
 
 	if err != nil {
 		printAnalyses()
-		return fmt.Errorf("%v\n", err)
+		return err
 	}
 
 	log.Info("Static analysis launched",
@@ -176,30 +189,24 @@ func mainReturningError() (err error) {
 		log.Label("local_path", *localFile),
 		log.Label("analyses", strings.Join(uniqueAnalyses, ",")))
 
-	tmpDir, archiveDir, extractDir, err := makeWorkDirs()
+	workDirs, err := makeWorkDirs()
+	if err != nil {
+		return fmt.Errorf("failed to create work directories: %v", err)
+	}
 
-	defer cleanupTmpDir(tmpDir)
+	defer workDirs.cleanup()
 
 	var archivePath string
-
 	if *localFile != "" {
-		// ensure we can access archive file to the archive dir
-		archivePath = archiveDir + string(os.PathSeparator) + *localFile
-		err = os.Link(*localFile, archivePath)
-		if err != nil {
-			return fmt.Errorf("error linking local archive into work dir: %v", err)
-		}
-
+		archivePath = *localFile
 	} else {
-		archivePath, err = manager.DownloadArchive(pkg.Name(), pkg.Version(), archiveDir)
+		archivePath, err = manager.DownloadArchive(pkg.Name(), pkg.Version(), workDirs.archiveDir)
 		if err != nil {
 			return fmt.Errorf("error downloading archive: %v\n", err)
 		}
 	}
 
-	fmt.Printf("Archive path is %s\n", archivePath)
-
-	err = manager.ExtractArchive(archivePath, extractDir)
+	err = manager.ExtractArchive(archivePath, workDirs.extractDir)
 	if err != nil {
 		return fmt.Errorf("archive extraction failed: %v", err)
 	}
@@ -207,17 +214,11 @@ func mainReturningError() (err error) {
 	for _, task := range analysisTasks {
 		switch task {
 		case staticanalysis.ObfuscationDetection:
-			analysisResult, err := doObfuscationDetection(extractDir)
+			analysisResult, err := doObfuscationDetection(workDirs.extractDir)
 			if err != nil {
 				log.Error("Error occurred during obfuscation detection", "error", err)
 			}
 			fmt.Printf("Analysis result\n%v\n", analysisResult)
-			//jsonOutput, err := json.Marshal(analysisResult)
-			//if err != nil {
-			//	log.Error("Error marshalling JSON", "error", err)
-			//} else {
-			//	fmt.Printf("Analysis result JSON: %v\n", jsonOutput)
-			//}
 		default:
 			return fmt.Errorf("static analysis task not implemented: %s", task)
 		}
@@ -227,7 +228,7 @@ func mainReturningError() (err error) {
 }
 
 func main() {
-	err := mainReturningError()
+	err := run()
 	if err != nil {
 		fmt.Printf("%v\n", err)
 		os.Exit(1)
