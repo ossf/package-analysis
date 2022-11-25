@@ -22,13 +22,24 @@ type SampleStatistics struct {
 	Quartiles [5]float64
 }
 
+func NoData() SampleStatistics {
+	nan := math.NaN()
+	return SampleStatistics{
+		Size:      0,
+		Mean:      nan,
+		Variance:  nan,
+		Skewness:  nan,
+		Quartiles: [5]float64{nan, nan, nan, nan, nan},
+	}
+}
+
 func (s SampleStatistics) Min() float64    { return s.Quartiles[0] }
 func (s SampleStatistics) Q1() float64     { return s.Quartiles[1] }
 func (s SampleStatistics) Median() float64 { return s.Quartiles[2] }
 func (s SampleStatistics) Q3() float64     { return s.Quartiles[3] }
 func (s SampleStatistics) Max() float64    { return s.Quartiles[4] }
 
-func (s SampleStatistics) FloatData() (data [8]float64) {
+func (s SampleStatistics) toFloatData() (data [8]float64) {
 	data[0] = s.Mean
 	data[1] = s.Variance
 	data[2] = s.Skewness
@@ -38,18 +49,46 @@ func (s SampleStatistics) FloatData() (data [8]float64) {
 	return
 }
 
+func fromFloatData(size int, data [8]float64) SampleStatistics {
+	return SampleStatistics{
+		Size:      size,
+		Mean:      data[0],
+		Variance:  data[1],
+		Skewness:  data[2],
+		Quartiles: [5]float64{data[3], data[4], data[5], data[6], data[7]},
+	}
+}
+
+func (s SampleStatistics) String() string {
+	q := s.Quartiles
+	return fmt.Sprintf("size: %d, mean: %f, variance: %f, skewness: %f, quartiles: [%f, %f, %f, %f, %f]",
+		s.Size, s.Mean, s.Variance, s.Skewness, q[0], q[1], q[2], q[3], q[4])
+}
+
 func (s SampleStatistics) Equals(other SampleStatistics, absTol float64) bool {
 	if s.Size != other.Size {
 		return false
 	}
-	thisData := s.FloatData()
-	otherData := other.FloatData()
+	thisData := s.toFloatData()
+	otherData := other.toFloatData()
 	for i := 0; i < len(thisData); i++ {
 		if !utils.FloatEquals(thisData[i], otherData[i], absTol) {
 			return false
 		}
 	}
 	return true
+}
+
+// ReplaceNaNs returns a copy of this SampleStatistics object with all NaN values
+// replaced by the given value r
+func (s SampleStatistics) ReplaceNaNs(r float64) SampleStatistics {
+	data := s.toFloatData()
+	for i, x := range data {
+		if math.IsNaN(x) {
+			data[i] = r
+		}
+	}
+	return fromFloatData(s.Size, data)
 }
 
 // mean computes the sample mean

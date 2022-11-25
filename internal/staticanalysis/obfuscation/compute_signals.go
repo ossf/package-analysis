@@ -1,6 +1,7 @@
 package obfuscation
 
 import (
+	"math"
 	"strings"
 
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stats"
@@ -52,4 +53,36 @@ func ComputeSignals(rawData RawData) Signals {
 		characterAnalysis(rawData.Identifiers)
 
 	return signals
+}
+
+func NoSignals() Signals {
+	return Signals{
+		StringLengthSummary:       stats.NoData(),
+		StringEntropySummary:      stats.NoData(),
+		CombinedStringEntropy:     math.NaN(),
+		IdentifierLengthSummary:   stats.NoData(),
+		IdentifierEntropySummary:  stats.NoData(),
+		CombinedIdentifierEntropy: math.NaN(),
+	}
+}
+
+// RemoveNaNs replaces all NaN values in this object with zeros
+func RemoveNaNs(s Signals) Signals {
+	replaced := Signals{
+		StringLengthSummary:       s.StringLengthSummary.ReplaceNaNs(0),
+		StringEntropySummary:      s.StringEntropySummary.ReplaceNaNs(0),
+		CombinedStringEntropy:     s.CombinedStringEntropy,
+		IdentifierLengthSummary:   s.IdentifierLengthSummary.ReplaceNaNs(0),
+		IdentifierEntropySummary:  s.IdentifierEntropySummary.ReplaceNaNs(0),
+		CombinedIdentifierEntropy: s.CombinedIdentifierEntropy,
+	}
+
+	if math.IsNaN(replaced.CombinedStringEntropy) {
+		replaced.CombinedStringEntropy = 0.0
+	}
+	if math.IsNaN(replaced.CombinedIdentifierEntropy) {
+		replaced.CombinedIdentifierEntropy = 0.0
+	}
+
+	return replaced
 }
