@@ -73,9 +73,9 @@ function logLiteral(literalType, value, pos, inArray, extra = null) {
 
     if (extra === null) {
         extra = {};
-	}
-
-	extra.array = inArray;
+    }
+    
+    extra.array = inArray;
     logJSON("Literal", literalType, value, pos, extra);
 }
 
