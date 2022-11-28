@@ -54,12 +54,14 @@ func testSignals(t *testing.T, signals Signals, stringLiterals, identifiers []st
 }
 
 type testCase struct {
+	name           string
 	jsSource       string
 	stringLiterals []string
 	identifiers    []string
 }
 
 var test1 = testCase{
+	name: "simple 1",
 	jsSource: `
 var a = "hello"
 	`,
@@ -68,6 +70,7 @@ var a = "hello"
 }
 
 var test2 = testCase{
+	name: "simple 2",
 	jsSource: `
 function test(a, b = 2) {
 	console.log("hello")
@@ -79,8 +82,8 @@ function test(a, b = 2) {
 	}
 }
 	`,
-	stringLiterals: nil,
-	identifiers:    nil,
+	stringLiterals: []string{"hello", "apple"},
+	identifiers:    []string{"test", "a", "b", "c"},
 }
 
 func TestComputeSignals(t *testing.T) {
@@ -94,7 +97,7 @@ func TestComputeSignals(t *testing.T) {
 	testCases := []testCase{test1, test2}
 
 	for _, test := range testCases {
-		t.Run("basic signals 1", func(t *testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			rawData, err := CollectData(parserConfig, "", test.jsSource, true)
 			if err != nil {
 				t.Error(err)
