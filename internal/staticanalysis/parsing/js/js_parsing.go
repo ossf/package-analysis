@@ -19,15 +19,19 @@ type parserOutputElement struct {
 	Extra         map[string]any `json:"extra"`
 }
 
-// syntaxErrorExitCode is the exit code that the parser will return if it encounters a
-// syntax error while parsing the input. This also ends up being the signal of whether a given
-// input is JavaScript or not - without an external tool that detects file types, it's hard
-// to tell between 'JavaScript with a few errors' and 'a totally non-JavaScript file'.
+/*
+syntaxErrorExitCode is the exit code that the parser will return if it encounters a
+syntax error while parsing the input. This also ends up being the signal of whether a given
+input is JavaScript or not - without an external tool that detects file types, it's hard
+to tell between 'JavaScript with a few errors' and 'a totally non-JavaScript file'.
+*/
 const syntaxErrorExitCode = 33
 
-// runParser handles calling a parser program and provide the specified Javascript source to it, either
-// by filename (jsFilePath) or piping jsSource to the program's stdin
-// sourcePath is empty, sourceString will be parsed as JS code
+/*
+runParser handles calling the parser program and provide the specified Javascript source to it,
+either by filename (jsFilePath) or piping jsSource to the program's stdin.
+If sourcePath is empty, sourceString will be parsed as JS code
+*/
 func runParser(parserPath, jsFilePath, jsSource string) (string, error) {
 	var out []byte
 	var err error
@@ -65,11 +69,18 @@ func runParser(parserPath, jsFilePath, jsSource string) (string, error) {
 /*
 ParseJS extracts source code identifiers and string literals from JavaScript code.
 If sourcePath is empty, sourceString will be parsed as JS code.
+
+parserConfig specifies options relevant to the parser itself, and is produced by InitParser
+
 If the input contains a syntax error (which could mean it's not actually JavaScript),
 then a pointer to parsing.InvalidInput is returned.
 */
-func ParseJS(parserPath string, filePath string, sourceString string) (result parsing.ParseResult, parserOutput string, err error) {
-	parserOutput, err = runParser(parserPath, filePath, sourceString)
+func ParseJS(parserConfig ParserConfig, filePath string, sourceString string) (result parsing.ParseResult, parserOutput string, err error) {
+	if err != nil {
+		return
+	}
+
+	parserOutput, err = runParser(parserConfig.ParserPath, filePath, sourceString)
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			if exitErr.ExitCode() == syntaxErrorExitCode {
@@ -117,8 +128,8 @@ func ParseJS(parserPath string, filePath string, sourceString string) (result pa
 	return
 }
 
-func RunExampleParsing(jsParserPath, jsFilePath string, jsSourceString string) {
-	parseResult, parserOutput, err := ParseJS(jsParserPath, jsFilePath, jsSourceString)
+func RunExampleParsing(config ParserConfig, jsFilePath string, jsSourceString string) {
+	parseResult, parserOutput, err := ParseJS(config, jsFilePath, jsSourceString)
 
 	println("\nRaw JSON:\n", parserOutput)
 

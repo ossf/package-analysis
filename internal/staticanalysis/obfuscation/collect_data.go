@@ -28,8 +28,8 @@ Current data collected:
 TODO planned data
   - recording of arrays of either string literals or numeric data
 */
-func CollectData(jsParserPath, jsSourceFile string, jsSourceString string, printDebug bool) (*RawData, error) {
-	parseResult, parserOutput, err := js.ParseJS(jsParserPath, jsSourceFile, jsSourceString)
+func CollectData(parserConfig js.ParserConfig, jsSourceFile string, jsSourceString string, printDebug bool) (*RawData, error) {
+	parseResult, parserOutput, err := js.ParseJS(parserConfig, jsSourceFile, jsSourceString)
 	if printDebug {
 		println("\nRaw JSON:\n", parserOutput)
 	}

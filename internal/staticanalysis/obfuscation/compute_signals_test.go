@@ -1,15 +1,15 @@
 package obfuscation
 
 import (
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stats"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stringentropy"
+	"github.com/ossf/package-analysis/internal/staticanalysis/parsing/js"
 	"github.com/ossf/package-analysis/internal/utils"
 )
-
-const jsParserPath = "../parsing/js/babel-parser.js"
 
 func symbolEntropySummary(symbols []string) stats.SampleStatistics {
 	probs := stringentropy.CharacterProbabilities(symbols)
@@ -53,38 +53,59 @@ func testSignals(t *testing.T, signals Signals, stringLiterals, identifiers []st
 	}
 }
 
-func TestBasicSignals(t *testing.T) {
-	jsSource := `var a = "hello"`
-	rawData, err := CollectData(jsParserPath, "", jsSource, true)
-	if err != nil {
-		t.Error(err)
-	} else {
-		signals := ComputeSignals(*rawData)
-		stringLiterals := []string{"hello"}
-		identifiers := []string{"a"}
-		testSignals(t, signals, stringLiterals, identifiers)
-	}
+type testCase struct {
+	jsSource       string
+	stringLiterals []string
+	identifiers    []string
 }
 
-func TestBasicSignals2(t *testing.T) {
-	jsSource := `
-		function test(a, b = 2) {
-			console.log("hello")
-			var c = a + b
-			if (c === 3) {
-				return 4
-			} else {
-				return "apple"
-			}
-		}
-	`
-	rawData, err := CollectData(jsParserPath, "", jsSource, true)
-	if err != nil {
-		t.Error(err)
+var test1 = testCase{
+	jsSource: `
+var a = "hello"
+	`,
+	stringLiterals: []string{"hello"},
+	identifiers:    []string{"a"},
+}
+
+var test2 = testCase{
+	jsSource: `
+function test(a, b = 2) {
+	console.log("hello")
+	var c = a + b
+	if (c === 3) {
+		return 4
 	} else {
-		signals := ComputeSignals(*rawData)
-		stringLiterals := []string{"hello", "apple"}
-		identifiers := []string{"test", "a", "b", "c"}
-		testSignals(t, signals, stringLiterals, identifiers)
+		return "apple"
+	}
+}
+	`,
+	stringLiterals: nil,
+	identifiers:    nil,
+}
+
+func TestComputeSignals(t *testing.T) {
+	const jsParserInstallDir = "/tmp/package-analysis-compute-signals-test-js-parser"
+	parserConfig, err := js.InitParser(jsParserInstallDir)
+	if err != nil {
+		t.Errorf("failed to init parser: %v", err)
+		return
+	}
+
+	testCases := []testCase{test1, test2}
+
+	for _, test := range testCases {
+		t.Run("basic signals 1", func(t *testing.T) {
+			rawData, err := CollectData(parserConfig, "", test.jsSource, true)
+			if err != nil {
+				t.Error(err)
+			} else {
+				signals := ComputeSignals(*rawData)
+				testSignals(t, signals, test.stringLiterals, test.identifiers)
+			}
+		})
+	}
+
+	if err = os.RemoveAll(jsParserInstallDir); err != nil {
+		t.Errorf("failed to remove parser install dir: %v", err)
 	}
 }

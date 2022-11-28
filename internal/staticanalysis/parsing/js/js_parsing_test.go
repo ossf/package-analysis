@@ -1,13 +1,12 @@
 package js
 
 import (
+	"os"
 	"reflect"
 	"testing"
 
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 )
-
-const jsParserPath = "./babel-parser.js"
 
 type jsTestCase struct {
 	name      string
@@ -299,11 +298,18 @@ var index = 0,
 
 func TestParseJS(t *testing.T) {
 	const printAllJson = false
+	const jsParserDir = "/tmp/package-analysis-js-parsing-test-parser"
 	var tests = []jsTestCase{test1, test2, test3, test4, test5, test6, test7}
+
+	jsParserConfig, err := InitParser(jsParserDir)
+	if err != nil {
+		t.Errorf("%v", err)
+		return
+	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, parserOutput, err := ParseJS(jsParserPath, "", tt.inputJs)
+			got, parserOutput, err := ParseJS(jsParserConfig, "", tt.inputJs)
 			if err != nil {
 				t.Errorf("ParseJS() error = %v", err)
 				println("Parser output:\n", parserOutput)
@@ -342,5 +348,9 @@ func TestParseJS(t *testing.T) {
 			}
 
 		})
+	}
+
+	if err := os.RemoveAll(jsParserDir); err != nil {
+		t.Errorf("Could not remove parser installation: %v", err)
 	}
 }
