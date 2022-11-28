@@ -7,6 +7,9 @@ import (
 	"os"
 )
 
+const defaultFileMode os.FileMode = 0666
+const executableFlag os.FileMode = 0111
+
 /*
 WriteFile writes the given file contents to the given path.
 The file may optionally be marked as executable.
@@ -22,43 +25,21 @@ In cases 2 and 3 above, the contents of scriptSource are then written to the fil
 func WriteFile(path string, contents []byte, executable bool) (err error) {
 	fileInfo, err := os.Stat(path)
 
-	if err == nil {
-		if !fileInfo.Mode().IsRegular() {
-			return fmt.Errorf("not a regular file: %s", path)
-		}
-		if executable {
-			// else it's a regular, empty file that we'll chmod
-			if err = os.Chmod(path, fileInfo.Mode().Perm()|0100); err != nil {
-				return fmt.Errorf("could not set executable bit on %s: %v", path, err)
-			}
-		}
-	}
-
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("could not stat %s: %v", path, err)
+		return err
 	}
 
-	var fileMode os.FileMode
-	if executable {
-		fileMode = 0700
-	} else {
-		fileMode = 0600
-	}
-
-	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, fileMode)
-	if err != nil {
-		return fmt.Errorf("could not open or create file %s: %v", path, err)
-	}
-
-	defer func() {
-		if closeErr := file.Close(); closeErr != nil && err != nil {
-			err = closeErr
+	if err == nil && executable {
+		// file exists - make sure it's executable
+		if err := os.Chmod(path, fileInfo.Mode().Perm()|executableFlag); err != nil {
+			return fmt.Errorf("could not set executable bit on %s: %v", path, err)
 		}
-	}()
-
-	if _, err = file.Write(contents); err != nil {
-		return fmt.Errorf("could not write to %s: %v", path, err)
 	}
 
-	return
+	fileMode := defaultFileMode
+	if executable {
+		fileMode |= executableFlag
+	}
+
+	return os.WriteFile(path, contents, fileMode)
 }

@@ -49,9 +49,7 @@ var parserFiles = []parserFile{
 }
 
 func InitParser(installDir string) (ParserConfig, error) {
-	// TODO cleanup if error occurred?
-
-	if err := os.Mkdir(installDir, 0700); err != nil {
+	if err := os.MkdirAll(installDir, 0777); err != nil {
 		return ParserConfig{}, fmt.Errorf("error creating JS parser directory: %v", err)
 	}
 
@@ -69,9 +67,8 @@ func InitParser(installDir string) (ParserConfig, error) {
 		return ParserConfig{}, fmt.Errorf("npm install error: %v", err)
 	}
 
-	config := ParserConfig{}
-	config.InstallDir = installDir
-	config.ParserPath = path.Join(installDir, parserFileName)
-
-	return config, nil
+	return ParserConfig{
+		InstallDir: installDir,
+		ParserPath: path.Join(installDir, parserFileName),
+	}, nil
 }

@@ -1,7 +1,6 @@
 package js
 
 import (
-	"os"
 	"reflect"
 	"testing"
 
@@ -298,13 +297,11 @@ var index = 0,
 
 func TestParseJS(t *testing.T) {
 	const printAllJson = false
-	const jsParserDir = "/tmp/package-analysis-js-parsing-test-parser"
 	var tests = []jsTestCase{test1, test2, test3, test4, test5, test6, test7}
 
-	jsParserConfig, err := InitParser(jsParserDir)
+	jsParserConfig, err := InitParser(t.TempDir())
 	if err != nil {
-		t.Errorf("%v", err)
-		return
+		t.Fatalf("%v", err)
 	}
 
 	for _, tt := range tests {
@@ -350,7 +347,4 @@ func TestParseJS(t *testing.T) {
 		})
 	}
 
-	if err := os.RemoveAll(jsParserDir); err != nil {
-		t.Errorf("Could not remove parser installation: %v", err)
-	}
 }

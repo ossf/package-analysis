@@ -1,7 +1,6 @@
 package obfuscation
 
 import (
-	"os"
 	"strings"
 	"testing"
 
@@ -87,11 +86,9 @@ function test(a, b = 2) {
 }
 
 func TestComputeSignals(t *testing.T) {
-	const jsParserInstallDir = "/tmp/package-analysis-compute-signals-test-js-parser"
-	parserConfig, err := js.InitParser(jsParserInstallDir)
+	parserConfig, err := js.InitParser(t.TempDir())
 	if err != nil {
-		t.Errorf("failed to init parser: %v", err)
-		return
+		t.Fatalf("failed to init parser: %v", err)
 	}
 
 	testCases := []testCase{test1, test2}
@@ -106,9 +103,5 @@ func TestComputeSignals(t *testing.T) {
 				testSignals(t, signals, test.stringLiterals, test.identifiers)
 			}
 		})
-	}
-
-	if err = os.RemoveAll(jsParserInstallDir); err != nil {
-		t.Errorf("failed to remove parser install dir: %v", err)
 	}
 }
