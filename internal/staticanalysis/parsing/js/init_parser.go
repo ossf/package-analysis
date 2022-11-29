@@ -49,7 +49,7 @@ var parserFiles = []parserFile{
 }
 
 func InitParser(installDir string) (ParserConfig, error) {
-	if err := os.MkdirAll(installDir, 0777); err != nil {
+	if err := os.MkdirAll(installDir, 0o777); err != nil {
 		return ParserConfig{}, fmt.Errorf("error creating JS parser directory: %v", err)
 	}
 
