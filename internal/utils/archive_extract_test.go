@@ -17,7 +17,7 @@ func makeDirHeader(name string) *tar.Header {
 	return &tar.Header{
 		Typeflag: tar.TypeDir,
 		Name:     name,
-		Mode:     0777,
+		Mode:     0o777,
 		Uid:      os.Geteuid(),
 		Gid:      os.Getegid(),
 	}
@@ -30,7 +30,7 @@ func makeFileHeader(name string, size int) *tar.Header {
 		Typeflag: tar.TypeReg,
 		Name:     name,
 		Size:     int64(size),
-		Mode:     0666,
+		Mode:     0o666,
 		Uid:      os.Geteuid(),
 		Gid:      os.Getegid(),
 	}
@@ -87,26 +87,16 @@ func createTgzFile(path string, headers []*tar.Header) (err error) {
 	return tarWriter.Close()
 }
 
-func makePaths(testName string) (workDir, archivePath, extractPath string, err error) {
-	workDir, err = os.MkdirTemp("", testName)
-	if err != nil {
-		return "", "", "", fmt.Errorf("failed to create working dir for test: %v", err)
-	}
+func makePaths(t *testing.T, testName string) (workDir, archivePath, extractPath string, err error) {
+	workDir = t.TempDir()
 	archivePath = path.Join(workDir, testName+".tar.gz")
 	extractPath = path.Join(workDir, "extracted")
 
-	if err = os.Mkdir(extractPath, 0700); err != nil {
-		_ = os.Remove(workDir)
-		return "", "", "", fmt.Errorf("failed to create dir for extraction: %v", err)
+	if err = os.Mkdir(extractPath, 0o700); err != nil {
+		t.Fatalf("failed to create dir for extraction: %v", err)
 	}
 
 	return
-}
-
-func cleanupWorkDir(t *testing.T, workDir string) {
-	if removeErr := os.RemoveAll(workDir); removeErr != nil {
-		t.Errorf("failed to remove test files: %v", removeErr)
-	}
 }
 
 func doExtractionTest(archivePath, extractPath string, archiveHeaders []*tar.Header, runChecks func() error) (err error) {
@@ -126,13 +116,11 @@ func doExtractionTest(archivePath, extractPath string, archiveHeaders []*tar.Hea
 func TestExtractSimpleTarGzFile(t *testing.T) {
 	testName := "simple"
 
-	workDir, archivePath, extractPath, err := makePaths(testName)
+	_, archivePath, extractPath, err := makePaths(t, testName)
 	if err != nil {
 		t.Errorf("%v", err)
 		return
 	}
-
-	defer cleanupWorkDir(t, workDir)
 
 	testHeaders := []*tar.Header{
 		makeDirHeader("test"),
@@ -175,13 +163,11 @@ func TestExtractSimpleTarGzFile(t *testing.T) {
 func TestExtractMissingParentDir(t *testing.T) {
 	testName := "simple"
 
-	workDir, archivePath, extractPath, err := makePaths(testName)
+	_, archivePath, extractPath, err := makePaths(t, testName)
 	if err != nil {
 		t.Errorf("%v", err)
 		return
 	}
-
-	defer cleanupWorkDir(t, workDir)
 
 	testHeaders := []*tar.Header{
 		makeFileHeader("test/1.txt", 10),
@@ -223,13 +209,11 @@ func TestExtractMissingParentDir(t *testing.T) {
 func TestExtractAbsolutePathTarGzFile(t *testing.T) {
 	testName := "abs-path"
 
-	workDir, archivePath, extractPath, err := makePaths(testName)
+	_, archivePath, extractPath, err := makePaths(t, testName)
 	if err != nil {
 		t.Errorf("%v", err)
 		return
 	}
-
-	defer cleanupWorkDir(t, workDir)
 
 	testHeaders := []*tar.Header{
 		makeDirHeader("/test"),
@@ -272,13 +256,11 @@ func TestExtractAbsolutePathTarGzFile(t *testing.T) {
 func TestExtractZipSlip(t *testing.T) {
 	testName := "zipslip"
 
-	workDir, archivePath, extractPath, err := makePaths(testName)
+	_, archivePath, extractPath, err := makePaths(t, testName)
 	if err != nil {
 		t.Errorf("%v", err)
 		return
 	}
-
-	defer cleanupWorkDir(t, workDir)
 
 	testHeaders := []*tar.Header{
 		makeDirHeader("test"),
@@ -298,13 +280,11 @@ func TestExtractZipSlip(t *testing.T) {
 func TestExtractZipSlip2(t *testing.T) {
 	testName := "zipslip2"
 
-	workDir, archivePath, extractPath, err := makePaths(testName)
+	_, archivePath, extractPath, err := makePaths(t, testName)
 	if err != nil {
 		t.Errorf("%v", err)
 		return
 	}
-
-	defer cleanupWorkDir(t, workDir)
 
 	// try and force writing into a similarly named directory
 	similarlyNamedDir := extractPath + "FOO"
@@ -331,13 +311,11 @@ func TestExtractZipSlip2(t *testing.T) {
 func TestExtractZipSlip3(t *testing.T) {
 	testName := "zipslip3"
 
-	workDir, archivePath, extractPath, err := makePaths(testName)
+	workDir, archivePath, extractPath, err := makePaths(t, testName)
 	if err != nil {
 		t.Errorf("%v", err)
 		return
 	}
-
-	defer cleanupWorkDir(t, workDir)
 
 	testHeaders := []*tar.Header{
 		makeFileHeader("../bad3.txt", 1),
