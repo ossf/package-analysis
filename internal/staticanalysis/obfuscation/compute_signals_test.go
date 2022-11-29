@@ -52,39 +52,6 @@ func testSignals(t *testing.T, signals Signals, stringLiterals, identifiers []st
 	}
 }
 
-type testCase struct {
-	name           string
-	jsSource       string
-	stringLiterals []string
-	identifiers    []string
-}
-
-var test1 = testCase{
-	name: "simple 1",
-	jsSource: `
-var a = "hello"
-	`,
-	stringLiterals: []string{"hello"},
-	identifiers:    []string{"a"},
-}
-
-var test2 = testCase{
-	name: "simple 2",
-	jsSource: `
-function test(a, b = 2) {
-	console.log("hello")
-	var c = a + b
-	if (c === 3) {
-		return 4
-	} else {
-		return "apple"
-	}
-}
-	`,
-	stringLiterals: []string{"hello", "apple"},
-	identifiers:    []string{"test", "a", "b", "c"},
-}
-
 func TestComputeSignals(t *testing.T) {
 	parserConfig, err := js.InitParser(t.TempDir())
 	if err != nil {
@@ -100,7 +67,7 @@ func TestComputeSignals(t *testing.T) {
 				t.Error(err)
 			} else {
 				signals := ComputeSignals(*rawData)
-				testSignals(t, signals, test.stringLiterals, test.identifiers)
+				testSignals(t, signals, test.expectedData.StringLiterals, test.expectedData.Identifiers)
 			}
 		})
 	}
