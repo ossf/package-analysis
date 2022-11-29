@@ -78,9 +78,9 @@ func makeSandboxOpts() []sandbox.Option {
 	return sbOpts
 }
 
-func dynamicAnalysis(manager *pkgecosystem.PkgManager, pkg *pkgecosystem.Pkg) {
+func dynamicAnalysis(pkg *pkgecosystem.Pkg) {
 	sbOpts := makeSandboxOpts()
-	sb := sandbox.New(manager.DynamicAnalysisImage(), sbOpts...)
+	sb := sandbox.New(pkg.Manager().DynamicAnalysisImage(), sbOpts...)
 	defer cleanupSandbox(sb)
 
 	results, lastRunPhase, err := worker.RunDynamicAnalysis(sb, pkg)
@@ -115,7 +115,7 @@ func dynamicAnalysis(manager *pkgecosystem.PkgManager, pkg *pkgecosystem.Pkg) {
 	}
 }
 
-func staticAnalysis(manager *pkgecosystem.PkgManager, pkg *pkgecosystem.Pkg) {
+func staticAnalysis(pkg *pkgecosystem.Pkg) {
 	sbOpts := makeSandboxOpts()
 	image := "gcr.io/ossf-malware-analysis/static-analysis"
 
@@ -189,12 +189,12 @@ func main() {
 
 	if runMode[analysis.Static] {
 		log.Info("Starting static analysis")
-		staticAnalysis(manager, pkg)
+		staticAnalysis(pkg)
 	}
 
 	// dynamicAnalysis() currently panics on error, so it's last
 	if runMode[analysis.Dynamic] {
 		log.Info("Starting dynamic analysis")
-		dynamicAnalysis(manager, pkg)
+		dynamicAnalysis(pkg)
 	}
 }

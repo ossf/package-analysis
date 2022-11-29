@@ -18,13 +18,7 @@ jobs:
     - uses: actions/setup-node@v3
       with:
         node-version: 18
-        cache: 'npm'
-        cache-dependency-path: internal/staticanalysis/parsing/js/package-lock.json
     - name: Install libpcap-dev
       run: sudo apt-get install -y libpcap-dev
-    - name: Install babel parser
-      run: npm install @babel/parser
-    - name: Install babel traverse
-      run: npm install @babel/traverse
     - name: Run tests
       run: go test -v ./...
