@@ -29,6 +29,8 @@ You must install these tools:
 
 1.  [`git`](https://help.github.com/articles/set-up-git/): For source control.
 1.  [`go`](https://go.dev/dl/): For running code.
+1.  `libpcap-dev`: Network packet capture library
+1.  `make`: For running development commands
 
 For running locally, the following additional tools are required:
 
