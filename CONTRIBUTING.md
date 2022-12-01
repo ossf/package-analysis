@@ -6,12 +6,12 @@ We're delighted to have you on board.
 This document describes the contribution guidelines for the project.
 
 ## Ways to get in touch
+
 If you have any contribution-related questions, please get in touch! Here are some ways to reach current contributors
 1. Open a new issue (strongly preferred)
 1. Via the [OpenSSF Securing Critical Projects Working Group](https://github.com/ossf/wg-securing-critical-projects) mailing list or Slack channel
 
 Note: for minor changes (typos, documentation improvements), feel free to open a pull request directly.
-
 
 **Note:** Before you start contributing, you must read and abide by our
 **[Code of Conduct](./CODE_OF_CONDUCT.md)**.
@@ -21,8 +21,6 @@ Note: for minor changes (typos, documentation improvements), feel free to open a
 ### Getting started
 
 1.  Create [a GitHub account](https://github.com/join)
-1.  Create a [personal access token](https://docs.github.com/en/free-pro-team@latest/developers/apps/about-apps#personal-access-tokens)
-1.  (Optionally) a Google Cloud Platform account for [deps.dev](https://deps.dev) data
 1.  Set up your [development environment](#environment-setup)
 
 ## Environment Setup
@@ -30,12 +28,12 @@ Note: for minor changes (typos, documentation improvements), feel free to open a
 You must install these tools:
 
 1.  [`git`](https://help.github.com/articles/set-up-git/): For source control.
-
 1.  [`go`](https://go.dev/dl/): For running code.
 
-And optionally:
+For running locally, the following additional tools are required:
 
-1.  [`gcloud`](https://cloud.google.com/sdk/docs/install): For Google Cloud Platform access for deps.dev data.
+1.  [`docker`](https://www.docker.com/get-started/): The external container
+1.  [`podman`](https://podman.io/getting-started/): The internal container
 
 Then clone the repository, e.g:
 
@@ -45,28 +43,32 @@ $ cd package-analysis
 ```
 
 ## Notes on style
-### Commit style:
-Prefer small but frequent PRs to make reviewing easier.
 
-If making many incremental changes, one way to avoid being blocked by reviews while still writing new code is to make a new branch off the branch under review, and opening a new PR which is diffed to the first branch. This can be chained multiple times. However, the commits of earlier PRs are duplicated in later PRs; this causes the default squashed commit message of the later PRs to contain commit messages from the earlier PRs. Rebasing branches of later PRs onto main after earlier PRs have been merged may solve this.
+### Commit style
 
-### Code style:
+Prefer smaller PRs to make reviewing easier. Larger changes can be split into smaller PRs by branching off previous (unmerged) branches rather than main.
 
-#### Warnings:
+### Code style
+
+#### Warnings
+
 Some things that are OK:
+
 - not handling the error when `defer` close() on an HTTP response body
 
-#### Comments:
+#### Comments
+
 Follow official Go comment style: https://tip.golang.org/doc/comment.
 In particular, all exported (capitalised) types and functions should have a comment explaining what they do.
 The comment should start with the type/function name.
 
+#### Imports
 
-#### Imports:
 - stdlib imports grouped first, then 3rd party packages, then local imports
 - each group separated by a blank line and ordered alphabetically
 
-##### on IntelliJ:
+##### on IntelliJ
+
 - Remove redundant import aliases: yes
 - Sorting type: gofmt
 - Move all imports into a single declaration: yes
