@@ -132,22 +132,16 @@ func parseCmdAndEnv(cmdAndEnv string) ([]string, []string, error) {
 	return cmd, env, nil
 }
 
-func (r *Result) recordFileAccess(file string, read, write, delete bool) {
+func (r *Result) recordFileAccess(file string, read, write, delete bool, bytesWritten int64) {
 	if _, exists := r.files[file]; !exists {
 		r.files[file] = &FileInfo{Path: file}
 	}
 	r.files[file].Read = r.files[file].Read || read
 	r.files[file].Write = r.files[file].Write || write
 	r.files[file].Delete = r.files[file].Delete || delete
-}
 
-func (r *Result) recordFileWrite(file string, bytesWritten int64) {
-	if bytesWritten > 0 {
-		if _, exists := r.files[file]; !exists {
-			r.files[file] = &FileInfo{Path: file, WriteInfo: []WriteContentInfo{}}
-		}
+	if write && bytesWritten > 0 {
 		writeContentsAndBytes := WriteContentInfo{BytesWritten: bytesWritten}
-		r.files[file].Write = true
 		r.files[file].WriteInfo = append(r.files[file].WriteInfo, writeContentsAndBytes)
 	}
 }
@@ -180,19 +174,19 @@ func (r *Result) parseEnterSyscall(syscall, args string) error {
 		match := writePattern.FindStringSubmatch(args)
 		// Example: django.template.base\nImporting django.template"..., 0xe64
 		writeBufAndBytesWritten := match[2]
-		for i := len(writeBufAndBytesWritten) - 1; i >= 0; i-- {
-			// TODO: A future PR will use the index right before the comma to get the end of the write buffer.
-			if writeBufAndBytesWritten[i] == ',' {
-				// Use the index after the space and "0x" to get to the first index of the bytes written.
-				bytesWritten, err := strconv.ParseInt(writeBufAndBytesWritten[i+4:len(writeBufAndBytesWritten)], 16, 64)
-				r.recordFileWrite(match[1], bytesWritten)
-				if err != nil {
-					return err
-				}
-				break
-			}
+		// The index of the comma that separates the write buffer argument from the bytes written argument.
+		commaIndex := strings.LastIndex(writeBufAndBytesWritten, ",")
+		if commaIndex == -1 || len(writeBufAndBytesWritten) <= commaIndex+4 || writeBufAndBytesWritten[commaIndex+1:commaIndex+4] != " 0x" {
+			return fmt.Errorf("strace of file write syscall has the bytes written argument in an unexpected format")
 		}
-
+		// Use the index after the space and "0x" to get to the first index of the bytes written.
+		// TODO: A future PR will use the index right before the comma to get the end of the write buffer.
+		bytesWritten, err := strconv.ParseInt(writeBufAndBytesWritten[commaIndex+4:len(writeBufAndBytesWritten)], 16, 64)
+		if err != nil {
+			log.Debug("Could not parse")
+			return err
+		}
+		r.recordFileAccess(match[1], false, true, false, bytesWritten)
 	}
 	return nil
 }
@@ -207,7 +201,7 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 
 		log.Debug("creat",
 			"path", match[1])
-		r.recordFileAccess(match[1], false, true, false)
+		r.recordFileAccess(match[1], false, true, false, 0)
 	case "open":
 		match := openPattern.FindStringSubmatch(args)
 		if match == nil {
@@ -219,7 +213,7 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 			"path", match[1],
 			"read", read,
 			"write", write)
-		r.recordFileAccess(match[1], read, write, false)
+		r.recordFileAccess(match[1], read, write, false, 0)
 	case "openat":
 		match := openatPattern.FindStringSubmatch(args)
 		if match == nil {
@@ -232,7 +226,7 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 			"path", path,
 			"read", read,
 			"write", write)
-		r.recordFileAccess(path, read, write, false)
+		r.recordFileAccess(path, read, write, false, 0)
 	case "execve":
 		match := execvePattern.FindStringSubmatch(args)
 		if match == nil {
@@ -279,7 +273,7 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 		}
 		log.Debug("stat",
 			"path", match[1])
-		r.recordFileAccess(match[1], true, false, false)
+		r.recordFileAccess(match[1], true, false, false, 0)
 	case "newfstatat":
 		match := newfstatatPattern.FindStringSubmatch(args)
 		if match == nil {
@@ -288,7 +282,7 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 		path := joinPaths(match[1], match[2])
 		log.Debug("newfstatat",
 			"path", path)
-		r.recordFileAccess(path, true, false, false)
+		r.recordFileAccess(path, true, false, false, 0)
 	case "unlink":
 		match := unlinkPatten.FindStringSubmatch(args)
 		if match == nil {
@@ -297,7 +291,7 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 		path := match[1]
 		log.Debug("unlink",
 			"path", path)
-		r.recordFileAccess(path, false, false, true)
+		r.recordFileAccess(path, false, false, true, 0)
 	case "unlinkat":
 		match := unlinkatPattern.FindStringSubmatch(args)
 		if match == nil {
@@ -306,7 +300,7 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 		path := joinPaths(match[1], match[2])
 		log.Debug("unlinkat",
 			"path", path)
-		r.recordFileAccess(path, false, false, true)
+		r.recordFileAccess(path, false, false, true, 0)
 	}
 	return nil
 }
