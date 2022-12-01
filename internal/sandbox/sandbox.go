@@ -111,12 +111,17 @@ func (v volume) args() []string {
 
 // Implements the Sandbox interface using "podman".
 type podmanSandbox struct {
-	image     string
-	tag       string
-	id        string
-	container string
-	noPull    bool
-	volumes   []volume
+	image      string
+	tag        string
+	id         string
+	container  string
+	noPull     bool
+	rawSockets bool
+	strace     bool
+	logPackets bool
+	logStdOut  bool
+	logStdErr  bool
+	volumes    []volume
 }
 
 type Option interface{ set(*podmanSandbox) }
@@ -125,16 +130,46 @@ func (o option) set(sb *podmanSandbox) { o(sb) }
 
 func New(image string, options ...Option) Sandbox {
 	sb := &podmanSandbox{
-		image:     image,
-		tag:       "",
-		container: "",
-		noPull:    false,
-		volumes:   make([]volume, 0),
+		image:      image,
+		tag:        "",
+		container:  "",
+		noPull:     false,
+		rawSockets: false,
+		strace:     false,
+		logPackets: false,
+		logStdOut:  false,
+		logStdErr:  false,
+		volumes:    make([]volume, 0),
 	}
 	for _, o := range options {
 		o.set(sb)
 	}
 	return sb
+}
+
+// EnableRawSockets allows use of raw sockets in the sandbox
+func EnableRawSockets() Option {
+	return option(func(sb *podmanSandbox) { sb.rawSockets = true })
+}
+
+// EnableStrace enables strace functionality for the sandbox
+func EnableStrace() Option {
+	return option(func(sb *podmanSandbox) { sb.strace = true })
+}
+
+// EnablePacketLogging enables packet logging for the sandbox
+func EnablePacketLogging() Option {
+	return option(func(sb *podmanSandbox) { sb.logPackets = true })
+}
+
+// LogStdOut enables logging of stdout from sandboxed process
+func LogStdOut() Option {
+	return option(func(sb *podmanSandbox) { sb.logStdOut = true })
+}
+
+// LogStdErr enables logging of stderr from sandboxed process
+func LogStdErr() Option {
+	return option(func(sb *podmanSandbox) { sb.logStdErr = true })
 }
 
 // NoPull will disable the image for the sandbox from being pulled during Init.
@@ -219,15 +254,24 @@ func (s *podmanSandbox) createContainer() (string, error) {
 }
 
 func (s *podmanSandbox) startContainerCmd(logDir string) *exec.Cmd {
-	return podman(
+	args := []string{
 		"start",
-		"--runtime="+runtimeBin,
-		"--runtime-flag=root="+rootDir,
-		"--runtime-flag=debug-log="+path.Join(logDir, "runsc.log.%COMMAND%"),
-		"--runtime-flag=net-raw",
-		"--runtime-flag=strace",
-		"--runtime-flag=log-packets",
-		s.container)
+		"--runtime=" + runtimeBin,
+		"--runtime-flag=root=" + rootDir,
+		"--runtime-flag=debug-log=" + path.Join(logDir, "runsc.log.%COMMAND%"),
+	}
+	if s.rawSockets {
+		args = append(args, "--runtime-flag=net-raw")
+	}
+	if s.strace {
+		args = append(args, "--runtime-flag=strace")
+	}
+	if s.logPackets {
+		args = append(args, "--runtime-flag=log-packets")
+	}
+	args = append(args, s.container)
+
+	return podman(args...)
 }
 
 func (s *podmanSandbox) stopContainerCmd() *exec.Cmd {
@@ -329,8 +373,16 @@ func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
 	logErr := log.Writer(log.WarnLevel,
 		"args", args)
 	defer logErr.Close()
-	outWriter := io.MultiWriter(&stdout, logOut)
-	errWriter := io.MultiWriter(&stderr, logErr)
+
+	var outWriter io.Writer = &stdout
+	if s.logStdOut {
+		outWriter = io.MultiWriter(&stdout, logOut)
+	}
+
+	var errWriter io.Writer = &stderr
+	if s.logStdErr {
+		errWriter = io.MultiWriter(&stderr, logErr)
+	}
 
 	// Start the container
 	startCmd := s.startContainerCmd(logDir)

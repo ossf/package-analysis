@@ -7,8 +7,6 @@ import (
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 )
 
-const jsParserPath = "./babel-parser.js"
-
 type jsTestCase struct {
 	name      string
 	inputJs   string
@@ -301,9 +299,14 @@ func TestParseJS(t *testing.T) {
 	const printAllJson = false
 	var tests = []jsTestCase{test1, test2, test3, test4, test5, test6, test7}
 
+	jsParserConfig, err := InitParser(t.TempDir())
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, parserOutput, err := ParseJS(jsParserPath, "", tt.inputJs)
+			got, parserOutput, err := ParseJS(jsParserConfig, "", tt.inputJs)
 			if err != nil {
 				t.Errorf("ParseJS() error = %v", err)
 				println("Parser output:\n", parserOutput)
@@ -343,4 +346,5 @@ func TestParseJS(t *testing.T) {
 
 		})
 	}
+
 }

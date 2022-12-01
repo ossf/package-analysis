@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"net/url"
 	"os"
 	"strings"
@@ -29,6 +30,7 @@ var (
 	listModes     = flag.Bool("list-modes", false, "prints out a list of available analysis modes")
 	analysisMode  = utils.CommaSeparatedFlags("analysis-mode", "dynamic",
 		"single or comma separated list of analysis modes to run. Use -list-modes to see available options")
+	uploadFileWriteInfo = flag.String("upload-file-write-info", "", "bucket path for uploading information from file writes")
 )
 
 func parseBucketPath(path string) (string, string) {
@@ -57,48 +59,55 @@ func printAnalysisModes() {
 }
 
 /*
-makeSandboxOpts prepares options for the sandbox based on command line arguments:
+makeSandboxOptions prepares options for the sandbox based on command line arguments:
 1. Always pass through the tag. An empty tag is the same as "latest".
 2. Respect the "-nopull" option.
 3. Ensure any local package is mapped through.
 */
-func makeSandboxOpts() []sandbox.Option {
-	var sbOpts []sandbox.Option
+func makeSandboxOptions(mode analysis.Mode) []sandbox.Option {
+	sbOpts := worker.DefaultSandboxOptions(mode, *imageTag)
 
-	sbOpts = append(sbOpts, sandbox.Tag(*imageTag))
-
-	if *noPull {
-		sbOpts = append(sbOpts, sandbox.NoPull())
-	}
 	if *localPkg != "" {
 		sbOpts = append(sbOpts, sandbox.Volume(*localPkg, *localPkg))
+	}
+	if *noPull {
+		sbOpts = append(sbOpts, sandbox.NoPull())
 	}
 
 	return sbOpts
 }
 
-func dynamicAnalysis(manager *pkgecosystem.PkgManager, pkg *pkgecosystem.Pkg) {
-	sbOpts := makeSandboxOpts()
-	sb := sandbox.New(manager.DynamicAnalysisImage(), sbOpts...)
+func dynamicAnalysis(pkg *pkgecosystem.Pkg) {
+	sandbox.InitEnv()
+	sbOpts := makeSandboxOptions(analysis.Dynamic)
+	sb := sandbox.New(pkg.Manager().DynamicAnalysisImage(), sbOpts...)
 	defer cleanupSandbox(sb)
 
 	results, lastRunPhase, err := worker.RunDynamicAnalysis(sb, pkg)
 	if err != nil {
-		log.Fatal("Dynamic analysis aborted due (run error)", "error", err)
+		log.Fatal("Dynamic analysis aborted (run error)", "error", err)
 	}
 
 	ctx := context.Background()
 	if *dynamicUpload != "" {
 		bucket, path := parseBucketPath(*dynamicUpload)
-		err := resultstore.New(bucket, resultstore.BasePath(path)).Save(ctx, pkg, results)
+		err := resultstore.New(bucket, resultstore.BasePath(path)).Save(ctx, pkg, results.StraceSummary)
 		if err != nil {
 			log.Fatal("Failed to upload dynamic analysis results to blobstore",
 				"error", err)
 		}
 	}
 
+	if *uploadFileWriteInfo != "" {
+		bucket, path := parseBucketPath(*uploadFileWriteInfo)
+		err := resultstore.New(bucket, resultstore.BasePath(path)).Save(ctx, pkg, results.FileWrites)
+		if err != nil {
+			log.Fatal("Failed to upload file write analysis results to blobstore", "error", err)
+		}
+	}
+
 	// this is only valid if RunDynamicAnalysis() returns nil err
-	lastStatus := results[lastRunPhase].Status
+	lastStatus := results.StraceSummary[lastRunPhase].Status
 	if lastStatus != analysis.StatusCompleted {
 		log.Fatal("Dynamic analysis phase did not complete successfully",
 			"lastRunPhase", lastRunPhase,
@@ -106,8 +115,10 @@ func dynamicAnalysis(manager *pkgecosystem.PkgManager, pkg *pkgecosystem.Pkg) {
 	}
 }
 
-func staticAnalysis(manager *pkgecosystem.PkgManager, pkg *pkgecosystem.Pkg) {
-	sbOpts := makeSandboxOpts()
+func staticAnalysis(pkg *pkgecosystem.Pkg) {
+	sandbox.InitEnv()
+	sbOpts := makeSandboxOptions(analysis.Static)
+
 	image := "gcr.io/ossf-malware-analysis/static-analysis"
 
 	sb := sandbox.New(image, sbOpts...)
@@ -116,6 +127,10 @@ func staticAnalysis(manager *pkgecosystem.PkgManager, pkg *pkgecosystem.Pkg) {
 	results, err := worker.RunStaticAnalyses(sb, pkg, staticanalysis.ObfuscationDetection)
 	if err != nil {
 		log.Fatal("Static analysis aborted", "error", err)
+	}
+
+	for task, result := range results {
+		fmt.Printf("%s result\n%s\n", task, result)
 	}
 
 	ctx := context.Background()
@@ -131,7 +146,6 @@ func staticAnalysis(manager *pkgecosystem.PkgManager, pkg *pkgecosystem.Pkg) {
 
 func main() {
 	log.Initalize(os.Getenv("LOGGER_ENV"))
-	sandbox.InitEnv()
 
 	analysisMode.InitFlag()
 	flag.Parse()
@@ -180,12 +194,12 @@ func main() {
 
 	if runMode[analysis.Static] {
 		log.Info("Starting static analysis")
-		staticAnalysis(manager, pkg)
+		staticAnalysis(pkg)
 	}
 
 	// dynamicAnalysis() currently panics on error, so it's last
 	if runMode[analysis.Dynamic] {
 		log.Info("Starting dynamic analysis")
-		dynamicAnalysis(manager, pkg)
+		dynamicAnalysis(pkg)
 	}
 }
