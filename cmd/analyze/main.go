@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"net/url"
 	"os"
 	"strings"
@@ -126,6 +127,10 @@ func staticAnalysis(pkg *pkgecosystem.Pkg) {
 	results, err := worker.RunStaticAnalyses(sb, pkg, staticanalysis.ObfuscationDetection)
 	if err != nil {
 		log.Fatal("Static analysis aborted", "error", err)
+	}
+
+	for task, result := range results {
+		fmt.Printf("%s result\n%s\n", task, result)
 	}
 
 	ctx := context.Background()
