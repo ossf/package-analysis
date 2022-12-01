@@ -19,6 +19,7 @@ import (
 	_ "gocloud.dev/pubsub/gcppubsub"
 	_ "gocloud.dev/pubsub/kafkapubsub"
 
+	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 	"github.com/ossf/package-analysis/internal/resultstore"
@@ -70,9 +71,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	worker.LogRequest(ecosystem, name, version, pkgPath, resultsBucketOverride)
 
 	localPkgPath := ""
-	sbOpts := []sandbox.Option{
-		sandbox.Tag(imageTag),
-	}
+	sbOpts := worker.DefaultSandboxOptions(analysis.Dynamic, imageTag)
 
 	if pkgPath != "" {
 		if packagesBucket == nil {
