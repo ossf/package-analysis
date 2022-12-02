@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/fs"
@@ -104,6 +105,8 @@ func doObfuscationDetection(workDirs workDirs) (*obfuscation.AnalysisResult, err
 		return nil, fmt.Errorf("error while walking package files: %v", err)
 	}
 
+	result.PackageSignals = obfuscation.RemoveNaNs(result.PackageSignals)
+
 	return result, nil
 }
 
@@ -200,6 +203,8 @@ func run() (err error) {
 		return fmt.Errorf("archive extraction failed: %v", err)
 	}
 
+	results := make(staticanalysis.Result)
+
 	for _, task := range analysisTasks {
 		switch task {
 		case staticanalysis.ObfuscationDetection:
@@ -207,13 +212,20 @@ func run() (err error) {
 			if err != nil {
 				log.Error("Error occurred during obfuscation detection", "error", err)
 			}
-			fmt.Printf("%v\n", analysisResult)
+			results[staticanalysis.ObfuscationDetection] = analysisResult
 		default:
 			return fmt.Errorf("static analysis task not implemented: %s", task)
 		}
 	}
 
-	return
+	jsonResult, err := json.Marshal(results)
+	if err != nil {
+		log.Error("JSON marshal error", "error", err)
+	} else {
+		fmt.Printf("%v\n", string(jsonResult))
+	}
+
+	return err
 }
 
 func main() {
