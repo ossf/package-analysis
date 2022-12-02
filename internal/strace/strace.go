@@ -43,9 +43,12 @@ var (
 	// unlinkat(AT_FDCWD /app, 0x5569a7e83380 /app/vendor/composer/e06632ca, 0x200)
 	unlinkatPattern = regexp.MustCompile(`\S+ ([^,]+), 0x[a-f\d]+ ([^,]+), 0x[a-f\d]+`)
 
-	// This regex captures 1) the file path and 2) the write buffer and bytes written together. #2 will be parsed further before used.
-	// write(0x1 host:[5], 0x557f2cfde7c0 "django.template.base\nImporting django.template...", 0xe64)
-	writePattern = regexp.MustCompile(`\S+ ([^,]+), 0x[a-f\d]+ (".+)`)
+	// This regex parses just the file path. Bytes written is parsed further below as the nature of the write buffer makes it unideal to parse through regex.
+	// TODO: We can see how we can potentially reuse regex patterns.
+	writePattern = regexp.MustCompile(`\S+ ([^,]+),.*`)
+
+	// Length of the hex prefix "0x".
+	hexPrefixLength = 2
 )
 
 type FileInfo struct {
@@ -132,15 +135,18 @@ func parseCmdAndEnv(cmdAndEnv string) ([]string, []string, error) {
 	return cmd, env, nil
 }
 
-func (r *Result) recordFileAccess(file string, read, write, delete bool, bytesWritten int64) {
+func (r *Result) recordFileAccess(file string, read, write, delete bool) {
 	if _, exists := r.files[file]; !exists {
 		r.files[file] = &FileInfo{Path: file}
 	}
 	r.files[file].Read = r.files[file].Read || read
 	r.files[file].Write = r.files[file].Write || write
 	r.files[file].Delete = r.files[file].Delete || delete
+}
 
-	if write && bytesWritten > 0 {
+func (r *Result) recordFileWrite(file string, bytesWritten int64) {
+	r.recordFileAccess(file, false, true, false)
+	if bytesWritten > 0 {
 		writeContentsAndBytes := WriteContentInfo{BytesWritten: bytesWritten}
 		r.files[file].WriteInfo = append(r.files[file].WriteInfo, writeContentsAndBytes)
 	}
@@ -171,22 +177,20 @@ func (r *Result) recordCommand(cmd, env []string) {
 func (r *Result) parseEnterSyscall(syscall, args string) error {
 	switch syscall {
 	case "write":
-		match := writePattern.FindStringSubmatch(args)
-		// Example: django.template.base\nImporting django.template"..., 0xe64
-		writeBufAndBytesWritten := match[2]
-		// The index of the comma that separates the write buffer argument from the bytes written argument.
-		commaIndex := strings.LastIndex(writeBufAndBytesWritten, ",")
-		if commaIndex == -1 || len(writeBufAndBytesWritten) <= commaIndex+4 || writeBufAndBytesWritten[commaIndex+1:commaIndex+4] != " 0x" {
+		// The index of the start of bytes written. Bytes written is expected to be in hex.
+		bytesWrittenHexIndex := strings.LastIndex(args, "0x")
+		// Return an error if we can't find the beginning of bytes written as a hex value or there is no value after the hex prefix.
+		if bytesWrittenHexIndex == -1 || len(args) <= bytesWrittenHexIndex+hexPrefixLength {
 			return fmt.Errorf("strace of file write syscall has the bytes written argument in an unexpected format")
 		}
-		// Use the index after the space and "0x" to get to the first index of the bytes written.
-		// TODO: A future PR will use the index right before the comma to get the end of the write buffer.
-		bytesWritten, err := strconv.ParseInt(writeBufAndBytesWritten[commaIndex+4:len(writeBufAndBytesWritten)], 16, 64)
+		// Get the hex value after "0x" to convert to an integer.
+		bytesWritten, err := strconv.ParseInt(args[bytesWrittenHexIndex+hexPrefixLength:len(args)], 16, 64)
 		if err != nil {
 			log.Debug("Could not parse")
 			return err
 		}
-		r.recordFileAccess(match[1], false, true, false, bytesWritten)
+		match := writePattern.FindStringSubmatch(args)
+		r.recordFileWrite(match[1], bytesWritten)
 	}
 	return nil
 }
@@ -201,7 +205,7 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 
 		log.Debug("creat",
 			"path", match[1])
-		r.recordFileAccess(match[1], false, true, false, 0)
+		r.recordFileAccess(match[1], false, true, false)
 	case "open":
 		match := openPattern.FindStringSubmatch(args)
 		if match == nil {
@@ -213,7 +217,7 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 			"path", match[1],
 			"read", read,
 			"write", write)
-		r.recordFileAccess(match[1], read, write, false, 0)
+		r.recordFileAccess(match[1], read, write, false)
 	case "openat":
 		match := openatPattern.FindStringSubmatch(args)
 		if match == nil {
@@ -226,7 +230,7 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 			"path", path,
 			"read", read,
 			"write", write)
-		r.recordFileAccess(path, read, write, false, 0)
+		r.recordFileAccess(path, read, write, false)
 	case "execve":
 		match := execvePattern.FindStringSubmatch(args)
 		if match == nil {
@@ -273,7 +277,7 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 		}
 		log.Debug("stat",
 			"path", match[1])
-		r.recordFileAccess(match[1], true, false, false, 0)
+		r.recordFileAccess(match[1], true, false, false)
 	case "newfstatat":
 		match := newfstatatPattern.FindStringSubmatch(args)
 		if match == nil {
@@ -282,7 +286,7 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 		path := joinPaths(match[1], match[2])
 		log.Debug("newfstatat",
 			"path", path)
-		r.recordFileAccess(path, true, false, false, 0)
+		r.recordFileAccess(path, true, false, false)
 	case "unlink":
 		match := unlinkPatten.FindStringSubmatch(args)
 		if match == nil {
@@ -291,7 +295,7 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 		path := match[1]
 		log.Debug("unlink",
 			"path", path)
-		r.recordFileAccess(path, false, false, true, 0)
+		r.recordFileAccess(path, false, false, true)
 	case "unlinkat":
 		match := unlinkatPattern.FindStringSubmatch(args)
 		if match == nil {
@@ -300,7 +304,7 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 		path := joinPaths(match[1], match[2])
 		log.Debug("unlinkat",
 			"path", path)
-		r.recordFileAccess(path, false, false, true, 0)
+		r.recordFileAccess(path, false, false, true)
 	}
 	return nil
 }
