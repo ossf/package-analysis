@@ -2,7 +2,8 @@ module github.com/ossf/package-analysis/static-analysis
 
 go 1.19
 
-require github.com/ossf/package-analysis v0.0.0-20221129065523-ba90761ae7db
+require github.com/ossf/package-analysis v0.0.0
+replace github.com/ossf/package-analysis v0.0.0 => ../../
 
 require (
 	github.com/blendle/zapdriver v1.3.1 // indirect
