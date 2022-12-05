@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing/js"
 )
 
@@ -42,6 +43,10 @@ function test(a, b = 2) {
 		StringLiterals: []string{"hello", "apple"},
 		IntLiterals:    []int{2, 3, 4},
 	},
+}
+
+func init() {
+	log.Initalize("")
 }
 
 func TestCollectData(t *testing.T) {
