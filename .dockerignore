@@ -5,4 +5,10 @@ infra
 examples
 function
 sandboxes
+internal/staticanalysis/parsing/js/node_modules
+node_modules
 web
+
+# Don't exclude sandboxes/staticanalysis as its Docker image
+# also needs to run from the top-level package analysis directory
+!sandboxes/staticanalysis
