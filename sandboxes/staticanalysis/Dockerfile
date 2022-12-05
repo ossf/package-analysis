@@ -24,4 +24,4 @@ RUN mkdir -p /app
 WORKDIR /app
 
 ENTRYPOINT [ "sleep" ]
-CMD [ "10m" ]
+CMD [ "30m" ]
