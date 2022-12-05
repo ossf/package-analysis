@@ -23,4 +23,16 @@ run:
 	@echo "To perform a local analysis, please use ./run_analysis.sh"
 	@echo
 
+docker_compose_start:
+	cd ./examples/e2e && docker-compose up -d
+	sleep 3
+	curl localhost:8080
+	@echo
+	@echo "To see analysis results, go to http://localhost:9000/minio/package-analysis"
+	@echo "Remember to run "make docker_compose_stop" when done!"
 
+docker_compose_logs:
+	cd ./examples/e2e && docker-compose logs
+
+docker_compose_stop:
+	cd ./examples/e2e && docker-compose down
