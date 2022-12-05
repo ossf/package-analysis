@@ -29,13 +29,13 @@ You must install these tools:
 
 1.  [`git`](https://help.github.com/articles/set-up-git/): For source control.
 1.  [`go`](https://go.dev/dl/): For running code.
-1.  `libpcap-dev`: Network packet capture library
 1.  `make`: For running development commands
 
-For running locally, the following additional tools are required:
+For running/testing locally, the following additional tools are required:
 
 1.  [`docker`](https://www.docker.com/get-started/): The external container
 1.  [`podman`](https://podman.io/getting-started/): The internal container
+1.  `docker-compose` for end-to-end testing
 
 Then clone the repository, e.g:
 
