@@ -13,11 +13,11 @@ import (
 
 // parserOutputElement represents the output JSON format of the JS parser
 type parserOutputElement struct {
-	SymbolType    string         `json:"type"`
-	SymbolSubtype string         `json:"subtype"`
-	Data          any            `json:"data"`
-	Pos           [2]int         `json:"pos"`
-	Extra         map[string]any `json:"extra"`
+	SymbolType    parsing.SymbolType `json:"type"`
+	SymbolSubtype string             `json:"subtype"`
+	Data          any                `json:"data"`
+	Pos           [2]int             `json:"pos"`
+	Extra         map[string]any     `json:"extra"`
 }
 
 /*
