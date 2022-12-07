@@ -86,9 +86,10 @@ sync_packagist_sandbox: IMAGE_NAME=${PACKAGIST_IMAGE_NAME}
 
 sync_crates_sandbox: IMAGE_NAME=${CRATES_IMAGE_NAME}
 
-sync_sandbox_static_analysis: IMAGE_NAME=${STATIC_ANALYSIS_IMAGE_NAME}
+sync_static_analysis_sandbox: IMAGE_NAME=${STATIC_ANALYSIS_IMAGE_NAME}
 
 sync_all_sandboxes: sync_node_sandbox sync_python_sandbox sync_ruby_sandbox sync_packagist_sandbox sync_crates_sandbox sync_static_analysis_sandbox
+
 
 #
 # This runs a lint check on all shell scripts in the repo
