@@ -35,7 +35,7 @@ For running/testing locally, the following additional tools are required:
 
 1.  [`docker`](https://www.docker.com/get-started/): The external container
 1.  [`podman`](https://podman.io/getting-started/): The internal container
-1.  `docker-compose` for end-to-end testing
+1.  [`docker-compose`](https://docs.docker.com/compose/install/) for end-to-end testing
 
 Then clone the repository, e.g:
 
