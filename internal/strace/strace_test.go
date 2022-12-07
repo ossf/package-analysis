@@ -113,10 +113,14 @@ func TestParseFileWriteWithZeroBytesWritten(t *testing.T) {
 	// Write calls where zero bytes are written are formatted as below where the write buffer argument does not include quotes.
 	input := "I1202 06:13:07.127115     312 strace.go:593] [  10:  10] npm init E write(0x2 host:[6], , 0x0)"
 
-	// We do not set WriteInfo if the bytes written is zero.
 	want := strace.FileInfo{
 		Path:  "host:[6]",
 		Write: true,
+		WriteInfo: strace.WriteInfo{
+			{
+				BytesWritten: 0,
+			},
+		},
 	}
 
 	r := strings.NewReader(input)

@@ -47,8 +47,8 @@ var (
 	// TODO: We can see how we can potentially reuse regex patterns.
 	writePattern = regexp.MustCompile(`\S+ ([^,]+),.*`)
 
-	// Length of the hex prefix "0x".
-	hexPrefixLength = 2
+	// We expect bytes written in the write syscall to be in hex.
+	hexPrefix = "0x"
 )
 
 type FileInfo struct {
@@ -146,10 +146,8 @@ func (r *Result) recordFileAccess(file string, read, write, delete bool) {
 
 func (r *Result) recordFileWrite(file string, bytesWritten int64) {
 	r.recordFileAccess(file, false, true, false)
-	if bytesWritten > 0 {
-		writeContentsAndBytes := WriteContentInfo{BytesWritten: bytesWritten}
-		r.files[file].WriteInfo = append(r.files[file].WriteInfo, writeContentsAndBytes)
-	}
+	writeContentsAndBytes := WriteContentInfo{BytesWritten: bytesWritten}
+	r.files[file].WriteInfo = append(r.files[file].WriteInfo, writeContentsAndBytes)
 }
 
 func (r *Result) recordSocket(address string, port int) {
@@ -178,15 +176,14 @@ func (r *Result) parseEnterSyscall(syscall, args string) error {
 	switch syscall {
 	case "write":
 		// The index of the start of bytes written. Bytes written is expected to be in hex.
-		bytesWrittenHexIndex := strings.LastIndex(args, "0x")
+		bytesWrittenHexIndex := strings.LastIndex(args, hexPrefix)
 		// Return an error if we can't find the beginning of bytes written as a hex value or there is no value after the hex prefix.
-		if bytesWrittenHexIndex == -1 || len(args) <= bytesWrittenHexIndex+hexPrefixLength {
+		if bytesWrittenHexIndex == -1 || len(args) <= bytesWrittenHexIndex+len(hexPrefix) {
 			return fmt.Errorf("strace of file write syscall has the bytes written argument in an unexpected format")
 		}
 		// Get the hex value after "0x" to convert to an integer.
-		bytesWritten, err := strconv.ParseInt(args[bytesWrittenHexIndex+hexPrefixLength:len(args)], 16, 64)
+		bytesWritten, err := strconv.ParseInt(args[bytesWrittenHexIndex+len(hexPrefix):len(args)], 16, 64)
 		if err != nil {
-			log.Debug("Could not parse")
 			return err
 		}
 		match := writePattern.FindStringSubmatch(args)
