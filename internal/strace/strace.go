@@ -46,10 +46,10 @@ var (
 	// This regex parses just the file path. Bytes written is parsed further below as the nature of the write buffer makes it unideal to parse through regex.
 	// TODO: We can see how we can potentially reuse regex patterns.
 	writePattern = regexp.MustCompile(`\S+ ([^,]+),.*`)
-
-	// We expect bytes written in the write syscall to be in hex.
-	hexPrefix = "0x"
 )
+
+// We expect bytes written in the write syscall to be in hex.
+const hexPrefix = "0x"
 
 type FileInfo struct {
 	Path      string
