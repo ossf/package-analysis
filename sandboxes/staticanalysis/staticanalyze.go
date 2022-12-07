@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/fs"
@@ -55,9 +56,9 @@ func checkAnalyses(names []string) ([]staticanalysis.Task, error) {
 }
 
 func printAnalyses() {
-	println("Available analyses are:")
+	fmt.Fprintln(os.Stderr, "Available analyses are:")
 	for _, task := range staticanalysis.AllTasks() {
-		println("\t", task)
+		fmt.Fprintln(os.Stderr, "\t", task)
 	}
 }
 
@@ -83,7 +84,7 @@ func doObfuscationDetection(workDirs workDirs) (*obfuscation.AnalysisResult, err
 		}
 		if f.Type().IsRegular() {
 			pathInArchive := strings.TrimPrefix(path, workDirs.extractDir+string(os.PathSeparator))
-			fmt.Printf("Processing file %s\n", pathInArchive)
+			log.Debug("Processing " + pathInArchive)
 			rawData, err := obfuscation.CollectData(jsParserConfig, path, "", false)
 			if err != nil {
 				log.Error("Error parsing file", "filename", pathInArchive, "error", err)
@@ -103,6 +104,8 @@ func doObfuscationDetection(workDirs workDirs) (*obfuscation.AnalysisResult, err
 	if err != nil {
 		return nil, fmt.Errorf("error while walking package files: %v", err)
 	}
+
+	result.PackageSignals = obfuscation.RemoveNaNs(result.PackageSignals)
 
 	return result, nil
 }
@@ -144,7 +147,7 @@ func run() (err error) {
 
 	if len(os.Args) == 1 || *help == true {
 		flag.Usage()
-		println()
+		fmt.Fprintln(os.Stderr, "")
 		printAnalyses()
 		return
 	}
@@ -200,6 +203,8 @@ func run() (err error) {
 		return fmt.Errorf("archive extraction failed: %v", err)
 	}
 
+	results := make(staticanalysis.Result)
+
 	for _, task := range analysisTasks {
 		switch task {
 		case staticanalysis.ObfuscationDetection:
@@ -207,19 +212,26 @@ func run() (err error) {
 			if err != nil {
 				log.Error("Error occurred during obfuscation detection", "error", err)
 			}
-			fmt.Printf("Analysis result\n%v\n", analysisResult)
+			results[staticanalysis.ObfuscationDetection] = analysisResult
 		default:
 			return fmt.Errorf("static analysis task not implemented: %s", task)
 		}
 	}
 
-	return
+	jsonResult, err := json.Marshal(results)
+	if err != nil {
+		log.Error("JSON marshal error", "error", err)
+	} else {
+		fmt.Printf("%v\n", string(jsonResult))
+	}
+
+	return err
 }
 
 func main() {
 	err := run()
 	if err != nil {
-		fmt.Printf("%v\n", err)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
 }

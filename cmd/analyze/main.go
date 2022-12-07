@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"net/url"
 	"os"
 	"strings"
@@ -58,28 +59,27 @@ func printAnalysisModes() {
 }
 
 /*
-makeSandboxOpts prepares options for the sandbox based on command line arguments:
+makeSandboxOptions prepares options for the sandbox based on command line arguments:
 1. Always pass through the tag. An empty tag is the same as "latest".
 2. Respect the "-nopull" option.
 3. Ensure any local package is mapped through.
 */
-func makeSandboxOpts() []sandbox.Option {
-	var sbOpts []sandbox.Option
+func makeSandboxOptions(mode analysis.Mode) []sandbox.Option {
+	sbOpts := worker.DefaultSandboxOptions(mode, *imageTag)
 
-	sbOpts = append(sbOpts, sandbox.Tag(*imageTag))
-
-	if *noPull {
-		sbOpts = append(sbOpts, sandbox.NoPull())
-	}
 	if *localPkg != "" {
 		sbOpts = append(sbOpts, sandbox.Volume(*localPkg, *localPkg))
+	}
+	if *noPull {
+		sbOpts = append(sbOpts, sandbox.NoPull())
 	}
 
 	return sbOpts
 }
 
 func dynamicAnalysis(pkg *pkgecosystem.Pkg) {
-	sbOpts := makeSandboxOpts()
+	sandbox.InitEnv()
+	sbOpts := makeSandboxOptions(analysis.Dynamic)
 	sb := sandbox.New(pkg.Manager().DynamicAnalysisImage(), sbOpts...)
 	defer cleanupSandbox(sb)
 
@@ -116,7 +116,9 @@ func dynamicAnalysis(pkg *pkgecosystem.Pkg) {
 }
 
 func staticAnalysis(pkg *pkgecosystem.Pkg) {
-	sbOpts := makeSandboxOpts()
+	sandbox.InitEnv()
+	sbOpts := makeSandboxOptions(analysis.Static)
+
 	image := "gcr.io/ossf-malware-analysis/static-analysis"
 
 	sb := sandbox.New(image, sbOpts...)
@@ -125,6 +127,10 @@ func staticAnalysis(pkg *pkgecosystem.Pkg) {
 	results, err := worker.RunStaticAnalyses(sb, pkg, staticanalysis.ObfuscationDetection)
 	if err != nil {
 		log.Fatal("Static analysis aborted", "error", err)
+	}
+
+	for task, result := range results {
+		fmt.Printf("%s result\n%s\n", task, result)
 	}
 
 	ctx := context.Background()
@@ -140,7 +146,6 @@ func staticAnalysis(pkg *pkgecosystem.Pkg) {
 
 func main() {
 	log.Initalize(os.Getenv("LOGGER_ENV"))
-	sandbox.InitEnv()
 
 	analysisMode.InitFlag()
 	flag.Parse()
