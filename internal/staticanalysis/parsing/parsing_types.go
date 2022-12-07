@@ -4,9 +4,15 @@ import (
 	"fmt"
 )
 
+type SymbolType string
 type IdentifierType string
 
 const (
+	Identifier SymbolType = "Identifier" // source code identifier (variable, class, function name)
+	Literal    SymbolType = "Literal"    // source code data (string, integer, floating point literals)
+	Info       SymbolType = "Info"       // information about the parsing (e.g. number of bytes read by parser)
+	Error      SymbolType = "Error"      // any error encountered by parser; some are recoverable and some are not
+
 	Function       IdentifierType = "Function"       // function declaration / definition
 	Variable       IdentifierType = "Variable"       // variable declaration / definition
 	Parameter      IdentifierType = "Parameter"      // parameters to functions, constructors, catch blocks
