@@ -145,7 +145,7 @@ func staticAnalysis(pkg *pkgecosystem.Pkg) {
 }
 
 func main() {
-	log.Initalize(os.Getenv("LOGGER_ENV"))
+	log.Initialize(os.Getenv("LOGGER_ENV"))
 
 	analysisMode.InitFlag()
 	flag.Parse()
