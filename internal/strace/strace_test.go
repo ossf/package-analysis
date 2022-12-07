@@ -109,6 +109,31 @@ func TestParseFileWritesToDifferentFiles(t *testing.T) {
 	}
 }
 
+func TestParseFileWriteWithZeroBytesWritten(t *testing.T) {
+	// Write calls where zero bytes are written are formatted as below where the write buffer argument does not include quotes.
+	input := "I1202 06:13:07.127115     312 strace.go:593] [  10:  10] npm init E write(0x2 host:[6], , 0x0)"
+
+	want := strace.FileInfo{
+		Path:  "host:[6]",
+		Write: true,
+		WriteInfo: strace.WriteInfo{
+			{
+				BytesWritten: 0,
+			},
+		},
+	}
+
+	r := strings.NewReader(input)
+	res, err := strace.Parse(r)
+	if err != nil || res == nil {
+		t.Errorf(`Parse(r) = %v, %v, want _, nil`, res, err)
+	}
+	files := res.Files()
+	if len(files) != 1 || !reflect.DeepEqual(files[0], want) {
+		t.Errorf(`Files() = %v, want [%v]`, files, want)
+	}
+}
+
 func TestParseFilesOneEntry(t *testing.T) {
 	tests := []struct {
 		name  string
