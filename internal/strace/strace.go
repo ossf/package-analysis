@@ -43,10 +43,13 @@ var (
 	// unlinkat(AT_FDCWD /app, 0x5569a7e83380 /app/vendor/composer/e06632ca, 0x200)
 	unlinkatPattern = regexp.MustCompile(`\S+ ([^,]+), 0x[a-f\d]+ ([^,]+), 0x[a-f\d]+`)
 
-	// This regex captures 1) the file path and 2) the write buffer and bytes written together. #2 will be parsed further before used.
-	// write(0x1 host:[5], 0x557f2cfde7c0 "django.template.base\nImporting django.template...", 0xe64)
-	writePattern = regexp.MustCompile(`\S+ ([^,]+), 0x[a-f\d]+ (".+)`)
+	// This regex parses just the file path. Bytes written is parsed further below as the nature of the write buffer makes it unideal to parse through regex.
+	// TODO: We can see how we can potentially reuse regex patterns.
+	writePattern = regexp.MustCompile(`\S+ ([^,]+),.*`)
 )
+
+// We expect bytes written in the write syscall to be in hex.
+const hexPrefix = "0x"
 
 type FileInfo struct {
 	Path      string
@@ -142,14 +145,9 @@ func (r *Result) recordFileAccess(file string, read, write, delete bool) {
 }
 
 func (r *Result) recordFileWrite(file string, bytesWritten int64) {
-	if bytesWritten > 0 {
-		if _, exists := r.files[file]; !exists {
-			r.files[file] = &FileInfo{Path: file, WriteInfo: []WriteContentInfo{}}
-		}
-		writeContentsAndBytes := WriteContentInfo{BytesWritten: bytesWritten}
-		r.files[file].Write = true
-		r.files[file].WriteInfo = append(r.files[file].WriteInfo, writeContentsAndBytes)
-	}
+	r.recordFileAccess(file, false, true, false)
+	writeContentsAndBytes := WriteContentInfo{BytesWritten: bytesWritten}
+	r.files[file].WriteInfo = append(r.files[file].WriteInfo, writeContentsAndBytes)
 }
 
 func (r *Result) recordSocket(address string, port int) {
@@ -177,22 +175,19 @@ func (r *Result) recordCommand(cmd, env []string) {
 func (r *Result) parseEnterSyscall(syscall, args string) error {
 	switch syscall {
 	case "write":
-		match := writePattern.FindStringSubmatch(args)
-		// Example: django.template.base\nImporting django.template"..., 0xe64
-		writeBufAndBytesWritten := match[2]
-		for i := len(writeBufAndBytesWritten) - 1; i >= 0; i-- {
-			// TODO: A future PR will use the index right before the comma to get the end of the write buffer.
-			if writeBufAndBytesWritten[i] == ',' {
-				// Use the index after the space and "0x" to get to the first index of the bytes written.
-				bytesWritten, err := strconv.ParseInt(writeBufAndBytesWritten[i+4:len(writeBufAndBytesWritten)], 16, 64)
-				r.recordFileWrite(match[1], bytesWritten)
-				if err != nil {
-					return err
-				}
-				break
-			}
+		// The index of the start of bytes written. Bytes written is expected to be in hex.
+		bytesWrittenHexIndex := strings.LastIndex(args, hexPrefix)
+		// Return an error if we can't find the beginning of bytes written as a hex value or there is no value after the hex prefix.
+		if bytesWrittenHexIndex == -1 || len(args) <= bytesWrittenHexIndex+len(hexPrefix) {
+			return fmt.Errorf("strace of file write syscall has the bytes written argument in an unexpected format")
 		}
-
+		// Get the hex value after "0x" to convert to an integer.
+		bytesWritten, err := strconv.ParseInt(args[bytesWrittenHexIndex+len(hexPrefix):len(args)], 16, 64)
+		if err != nil {
+			return err
+		}
+		match := writePattern.FindStringSubmatch(args)
+		r.recordFileWrite(match[1], bytesWritten)
 	}
 	return nil
 }
