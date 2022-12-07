@@ -115,7 +115,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	sb := sandbox.New(manager.DynamicAnalysisImage(), sbOpts...)
 	defer sb.Clean()
 
-	results, _, err := worker.RunDynamicAnalysis(sb, pkg)
+	results, _, _, err := worker.RunDynamicAnalysis(sb, pkg)
 	if err != nil {
 		return err
 	}

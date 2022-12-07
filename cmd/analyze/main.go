@@ -85,7 +85,7 @@ func dynamicAnalysis(pkg *pkgecosystem.Pkg) {
 	sb := sandbox.New(pkg.Manager().DynamicAnalysisImage(), sbOpts...)
 	defer cleanupSandbox(sb)
 
-	results, lastRunPhase, err := worker.RunDynamicAnalysis(sb, pkg)
+	results, lastRunPhase, lastStatus, err := worker.RunDynamicAnalysis(sb, pkg)
 	if err != nil {
 		log.Fatal("Dynamic analysis aborted (run error)", "error", err)
 	}
@@ -109,7 +109,6 @@ func dynamicAnalysis(pkg *pkgecosystem.Pkg) {
 	}
 
 	// this is only valid if RunDynamicAnalysis() returns nil err
-	lastStatus := results.StraceSummary[lastRunPhase].Status
 	if lastStatus != analysis.StatusCompleted {
 		log.Fatal("Dynamic analysis phase did not complete successfully",
 			"lastRunPhase", lastRunPhase,
