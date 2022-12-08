@@ -29,7 +29,7 @@ func RunStaticAnalyses(sb sandbox.Sandbox, pkg *pkgecosystem.Pkg, tasks ...stati
 	}
 
 	if pkg.IsLocal() {
-		return nil, fmt.Errorf("local packages are not yet supported")
+		args = append(args, "-local", pkg.LocalPath())
 	}
 
 	r, err := sb.Run(args...)
