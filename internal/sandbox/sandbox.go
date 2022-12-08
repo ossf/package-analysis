@@ -19,7 +19,7 @@ const (
 	podmanBin     = "podman"
 	runtimeBin    = "/usr/local/bin/runsc_compat.sh"
 	rootDir       = "/var/run/runsc"
-	straceFile    = "runsc.log.boot"
+	runLogFile    = "runsc.log.boot"
 	logDirPattern = "sandbox_logs_"
 
 	// networkName is the name of the podman network defined in
@@ -32,7 +32,7 @@ const (
 type RunStatus uint8
 
 const (
-	// RunStatusUnknown is used when some other issue occured that prevented
+	// RunStatusUnknown is used when some other issue occurred that prevented
 	// an attempt to run the command.
 	RunStatusUnknown = iota
 
@@ -121,6 +121,8 @@ type podmanSandbox struct {
 	logPackets bool
 	logStdOut  bool
 	logStdErr  bool
+	echoStdOut bool
+	echoStdErr bool
 	volumes    []volume
 }
 
@@ -139,6 +141,8 @@ func New(image string, options ...Option) Sandbox {
 		logPackets: false,
 		logStdOut:  false,
 		logStdErr:  false,
+		echoStdOut: false,
+		echoStdErr: false,
 		volumes:    make([]volume, 0),
 	}
 	for _, o := range options {
@@ -162,14 +166,26 @@ func EnablePacketLogging() Option {
 	return option(func(sb *podmanSandbox) { sb.logPackets = true })
 }
 
-// LogStdOut enables logging of stdout from sandboxed process
+// LogStdOut enables wrapping each line of stdout from sandboxed process
+// as a log.Info line in the main container
 func LogStdOut() Option {
 	return option(func(sb *podmanSandbox) { sb.logStdOut = true })
 }
 
-// LogStdErr enables logging of stderr from sandboxed process
+// LogStdErr enables wrapping each line of stderr from the sandboxed process
+// as log.Warn line in the main container
 func LogStdErr() Option {
 	return option(func(sb *podmanSandbox) { sb.logStdErr = true })
+}
+
+// EchoStdOut enables simple echoing of the sandboxed process stdout
+func EchoStdOut() Option {
+	return option(func(sb *podmanSandbox) { sb.echoStdOut = true })
+}
+
+// EchoStdErr enables simple echoing of the sandboxed process stderr
+func EchoStdErr() Option {
+	return option(func(sb *podmanSandbox) { sb.echoStdErr = true })
 }
 
 // NoPull will disable the image for the sandbox from being pulled during Init.
@@ -360,7 +376,7 @@ func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	result := &RunResult{
-		logPath: path.Join(logDir, straceFile),
+		logPath: path.Join(logDir, runLogFile),
 		status:  RunStatusUnknown,
 		stdout:  &stdout,
 		stderr:  &stderr,
@@ -374,15 +390,23 @@ func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
 		"args", args)
 	defer logErr.Close()
 
-	var outWriter io.Writer = &stdout
+	var outWriters = []io.Writer{&stdout}
 	if s.logStdOut {
-		outWriter = io.MultiWriter(&stdout, logOut)
+		outWriters = append(outWriters, logOut)
 	}
+	if s.echoStdOut {
+		outWriters = append(outWriters, os.Stdout)
+	}
+	outWriter := io.MultiWriter(outWriters...)
 
-	var errWriter io.Writer = &stderr
+	var errWriters = []io.Writer{&stderr}
 	if s.logStdErr {
-		errWriter = io.MultiWriter(&stderr, logErr)
+		errWriters = append(errWriters, logErr)
 	}
+	if s.echoStdErr {
+		errWriters = append(errWriters, os.Stdout)
+	}
+	errWriter := io.MultiWriter(errWriters...)
 
 	// Start the container
 	startCmd := s.startContainerCmd(logDir)

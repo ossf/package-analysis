@@ -20,6 +20,7 @@ func DefaultSandboxOptions(mode analysis.Mode, imageTag string) []sandbox.Option
 	case analysis.Static:
 		return []sandbox.Option{
 			sandbox.Tag(imageTag),
+			sandbox.EchoStdErr(),
 		}
 	default:
 		return []sandbox.Option{}

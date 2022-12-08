@@ -115,7 +115,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	sb := sandbox.New(manager.DynamicAnalysisImage(), sbOpts...)
 	defer sb.Clean()
 
-	results, _, err := worker.RunDynamicAnalysis(sb, pkg)
+	results, _, _, err := worker.RunDynamicAnalysis(sb, pkg)
 	if err != nil {
 		return err
 	}
@@ -176,7 +176,7 @@ func main() {
 	resultsBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS")
 	fileWritesBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_FILE_WRITE_RESULTS")
 	imageTag := os.Getenv("OSSF_SANDBOX_IMAGE_TAG")
-	log.Initalize(os.Getenv("LOGGER_ENV"))
+	log.Initialize(os.Getenv("LOGGER_ENV"))
 	sandbox.InitEnv()
 
 	// Log the configuration of the worker at startup so we can observe it.

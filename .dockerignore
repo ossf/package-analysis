@@ -5,4 +5,11 @@ infra
 examples
 function
 sandboxes
+internal/staticanalysis/parsing/js/node_modules
+node_modules
 web
+
+# Docker builds the static analysis sandbox image in
+# the top-level project directory, so needs to copy
+# from this subdirectory during the build
+!sandboxes/staticanalysis

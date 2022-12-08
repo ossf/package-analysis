@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stats"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stringentropy"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing/js"
@@ -50,6 +51,10 @@ func testSignals(t *testing.T, signals Signals, stringLiterals, identifiers []st
 		t.Errorf("Combined identifier entropy: expected %.3f, actual %.3f",
 			expectedIdentifierCombinedEntropy, signals.CombinedIdentifierEntropy)
 	}
+}
+
+func init() {
+	log.Initialize("")
 }
 
 func TestComputeSignals(t *testing.T) {

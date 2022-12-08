@@ -7,16 +7,17 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 )
 
 // parserOutputElement represents the output JSON format of the JS parser
 type parserOutputElement struct {
-	SymbolType    string         `json:"type"`
-	SymbolSubtype string         `json:"subtype"`
-	Data          any            `json:"data"`
-	Pos           [2]int         `json:"pos"`
-	Extra         map[string]any `json:"extra"`
+	SymbolType    parsing.SymbolType `json:"type"`
+	SymbolSubtype string             `json:"subtype"`
+	Data          any                `json:"data"`
+	Pos           [2]int             `json:"pos"`
+	Extra         map[string]any     `json:"extra"`
 }
 
 /*
@@ -104,7 +105,7 @@ func ParseJS(parserConfig ParserConfig, filePath string, sourceString string) (r
 	// convert the elements into more natural data structure
 	for _, element := range storage {
 		switch element.SymbolType {
-		case "Identifier":
+		case parsing.Identifier:
 			symbolSubtype := parsing.CheckIdentifierType(element.SymbolSubtype)
 			if symbolSubtype == parsing.Other || symbolSubtype == parsing.Unknown {
 				break
@@ -114,7 +115,7 @@ func ParseJS(parserConfig ParserConfig, filePath string, sourceString string) (r
 				Name: element.Data.(string),
 				Pos:  element.Pos,
 			})
-		case "Literal":
+		case parsing.Literal:
 			result.Literals = append(result.Literals, parsing.ParsedLiteral[any]{
 				Type:     element.SymbolSubtype,
 				GoType:   fmt.Sprintf("%T", element.Data),
@@ -123,6 +124,11 @@ func ParseJS(parserConfig ParserConfig, filePath string, sourceString string) (r
 				InArray:  element.Extra["array"] == true,
 				Pos:      element.Pos,
 			})
+		case parsing.Info:
+			fallthrough
+		case parsing.Error:
+			// pass through unchanged
+			log.Warn(fmt.Sprintf("ParseJS: unrecognised symbol type %s", element.SymbolType))
 		}
 	}
 	return

@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 )
 
@@ -293,6 +294,10 @@ var index = 0,
 			{"Numeric", "float64", 10.0, "10", false, parsing.TextPosition{6, 22}},
 		},
 	},
+}
+
+func init() {
+	log.Initialize("")
 }
 
 func TestParseJS(t *testing.T) {
