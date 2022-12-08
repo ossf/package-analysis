@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	log.Initalize("")
+	log.Initialize("")
 }
 
 func TestIgnoreEntryLogs(t *testing.T) {

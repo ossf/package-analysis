@@ -13,9 +13,10 @@ import (
 	_ "gocloud.dev/pubsub/gcppubsub"
 	_ "gocloud.dev/pubsub/kafkapubsub"
 
+	"github.com/ossf/package-feeds/pkg/feeds"
+
 	"github.com/ossf/package-analysis/cmd/scheduler/proxy"
 	"github.com/ossf/package-analysis/internal/log"
-	"github.com/ossf/package-feeds/pkg/feeds"
 )
 
 const (
@@ -67,7 +68,7 @@ func main() {
 	retryCount := 0
 	subscriptionURL := os.Getenv("OSSMALWARE_SUBSCRIPTION_URL")
 	topicURL := os.Getenv("OSSMALWARE_WORKER_TOPIC")
-	log.Initalize(os.Getenv("LOGGER_ENV"))
+	log.Initialize(os.Getenv("LOGGER_ENV"))
 
 	for retryCount <= maxRetries {
 		err := listenLoop(subscriptionURL, topicURL)

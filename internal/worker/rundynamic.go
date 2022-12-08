@@ -17,24 +17,35 @@ type DynamicAnalysisResults struct {
 /*
 RunDynamicAnalysis runs dynamic analysis on the given package in the sandbox
 provided, across all phases (e.g. import, install) valid in the package ecosystem.
-Status and errors are logged to stdout. There are 3 return values:
+Status and errors are logged to stdout. There are 4 return values:
 
-results: Map of each successfully run phase to a summary of the corresponding dynamic analysis result.
-If error is not nil, then results[lastRunPhase] is nil.
+DynamicAnalysisResults: Map of each successfully run phase to a summary of
+the corresponding dynamic analysis result. This summary has two parts:
+1. StraceSummary: information about system calls performed by the process
+2. FileWrites: list of files which were written to and counts of bytes written
 
-writeResults: Map of each successfully run phase to further dynamic analysis result on file writes. This data will be uploaded to a separate bucket.
+Note, if error is not nil, then results[lastRunPhase] is nil.
 
-lastRunPhase: the last phase that was run. If error is non-nil, this phase did not complete successfully
-and the results for this phase are not recorded. Otherwise, results[lastRunPhase] contains
-the corresponding results this phase, including any abnormal termination of the sandboxed process.
+RunPhase: the last phase that was run. If error is non-nil, this phase did not
+successfully complete, and the results for this phase are not recorded.
+Otherwise, the results contain data for this phase, even in cases where the
+sandboxed process terminated abnormally.
 
-error: Any error that occurred in the runtime/sandbox infrastructure. This does not include errors caused
-by the package under analysis.
+Status: the status of the last run phase if it completed without error, else empty
+
+error: Any error that occurred in the runtime/sandbox infrastructure.
+This does not include errors caused by the package under analysis.
 */
 
-func RunDynamicAnalysis(sb sandbox.Sandbox, pkg *pkgecosystem.Pkg) (results DynamicAnalysisResults, lastRunPhase pkgecosystem.RunPhase, err error) {
-	straceSummary := make(DynamicAnalysisStraceSummary)
-	fileWrites := make(DynamicAnalysisFileWrites)
+func RunDynamicAnalysis(sb sandbox.Sandbox, pkg *pkgecosystem.Pkg) (DynamicAnalysisResults, pkgecosystem.RunPhase, analysis.Status, error) {
+	results := DynamicAnalysisResults{
+		StraceSummary: make(DynamicAnalysisStraceSummary),
+		FileWrites:    make(DynamicAnalysisFileWrites),
+	}
+
+	var lastRunPhase pkgecosystem.RunPhase
+	var lastStatus analysis.Status
+	var lastError error
 	for _, phase := range pkg.Manager().RunPhases() {
 		result, err := dynamicanalysis.Run(sb, pkg.Command(phase))
 		lastRunPhase = phase
@@ -42,28 +53,27 @@ func RunDynamicAnalysis(sb sandbox.Sandbox, pkg *pkgecosystem.Pkg) (results Dyna
 		if err != nil {
 			// Error when trying to actually run; don't record the result for this phase
 			// or attempt subsequent phases
+			lastStatus = ""
+			lastError = err
 			break
 		}
 
-		straceSummary[phase] = &result.StraceSummary
-		fileWrites[phase] = &result.FileWrites
+		results.StraceSummary[phase] = &result.StraceSummary
+		results.FileWrites[phase] = &result.FileWrites
+		lastStatus = result.StraceSummary.Status
 
-		if result.StraceSummary.Status != analysis.StatusCompleted {
+		if lastStatus != analysis.StatusCompleted {
 			// Error caused by an issue with the package (probably).
 			// Don't continue with phases if this one did not complete successfully.
 			break
 		}
 	}
 
-	results.StraceSummary = straceSummary
-	results.FileWrites = fileWrites
-
-	if err != nil {
-		LogDynamicAnalysisError(pkg, lastRunPhase, err)
+	if lastError != nil {
+		LogDynamicAnalysisError(pkg, lastRunPhase, lastError)
 	} else {
-		// Produce a log message for the final status to help generate metrics.
-		LogDynamicAnalysisResult(pkg, lastRunPhase, results.StraceSummary[lastRunPhase].Status)
+		LogDynamicAnalysisResult(pkg, lastRunPhase, lastStatus)
 	}
 
-	return results, lastRunPhase, err
+	return results, lastRunPhase, lastStatus, lastError
 }

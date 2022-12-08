@@ -48,13 +48,13 @@ var (
 	defaultLoggingEnv LoggingEnv = LoggingEnvDev
 )
 
-// Initalize the logger for logging.
+// Initialize the logger for logging.
 //
 // Passing in "true" will use Zap's default production configuration, while
 // "false" will use the default development configuration.
 //
 // Note: this method MUST be called before any other method in this package.
-func Initalize(env string) {
+func Initialize(env string) {
 	var err error
 	var logger *zap.Logger
 	switch strings.ToLower(env) {
