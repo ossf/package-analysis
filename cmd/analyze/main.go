@@ -19,18 +19,19 @@ import (
 )
 
 var (
-	pkgName       = flag.String("package", "", "package name")
-	localPkg      = flag.String("local", "", "local package path")
-	ecosystem     = flag.String("ecosystem", "", "ecosystem (npm, pypi, or rubygems)")
-	version       = flag.String("version", "", "version")
-	noPull        = flag.Bool("nopull", false, "disables pulling down sandbox images")
-	dynamicUpload = flag.String("upload", "", "bucket path for uploading dynamic analysis results")
-	imageTag      = flag.String("image-tag", "", "set image tag for analysis sandboxes")
-	staticUpload  = flag.String("upload-static", "", "bucket path for uploading static analysis results")
-	listModes     = flag.Bool("list-modes", false, "prints out a list of available analysis modes")
-	analysisMode  = utils.CommaSeparatedFlags("analysis-mode", "dynamic",
-		"single or comma separated list of analysis modes to run. Use -list-modes to see available options")
+	pkgName             = flag.String("package", "", "package name")
+	localPkg            = flag.String("local", "", "local package path")
+	ecosystem           = flag.String("ecosystem", "", "ecosystem (npm, pypi, or rubygems)")
+	version             = flag.String("version", "", "version")
+	noPull              = flag.Bool("nopull", false, "disables pulling down sandbox images")
+	imageTag            = flag.String("image-tag", "", "set image tag for analysis sandboxes")
+	dynamicUpload       = flag.String("upload", "", "bucket path for uploading dynamic analysis results")
+	staticUpload        = flag.String("upload-static", "", "bucket path for uploading static analysis results")
 	uploadFileWriteInfo = flag.String("upload-file-write-info", "", "bucket path for uploading information from file writes")
+	listModes           = flag.Bool("list-modes", false, "prints out a list of available analysis modes")
+	help                = flag.Bool("help", false, "print help on available options")
+	analysisMode        = utils.CommaSeparatedFlags("mode", "dynamic",
+		"list of analysis modes to run, separated by commas. Use -list-modes to see available options")
 )
 
 func parseBucketPath(path string) (string, string) {
@@ -59,10 +60,11 @@ func printAnalysisModes() {
 }
 
 /*
-makeSandboxOptions prepares options for the sandbox based on command line arguments:
-1. Always pass through the tag. An empty tag is the same as "latest".
-2. Respect the "-nopull" option.
-3. Ensure any local package is mapped through.
+makeSandboxOptions prepares options for the sandbox based on command line arguments.
+In particular:
+1. The image tag is always passed through. An empty tag is the same as "latest".
+2. A local package is mapped into the sandbox if applicable
+3. Image pulling is disabled if the "-nopull" command-line flag was used
 */
 func makeSandboxOptions(mode analysis.Mode) []sandbox.Option {
 	sbOpts := worker.DefaultSandboxOptions(mode, *imageTag)
@@ -149,6 +151,11 @@ func main() {
 
 	analysisMode.InitFlag()
 	flag.Parse()
+
+	if *help {
+		flag.Usage()
+		return
+	}
 
 	if *listModes {
 		printAnalysisModes()
