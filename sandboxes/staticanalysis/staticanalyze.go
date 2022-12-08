@@ -141,7 +141,7 @@ func makeWorkDirs() (workDirs, error) {
 }
 
 func run() (err error) {
-	log.Initalize(os.Getenv("LOGGER_ENV"))
+	log.Initialize(os.Getenv("LOGGER_ENV"))
 	analyses.InitFlag()
 	flag.Parse()
 

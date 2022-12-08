@@ -104,7 +104,7 @@ func doExtractionTest(archivePath, extractPath string, archiveHeaders []*tar.Hea
 		return fmt.Errorf("failed to create test tgz file: %v", err)
 	}
 
-	log.Initalize("")
+	log.Initialize("")
 
 	if err = ExtractTarGzFile(archivePath, extractPath); err != nil {
 		return fmt.Errorf("extract failed: %v", err)
