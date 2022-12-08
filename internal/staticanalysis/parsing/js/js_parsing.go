@@ -13,11 +13,11 @@ import (
 
 // parserOutputElement represents the output JSON format of the JS parser
 type parserOutputElement struct {
-	SymbolType    string         `json:"type"`
-	SymbolSubtype string         `json:"subtype"`
-	Data          any            `json:"data"`
-	Pos           [2]int         `json:"pos"`
-	Extra         map[string]any `json:"extra"`
+	SymbolType    parsing.SymbolType `json:"type"`
+	SymbolSubtype string             `json:"subtype"`
+	Data          any                `json:"data"`
+	Pos           [2]int             `json:"pos"`
+	Extra         map[string]any     `json:"extra"`
 }
 
 /*
@@ -104,7 +104,7 @@ func ParseJS(parserConfig ParserConfig, filePath string, sourceString string) (r
 
 	// convert the elements into more natural data structure
 	for _, element := range storage {
-		switch parsing.SymbolType(element.SymbolType) {
+		switch element.SymbolType {
 		case parsing.Identifier:
 			symbolSubtype := parsing.CheckIdentifierType(element.SymbolSubtype)
 			if symbolSubtype == parsing.Other || symbolSubtype == parsing.Unknown {

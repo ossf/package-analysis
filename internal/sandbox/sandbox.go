@@ -32,7 +32,7 @@ const (
 type RunStatus uint8
 
 const (
-	// RunStatusUnknown is used when some other issue occured that prevented
+	// RunStatusUnknown is used when some other issue occurred that prevented
 	// an attempt to run the command.
 	RunStatusUnknown = iota
 
