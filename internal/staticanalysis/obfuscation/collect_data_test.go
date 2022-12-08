@@ -46,7 +46,7 @@ function test(a, b = 2) {
 }
 
 func init() {
-	log.Initalize("")
+	log.Initialize("")
 }
 
 func TestCollectData(t *testing.T) {

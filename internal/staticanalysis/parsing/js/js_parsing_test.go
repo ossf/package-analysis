@@ -297,7 +297,7 @@ var index = 0,
 }
 
 func init() {
-	log.Initalize("")
+	log.Initialize("")
 }
 
 func TestParseJS(t *testing.T) {

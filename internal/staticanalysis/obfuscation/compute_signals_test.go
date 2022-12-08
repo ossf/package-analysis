@@ -54,7 +54,7 @@ func testSignals(t *testing.T, signals Signals, stringLiterals, identifiers []st
 }
 
 func init() {
-	log.Initalize("")
+	log.Initialize("")
 }
 
 func TestComputeSignals(t *testing.T) {
