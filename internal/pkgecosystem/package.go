@@ -31,6 +31,10 @@ func (p *Pkg) Manager() *PkgManager {
 	return p.manager
 }
 
+func (p *Pkg) LocalPath() string {
+	return p.local
+}
+
 // Command returns the analysis command for the package.
 func (p *Pkg) Command(phase RunPhase) []string {
 	args := make([]string, 0)
