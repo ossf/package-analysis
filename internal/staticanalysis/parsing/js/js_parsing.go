@@ -104,7 +104,7 @@ func ParseJS(parserConfig ParserConfig, filePath string, sourceString string) (r
 
 	// convert the elements into more natural data structure
 	for _, element := range storage {
-		switch parsing.SymbolType(element.SymbolType) {
+		switch element.SymbolType {
 		case parsing.Identifier:
 			symbolSubtype := parsing.CheckIdentifierType(element.SymbolSubtype)
 			if symbolSubtype == parsing.Other || symbolSubtype == parsing.Unknown {
