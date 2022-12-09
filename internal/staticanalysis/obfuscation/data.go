@@ -12,6 +12,7 @@ type RawData struct {
 	StringLiterals []string
 	IntLiterals    []int
 	FloatLiterals  []float64
+	Comments       []string
 }
 
 type Signals struct {

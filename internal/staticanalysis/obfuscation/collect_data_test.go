@@ -22,6 +22,8 @@ var a = "hello"
 	expectedData: RawData{
 		Identifiers:    []string{"a"},
 		StringLiterals: []string{"hello"},
+		IntLiterals:    []int{},
+		FloatLiterals:  []float64{},
 	},
 }
 
@@ -42,6 +44,7 @@ function test(a, b = 2) {
 		Identifiers:    []string{"test", "a", "b", "c"},
 		StringLiterals: []string{"hello", "apple"},
 		IntLiterals:    []int{2, 3, 4},
+		FloatLiterals:  []float64{},
 	},
 }
 

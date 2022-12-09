@@ -10,6 +10,7 @@ type IdentifierType string
 const (
 	Identifier SymbolType = "Identifier" // source code identifier (variable, class, function name)
 	Literal    SymbolType = "Literal"    // source code data (string, integer, floating point literals)
+	Comment    SymbolType = "Comment"    // source code comments
 	Info       SymbolType = "Info"       // information about the parsing (e.g. number of bytes read by parser)
 	Error      SymbolType = "Error"      // any error encountered by parser; some are recoverable and some are not
 
@@ -72,10 +73,17 @@ func (l ParsedLiteral[T]) String() string {
 	return s
 }
 
+type ParsedComment struct {
+	Type string
+	Data string
+	Pos  TextPosition
+}
+
 type ParseResult struct {
 	ValidInput  bool
 	Identifiers []ParsedIdentifier
 	Literals    []ParsedLiteral[any]
+	Comments    []ParsedComment
 }
 
 var InvalidInput = ParseResult{ValidInput: false}

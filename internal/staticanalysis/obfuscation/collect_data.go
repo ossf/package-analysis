@@ -41,7 +41,14 @@ func CollectData(parserConfig js.ParserConfig, jsSourceFile string, jsSourceStri
 		return nil, nil
 	}
 
-	data := RawData{}
+	// Initialise with empty slices to avoid null values in JSON
+	data := RawData{
+		Identifiers:    []string{},
+		StringLiterals: []string{},
+		IntLiterals:    []int{},
+		FloatLiterals:  []float64{},
+		Comments:       []string{},
+	}
 
 	for _, d := range parseResult.Literals {
 		if d.GoType == "string" {
@@ -69,6 +76,10 @@ func CollectData(parserConfig js.ParserConfig, jsSourceFile string, jsSourceStri
 		case parsing.Variable:
 			data.Identifiers = append(data.Identifiers, ident.Name)
 		}
+	}
+
+	for _, comment := range parseResult.Comments {
+		data.Comments = append(data.Comments, comment.Data)
 	}
 
 	return &data, nil

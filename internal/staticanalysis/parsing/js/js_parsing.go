@@ -124,10 +124,17 @@ func ParseJS(parserConfig ParserConfig, filePath string, sourceString string) (r
 				InArray:  element.Extra["array"] == true,
 				Pos:      element.Pos,
 			})
+		case parsing.Comment:
+			result.Comments = append(result.Comments, parsing.ParsedComment{
+				Type: element.SymbolSubtype,
+				Data: element.Data.(string),
+				Pos:  element.Pos,
+			})
 		case parsing.Info:
 			fallthrough
 		case parsing.Error:
-			// pass through unchanged
+			// ignore for now
+		default:
 			log.Warn(fmt.Sprintf("ParseJS: unrecognised symbol type %s", element.SymbolType))
 		}
 	}
@@ -152,12 +159,18 @@ func RunExampleParsing(config ParserConfig, jsFilePath string, jsSourceString st
 	println()
 	println("== Parsed Identifiers ==")
 	for _, identifier := range parseResult.Identifiers {
-		fmt.Println(identifier)
+		fmt.Printf("%v\n", identifier)
 	}
 	println()
 	println("== Parsed Literals ==")
 	for _, literal := range parseResult.Literals {
-		fmt.Println(literal)
+		fmt.Printf("%v\n", literal)
+	}
+
+	println()
+	println("== Parsed Comments ==")
+	for _, comment := range parseResult.Comments {
+		fmt.Printf("%v\n", comment)
 	}
 
 }
