@@ -130,9 +130,7 @@ func staticAnalysis(pkg *pkgecosystem.Pkg) {
 		log.Fatal("Static analysis aborted", "error", err)
 	}
 
-	for task, result := range results {
-		fmt.Printf("%s result\n%s\n", task, result)
-	}
+	fmt.Printf("\nResults\n%s\n", results)
 
 	ctx := context.Background()
 	if *staticUpload != "" {
