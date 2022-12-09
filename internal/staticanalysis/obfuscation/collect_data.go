@@ -41,13 +41,13 @@ func CollectData(parserConfig js.ParserConfig, jsSourceFile string, jsSourceStri
 		return nil, nil
 	}
 
-	// don't want null values in JSON
+	// Initialise with empty slices to avoid null values in JSON
 	data := RawData{
-		Identifiers:    make([]string, 0),
-		StringLiterals: make([]string, 0),
-		IntLiterals:    make([]int, 0),
-		FloatLiterals:  make([]float64, 0),
-		Comments:       make([]string, 0),
+		Identifiers:    []string{},
+		StringLiterals: []string{},
+		IntLiterals:    []int{},
+		FloatLiterals:  []float64{},
+		Comments:       []string{},
 	}
 
 	for _, d := range parseResult.Literals {
