@@ -1,0 +1,35 @@
+header:
+  parent-security-yaml: 'https://github.com/ossf/package-analysis/blob/main/SECURITY-INSIGHTS.yml'
+  expiration-date: '2023-12-10T13:37:00.000Z'
+  last-updated: '2022-12-11'
+  last-reviewed: '2022-12-11'
+  commit-hash: '9e11bd60fb21c3aad291b9b8f4286f2e53cb768a'
+  project-url: 'https://github.com/ossf/package-analysis'
+  schema-version: '1.0.0'
+  license: 'https://github.com/ossf/package-analysis/blob/main/LICENSE'
+project-lifecycle:
+  stage: 'active'
+  bug-fixes-only: False
+  core-maintainers:
+  - 'https://github.com/maxfisher-g'
+contribution-policy:
+  accepts-pull-requests: True
+  accepts-bot-pull-requests: True
+  contributing-policy: 'https://github.com/ossf/package-analysis/blob/main/CONTRIBUTING.md'
+distribution-points:
+- package-url: 'https://github.com/ossf/package-analysis'
+security-artifacts:
+  threat-model:
+    threat-model-created: False
+security-contacts:
+- type: 'email'
+  value: 'oss-security@googlegroups.com'
+  primary: True
+vulnerability-reporting:
+  accepts-vulnerability-reports: True
+  email-contact: 'oss-security@googlegroups.com'
+  security-policy: 'https://github.com/ossf/package-analysis/blob/main/SECURITY.md'
+dependencies:
+  third-party-packages: True
+  dependencies-lists:
+  - 'https://github.com/ossf/package-analysis/blob/main/go.sum'
