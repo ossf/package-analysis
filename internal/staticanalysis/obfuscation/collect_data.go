@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing/js"
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
@@ -65,15 +64,15 @@ func CollectData(parserConfig js.ParserConfig, jsSourceFile string, jsSourceStri
 
 	for _, ident := range parseResult.Identifiers {
 		switch ident.Type {
-		case parsing.Function:
+		case token.Function:
 			fallthrough
-		case parsing.Class:
+		case token.Class:
 			fallthrough
-		case parsing.Parameter:
+		case token.Parameter:
 			fallthrough
-		case parsing.Property:
+		case token.Property:
 			fallthrough
-		case parsing.Variable:
+		case token.Variable:
 			data.Identifiers = append(data.Identifiers, token.Identifier{Name: ident.Name, Type: ident.Type})
 		}
 	}
