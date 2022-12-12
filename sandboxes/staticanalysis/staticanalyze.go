@@ -25,7 +25,7 @@ var (
 	version     = flag.String("version", "", "Package version (ignored if local file is specified)")
 	localFile   = flag.String("local", "", "Local package archive containing package to be analysed. Name must match -package argument")
 	help        = flag.Bool("help", false, "Prints this help and list of available analyses")
-	analyses    = utils.CommaSeparatedFlags("analyses", "obfuscation", "comma-separated list of static analyses to perform")
+	analyses    = utils.CommaSeparatedFlags("analyses", "", "comma-separated list of static analyses to perform")
 )
 
 type workDirs struct {
@@ -58,7 +58,7 @@ func checkAnalyses(names []string) ([]staticanalysis.Task, error) {
 func printAnalyses() {
 	fmt.Fprintln(os.Stderr, "Available analyses are:")
 	for _, task := range staticanalysis.AllTasks() {
-		fmt.Fprintln(os.Stderr, "\t", task)
+		fmt.Fprintln(os.Stderr, task)
 	}
 }
 
@@ -141,7 +141,7 @@ func makeWorkDirs() (workDirs, error) {
 }
 
 func run() (err error) {
-	log.Initalize(os.Getenv("LOGGER_ENV"))
+	log.Initialize(os.Getenv("LOGGER_ENV"))
 	analyses.InitFlag()
 	flag.Parse()
 
@@ -220,12 +220,12 @@ func run() (err error) {
 
 	jsonResult, err := json.Marshal(results)
 	if err != nil {
-		log.Error("JSON marshal error", "error", err)
-	} else {
-		fmt.Printf("%v\n", string(jsonResult))
+		return fmt.Errorf("JSON marshall error: %v", err)
 	}
 
-	return err
+	fmt.Printf("%s\n", string(jsonResult))
+
+	return nil
 }
 
 func main() {

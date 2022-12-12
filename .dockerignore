@@ -9,6 +9,7 @@ internal/staticanalysis/parsing/js/node_modules
 node_modules
 web
 
-# Don't exclude sandboxes/staticanalysis as its Docker image
-# also needs to run from the top-level package analysis directory
+# Docker builds the static analysis sandbox image in
+# the top-level project directory, so needs to copy
+# from this subdirectory during the build
 !sandboxes/staticanalysis
