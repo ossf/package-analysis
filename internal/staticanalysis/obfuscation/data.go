@@ -39,7 +39,7 @@ type AnalysisResult struct {
 	// PackageSignals contains aggregated signals from
 	// all files and/or signals that can only be computed
 	// from global information about the package
-	PackageSignals Signals
+	PackageSignals struct{}
 
 	// ExcludedFiles is a list of package files that were
 	// excluded from analysis, e.g. because all supported
