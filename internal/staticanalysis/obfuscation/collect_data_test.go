@@ -5,7 +5,9 @@ import (
 	"testing"
 
 	"github.com/ossf/package-analysis/internal/log"
+	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing/js"
+	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
 
 type testCase struct {
@@ -20,10 +22,14 @@ var test1 = testCase{
 var a = "hello"
 	`,
 	expectedData: RawData{
-		Identifiers:    []string{"a"},
-		StringLiterals: []string{"hello"},
-		IntLiterals:    []int{},
-		FloatLiterals:  []float64{},
+		Identifiers: []token.Identifier{
+			{Name: "a", Type: parsing.Variable},
+		},
+		StringLiterals: []token.String{
+			{Value: "hello", Raw: `"hello"`},
+		},
+		IntLiterals:   []token.Int{},
+		FloatLiterals: []token.Float{},
 	},
 }
 
@@ -41,10 +47,22 @@ function test(a, b = 2) {
 }
 	`,
 	expectedData: RawData{
-		Identifiers:    []string{"test", "a", "b", "c"},
-		StringLiterals: []string{"hello", "apple"},
-		IntLiterals:    []int{2, 3, 4},
-		FloatLiterals:  []float64{},
+		Identifiers: []token.Identifier{
+			{Name: "test", Type: parsing.Function},
+			{Name: "a", Type: parsing.Parameter},
+			{Name: "b", Type: parsing.Parameter},
+			{Name: "c", Type: parsing.Variable},
+		},
+		StringLiterals: []token.String{
+			{Value: "hello", Raw: `"hello"`},
+			{Value: "apple", Raw: `"apple"`},
+		},
+		IntLiterals: []token.Int{
+			{Value: 2, Raw: "2"},
+			{Value: 3, Raw: "3"},
+			{Value: 4, Raw: "4"},
+		},
+		FloatLiterals: []token.Float{},
 	},
 }
 

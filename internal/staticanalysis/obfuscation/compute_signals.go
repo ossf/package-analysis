@@ -6,6 +6,8 @@ import (
 
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stats"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stringentropy"
+	"github.com/ossf/package-analysis/internal/staticanalysis/token"
+	"github.com/ossf/package-analysis/internal/utils"
 )
 
 // characterAnalysis performs analysis on a collection of string symbols, returning:
@@ -46,11 +48,14 @@ TODO Planned signals
 */
 func ComputeSignals(rawData RawData) Signals {
 	signals := Signals{}
-	signals.StringLengthSummary, signals.StringEntropySummary, signals.CombinedStringEntropy =
-		characterAnalysis(rawData.StringLiterals)
 
+	literals := utils.Transform(rawData.StringLiterals, func(s token.String) string { return s.Value })
+	signals.StringLengthSummary, signals.StringEntropySummary, signals.CombinedStringEntropy =
+		characterAnalysis(literals)
+
+	identifierNames := utils.Transform(rawData.Identifiers, func(i token.Identifier) string { return i.Name })
 	signals.IdentifierLengthSummary, signals.IdentifierEntropySummary, signals.CombinedIdentifierEntropy =
-		characterAnalysis(rawData.Identifiers)
+		characterAnalysis(identifierNames)
 
 	return signals
 }

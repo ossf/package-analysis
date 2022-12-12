@@ -8,6 +8,7 @@ import (
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stats"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stringentropy"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing/js"
+	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 	"github.com/ossf/package-analysis/internal/utils"
 )
 
@@ -29,24 +30,26 @@ func compareSummary(t *testing.T, name string, expected, actual stats.SampleStat
 	}
 }
 
-func testSignals(t *testing.T, signals Signals, stringLiterals, identifiers []string) {
-	expectedStringEntropySummary := symbolEntropySummary(stringLiterals)
-	expectedStringLengthSummary := symbolLengthSummary(stringLiterals)
-	expectedIdentifierEntropySummary := symbolEntropySummary(identifiers)
-	expectedIdentifierLengthSummary := symbolLengthSummary(identifiers)
+func testSignals(t *testing.T, signals Signals, stringLiterals []token.String, identifiers []token.Identifier) {
+	literals := utils.Transform(stringLiterals, func(s token.String) string { return s.Value })
+	identifierNames := utils.Transform(identifiers, func(i token.Identifier) string { return i.Name })
+	expectedStringEntropySummary := symbolEntropySummary(literals)
+	expectedStringLengthSummary := symbolLengthSummary(literals)
+	expectedIdentifierEntropySummary := symbolEntropySummary(identifierNames)
+	expectedIdentifierLengthSummary := symbolLengthSummary(identifierNames)
 
 	compareSummary(t, "String literal entropy", expectedStringEntropySummary, signals.StringEntropySummary)
 	compareSummary(t, "String literal lengths", expectedStringLengthSummary, signals.StringLengthSummary)
 	compareSummary(t, "Identifier entropy", expectedIdentifierEntropySummary, signals.IdentifierEntropySummary)
 	compareSummary(t, "Identifier lengths", expectedIdentifierLengthSummary, signals.IdentifierLengthSummary)
 
-	expectedStringCombinedEntropy := stringentropy.CalculateEntropy(strings.Join(stringLiterals, ""), nil)
+	expectedStringCombinedEntropy := stringentropy.CalculateEntropy(strings.Join(literals, ""), nil)
 	if !utils.FloatEquals(expectedStringCombinedEntropy, signals.CombinedStringEntropy, 1e-4) {
 		t.Errorf("Combined string entropy: expected %.3f, actual %.3f",
 			expectedStringCombinedEntropy, signals.CombinedStringEntropy)
 	}
 
-	expectedIdentifierCombinedEntropy := stringentropy.CalculateEntropy(strings.Join(identifiers, ""), nil)
+	expectedIdentifierCombinedEntropy := stringentropy.CalculateEntropy(strings.Join(identifierNames, ""), nil)
 	if !utils.FloatEquals(expectedIdentifierCombinedEntropy, signals.CombinedIdentifierEntropy, 1e-4) {
 		t.Errorf("Combined identifier entropy: expected %.3f, actual %.3f",
 			expectedIdentifierCombinedEntropy, signals.CombinedIdentifierEntropy)
