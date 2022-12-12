@@ -8,15 +8,15 @@ type Pkg interface {
 	EcosystemName() string
 }
 
-// pkg is an internal representation of a Pkg, which can be marshalled into JSON
-type pkg struct {
+// A representation of a Pkg, which can be marshalled into JSON
+type PkgIdentifier struct {
 	Name      string
 	Version   string
 	Ecosystem string
 }
 
 type result struct {
-	Package          pkg
+	Package          PkgIdentifier
 	CreatedTimestamp int64
 	Analysis         interface{}
 }

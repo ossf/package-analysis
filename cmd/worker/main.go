@@ -36,14 +36,10 @@ const (
 	localPkgPathFmt = "/local/%s"
 )
 
-type pkgIdentifier struct {
-	Name 		string
-	Version 	string
-	Ecosystem 	string
-}
+type pkgIdentifier resultstore.PkgIdentifier
 
 type notificationMessage struct {
-	Package		pkgIdentifier
+	Package	pkgIdentifier
 }
 
 func publishNotification(ctx context.Context, topicNotification *pubsub.Topic, pkgDetails pkgIdentifier) error {
