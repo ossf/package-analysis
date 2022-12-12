@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -35,7 +36,34 @@ const (
 	localPkgPathFmt = "/local/%s"
 )
 
-func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blob.Bucket, resultsBucket, fileWritesBucket, imageTag string) error {
+type pkgIdentifier struct {
+	Name 		string
+	Version 	string
+	Ecosystem 	string
+}
+
+type notificationMessage struct {
+	Package pkgIdentifier
+}
+
+func publishNotification(ctx context.Context, topicNotification *pubsub.Topic, pkgDetails pkgIdentifier) error {
+	notificationMsg, err := json.Marshal(notificationMessage{pkgDetails})
+	if err != nil {
+		return fmt.Errorf("failed to create completed analysis notification message: %v", err)
+	}
+
+	err = topicNotification.Send(ctx, &pubsub.Message{
+		Body: []byte(notificationMsg),
+		Metadata: nil,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to send completed analysis notification: %v", err)
+	}
+
+	return nil
+}
+
+func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blob.Bucket, resultsBucket, fileWritesBucket, imageTag string, topicNotification *pubsub.Topic) error {
 	name := msg.Metadata["name"]
 	if name == "" {
 		log.Warn("name is empty")
@@ -133,11 +161,15 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		}
 	}
 
+	if err = publishNotification(ctx, topicNotification, pkgIdentifier{name, version, ecosystem}); err != nil {
+		return err
+	}
+
 	msg.Ack()
 	return nil
 }
 
-func messageLoop(ctx context.Context, subURL, packagesBucket, resultsBucket, fileWritesBucket, imageTag string) error {
+func messageLoop(ctx context.Context, subURL, packagesBucket, resultsBucket, fileWritesBucket, imageTag string, topicNotification *pubsub.Topic) error {
 	sub, err := pubsub.OpenSubscription(ctx, subURL)
 	if err != nil {
 		return err
@@ -161,7 +193,7 @@ func messageLoop(ctx context.Context, subURL, packagesBucket, resultsBucket, fil
 			return fmt.Errorf("error receiving message: %w", err)
 		}
 
-		if err := handleMessage(ctx, msg, pkgsBkt, resultsBucket, fileWritesBucket, imageTag); err != nil {
+		if err := handleMessage(ctx, msg, pkgsBkt, resultsBucket, fileWritesBucket, imageTag, topicNotification); err != nil {
 			log.Error("Failed to process message",
 				"error", err)
 		}
@@ -176,6 +208,7 @@ func main() {
 	resultsBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS")
 	fileWritesBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_FILE_WRITE_RESULTS")
 	imageTag := os.Getenv("OSSF_SANDBOX_IMAGE_TAG")
+	topicNotificationURL := os.Getenv("OSSMALWARE_NOTIFICATION_TOPIC") 
 	log.Initialize(os.Getenv("LOGGER_ENV"))
 	sandbox.InitEnv()
 
@@ -185,10 +218,17 @@ func main() {
 		log.Label("package_bucket", packagesBucket),
 		log.Label("results_bucket", resultsBucket),
 		log.Label("file_write_results_bucket", fileWritesBucket),
-		log.Label("image_tag", imageTag))
+		log.Label("image_tag", imageTag),
+		log.Label("topic_notification", topicNotificationURL))
+
+	topicNotification, err := pubsub.OpenTopic(ctx, topicNotificationURL)
+	if err != nil {
+		log.Error("Failed to open completed analysis notification topic: %v", err)
+		return
+	}
 
 	for {
-		err := messageLoop(ctx, subURL, packagesBucket, resultsBucket, fileWritesBucket, imageTag)
+		err := messageLoop(ctx, subURL, packagesBucket, resultsBucket, fileWritesBucket, imageTag, topicNotification)
 		if err != nil {
 			if retryCount++; retryCount >= maxRetries {
 				log.Error("Retries exceeded",
