@@ -17,6 +17,10 @@ part of the separator.
 
 If filePath is not empty, the function attempts to count the lines of the file
 at that path, otherwise lines in sourceString are counted.
+
+Note: there may not be much useful information to be gathered by distinguishing
+between line lengths when they get very long. It may be pragmatic to just report
+all lines above e.g. 64K as 64K long
 */
 func GetLineLengths(filePath string, sourceString string) (map[int]int, error) {
 	var reader *bufio.Reader
@@ -34,6 +38,11 @@ func GetLineLengths(filePath string, sourceString string) (map[int]int, error) {
 
 	lengths := map[int]int{}
 	for {
+		/* Normally bufio.Scanner would be more convenient to use here, however by default
+		it uses a fixed maximum buffer size (MaxScanTokenSize = 64 * 1024). Since some
+		(obfuscated) source code may contain very long lines, rather than doing our own
+		buffer management we'll use reader.ReadStrings, which uses an internal function
+		(collectFragments) to aggregate multiple full buffers. */
 		line, readErr := reader.ReadString('\n')
 		if readErr != nil && readErr != io.EOF {
 			return nil, readErr
