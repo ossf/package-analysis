@@ -1,10 +1,8 @@
 package token
 
-import "github.com/ossf/package-analysis/internal/staticanalysis/parsing"
-
 type Identifier struct {
 	Name string
-	Type parsing.IdentifierType
+	Type IdentifierType
 }
 
 type Comment struct {
