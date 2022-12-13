@@ -145,10 +145,21 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	return nil
 }
 
-func messageLoop(ctx context.Context, subURL, packagesBucket, resultsBucket, fileWritesBucket, imageTag string, notificationTopic *pubsub.Topic) error {
+func messageLoop(ctx context.Context, subURL, packagesBucket, resultsBucket, fileWritesBucket, imageTag, notificationTopicURL string) error {
 	sub, err := pubsub.OpenSubscription(ctx, subURL)
 	if err != nil {
 		return err
+	}
+
+	// default value set so notification topic is optional
+	// if no environment variable is set, we continue without notifying
+	var notificationTopic *pubsub.Topic
+	if notificationTopicURL != "" {
+		notificationTopic, err = pubsub.OpenTopic(ctx, notificationTopicURL)
+		if err != nil {
+			return err
+		}
+		defer notificationTopic.Shutdown(ctx)
 	}
 
 	var pkgsBkt *blob.Bucket
@@ -198,18 +209,7 @@ func main() {
 		log.Label("topic_notification", notificationTopicURL))
 
 	for {
-		// default values set so the notification topic is optional
-		// if the environment variable is unable to be retrieved,
-		// no notifications are sent and we continue without notifying
-		var err error = nil
-		var notificationTopic *pubsub.Topic = nil
-		if notificationTopicURL != "" {
-			notificationTopic, err = pubsub.OpenTopic(ctx, notificationTopicURL)
-			defer notificationTopic.Shutdown(ctx)
-		}
-		if err == nil {
-			err = messageLoop(ctx, subURL, packagesBucket, resultsBucket, fileWritesBucket, imageTag, notificationTopic)
-		}
+		err := messageLoop(ctx, subURL, packagesBucket, resultsBucket, fileWritesBucket, imageTag, notificationTopicURL)
 		if err != nil {	
 			if retryCount++; retryCount >= maxRetries {
 				log.Error("Retries exceeded",
