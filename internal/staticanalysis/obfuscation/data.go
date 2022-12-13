@@ -5,14 +5,15 @@ import (
 	"strings"
 
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stats"
+	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
 
 type RawData struct {
-	Identifiers    []string
-	StringLiterals []string
-	IntLiterals    []int
-	FloatLiterals  []float64
-	Comments       []string
+	Identifiers    []token.Identifier
+	StringLiterals []token.String
+	IntLiterals    []token.Int
+	FloatLiterals  []token.Float
+	Comments       []token.Comment
 }
 
 type Signals struct {
@@ -38,7 +39,7 @@ type AnalysisResult struct {
 	// PackageSignals contains aggregated signals from
 	// all files and/or signals that can only be computed
 	// from global information about the package
-	PackageSignals Signals
+	PackageSignals struct{}
 
 	// ExcludedFiles is a list of package files that were
 	// excluded from analysis, e.g. because all supported
@@ -48,8 +49,8 @@ type AnalysisResult struct {
 
 func (rd RawData) String() string {
 	parts := []string{
-		fmt.Sprintf("Identifiers\n%s", strings.Join(rd.Identifiers, "\n")),
-		fmt.Sprintf("String Literals\n%s", strings.Join(rd.StringLiterals, "\n")),
+		fmt.Sprintf("Identifiers\n%v", rd.Identifiers),
+		fmt.Sprintf("String Literals\n%v", rd.StringLiterals),
 		fmt.Sprintf("Integer Literals\n%v", rd.IntLiterals),
 		fmt.Sprintf("Float Literals\n%v", rd.FloatLiterals),
 	}

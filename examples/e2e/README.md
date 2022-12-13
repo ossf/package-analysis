@@ -30,6 +30,16 @@ using the following credentials for authentication:
 
 `docker-compose logs -f analysis` provides too much stdout to be useful, outputs are sent to minio as mentioned above.
 
+## PubSub (Kafka) Inspection
+
+Output from the Kafka PubSub topics can be inspected using
+[KafkaCat](https://github.com/edenhill/kcat).
+
+1. Install `kafkacat` or `kcat` (e.g. `sudo apt install kafkacat`)
+2. Run `kafkacat` to observe the topics:
+    - package-feeds: `kafkacat -C -J -b localhost:9094 -t package-feeds`
+    - workers: `kafkacat -C -J -b localhost:9094 -t workers`
+
 ## Additional Notes
 
 ### Limitations
