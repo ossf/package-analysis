@@ -73,10 +73,9 @@ func doObfuscationDetection(workDirs workDirs) (*obfuscation.AnalysisResult, err
 	}
 
 	result := &obfuscation.AnalysisResult{
-		FileRawData:    map[string]obfuscation.RawData{},
-		FileSignals:    map[string]obfuscation.Signals{},
-		PackageSignals: obfuscation.NoSignals(),
-		ExcludedFiles:  []string{},
+		FileRawData:   map[string]obfuscation.RawData{},
+		FileSignals:   map[string]obfuscation.Signals{},
+		ExcludedFiles: []string{},
 	}
 	err = filepath.WalkDir(workDirs.extractDir, func(path string, f fs.DirEntry, err error) error {
 		if err != nil {
@@ -104,8 +103,6 @@ func doObfuscationDetection(workDirs workDirs) (*obfuscation.AnalysisResult, err
 	if err != nil {
 		return nil, fmt.Errorf("error while walking package files: %v", err)
 	}
-
-	result.PackageSignals = obfuscation.RemoveNaNs(result.PackageSignals)
 
 	return result, nil
 }

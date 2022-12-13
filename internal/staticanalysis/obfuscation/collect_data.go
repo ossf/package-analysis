@@ -6,6 +6,7 @@ import (
 
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing/js"
+	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
 
 /*
@@ -43,22 +44,21 @@ func CollectData(parserConfig js.ParserConfig, jsSourceFile string, jsSourceStri
 
 	// Initialise with empty slices to avoid null values in JSON
 	data := RawData{
-		Identifiers:    []string{},
-		StringLiterals: []string{},
-		IntLiterals:    []int{},
-		FloatLiterals:  []float64{},
-		Comments:       []string{},
+		Identifiers:    []token.Identifier{},
+		StringLiterals: []token.String{},
+		IntLiterals:    []token.Int{},
+		FloatLiterals:  []token.Float{},
+		Comments:       []token.Comment{},
 	}
 
 	for _, d := range parseResult.Literals {
 		if d.GoType == "string" {
-			data.StringLiterals = append(data.StringLiterals, d.Value.(string))
+			data.StringLiterals = append(data.StringLiterals, token.String{Value: d.Value.(string), Raw: d.RawValue})
 		} else if d.GoType == "float64" {
-			// check if it can be an int
-			if intValue, err := strconv.Atoi(d.RawValue); err == nil {
-				data.IntLiterals = append(data.IntLiterals, intValue)
+			if intValue, err := strconv.ParseInt(d.RawValue, 0, 64); err == nil {
+				data.IntLiterals = append(data.IntLiterals, token.Int{Value: intValue, Raw: d.RawValue})
 			} else {
-				data.FloatLiterals = append(data.FloatLiterals, d.Value.(float64))
+				data.FloatLiterals = append(data.FloatLiterals, token.Float{Value: d.Value.(float64), Raw: d.RawValue})
 			}
 		}
 	}
@@ -74,12 +74,12 @@ func CollectData(parserConfig js.ParserConfig, jsSourceFile string, jsSourceStri
 		case parsing.Property:
 			fallthrough
 		case parsing.Variable:
-			data.Identifiers = append(data.Identifiers, ident.Name)
+			data.Identifiers = append(data.Identifiers, token.Identifier{Name: ident.Name, Type: ident.Type})
 		}
 	}
 
 	for _, comment := range parseResult.Comments {
-		data.Comments = append(data.Comments, comment.Data)
+		data.Comments = append(data.Comments, token.Comment{Value: comment.Data})
 	}
 
 	return &data, nil
