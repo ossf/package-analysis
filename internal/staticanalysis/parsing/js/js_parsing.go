@@ -9,6 +9,7 @@ import (
 
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
+	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
 
 // parserOutputElement represents the output JSON format of the JS parser
@@ -106,12 +107,12 @@ func ParseJS(parserConfig ParserConfig, filePath string, sourceString string) (r
 	for _, element := range storage {
 		switch element.SymbolType {
 		case parsing.Identifier:
-			symbolSubtype := parsing.CheckIdentifierType(element.SymbolSubtype)
-			if symbolSubtype == parsing.Other || symbolSubtype == parsing.Unknown {
+			symbolSubtype := token.CheckIdentifierType(element.SymbolSubtype)
+			if symbolSubtype == token.Other || symbolSubtype == token.Unknown {
 				break
 			}
 			result.Identifiers = append(result.Identifiers, parsing.ParsedIdentifier{
-				Type: parsing.CheckIdentifierType(element.SymbolSubtype),
+				Type: token.CheckIdentifierType(element.SymbolSubtype),
 				Name: element.Data.(string),
 				Pos:  element.Pos,
 			})
