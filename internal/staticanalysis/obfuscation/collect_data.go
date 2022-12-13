@@ -2,8 +2,10 @@ package obfuscation
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 
+	"github.com/ossf/package-analysis/internal/staticanalysis/linelengths"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing/js"
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
@@ -31,18 +33,23 @@ TODO planned data
 func CollectData(parserConfig js.ParserConfig, jsSourceFile string, jsSourceString string, printDebug bool) (*RawData, error) {
 	parseResult, parserOutput, err := js.ParseJS(parserConfig, jsSourceFile, jsSourceString)
 	if printDebug {
-		println("\nRaw JSON:\n", parserOutput)
+		fmt.Fprintf(os.Stderr, "\nRaw JSON:\n%s\n", parserOutput)
 	}
 	if err != nil {
-		fmt.Printf("Error occured while reading %s: %v\n", jsSourceFile, err)
 		return nil, err
 	}
 	if !parseResult.ValidInput {
 		return nil, nil
 	}
 
+	lineLengths, err := linelengths.GetLineLengths(jsSourceFile, jsSourceString)
+	if err != nil {
+		return nil, err
+	}
+
 	// Initialise with empty slices to avoid null values in JSON
 	data := RawData{
+		LineLengths:    lineLengths,
 		Identifiers:    []token.Identifier{},
 		StringLiterals: []token.String{},
 		IntLiterals:    []token.Int{},

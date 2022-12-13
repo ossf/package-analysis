@@ -1,0 +1,67 @@
+package linelengths
+
+import (
+	"bufio"
+	"io"
+	"os"
+	"strings"
+)
+
+/*
+GetLineLengths counts the number of characters on each line of a file or string,
+returning a map of length to the number of lines in the file with that length.
+
+Lines are defined to be separated by newline ('\n') characters. If the newline
+character is preceded by a carriage return ('\r'), this will also be treated as
+part of the separator.
+
+If filePath is not empty, the function attempts to count the lines of the file
+at that path, otherwise lines in sourceString are counted.
+*/
+func GetLineLengths(filePath string, sourceString string) (map[int]int, error) {
+	var reader *bufio.Reader
+	if len(filePath) > 0 {
+		file, err := os.Open(filePath)
+		if err != nil {
+			return nil, err
+		}
+		defer file.Close()
+
+		reader = bufio.NewReader(file)
+	} else {
+		reader = bufio.NewReader(strings.NewReader(sourceString))
+	}
+
+	lengths := map[int]int{}
+	for {
+		line, readErr := reader.ReadString('\n')
+		if readErr != nil && readErr != io.EOF {
+			return nil, readErr
+		}
+
+		// remove trailing newline and carriage return if present
+		// (code adapted from bufio.ReadLine())
+		l := len(line)
+		if l >= 1 {
+			if line[l-1] == '\n' {
+				drop := 1
+				if l >= 2 && line[l-2] == '\r' {
+					drop = 2
+				}
+				l -= drop
+			}
+			lengths[l]++
+		}
+
+		if readErr == io.EOF {
+			break
+		}
+	}
+
+	if len(lengths) == 0 {
+		// define the empty string to have a single empty line
+		lengths[0] = 1
+	}
+
+	return lengths, nil
+}
