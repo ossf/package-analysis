@@ -62,15 +62,20 @@ type AnalysisResult struct {
 	// the Signals computed for that file.
 	FileSignals map[string]Signals
 
-	// PackageSignals contains aggregated signals from
+	// PackageData contains aggregated information from
 	// all files and/or signals that can only be computed
 	// from global information about the package
-	PackageSignals struct{}
+	PackageData struct{}
 
 	// ExcludedFiles is a list of package files that were
 	// excluded from analysis, e.g. because all supported
 	// parsers encountered syntax errors when analysing the file.
 	ExcludedFiles []string
+
+	// FileSizes is a map from file name to size in bytes, and
+	// is populated with data from all files in the package,
+	// regardless of whether they were included in the analysis.
+	FileSizes map[string]int64
 }
 
 func (rd RawData) String() string {
@@ -111,8 +116,9 @@ func (ar AnalysisResult) String() string {
 	parts := []string{
 		fmt.Sprintf("File Raw Data\n%s", strings.Join(fileRawDataStrings, "\n\n")),
 		fmt.Sprintf("File Signals\n%s", strings.Join(fileSignalsStrings, "\n\n")),
-		fmt.Sprintf("Package Signals\n%s", ar.PackageSignals),
-		fmt.Sprintf("Excluded Files\n%s", strings.Join(ar.ExcludedFiles, "\n")),
+		fmt.Sprintf("Package Data\n%s", ar.PackageData),
+		fmt.Sprintf("Excluded files\n%s", strings.Join(ar.ExcludedFiles, "\n")),
+		fmt.Sprintf("File sizes\n%v", ar.FileSizes),
 	}
 
 	return strings.Join(parts, "\n\n########################\n\n")
