@@ -56,7 +56,7 @@ func (rs *ResultStore) generatePath(p Pkg) string {
 func (rs *ResultStore) Save(ctx context.Context, p Pkg, analysis interface{}) error {
 	version := p.Version()
 	result := &result{
-		Package: PkgIdentifier{
+		Package: pkg{
 			Name:      p.Name(),
 			Ecosystem: p.EcosystemName(),
 			Version:   version,

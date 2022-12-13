@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -26,6 +25,7 @@ import (
 	"github.com/ossf/package-analysis/internal/resultstore"
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/internal/worker"
+	"github.com/ossf/package-analysis/internal/notification"
 )
 
 const (
@@ -35,26 +35,6 @@ const (
 
 	localPkgPathFmt = "/local/%s"
 )
-
-type notificationMessage struct {
-	Package	resultstore.PkgIdentifier
-}
-
-func publishNotification(ctx context.Context, notificationTopic *pubsub.Topic, name, version, ecosystem string) error {
-	pkgDetails := resultstore.PkgIdentifier{name, version, ecosystem}
-	notificationMsg, err := json.Marshal(notificationMessage{pkgDetails})
-	if err != nil {
-		return fmt.Errorf("failed to encode completion notification: %w", err)
-	}
-	err = notificationTopic.Send(ctx, &pubsub.Message{
-		Body: []byte(notificationMsg),
-		Metadata: nil,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to send completion notification: %w", err)
-	}
-	return nil
-}
 
 func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blob.Bucket, resultsBucket, fileWritesBucket, imageTag string, notificationTopic *pubsub.Topic) error {
 	name := msg.Metadata["name"]
@@ -154,7 +134,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		}
 	}
 
-	if err = publishNotification(ctx, notificationTopic, name, version, ecosystem); err != nil {
+	if err = notification.PublishNotification(ctx, notificationTopic, name, version, ecosystem); err != nil {
 		return err 
 	}
 
