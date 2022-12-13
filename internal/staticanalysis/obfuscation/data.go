@@ -17,12 +17,37 @@ type RawData struct { // TODO rename to FileData
 	Comments       []token.Comment
 }
 
-type Signals struct {
-	StringLengthSummary       stats.SampleStatistics
-	StringEntropySummary      stats.SampleStatistics
-	CombinedStringEntropy     float64
-	IdentifierLengthSummary   stats.SampleStatistics
-	IdentifierEntropySummary  stats.SampleStatistics
+type Signals struct { // TODO rename to FileSignals
+	// StringLengths is a map from length (in characters) to number of
+	// string literals in the file having that length. If a length key is
+	// missing, it is assumed to be zero.
+	StringLengths map[int]int
+
+	// StringEntropySummary provides sample statistics for the set of entropy
+	// values calculated on each string literal. Character probabilities for the
+	// entropy calculation are estimated empirically from aggregated counts
+	// of characters across all string literals in the file.
+	StringEntropySummary stats.SampleStatistics
+
+	// CombinedStringEntropy is the entropy of the string obtained from
+	// concatenating all string literals in the file together. It may be used
+	// to normalise the values in StringEntropySummary
+	CombinedStringEntropy float64
+
+	// IdentifierLengths is a map from length (in characters) to number of
+	// identifiers in the file having that length. If a length key is missing,
+	// it is assumed to be zero.
+	IdentifierLengths map[int]int
+
+	// IdentifierEntropySummary provides sample statistics for the set of entropy
+	// values calculated on each identifier. Character probabilities for the
+	// entropy calculation are estimated empirically from aggregated counts
+	// of characters across all identifiers in the file.
+	IdentifierEntropySummary stats.SampleStatistics
+
+	// CombinedIdentifierEntropy is the entropy of the string obtained from
+	// concatenating all identifiers in the file together. It may be used to
+	// normalise the values in IdentifierEntropySummary
 	CombinedIdentifierEntropy float64
 }
 
@@ -37,15 +62,20 @@ type AnalysisResult struct {
 	// the Signals computed for that file.
 	FileSignals map[string]Signals
 
-	// PackageSignals contains aggregated signals from
+	// PackageData contains aggregated information from
 	// all files and/or signals that can only be computed
 	// from global information about the package
-	PackageSignals struct{}
+	PackageData struct{}
 
 	// ExcludedFiles is a list of package files that were
 	// excluded from analysis, e.g. because all supported
 	// parsers encountered syntax errors when analysing the file.
 	ExcludedFiles []string
+
+	// FileSizes is a map from file name to size in bytes, and
+	// is populated with data from all files in the package,
+	// regardless of whether they were included in the analysis.
+	FileSizes map[string]int64
 }
 
 func (rd RawData) String() string {
@@ -61,11 +91,11 @@ func (rd RawData) String() string {
 
 func (s Signals) String() string {
 	parts := []string{
-		fmt.Sprintf("string length: %s", s.StringLengthSummary),
+		fmt.Sprintf("string lengths: %v", s.StringLengths),
 		fmt.Sprintf("string entropy: %s", s.StringEntropySummary),
 		fmt.Sprintf("combined string entropy: %f", s.CombinedStringEntropy),
 
-		fmt.Sprintf("identifier length: %s", s.IdentifierLengthSummary),
+		fmt.Sprintf("identifier lengths: %v", s.IdentifierLengths),
 		fmt.Sprintf("identifier entropy: %s", s.IdentifierEntropySummary),
 		fmt.Sprintf("combined identifier entropy: %f", s.CombinedIdentifierEntropy),
 	}
@@ -86,8 +116,9 @@ func (ar AnalysisResult) String() string {
 	parts := []string{
 		fmt.Sprintf("File Raw Data\n%s", strings.Join(fileRawDataStrings, "\n\n")),
 		fmt.Sprintf("File Signals\n%s", strings.Join(fileSignalsStrings, "\n\n")),
-		fmt.Sprintf("Package Signals\n%s", ar.PackageSignals),
-		fmt.Sprintf("Excluded Files\n%s", strings.Join(ar.ExcludedFiles, "\n")),
+		fmt.Sprintf("Package Data\n%s", ar.PackageData),
+		fmt.Sprintf("Excluded files\n%s", strings.Join(ar.ExcludedFiles, "\n")),
+		fmt.Sprintf("File sizes\n%v", ar.FileSizes),
 	}
 
 	return strings.Join(parts, "\n\n########################\n\n")

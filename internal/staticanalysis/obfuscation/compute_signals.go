@@ -15,7 +15,7 @@ import (
 // - Stats summary of symbol (string) entropies
 // - Entropy of all symbols concatenated together
 func characterAnalysis(symbols []string) (
-	lengthSummary stats.SampleStatistics,
+	lengthCounts map[int]int,
 	entropySummary stats.SampleStatistics,
 	combinedEntropy float64,
 ) {
@@ -29,7 +29,7 @@ func characterAnalysis(symbols []string) (
 		lengths = append(lengths, len(s))
 	}
 
-	lengthSummary = stats.Summarise(lengths)
+	lengthCounts = stats.CountDistinct(lengths)
 	entropySummary = stats.Summarise(entropies)
 	combinedEntropy = stringentropy.CalculateEntropy(strings.Join(symbols, ""), nil)
 	return
@@ -50,11 +50,11 @@ func ComputeSignals(rawData RawData) Signals {
 	signals := Signals{}
 
 	literals := utils.Transform(rawData.StringLiterals, func(s token.String) string { return s.Value })
-	signals.StringLengthSummary, signals.StringEntropySummary, signals.CombinedStringEntropy =
+	signals.StringLengths, signals.StringEntropySummary, signals.CombinedStringEntropy =
 		characterAnalysis(literals)
 
 	identifierNames := utils.Transform(rawData.Identifiers, func(i token.Identifier) string { return i.Name })
-	signals.IdentifierLengthSummary, signals.IdentifierEntropySummary, signals.CombinedIdentifierEntropy =
+	signals.IdentifierLengths, signals.IdentifierEntropySummary, signals.CombinedIdentifierEntropy =
 		characterAnalysis(identifierNames)
 
 	return signals
@@ -62,10 +62,10 @@ func ComputeSignals(rawData RawData) Signals {
 
 func NoSignals() Signals {
 	return Signals{
-		StringLengthSummary:       stats.NoData(),
+		StringLengths:             map[int]int{},
 		StringEntropySummary:      stats.NoData(),
 		CombinedStringEntropy:     math.NaN(),
-		IdentifierLengthSummary:   stats.NoData(),
+		IdentifierLengths:         map[int]int{},
 		IdentifierEntropySummary:  stats.NoData(),
 		CombinedIdentifierEntropy: math.NaN(),
 	}
@@ -74,10 +74,10 @@ func NoSignals() Signals {
 // RemoveNaNs replaces all NaN values in this object with zeros
 func RemoveNaNs(s Signals) Signals {
 	replaced := Signals{
-		StringLengthSummary:       s.StringLengthSummary.ReplaceNaNs(0),
+		StringLengths:             s.StringLengths,
 		StringEntropySummary:      s.StringEntropySummary.ReplaceNaNs(0),
 		CombinedStringEntropy:     s.CombinedStringEntropy,
-		IdentifierLengthSummary:   s.IdentifierLengthSummary.ReplaceNaNs(0),
+		IdentifierLengths:         s.IdentifierLengths,
 		IdentifierEntropySummary:  s.IdentifierEntropySummary.ReplaceNaNs(0),
 		CombinedIdentifierEntropy: s.CombinedIdentifierEntropy,
 	}

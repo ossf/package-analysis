@@ -207,3 +207,11 @@ func Summarise[T RealNumber](sample []T) SampleStatistics {
 	q := quartiles(sample)
 	return SampleStatistics{Size: l, Mean: m, Variance: v, Skewness: s, Quartiles: q}
 }
+
+func CountDistinct[T constraints.Integer](sample []T) map[T]int {
+	counts := make(map[T]int, 0)
+	for _, t := range sample {
+		counts[t] += 1
+	}
+	return counts
+}

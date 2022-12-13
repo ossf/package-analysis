@@ -76,6 +76,7 @@ func doObfuscationDetection(workDirs workDirs) (*obfuscation.AnalysisResult, err
 		FileRawData:   map[string]obfuscation.RawData{},
 		FileSignals:   map[string]obfuscation.Signals{},
 		ExcludedFiles: []string{},
+		FileSizes:     map[string]int64{},
 	}
 	err = filepath.WalkDir(workDirs.extractDir, func(path string, f fs.DirEntry, err error) error {
 		if err != nil {
@@ -84,6 +85,14 @@ func doObfuscationDetection(workDirs workDirs) (*obfuscation.AnalysisResult, err
 		if f.Type().IsRegular() {
 			pathInArchive := strings.TrimPrefix(path, workDirs.extractDir+string(os.PathSeparator))
 			log.Debug("Processing " + pathInArchive)
+			fileInfo, err := f.Info()
+			if err != nil {
+				log.Error("Error getting file metadata", "filename", pathInArchive, "error", err)
+				result.FileSizes[pathInArchive] = -1 // error value
+			} else {
+				result.FileSizes[pathInArchive] = fileInfo.Size()
+			}
+
 			rawData, err := obfuscation.CollectData(jsParserConfig, path, "", false)
 			if err != nil {
 				log.Error("Error parsing file", "filename", pathInArchive, "error", err)
