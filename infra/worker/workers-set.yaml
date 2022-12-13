@@ -29,7 +29,7 @@ spec:
           value: prod
         - name: OSSF_MALWARE_ANALYSIS_PACKAGES
           value: gs://ossf-malware-analysis-packages
-        - name: OSSMALWARE_NOTIFICATION_TOPIC
+        - name: OSSF_MALWARE_NOTIFICATION_TOPIC
           value: gcppubsub://projects/gosst-package-detection/subscriptions/analysis-notify
         securityContext:
           privileged: true

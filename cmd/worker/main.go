@@ -201,7 +201,7 @@ func main() {
 	resultsBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS")
 	fileWritesBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_FILE_WRITE_RESULTS")
 	imageTag := os.Getenv("OSSF_SANDBOX_IMAGE_TAG")
-	notificationTopicURL := os.Getenv("OSSMALWARE_NOTIFICATION_TOPIC") 
+	notificationTopicURL := os.Getenv("OSSF_MALWARE_NOTIFICATION_TOPIC") 
 	log.Initialize(os.Getenv("LOGGER_ENV"))
 	sandbox.InitEnv()
 
@@ -213,7 +213,7 @@ func main() {
 		log.Label("file_write_results_bucket", fileWritesBucket),
 		log.Label("image_tag", imageTag),
 		log.Label("topic_notification", notificationTopicURL))
-	
+
 	for {
 		notificationTopic, err := pubsub.OpenTopic(ctx, notificationTopicURL)
 		defer notificationTopic.Shutdown(ctx)

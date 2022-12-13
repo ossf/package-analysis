@@ -46,7 +46,7 @@ services:
     entrypoint: "/usr/local/bin/worker"
     environment:
       OSSMALWARE_WORKER_SUBSCRIPTION: kafka://worker?topic=workers
-      OSSMALWARE_NOTIFICATION_TOPIC: kafka://notifications
+      OSSF_MALWARE_NOTIFICATION_TOPIC: kafka://notifications
       OSSF_MALWARE_ANALYSIS_RESULTS: s3://package-analysis?endpoint=minio:9000&disableSSL=true&s3ForcePathStyle=true
       OSSF_MALWARE_ANALYSIS_FILE_WRITE_RESULTS: s3://package-analysis-file-writes?endpoint=minio:9000&disableSSL=true&s3ForcePathStyle=true
       KAFKA_BROKERS: kafka:9092
