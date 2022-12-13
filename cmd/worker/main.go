@@ -134,8 +134,11 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		}
 	}
 
-	if err = notification.PublishNotification(ctx, notificationTopic, name, version, ecosystem); err != nil {
-		return err 
+	if notificationTopic != nil {
+		err := notification.PublishNotification(ctx, notificationTopic, name, version, ecosystem)
+		if err != nil {
+			return err 
+		}
 	}
 
 	msg.Ack()
@@ -195,8 +198,15 @@ func main() {
 		log.Label("topic_notification", notificationTopicURL))
 
 	for {
-		notificationTopic, err := pubsub.OpenTopic(ctx, notificationTopicURL)
-		defer notificationTopic.Shutdown(ctx)
+		// default values set so the notification topic is optional
+		// if the environment variable is unable to be retrieved,
+		// no notifications are sent and we continue without notifying
+		var err error = nil
+		var notificationTopic *pubsub.Topic = nil
+		if notificationTopicURL != "" {
+			notificationTopic, err = pubsub.OpenTopic(ctx, notificationTopicURL)
+			defer notificationTopic.Shutdown(ctx)
+		}
 		if err == nil {
 			err = messageLoop(ctx, subURL, packagesBucket, resultsBucket, fileWritesBucket, imageTag, notificationTopic)
 		}
