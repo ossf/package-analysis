@@ -14,13 +14,13 @@ type pkgIdentifier struct {
 	Ecosystem string
 }
 
-type NotificationMessage struct {
+type AnalysisCompletion struct {
 	Package	pkgIdentifier
 }
 
-func PublishNotification(ctx context.Context, notificationTopic *pubsub.Topic, name, version, ecosystem string) error {
+func PublishAnalysisCompletion(ctx context.Context, notificationTopic *pubsub.Topic, name, version, ecosystem string) error {
 	pkgDetails := pkgIdentifier{name, version, ecosystem}
-	notificationMsg, err := json.Marshal(NotificationMessage{pkgDetails})
+	notificationMsg, err := json.Marshal(AnalysisCompletion{pkgDetails})
 	if err != nil {
 		return fmt.Errorf("failed to encode completion notification: %w", err)
 	}
