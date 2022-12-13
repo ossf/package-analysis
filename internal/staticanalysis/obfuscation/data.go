@@ -17,12 +17,37 @@ type RawData struct { // TODO rename to FileData
 	Comments       []token.Comment
 }
 
-type Signals struct {
-	StringLengthSummary       stats.SampleStatistics
-	StringEntropySummary      stats.SampleStatistics
-	CombinedStringEntropy     float64
-	IdentifierLengthSummary   stats.SampleStatistics
-	IdentifierEntropySummary  stats.SampleStatistics
+type Signals struct { // TODO rename to FileSignals
+	// StringLengths is a map from length (in characters) to number of
+	// string literals in the file having that length. If a length key is
+	// missing, it is assumed to be zero.
+	StringLengths map[int]int
+
+	// StringEntropySummary provides sample statistics for the set of entropy
+	// values calculated on each string literal. Character probabilities for the
+	// entropy calculation are estimated empirically from aggregated counts
+	// of characters across all string literals in the file.
+	StringEntropySummary stats.SampleStatistics
+
+	// CombinedStringEntropy is the entropy of the string obtained from
+	// concatenating all string literals in the file together. It may be used
+	// to normalise the values in StringEntropySummary
+	CombinedStringEntropy float64
+
+	// IdentifierLengths is a map from length (in characters) to number of
+	// identifiers in the file having that length. If a length key is missing,
+	// it is assumed to be zero.
+	IdentifierLengths map[int]int
+
+	// IdentifierEntropySummary provides sample statistics for the set of entropy
+	// values calculated on each identifier. Character probabilities for the
+	// entropy calculation are estimated empirically from aggregated counts
+	// of characters across all identifiers in the file.
+	IdentifierEntropySummary stats.SampleStatistics
+
+	// CombinedIdentifierEntropy is the entropy of the string obtained from
+	// concatenating all identifiers in the file together. It may be used to
+	// normalise the values in IdentifierEntropySummary
 	CombinedIdentifierEntropy float64
 }
 
@@ -61,11 +86,11 @@ func (rd RawData) String() string {
 
 func (s Signals) String() string {
 	parts := []string{
-		fmt.Sprintf("string length: %s", s.StringLengthSummary),
+		fmt.Sprintf("string lengths: %v", s.StringLengths),
 		fmt.Sprintf("string entropy: %s", s.StringEntropySummary),
 		fmt.Sprintf("combined string entropy: %f", s.CombinedStringEntropy),
 
-		fmt.Sprintf("identifier length: %s", s.IdentifierLengthSummary),
+		fmt.Sprintf("identifier lengths: %v", s.IdentifierLengths),
 		fmt.Sprintf("identifier entropy: %s", s.IdentifierEntropySummary),
 		fmt.Sprintf("combined identifier entropy: %f", s.CombinedIdentifierEntropy),
 	}

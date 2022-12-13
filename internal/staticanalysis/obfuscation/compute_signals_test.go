@@ -1,6 +1,7 @@
 package obfuscation
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
@@ -18,10 +19,9 @@ func symbolEntropySummary(symbols []string) stats.SampleStatistics {
 	return stats.Summarise(entropies)
 }
 
-func symbolLengthSummary(symbols []string) stats.SampleStatistics {
+func symbolLengthCounts(symbols []string) map[int]int {
 	lengths := utils.Transform(symbols, func(s string) int { return len(s) })
-	return stats.Summarise(lengths)
-
+	return stats.CountDistinct(lengths)
 }
 
 func compareSummary(t *testing.T, name string, expected, actual stats.SampleStatistics) {
@@ -30,18 +30,24 @@ func compareSummary(t *testing.T, name string, expected, actual stats.SampleStat
 	}
 }
 
+func compareCounts(t *testing.T, name string, expected, actual map[int]int) {
+	if !reflect.DeepEqual(expected, actual) {
+		t.Errorf("%s summary did not match.\nExpected: %v\nActual: %v\n", name, expected, actual)
+	}
+}
+
 func testSignals(t *testing.T, signals Signals, stringLiterals []token.String, identifiers []token.Identifier) {
 	literals := utils.Transform(stringLiterals, func(s token.String) string { return s.Value })
 	identifierNames := utils.Transform(identifiers, func(i token.Identifier) string { return i.Name })
 	expectedStringEntropySummary := symbolEntropySummary(literals)
-	expectedStringLengthSummary := symbolLengthSummary(literals)
+	expectedStringLengthSummary := symbolLengthCounts(literals)
 	expectedIdentifierEntropySummary := symbolEntropySummary(identifierNames)
-	expectedIdentifierLengthSummary := symbolLengthSummary(identifierNames)
+	expectedIdentifierLengthSummary := symbolLengthCounts(identifierNames)
 
 	compareSummary(t, "String literal entropy", expectedStringEntropySummary, signals.StringEntropySummary)
-	compareSummary(t, "String literal lengths", expectedStringLengthSummary, signals.StringLengthSummary)
+	compareCounts(t, "String literal lengths", expectedStringLengthSummary, signals.StringLengths)
 	compareSummary(t, "Identifier entropy", expectedIdentifierEntropySummary, signals.IdentifierEntropySummary)
-	compareSummary(t, "Identifier lengths", expectedIdentifierLengthSummary, signals.IdentifierLengthSummary)
+	compareCounts(t, "Identifier lengths", expectedIdentifierLengthSummary, signals.IdentifierLengths)
 
 	expectedStringCombinedEntropy := stringentropy.CalculateEntropy(strings.Join(literals, ""), nil)
 	if !utils.FloatEquals(expectedStringCombinedEntropy, signals.CombinedStringEntropy, 1e-4) {
