@@ -8,7 +8,8 @@ import (
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
 
-type RawData struct {
+type RawData struct { // TODO rename to FileData
+	LineLengths    map[int]int
 	Identifiers    []token.Identifier
 	StringLiterals []token.String
 	IntLiterals    []token.Int
@@ -49,10 +50,11 @@ type AnalysisResult struct {
 
 func (rd RawData) String() string {
 	parts := []string{
-		fmt.Sprintf("Identifiers\n%v", rd.Identifiers),
-		fmt.Sprintf("String Literals\n%v", rd.StringLiterals),
-		fmt.Sprintf("Integer Literals\n%v", rd.IntLiterals),
-		fmt.Sprintf("Float Literals\n%v", rd.FloatLiterals),
+		fmt.Sprintf("line lengths\n%v\n", rd.LineLengths),
+		fmt.Sprintf("identifiers\n%v\n", rd.Identifiers),
+		fmt.Sprintf("string literals\n%v\n", rd.StringLiterals),
+		fmt.Sprintf("integer literals\n%v\n", rd.IntLiterals),
+		fmt.Sprintf("float literals\n%v\n", rd.FloatLiterals),
 	}
 	return strings.Join(parts, "\n-------------------\n")
 }
