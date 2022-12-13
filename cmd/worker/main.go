@@ -150,9 +150,11 @@ func messageLoop(ctx context.Context, subURL, packagesBucket, resultsBucket, fil
 	if err != nil {
 		return err
 	}
-
-	// default value set so notification topic is optional
-	// if no environment variable is set, we continue without notifying
+	
+	// the default value of the notificationTopic object is nil
+	// if no environment variable for a notification topic is set,
+	// we pass in a nil notificationTopic object to handleMessage
+	// and continue with the analysis with no notifications published
 	var notificationTopic *pubsub.Topic
 	if notificationTopicURL != "" {
 		notificationTopic, err = pubsub.OpenTopic(ctx, notificationTopicURL)
