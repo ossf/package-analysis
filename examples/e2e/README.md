@@ -39,6 +39,7 @@ Output from the Kafka PubSub topics can be inspected using
 2. Run `kafkacat` to observe the topics:
     - package-feeds: `kafkacat -C -J -b localhost:9094 -t package-feeds`
     - workers: `kafkacat -C -J -b localhost:9094 -t workers`
+    - notifications: `kafkacat -C -J -b localhost:9094 -t notifications`
 
 ## Additional Notes
 
