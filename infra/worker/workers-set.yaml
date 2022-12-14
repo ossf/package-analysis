@@ -32,7 +32,7 @@ spec:
         - name: OSSF_MALWARE_ANALYSIS_PACKAGES
           value: gs://ossf-malware-analysis-packages
         - name: OSSF_MALWARE_NOTIFICATION_TOPIC
-          value: gcppubsub://projects/gosst-package-detection/subscriptions/analysis-notify
+          value: gcppubsub://projects/ossf-malware-analysis/topics/analysis-notify
         securityContext:
           privileged: true
         volumeMounts:
