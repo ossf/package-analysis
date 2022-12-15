@@ -21,11 +21,11 @@ import (
 
 	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/log"
+	"github.com/ossf/package-analysis/internal/notification"
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 	"github.com/ossf/package-analysis/internal/resultstore"
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/internal/worker"
-	"github.com/ossf/package-analysis/internal/notification"
 )
 
 const (
@@ -137,7 +137,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	if notificationTopic != nil {
 		err := notification.PublishAnalysisCompletion(ctx, notificationTopic, name, version, ecosystem)
 		if err != nil {
-			return err 
+			return err
 		}
 	}
 
@@ -150,7 +150,7 @@ func messageLoop(ctx context.Context, subURL, packagesBucket, resultsBucket, fil
 	if err != nil {
 		return err
 	}
-	
+
 	// the default value of the notificationTopic object is nil
 	// if no environment variable for a notification topic is set,
 	// we pass in a nil notificationTopic object to handleMessage
@@ -197,9 +197,9 @@ func main() {
 	resultsBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS")
 	fileWritesBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_FILE_WRITE_RESULTS")
 	imageTag := os.Getenv("OSSF_SANDBOX_IMAGE_TAG")
-	notificationTopicURL := os.Getenv("OSSF_MALWARE_NOTIFICATION_TOPIC") 
+	notificationTopicURL := os.Getenv("OSSF_MALWARE_NOTIFICATION_TOPIC")
 	log.Initialize(os.Getenv("LOGGER_ENV"))
-	sandbox.InitEnv()
+	sandbox.InitNetwork()
 
 	// Log the configuration of the worker at startup so we can observe it.
 	log.Info("Starting worker",
@@ -212,7 +212,7 @@ func main() {
 
 	for {
 		err := messageLoop(ctx, subURL, packagesBucket, resultsBucket, fileWritesBucket, imageTag, notificationTopicURL)
-		if err != nil {	
+		if err != nil {
 			if retryCount++; retryCount >= maxRetries {
 				log.Error("Retries exceeded",
 					"error", err,
