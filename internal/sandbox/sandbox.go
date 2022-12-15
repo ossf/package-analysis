@@ -118,6 +118,7 @@ type podmanSandbox struct {
 	noPull     bool
 	rawSockets bool
 	strace     bool
+	offline    bool
 	logPackets bool
 	logStdOut  bool
 	logStdErr  bool
@@ -138,6 +139,7 @@ func New(image string, options ...Option) Sandbox {
 		noPull:     false,
 		rawSockets: false,
 		strace:     false,
+		offline:    false,
 		logPackets: false,
 		logStdOut:  false,
 		logStdErr:  false,
@@ -159,6 +161,11 @@ func EnableRawSockets() Option {
 // EnableStrace enables strace functionality for the sandbox
 func EnableStrace() Option {
 	return option(func(sb *podmanSandbox) { sb.strace = true })
+}
+
+// Offline disables network functionality for the sandbox
+func Offline() Option {
+	return option(func(sb *podmanSandbox) { sb.offline = true })
 }
 
 // EnablePacketLogging enables packet logging for the sandbox
@@ -253,11 +260,21 @@ func (s *podmanSandbox) createContainer() (string, error) {
 		"create",
 		"--runtime=" + runtimeBin,
 		"--init",
+	}
+
+	networkArgs := []string{
 		"--dns=8.8.8.8",  // Manually specify DNS to bypass kube-dns and
 		"--dns=8.8.4.4",  // allow for tighter firewall rules that block
 		"--dns-search=.", // network traffic to private IP address ranges.
 		"--network=" + networkName,
 	}
+
+	if s.offline {
+		args = append(args, "--network=none")
+	} else {
+		args = append(args, networkArgs...)
+	}
+
 	args = append(args, s.extraArgs()...)
 	args = append(args, s.imageWithTag())
 	cmd := podman(args...)

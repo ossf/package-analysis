@@ -109,7 +109,7 @@ func createBridgeNetwork() error {
 	return nil
 }
 
-// InitEnv initializes the host for running sandboxes.
+// InitNetwork initializes the host for sandbox network connections
 //
 // It will ensure that the network interface exists, and any firewall
 // rules are configured.
@@ -118,7 +118,7 @@ func createBridgeNetwork() error {
 //
 // This function must be called after logging is complete, and may exit if
 // any of the commands fail.
-func InitEnv() {
+func InitNetwork() {
 	// Create the bridge network
 	if err := createBridgeNetwork(); err != nil {
 		log.Fatal("Failed to create bridge network", "error", err)

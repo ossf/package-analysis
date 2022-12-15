@@ -28,6 +28,7 @@ var (
 	dynamicUpload       = flag.String("upload", "", "bucket path for uploading dynamic analysis results")
 	staticUpload        = flag.String("upload-static", "", "bucket path for uploading static analysis results")
 	uploadFileWriteInfo = flag.String("upload-file-write-info", "", "bucket path for uploading information from file writes")
+	offline             = flag.Bool("offline", false, "disables sandbox network access")
 	listModes           = flag.Bool("list-modes", false, "prints out a list of available analysis modes")
 	help                = flag.Bool("help", false, "print help on available options")
 	analysisMode        = utils.CommaSeparatedFlags("mode", "dynamic",
@@ -75,12 +76,17 @@ func makeSandboxOptions(mode analysis.Mode) []sandbox.Option {
 	if *noPull {
 		sbOpts = append(sbOpts, sandbox.NoPull())
 	}
+	if *offline {
+		sbOpts = append(sbOpts, sandbox.Offline())
+	}
 
 	return sbOpts
 }
 
 func dynamicAnalysis(pkg *pkgecosystem.Pkg) {
-	sandbox.InitEnv()
+	if !*offline {
+		sandbox.InitNetwork()
+	}
 	sbOpts := makeSandboxOptions(analysis.Dynamic)
 	sb := sandbox.New(pkg.Manager().DynamicAnalysisImage(), sbOpts...)
 	defer cleanupSandbox(sb)
@@ -117,7 +123,9 @@ func dynamicAnalysis(pkg *pkgecosystem.Pkg) {
 }
 
 func staticAnalysis(pkg *pkgecosystem.Pkg) {
-	sandbox.InitEnv()
+	if !*offline {
+		sandbox.InitNetwork()
+	}
 	sbOpts := makeSandboxOptions(analysis.Static)
 
 	image := "gcr.io/ossf-malware-analysis/static-analysis"
