@@ -104,3 +104,8 @@ docker_compose_logs:
 docker_compose_stop:
 	cd ./examples/e2e && docker-compose down
 
+
+.PHONY: test
+test:
+	go test -v ./...
+
