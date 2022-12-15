@@ -31,6 +31,11 @@ const parserFileName = "babel-parser.js"
 const packageJSONFileName = "package.json"
 const packageLockJSONFileName = "package-lock.json"
 
+// npmCacheDir is used to check for cached versions of NPM dependencies before
+// downloading them from a remote source. The directory is populated by the
+// Docker build for the container this code will run in.
+const npmCacheDir = "/npm_cache"
+
 type ParserConfig struct {
 	InstallDir string
 	ParserPath string
@@ -61,7 +66,8 @@ func InitParser(installDir string) (ParserConfig, error) {
 	}
 
 	// run npm install in that folder
-	cmd := exec.Command("npm", "ci", "--silent", "--no-progress", "--prefix", installDir, "install")
+	cmd := exec.Command("npm",
+		"ci", "--silent", "--no-progress", "--prefer-offline", "--prefix", installDir, "--cache", npmCacheDir)
 
 	if err := cmd.Run(); err != nil {
 		return ParserConfig{}, fmt.Errorf("npm install error: %v", err)
