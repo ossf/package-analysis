@@ -66,9 +66,15 @@ func InitParser(installDir string) (ParserConfig, error) {
 	}
 
 	// run npm install in that folder
-	cmd := exec.Command("npm",
-		"ci", "--silent", "--no-progress", "--prefer-offline", "--prefix", installDir, "--cache", npmCacheDir)
+	npmArgs := []string{"ci", "--silent", "--no-progress", "--prefix", installDir}
 
+	fileInfo, err := os.Stat(npmCacheDir)
+	cacheDirAccessible := err == nil && fileInfo.IsDir() && (fileInfo.Mode().Perm()&0o700 == 0o700)
+	if cacheDirAccessible {
+		npmArgs = append(npmArgs, "--cache", npmCacheDir, "--prefer-offline")
+	}
+
+	cmd := exec.Command("npm", npmArgs...)
 	if err := cmd.Run(); err != nil {
 		return ParserConfig{}, fmt.Errorf("npm install error: %v", err)
 	}
