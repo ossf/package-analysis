@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"net/url"
 	"os"
 	"strings"
@@ -138,15 +137,14 @@ func staticAnalysis(pkg *pkgecosystem.Pkg) {
 		log.Fatal("Static analysis aborted", "error", err)
 	}
 
-	fmt.Printf("\nResults\n%s\n", results)
+	log.Info("Got results", "length", len(results))
 
 	ctx := context.Background()
 	if *staticUpload != "" {
 		bucket, path := parseBucketPath(*staticUpload)
 		err := resultstore.New(bucket, resultstore.BasePath(path)).Save(ctx, pkg, results)
 		if err != nil {
-			log.Fatal("Failed to upload static results to blobstore",
-				"error", err)
+			log.Fatal("Failed to upload static results to blobstore", "error", err)
 		}
 	}
 }
