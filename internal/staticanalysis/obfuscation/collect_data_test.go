@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/ossf/package-analysis/internal/log"
-	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing/js"
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
@@ -23,7 +22,7 @@ var a = "hello"
 	`,
 	expectedData: RawData{
 		Identifiers: []token.Identifier{
-			{Name: "a", Type: parsing.Variable},
+			{Name: "a", Type: token.Variable},
 		},
 		StringLiterals: []token.String{
 			{Value: "hello", Raw: `"hello"`},
@@ -48,10 +47,10 @@ function test(a, b = 2) {
 	`,
 	expectedData: RawData{
 		Identifiers: []token.Identifier{
-			{Name: "test", Type: parsing.Function},
-			{Name: "a", Type: parsing.Parameter},
-			{Name: "b", Type: parsing.Parameter},
-			{Name: "c", Type: parsing.Variable},
+			{Name: "test", Type: token.Function},
+			{Name: "a", Type: token.Parameter},
+			{Name: "b", Type: token.Parameter},
+			{Name: "c", Type: token.Variable},
 		},
 		StringLiterals: []token.String{
 			{Value: "hello", Raw: `"hello"`},

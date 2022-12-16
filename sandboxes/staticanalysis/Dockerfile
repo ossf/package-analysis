@@ -16,7 +16,16 @@ RUN apk add --no-cache nodejs && \
 
 COPY --from=build /src/sandboxes/staticanalysis/staticanalyze /usr/local/bin/staticanalyze
 RUN chmod 755 /usr/local/bin/staticanalyze
-RUN mkdir -p /app
+
+RUN mkdir /npm_deps
+COPY --from=build /src/internal/staticanalysis/parsing/js/package.json /npm_deps
+COPY --from=build /src/internal/staticanalysis/parsing/js/package-lock.json /npm_deps
+
+# cache NPM installs in /npm_cache so that static analysis binary can use them
+RUN mkdir /npm_cache && \
+	chmod 755 /npm_cache && \
+	npm ci --prefix /npm_deps --cache /npm_cache
+
 
 WORKDIR /app
 

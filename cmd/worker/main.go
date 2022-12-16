@@ -21,6 +21,7 @@ import (
 
 	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/log"
+	"github.com/ossf/package-analysis/internal/notification"
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 	"github.com/ossf/package-analysis/internal/resultstore"
 	"github.com/ossf/package-analysis/internal/sandbox"
@@ -35,7 +36,7 @@ const (
 	localPkgPathFmt = "/local/%s"
 )
 
-func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blob.Bucket, resultsBucket, fileWritesBucket, imageTag string) error {
+func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blob.Bucket, resultsBucket, fileWritesBucket, imageTag string, notificationTopic *pubsub.Topic) error {
 	name := msg.Metadata["name"]
 	if name == "" {
 		log.Warn("name is empty")
@@ -133,14 +134,34 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		}
 	}
 
+	if notificationTopic != nil {
+		err := notification.PublishAnalysisCompletion(ctx, notificationTopic, name, version, ecosystem)
+		if err != nil {
+			return err
+		}
+	}
+
 	msg.Ack()
 	return nil
 }
 
-func messageLoop(ctx context.Context, subURL, packagesBucket, resultsBucket, fileWritesBucket, imageTag string) error {
+func messageLoop(ctx context.Context, subURL, packagesBucket, resultsBucket, fileWritesBucket, imageTag, notificationTopicURL string) error {
 	sub, err := pubsub.OpenSubscription(ctx, subURL)
 	if err != nil {
 		return err
+	}
+
+	// the default value of the notificationTopic object is nil
+	// if no environment variable for a notification topic is set,
+	// we pass in a nil notificationTopic object to handleMessage
+	// and continue with the analysis with no notifications published
+	var notificationTopic *pubsub.Topic
+	if notificationTopicURL != "" {
+		notificationTopic, err = pubsub.OpenTopic(ctx, notificationTopicURL)
+		if err != nil {
+			return err
+		}
+		defer notificationTopic.Shutdown(ctx)
 	}
 
 	var pkgsBkt *blob.Bucket
@@ -161,7 +182,7 @@ func messageLoop(ctx context.Context, subURL, packagesBucket, resultsBucket, fil
 			return fmt.Errorf("error receiving message: %w", err)
 		}
 
-		if err := handleMessage(ctx, msg, pkgsBkt, resultsBucket, fileWritesBucket, imageTag); err != nil {
+		if err := handleMessage(ctx, msg, pkgsBkt, resultsBucket, fileWritesBucket, imageTag, notificationTopic); err != nil {
 			log.Error("Failed to process message",
 				"error", err)
 		}
@@ -176,8 +197,9 @@ func main() {
 	resultsBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS")
 	fileWritesBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_FILE_WRITE_RESULTS")
 	imageTag := os.Getenv("OSSF_SANDBOX_IMAGE_TAG")
+	notificationTopicURL := os.Getenv("OSSF_MALWARE_NOTIFICATION_TOPIC")
 	log.Initialize(os.Getenv("LOGGER_ENV"))
-	sandbox.InitEnv()
+	sandbox.InitNetwork()
 
 	// Log the configuration of the worker at startup so we can observe it.
 	log.Info("Starting worker",
@@ -185,10 +207,11 @@ func main() {
 		log.Label("package_bucket", packagesBucket),
 		log.Label("results_bucket", resultsBucket),
 		log.Label("file_write_results_bucket", fileWritesBucket),
-		log.Label("image_tag", imageTag))
+		log.Label("image_tag", imageTag),
+		log.Label("topic_notification", notificationTopicURL))
 
 	for {
-		err := messageLoop(ctx, subURL, packagesBucket, resultsBucket, fileWritesBucket, imageTag)
+		err := messageLoop(ctx, subURL, packagesBucket, resultsBucket, fileWritesBucket, imageTag, notificationTopicURL)
 		if err != nil {
 			if retryCount++; retryCount >= maxRetries {
 				log.Error("Retries exceeded",

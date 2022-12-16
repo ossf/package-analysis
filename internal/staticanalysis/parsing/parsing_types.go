@@ -2,10 +2,11 @@ package parsing
 
 import (
 	"fmt"
+
+	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
 
 type SymbolType string
-type IdentifierType string
 
 const (
 	Identifier SymbolType = "Identifier" // source code identifier (variable, class, function name)
@@ -13,43 +14,12 @@ const (
 	Comment    SymbolType = "Comment"    // source code comments
 	Info       SymbolType = "Info"       // information about the parsing (e.g. number of bytes read by parser)
 	Error      SymbolType = "Error"      // any error encountered by parser; some are recoverable and some are not
-
-	Function       IdentifierType = "Function"       // function declaration / definition
-	Variable       IdentifierType = "Variable"       // variable declaration / definition
-	Parameter      IdentifierType = "Parameter"      // parameters to functions, constructors, catch blocks
-	Class          IdentifierType = "Class"          // class declaration / definition
-	Member         IdentifierType = "Member"         // access/mutation of an object member
-	Property       IdentifierType = "Property"       // declaration of class property
-	StatementLabel IdentifierType = "StatementLabel" // loop label
-	Other          IdentifierType = "Other"          // the parser picked up that isn't accounted for above
-	Unknown        IdentifierType = "Unknown"
 )
 
-var allTypes = []IdentifierType{
-	Function,
-	Variable,
-	Parameter,
-	Member,
-	Property,
-	Class,
-	StatementLabel,
-	Other,
-	Unknown,
-}
-
-func CheckIdentifierType(s string) IdentifierType {
-	for _, typeName := range allTypes {
-		if s == string(typeName) {
-			return typeName
-		}
-	}
-	return Unknown
-}
-
 type ParsedIdentifier struct {
-	Type IdentifierType
+	Type token.IdentifierType
 	Name string
-	Pos  TextPosition
+	Pos  token.Position
 }
 
 func (i ParsedIdentifier) String() string {
@@ -62,7 +32,7 @@ type ParsedLiteral[T any] struct {
 	Value    T
 	RawValue string
 	InArray  bool
-	Pos      TextPosition
+	Pos      token.Position
 }
 
 func (l ParsedLiteral[T]) String() string {
@@ -76,7 +46,7 @@ func (l ParsedLiteral[T]) String() string {
 type ParsedComment struct {
 	Type string
 	Data string
-	Pos  TextPosition
+	Pos  token.Position
 }
 
 type ParseResult struct {
