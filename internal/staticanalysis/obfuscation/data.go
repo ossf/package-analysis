@@ -8,7 +8,7 @@ import (
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
 
-type RawData struct { // TODO rename to FileData
+type FileData struct {
 	LineLengths    map[int]int
 	Identifiers    []token.Identifier
 	StringLiterals []token.String
@@ -17,7 +17,7 @@ type RawData struct { // TODO rename to FileData
 	Comments       []token.Comment
 }
 
-type Signals struct { // TODO rename to FileSignals
+type FileSignals struct {
 	// StringLengths is a map from length (in characters) to number of
 	// string literals in the file having that length. If a length key is
 	// missing, it is assumed to be zero.
@@ -49,18 +49,28 @@ type Signals struct { // TODO rename to FileSignals
 	// concatenating all identifiers in the file together. It may be used to
 	// normalise the values in IdentifierEntropySummary
 	CombinedIdentifierEntropy float64
+
+	// SuspiciousIdentifiers holds lists of identifiers that are deemed 'suspicious'
+	// (i.e. indicative of obfuscation) according to certain rules. The keys of the
+	// map are the rule names, and the values are the identifiers matching each rule.
+	// See
+	SuspiciousIdentifiers map[string][]string
+
+	// Base64Strings holds a list of (substrings of) string literals found in the
+	// file that match a base64 regex pattern. This patten has a minimum matching
+	// length in order to reduce the number of false positives.
+	Base64Strings []string
 }
 
 // AnalysisResult holds all the information obtained from
 // obfuscation analysis of a single package artifact.
 type AnalysisResult struct {
-	// FileRawData maps file names in the package to
-	// the RawData collected for that file.
-	FileRawData map[string]RawData
+	// FileData maps analysed file names to the FileData collected for that file.
+	FileData map[string]FileData
 
 	// FileSignals maps file names in the package to
-	// the Signals computed for that file.
-	FileSignals map[string]Signals
+	// the FileSignals computed for that file.
+	FileSignals map[string]FileSignals
 
 	// PackageData contains aggregated information from
 	// all files and/or signals that can only be computed
@@ -78,7 +88,7 @@ type AnalysisResult struct {
 	FileSizes map[string]int64
 }
 
-func (rd RawData) String() string {
+func (rd FileData) String() string {
 	parts := []string{
 		fmt.Sprintf("line lengths\n%v\n", rd.LineLengths),
 		fmt.Sprintf("identifiers\n%v\n", rd.Identifiers),
@@ -89,7 +99,7 @@ func (rd RawData) String() string {
 	return strings.Join(parts, "\n-------------------\n")
 }
 
-func (s Signals) String() string {
+func (s FileSignals) String() string {
 	parts := []string{
 		fmt.Sprintf("string lengths: %v", s.StringLengths),
 		fmt.Sprintf("string entropy: %s", s.StringEntropySummary),
@@ -106,7 +116,7 @@ func (ar AnalysisResult) String() string {
 	fileRawDataStrings := make([]string, 0)
 	fileSignalsStrings := make([]string, 0)
 
-	for filename, rawData := range ar.FileRawData {
+	for filename, rawData := range ar.FileData {
 		fileRawDataStrings = append(fileRawDataStrings, fmt.Sprintf("== %s ==\n%s", filename, rawData))
 	}
 	for filename, signals := range ar.FileSignals {

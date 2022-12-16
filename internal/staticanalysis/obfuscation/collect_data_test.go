@@ -12,7 +12,7 @@ import (
 type testCase struct {
 	name         string
 	jsSource     string
-	expectedData RawData
+	expectedData FileData
 }
 
 var test1 = testCase{
@@ -20,7 +20,7 @@ var test1 = testCase{
 	jsSource: `
 var a = "hello"
 	`,
-	expectedData: RawData{
+	expectedData: FileData{
 		Identifiers: []token.Identifier{
 			{Name: "a", Type: token.Variable},
 		},
@@ -45,7 +45,7 @@ function test(a, b = 2) {
 	}
 }
 	`,
-	expectedData: RawData{
+	expectedData: FileData{
 		Identifiers: []token.Identifier{
 			{Name: "test", Type: token.Function},
 			{Name: "a", Type: token.Parameter},
