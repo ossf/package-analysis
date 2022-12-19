@@ -5,14 +5,8 @@ import (
 	"github.com/ossf/package-analysis/internal/dynamicanalysis"
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 	"github.com/ossf/package-analysis/internal/sandbox"
+	"github.com/ossf/package-analysis/pkg/result"
 )
-
-type DynamicAnalysisStraceSummary map[pkgecosystem.RunPhase]*dynamicanalysis.StraceSummary
-type DynamicAnalysisFileWrites map[pkgecosystem.RunPhase]*dynamicanalysis.FileWrites
-type DynamicAnalysisResults struct {
-	StraceSummary DynamicAnalysisStraceSummary
-	FileWrites    DynamicAnalysisFileWrites
-}
 
 /*
 RunDynamicAnalysis runs dynamic analysis on the given package in the sandbox
@@ -37,10 +31,10 @@ error: Any error that occurred in the runtime/sandbox infrastructure.
 This does not include errors caused by the package under analysis.
 */
 
-func RunDynamicAnalysis(sb sandbox.Sandbox, pkg *pkgecosystem.Pkg) (DynamicAnalysisResults, pkgecosystem.RunPhase, analysis.Status, error) {
-	results := DynamicAnalysisResults{
-		StraceSummary: make(DynamicAnalysisStraceSummary),
-		FileWrites:    make(DynamicAnalysisFileWrites),
+func RunDynamicAnalysis(sb sandbox.Sandbox, pkg *pkgecosystem.Pkg) (result.DynamicAnalysisResults, pkgecosystem.RunPhase, analysis.Status, error) {
+	results := result.DynamicAnalysisResults{
+		StraceSummary: make(result.DynamicAnalysisStraceSummary),
+		FileWrites:    make(result.DynamicAnalysisFileWrites),
 	}
 
 	var lastRunPhase pkgecosystem.RunPhase
