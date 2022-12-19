@@ -73,8 +73,8 @@ func doObfuscationDetection(workDirs workDirs) (*obfuscation.AnalysisResult, err
 	}
 
 	result := &obfuscation.AnalysisResult{
-		FileRawData:   map[string]obfuscation.RawData{},
-		FileSignals:   map[string]obfuscation.Signals{},
+		FileData:      map[string]obfuscation.FileData{},
+		FileSignals:   map[string]obfuscation.FileSignals{},
 		ExcludedFiles: []string{},
 		FileSizes:     map[string]int64{},
 	}
@@ -84,7 +84,7 @@ func doObfuscationDetection(workDirs workDirs) (*obfuscation.AnalysisResult, err
 		}
 		if f.Type().IsRegular() {
 			pathInArchive := strings.TrimPrefix(path, workDirs.extractDir+string(os.PathSeparator))
-			log.Debug("Processing " + pathInArchive)
+			log.Info("Processing " + pathInArchive)
 			fileInfo, err := f.Info()
 			if err != nil {
 				log.Error("Error getting file metadata", "filename", pathInArchive, "error", err)
@@ -102,9 +102,10 @@ func doObfuscationDetection(workDirs workDirs) (*obfuscation.AnalysisResult, err
 				result.ExcludedFiles = append(result.ExcludedFiles, pathInArchive)
 			} else {
 				// rawData != nil, err == nil
-				result.FileRawData[f.Name()] = *rawData
+				result.FileData[f.Name()] = *rawData
 				signals := obfuscation.ComputeSignals(*rawData)
-				result.FileSignals[f.Name()] = obfuscation.RemoveNaNs(signals)
+				obfuscation.RemoveNaNs(&signals)
+				result.FileSignals[f.Name()] = signals
 			}
 		}
 		return nil
