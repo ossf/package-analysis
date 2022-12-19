@@ -9,10 +9,18 @@ LOGS_DIR=${LOGS_DIR:-"/tmp/dockertmp"}
 LINE="-----------------------------------------"
 
 function print_usage {
-	echo "Usage: $0 [-dryrun] <analysis args ...>"
-	echo "Pass -help to see a full list of arguments to the analysis program"
+	echo "Usage: $0 [-dryrun] [-fully-offline] <analyze args...>"
 	echo
-	echo "-dryrun prints out the commmand that would be executed without running anything"
+	echo $LINE
+	echo "Script options"
+	echo "  -dryrun"
+	echo "    	prints commmand that would be executed and exits"
+	echo "  -fully-offline"
+	echo "    	completely disables network access for the container runtime"
+	echo "    	Analysis will only work when using -local <pkg path> and -nopull."
+	echo "    	(see also: -offline)"
+	echo $LINE
+	echo
 }
 
 function print_package_details {
@@ -38,8 +46,10 @@ function print_results_dirs {
 
 args=("$@")
 
+HELP=0
 DRYRUN=0
 LOCAL=0
+DOCKER_OFFLINE=0
 
 ECOSYSTEM=""
 PACKAGE=""
@@ -53,6 +63,13 @@ while [[ $i -lt $# ]]; do
 		"-dryrun")
 			DRYRUN=1
 			unset "args[i]" # this argument is not passed to analysis image
+			;;
+		"-fully-offline")
+			DOCKER_OFFLINE=1
+			unset "args[i]" # this argument is not passed to analysis image
+			;;
+		"-help")
+			HELP=1
 			;;
 		"-local")
 			LOCAL=1
@@ -85,6 +102,10 @@ while [[ $i -lt $# ]]; do
 	i=$((i+1))
 done
 
+if [[ $# -eq 0 ]]; then
+	HELP=1
+fi
+
 DOCKER_OPTS=("run" "--cgroupns=host" "--privileged" "-ti")
 
 DOCKER_MOUNTS=("-v" "/var/lib/containers:/var/lib/containers" "-v" "$RESULTS_DIR:/results" "-v" "$STATIC_RESULTS_DIR:/staticResults" "-v" "$FILE_WRITE_RESULTS_DIR:/writeResults" "-v" "$LOGS_DIR:/tmp")
@@ -96,6 +117,10 @@ ANALYSIS_ARGS=("analyze" "-upload" "file:///results/" "-upload-file-write-info" 
 # Add the remaining command line arguments
 ANALYSIS_ARGS=("${ANALYSIS_ARGS[@]}" "${args[@]}")
 
+if [[ $HELP -eq 1 ]]; then
+	print_usage
+fi
+
 if [[ $LOCAL -eq 1 ]]; then
 	LOCATION="$PKG_PATH"
 
@@ -103,6 +128,10 @@ if [[ $LOCAL -eq 1 ]]; then
 	DOCKER_MOUNTS+=("-v" "$PKG_PATH:$MOUNTED_PKG_PATH")
 else
 	LOCATION="remote"
+fi
+
+if [[ $DOCKER_OFFLINE -eq 1 ]]; then
+	DOCKER_OPTS+=("--network" "none")
 fi
 
 if [[ -n "$ECOSYSTEM" && -n "$PACKAGE" ]]; then
