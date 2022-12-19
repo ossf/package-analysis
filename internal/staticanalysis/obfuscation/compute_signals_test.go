@@ -36,7 +36,7 @@ func compareCounts(t *testing.T, name string, expected, actual map[int]int) {
 	}
 }
 
-func testSignals(t *testing.T, signals Signals, stringLiterals []token.String, identifiers []token.Identifier) {
+func testSignals(t *testing.T, signals FileSignals, stringLiterals []token.String, identifiers []token.Identifier) {
 	literals := utils.Transform(stringLiterals, func(s token.String) string { return s.Value })
 	identifierNames := utils.Transform(identifiers, func(i token.Identifier) string { return i.Name })
 	expectedStringEntropySummary := symbolEntropySummary(literals)

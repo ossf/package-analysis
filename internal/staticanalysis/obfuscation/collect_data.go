@@ -11,10 +11,13 @@ import (
 )
 
 /*
-CollectData parses the given JavaScript input (source file or raw source string) and records raw data
-which is needed for processing by ComputeSignals. To parse a file, specify its path using jsSourceFile.
-In this case, the value of jsSourceString is ignored. If jsSourceFile is empty, then jsSourceString
-is parsed directly as JavaScript code. The input is assumed to be valid JavaScript source.
+CollectData parses the given JavaScript input (source file or raw source string) and
+produces a FileData object capturing data about the source code. This data can be
+further analysed by ComputeSignals.
+
+To parse a file, specify its path using jsSourceFile; the value of jsSourceString is ignored.
+If jsSourceFile is empty, then jsSourceString is parsed directly as JavaScript code.
+The input is assumed to be valid JavaScript source.
 
 If a syntax error is found, a nil pointer is returned with no error. This indicates that
 the file may not be JavaScript and could be parsed using other methods.
@@ -22,15 +25,8 @@ the file may not be JavaScript and could be parsed using other methods.
 In Javascript, there is little distinction between integer and floating point literals - they are
 all parsed as floating point. This function will record a numeric literal as an integer if it can be
 converted to an integer using strconv.Atoi(), otherwise it will be recorded as a floating point literal.
-
-Current data collected:
-  - list of identifiers (e.g. variable, function, and class names, loop labels)
-  - lists of string, integer and floating point literals
-
-TODO planned data
-  - recording of arrays of either string literals or numeric data
 */
-func CollectData(parserConfig js.ParserConfig, jsSourceFile string, jsSourceString string, printDebug bool) (*RawData, error) {
+func CollectData(parserConfig js.ParserConfig, jsSourceFile string, jsSourceString string, printDebug bool) (*FileData, error) {
 	parseResult, parserOutput, err := js.ParseJS(parserConfig, jsSourceFile, jsSourceString)
 	if printDebug {
 		fmt.Fprintf(os.Stderr, "\nRaw JSON:\n%s\n", parserOutput)
@@ -48,7 +44,7 @@ func CollectData(parserConfig js.ParserConfig, jsSourceFile string, jsSourceStri
 	}
 
 	// Initialise with empty slices to avoid null values in JSON
-	data := RawData{
+	data := FileData{
 		LineLengths:    lineLengths,
 		Identifiers:    []token.Identifier{},
 		StringLiterals: []token.String{},
