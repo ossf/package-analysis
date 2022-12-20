@@ -83,9 +83,9 @@ URL to publish results to. Values should follow
 URL to get custom uploaded packages from. Values should follow
 [goclouddev buckets](https://gocloud.dev/howto/blob/).
 
-`OSSF_MALWARE_NOTIFICATION_TOPIC` - **OPTIONAL**: Can be used to set the subscription
-URL for messages published after a new package analysis is complete. Values should follow
-[goclouddev subscriptions](https://gocloud.dev/howto/pubsub/subscribe/).
+`OSSF_MALWARE_NOTIFICATION_TOPIC` - **OPTIONAL**: Can be used to set the topic URL to
+publish messages for consumption after a new package analysis is complete. Values should follow
+[goclouddev publishing](https://gocloud.dev/howto/pubsub/publish/).
 
 ### Scheduler
 
