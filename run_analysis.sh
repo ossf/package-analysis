@@ -19,6 +19,8 @@ function print_usage {
 	echo "    	completely disables network access for the container runtime"
 	echo "    	Analysis will only work when using -local <pkg path> and -nopull."
 	echo "    	(see also: -offline)"
+	echo "  -nointeractive"
+	echo "          disables TTY input and prevents allocating pseudo-tty"
 	echo $LINE
 	echo
 }
@@ -50,6 +52,7 @@ HELP=0
 DRYRUN=0
 LOCAL=0
 DOCKER_OFFLINE=0
+INTERACTIVE=1
 
 ECOSYSTEM=""
 PACKAGE=""
@@ -66,6 +69,10 @@ while [[ $i -lt $# ]]; do
 			;;
 		"-fully-offline")
 			DOCKER_OFFLINE=1
+			unset "args[i]" # this argument is not passed to analysis image
+			;;
+		"-nointeractive")
+			INTERACTIVE=0
 			unset "args[i]" # this argument is not passed to analysis image
 			;;
 		"-help")
@@ -106,7 +113,7 @@ if [[ $# -eq 0 ]]; then
 	HELP=1
 fi
 
-DOCKER_OPTS=("run" "--cgroupns=host" "--privileged" "-ti")
+DOCKER_OPTS=("run" "--cgroupns=host" "--privileged")
 
 DOCKER_MOUNTS=("-v" "/var/lib/containers:/var/lib/containers" "-v" "$RESULTS_DIR:/results" "-v" "$STATIC_RESULTS_DIR:/staticResults" "-v" "$FILE_WRITE_RESULTS_DIR:/writeResults" "-v" "$LOGS_DIR:/tmp")
 
@@ -119,6 +126,10 @@ ANALYSIS_ARGS=("${ANALYSIS_ARGS[@]}" "${args[@]}")
 
 if [[ $HELP -eq 1 ]]; then
 	print_usage
+fi
+
+if [[ $INTERACTIVE -eq 1 ]]; then
+	DOCKER_OPTS+=("-ti")
 fi
 
 if [[ $LOCAL -eq 1 ]]; then
