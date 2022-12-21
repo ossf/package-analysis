@@ -83,7 +83,7 @@ func ComputeSignals(rawData FileData) FileSignals {
 		for _, candidate := range matches {
 			// use some extra checks to reduce false positives
 			if digit.MatchString(candidate) && nonHexLetter.MatchString(candidate) {
-				signals.Base64Strings = append(signals.Base64Strings, matches...)
+				signals.Base64Strings = append(signals.Base64Strings, candidate)
 			}
 		}
 	}
