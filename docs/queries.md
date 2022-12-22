@@ -1,6 +1,17 @@
 # Queries
 
-This document contains useful queries to run in BigQuery.
+This document contains useful queries to run in Google Cloud BigQuery.
+
+To use these queries:
+
+1. Visit the BigQuery [SQL Workspace](https://console.cloud.google.com/bigquery)
+in the GCP console.
+1. Select or create a new editor.
+1. Copy and paste the query in and adjust the variables as needed.
+1. Click "Run" to execute the query.
+1. Click "View Results" if needed when the query is complete.
+
+**NOTE:** executing these queries may incur charges against your GCP project.
 
 ## DNS Queries
 
@@ -32,7 +43,10 @@ SELECT
 FROM
   dns_queries
 WHERE
+  /* Ignore hostname lookups for "A" (IPv4 addresses) and "AAAA" (IPv6 addresses)
+     records with only one part to limit noise */
   (QueryType NOT IN ('A', 'AAAA') OR ARRAY_LENGTH(SPLIT(Hostname, ".")) >= 2) AND
+  /* Ignore "safe" jostnames that are used frequently */
   Hostname NOT IN ('gcr.io.default.svc.cluster.local', 'storage.googleapis.com.cluster.local',
                    'storage.googleapis.com.svc.cluster.local', 'gcr.io.cluster.local',
                    'gcr.io.google.internal', 'storage.googleapis.com.default.svc.cluster.local',
