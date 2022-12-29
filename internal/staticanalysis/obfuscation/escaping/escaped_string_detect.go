@@ -30,13 +30,11 @@ which is defined by either of the following conditions being true:
 where escaped means either hex escaped ("\xfc") or unicode escaped ("\u00af") using escape literals
 */
 func IsHighlyEscaped(s token.String) bool {
-	hexEscapeChars := len(hexEscapeRegex.FindAllStringIndex(s.Raw, -1))
-	unicodeEscapeChars := len(unicodeEscapeRegex.FindAllStringIndex(s.Raw, -1))
-	length := float64(len(s.Value))
-	return hexEscapeChars >= minEscapeCharCount ||
-		unicodeEscapeChars >= minEscapeCharCount ||
-		float64(hexEscapeChars)/length >= minEscapeCharFrequency ||
-		float64(unicodeEscapeChars)/length >= minEscapeCharFrequency
+	hexEscapeChars := hexEscapeRegex.FindAllStringIndex(s.Raw, -1)
+	unicodeEscapeChars := unicodeEscapeRegex.FindAllStringIndex(s.Raw, -1)
+	totalEscapeChars := len(hexEscapeChars) + len(unicodeEscapeChars)
+	length := float64(len([]rune(s.Value))) // convert to rune slice first to count codepoints, not bytes
+	return totalEscapeChars >= minEscapeCharCount || float64(totalEscapeChars)/length >= minEscapeCharFrequency
 }
 
 /*
