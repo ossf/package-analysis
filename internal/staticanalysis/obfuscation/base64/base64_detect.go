@@ -2,51 +2,67 @@ package base64
 
 import (
 	"regexp"
+	"strings"
 )
 
 var (
-	// Adapted from https://stackoverflow.com/a/5885097 to only match base64 strings with at least 12 characters
-	base64Regex = regexp.MustCompile("(?:[A-Za-z0-9+/]{4}){3,}(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})")
+	// RFC4648 standard base 64 chars, padding optional, min length 16
+	standardBase64 = regexp.MustCompile("[[:alnum:]+/]{16,}(?:={0,2})?")
+	// RFC4648 url/file-safe base 64 chars, padding optional, min length 16
+	urlSafeBase64 = regexp.MustCompile("[[:alnum:]-_]{16,}(?:={0,2})?")
+
+	// Combines RFC4648 standard ('+', '/') + file-safe ('-', '_') base 64 variants
+	base64Regex = regexp.MustCompile(standardBase64.String() + "|" + urlSafeBase64.String())
 
 	filterRegexes = []*regexp.Regexp{
-		// non-hex letter
-		regexp.MustCompile("[G-Zg-z]"),
-		// uppercase letter
-		regexp.MustCompile("[A-Z]"),
-		// lowercase letter
-		regexp.MustCompile("[a-z]"),
+		regexp.MustCompile("[[:upper:]]"),
+		regexp.MustCompile("[[:lower:]]"),
+		regexp.MustCompile("[G-Zg-z]"), // non-hex letter
 	}
 )
 
 /*
-looksLikeActualBase64 uses some regex based heuristics to avoid false positive matching
-of long words, hex strings, file paths, etc. as base64 strings, by checking that the
-candidate string matches the regexes defined above
+looksLikeActualBase64 checks a candidate base64 string (that matches base64Regex)
+using some rule-based heuristics to reduce false positive matching of e.g.
+long words, hex strings, file paths. Additionally, if the candidate string
+uses padding, its length is checked to ensure it is a multiple of 4 as required
+by the Base64 standard.
 */
 func looksLikeActualBase64(candidate string) bool {
+	if strings.ContainsRune(candidate, '=') && len(candidate)%4 != 0 {
+		return false
+	}
+
 	for _, r := range filterRegexes {
 		if !r.MatchString(candidate) {
 			return false
 		}
 	}
+
 	return true
 }
 
 /*
 FindBase64Substrings returns a slice containing all the non-overlapping substrings of s
-that are at least 12 characters long, and look like base64-encoded data. The function
+that are at least 20 characters long, and look like base64-encoded data. The function
 uses regex-based heuristics to determine valid substrings but does not decode the data.
-In particular, valid strings must have only valid base64 characters ([A-Za-z0-9+/]),
-and have correct padding ('=') chars. Additionally, the following heuristics are used:
+In particular, valid strings must have only valid base64 characters ([A-Za-z0-9+/] or
+[A-Za-z0-9-_], depending on the variant, plus up to 2 padding '=' characters).
+If padding characters are included, then the string length must be a multiple of 4.
 
-1. Valid strings contain one letter outside a-f (or A-F). This filters out hex literals.
-2. Valid strings contain one uppercase letter and one lowercase letter
+The following heuristic rules are checked to reduce the number of false positives.
 
-With a moderate sized input string, there will likely be some false positive matches.
-Due to the 12 character minimum length, however, it is highly unlikely that a legitimate
-base64 string will be excluded from the output. Additionally, if there are multiple
-base64 encoded strings in the input, depending on how they are separated, they may
-end up being concatenated together in a single element of the returned string slice.
+1. Must have at least one uppercase letter
+2. Must have at least one lowercase letter
+3. Must have at least one letter outside A-F (or a-f) [this filters out hex strings]
+4. If padding characters are included, the string length must be a multiple of 4
+
+While false positive matches will occur, due to the minimum length requirement
+it is highly unlikely that a legitimate base64 string will be excluded from the output.
+
+Note that, if there are multiple base64 encoded strings in the input, depending
+on how they are separated, they may end up being concatenated together into a single
+string in the returned string slice.
 */
 func FindBase64Substrings(s string) []string {
 	matches := []string{}
