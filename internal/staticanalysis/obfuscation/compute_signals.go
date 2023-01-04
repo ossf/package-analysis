@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/base64"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stats"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stringentropy"
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
@@ -15,15 +16,6 @@ var suspiciousIdentifierPatterns = map[string]*regexp.Regexp{
 	"hex":     regexp.MustCompile("^_0x\\d{3,}$"),
 	"numeric": regexp.MustCompile("^[A-Za-z_]?\\d{3,}$"),
 }
-
-// Adapted from https://stackoverflow.com/a/5885097 to only match
-// base64 strings with at least 12 characters
-var longBase64String = regexp.MustCompile("(?:[A-Za-z0-9+/]{4}){3,}(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})")
-
-// to avoid false positive matching on long words, hex strings or file paths, etc.
-// check for at least one digit and one letter outside a-f
-var digit = regexp.MustCompile("\\d")
-var nonHexLetter = regexp.MustCompile("[G-Zg-z]")
 
 /*
 characterAnalysis performs analysis on a collection of string symbols, returning:
@@ -79,13 +71,7 @@ func ComputeSignals(rawData FileData) FileSignals {
 
 	signals.Base64Strings = []string{}
 	for _, s := range literals {
-		matches := longBase64String.FindAllString(s, -1)
-		for _, candidate := range matches {
-			// use some extra checks to reduce false positives
-			if digit.MatchString(candidate) && nonHexLetter.MatchString(candidate) {
-				signals.Base64Strings = append(signals.Base64Strings, matches...)
-			}
-		}
+		signals.Base64Strings = append(signals.Base64Strings, base64.FindBase64Substrings(s)...)
 	}
 
 	return signals
