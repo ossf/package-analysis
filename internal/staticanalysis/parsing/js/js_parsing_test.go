@@ -1,6 +1,7 @@
 package js
 
 import (
+	"math/big"
 	"reflect"
 	"testing"
 
@@ -297,13 +298,76 @@ var index = 0,
 	},
 }
 
+var test8 = jsTestCase{
+	name: "test regex literal",
+	inputJs: `
+function validateIPAddress(ipaddress) {
+	const regex = /(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/
+    if (regex.test(ipaddress) || ipaddress.toLowerCase().includes('localhost')) {
+        return (true)
+    }
+
+    return (false)
+}
+`,
+	want: parsing.ParseResult{
+		ValidInput: true,
+		Identifiers: []parsing.ParsedIdentifier{
+			{token.Function, "validateIPAddress", token.Position{2, 9}},
+			{token.Parameter, "ipaddress", token.Position{2, 27}},
+			{token.Variable, "regex", token.Position{3, 7}},
+			{token.Member, "test", token.Position{4, 14}},
+			{token.Member, "toLowerCase", token.Position{4, 43}},
+			{token.Member, "includes", token.Position{4, 57}},
+		},
+		Literals: []parsing.ParsedLiteral[any]{
+			{
+				Type:     "Regexp",
+				GoType:   "string",
+				Value:    "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)",
+				RawValue: "/(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/",
+				InArray:  false,
+				Pos:      token.Position{3, 15},
+			},
+			{"String", "string", "localhost", "'localhost'", false, token.Position{4, 66}},
+		},
+	},
+	printJson: true,
+}
+
+var test9 = jsTestCase{
+	name: "test big integers",
+	inputJs: `
+let a = 123456789123456789n;     // 123456789123456789
+let b = 0o777777777777n;         // 68719476735
+let c = 0x123456789ABCDEFn;      // 81985529216486895
+let d = 0b11101001010101010101n; // 955733
+`,
+	want: parsing.ParseResult{
+		ValidInput: true,
+		Identifiers: []parsing.ParsedIdentifier{
+			{token.Variable, "a", token.Position{2, 4}},
+			{token.Variable, "b", token.Position{3, 4}},
+			{token.Variable, "c", token.Position{4, 4}},
+			{token.Variable, "d", token.Position{5, 4}},
+		},
+		Literals: []parsing.ParsedLiteral[any]{
+			{"Numeric", "big.Int", big.NewInt(123456789123456789), "123456789123456789n", false, token.Position{2, 8}},
+			{"Numeric", "big.Int", big.NewInt(68719476735), "0o777777777777n", false, token.Position{3, 8}},
+			{"Numeric", "big.Int", big.NewInt(81985529216486895), "0x123456789ABCDEFn", false, token.Position{4, 8}},
+			{"Numeric", "big.Int", big.NewInt(955733), "0b11101001010101010101n", false, token.Position{5, 8}},
+		},
+	},
+	printJson: false,
+}
+
 func init() {
 	log.Initialize("")
 }
 
 func TestParseJS(t *testing.T) {
 	const printAllJson = false
-	var tests = []jsTestCase{test1, test2, test3, test4, test5, test6, test7}
+	var tests = []jsTestCase{test1, test2, test3, test4, test5, test6, test7, test8, test9}
 
 	jsParserConfig, err := InitParser(t.TempDir())
 	if err != nil {
