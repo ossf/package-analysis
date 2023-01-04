@@ -31,6 +31,8 @@ func TestFindBase64Substrings(t *testing.T) {
 		{"long base64 string", longBase64String, []string{longBase64String}},
 		{"multiple base64 strings", longBase64String + " " + longBase64String,
 			[]string{longBase64String, longBase64String}},
+		{"multiple base64 strings 2", longBase64String + "!!!!====!!" + longBase64String,
+			[]string{longBase64String, longBase64String}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
