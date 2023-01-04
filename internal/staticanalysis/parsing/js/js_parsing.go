@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"os/exec"
 	"strings"
 
@@ -117,14 +118,25 @@ func ParseJS(parserConfig ParserConfig, filePath string, sourceString string) (r
 				Pos:  element.Pos,
 			})
 		case parsing.Literal:
-			result.Literals = append(result.Literals, parsing.ParsedLiteral[any]{
+			literal := parsing.ParsedLiteral[any]{
 				Type:     element.SymbolSubtype,
 				GoType:   fmt.Sprintf("%T", element.Data),
 				Value:    element.Data,
 				RawValue: element.Extra["raw"].(string),
 				InArray:  element.Extra["array"] == true,
 				Pos:      element.Pos,
-			})
+			}
+			// check for BigInteger types which have to be represented as strings in JSON
+			if literal.Type == "Numeric" && literal.GoType == "string" {
+				if intAsString, ok := literal.Value.(string); ok {
+					var bigInt big.Int
+					if _, valid := bigInt.SetString(intAsString, 0); valid {
+						literal.Value = &bigInt
+						literal.GoType = fmt.Sprintf("%T", bigInt)
+					}
+				}
+			}
+			result.Literals = append(result.Literals, literal)
 		case parsing.Comment:
 			result.Comments = append(result.Comments, parsing.ParsedComment{
 				Type: element.SymbolSubtype,

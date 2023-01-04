@@ -173,6 +173,14 @@ function traverseAst(ast, disableScope) {
             const loc = locationString(path.node);
             logLiteral("Numeric", path.node.value, loc, true, path.node.extra);
         },
+        BigIntLiteral: function(path) {
+            const loc = locationString(path.node);
+            logLiteral("Numeric", path.node.value, loc, true, path.node.extra);
+        },
+        RegExpLiteral: function(path) {
+            const loc = locationString(path.node);
+            logLiteral("Regexp", path.node.pattern, loc, true, path.node.extra);
+        },
         TemplateElement: function(path) {
             const loc = locationString(path.node);
             logLiteral("StringTemplate", path.node.value.raw, loc, true, path.node.value);
@@ -191,11 +199,18 @@ function traverseAst(ast, disableScope) {
             // same as string literal
             const loc = locationString(path.node);
             logLiteral("String", path.node.value, loc, false, path.node.extra);
-
         },
         NumericLiteral: function (path) {
             const loc = locationString(path.node);
             logLiteral("Numeric", path.node.value, loc, false, path.node.extra);
+        },
+        BigIntLiteral: function(path) {
+            const loc = locationString(path.node);
+            logLiteral("Numeric", path.node.value, loc, false, path.node.extra);
+        },
+        RegExpLiteral: function(path) {
+            const loc = locationString(path.node);
+            logLiteral("Regexp", path.node.pattern, loc, false, path.node.extra);
         },
         ArrayExpression: function (path) {
             path.traverse(arrayVisitor);

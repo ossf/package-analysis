@@ -36,7 +36,7 @@ type ParsedLiteral[T any] struct {
 }
 
 func (l ParsedLiteral[T]) String() string {
-	s := fmt.Sprintf("%s %v (%s) pos %d:%d", l.Type, l.Value, l.RawValue, l.Pos.Row(), l.Pos.Col())
+	s := fmt.Sprintf("%s (%s) %v (raw: %s) pos %d:%d", l.Type, l.GoType, l.Value, l.RawValue, l.Pos.Row(), l.Pos.Col())
 	if l.InArray {
 		s += " [array]"
 	}
