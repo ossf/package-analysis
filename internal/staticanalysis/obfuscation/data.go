@@ -17,6 +17,11 @@ type FileData struct {
 	Comments       []token.Comment
 }
 
+type EscapedString struct {
+	RawLiteral       string
+	LevenshteinRatio float64
+}
+
 type FileSignals struct {
 	// StringLengths is a map from length (in characters) to number of
 	// string literals in the file having that length. If a length key is
@@ -60,6 +65,10 @@ type FileSignals struct {
 	// file that match a base64 regex pattern. This patten has a minimum matching
 	// length in order to reduce the number of false positives.
 	Base64Strings []string
+
+	// EscapedStrings contain string literals that contain large amount of escape
+	// characters, which may indicate obfuscation
+	EscapedStrings []EscapedString
 }
 
 // AnalysisResult holds all the information obtained from
