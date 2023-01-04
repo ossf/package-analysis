@@ -74,7 +74,7 @@ func ComputeSignals(rawData FileData) FileSignals {
 	signals.EscapedStrings = []EscapedString{}
 	for _, s := range rawData.StringLiterals {
 		signals.Base64Strings = append(signals.Base64Strings, base64.FindBase64Substrings(s.Value)...)
-		if escaping.IsHighlyEscaped(s) {
+		if escaping.IsHighlyEscaped(s, 8, 0.25) {
 			escapedString := EscapedString{
 				RawLiteral:       s.Raw,
 				LevenshteinRatio: escaping.LevenshteinRatio(s),
