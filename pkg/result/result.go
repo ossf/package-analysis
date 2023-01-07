@@ -10,8 +10,9 @@ type DynamicAnalysisStraceSummary map[pkgecosystem.RunPhase]*StraceSummary
 type DynamicAnalysisFileWrites map[pkgecosystem.RunPhase]*FileWrites
 
 type DynamicAnalysisResults struct {
-	StraceSummary DynamicAnalysisStraceSummary
-	FileWrites    DynamicAnalysisFileWrites
+	StraceSummary    DynamicAnalysisStraceSummary
+	FileWrites       DynamicAnalysisFileWrites
+	FileWriteBuffers []string
 }
 
 type StraceSummary struct {

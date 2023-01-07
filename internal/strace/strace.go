@@ -13,6 +13,7 @@ import (
 	"unicode"
 
 	"github.com/ossf/package-analysis/internal/log"
+	"github.com/ossf/package-analysis/internal/utils"
 )
 
 var (
@@ -45,6 +46,7 @@ var (
 
 	// This regex parses just the file path. Bytes written is parsed further below as the nature of the write buffer makes it unideal to parse through regex.
 	// TODO: We can see how we can potentially reuse regex patterns.
+	// I0928 00:18:54.794008     365 strace.go:593] [   6:   6] uname E write(0x1 pipe:[5], 0x555695ceaab0 "Linux 4.4.0\n", 0xc)
 	writePattern = regexp.MustCompile(`\S+ ([^,]+),.*`)
 )
 
@@ -52,18 +54,19 @@ var (
 const hexPrefix = "0x"
 
 type FileInfo struct {
-	Path      string
-	Read      bool
-	Write     bool
-	Delete    bool
-	WriteInfo WriteInfo
+	Path         string
+	Read         bool
+	Write        bool
+	Delete       bool
+	WriteInfo    WriteInfo
+	WriteBuffers []string
 }
 
 type WriteInfo []WriteContentInfo
 
 type WriteContentInfo struct {
-	// TODO: A future PR will add to the WriteContentInfo struct a reference to a file. That file referenced will save the contents of the write buffer.
-	BytesWritten int64
+	WriteBufferId string
+	BytesWritten  int64
 }
 
 type SocketInfo struct {
@@ -144,10 +147,11 @@ func (r *Result) recordFileAccess(file string, read, write, delete bool) {
 	r.files[file].Delete = r.files[file].Delete || delete
 }
 
-func (r *Result) recordFileWrite(file string, bytesWritten int64) {
+func (r *Result) recordFileWrite(file, writeBuffer string, bytesWritten int64) {
 	r.recordFileAccess(file, false, true, false)
-	writeContentsAndBytes := WriteContentInfo{BytesWritten: bytesWritten}
+	writeContentsAndBytes := WriteContentInfo{BytesWritten: bytesWritten, WriteBufferId: utils.GetSHA256Hash(writeBuffer)}
 	r.files[file].WriteInfo = append(r.files[file].WriteInfo, writeContentsAndBytes)
+	r.files[file].WriteBuffers = append(r.files[file].WriteBuffers, writeBuffer)
 }
 
 func (r *Result) recordSocket(address string, port int) {
@@ -186,8 +190,15 @@ func (r *Result) parseEnterSyscall(syscall, args string) error {
 		if err != nil {
 			return err
 		}
+		writeBuffer := ""
 		match := writePattern.FindStringSubmatch(args)
-		r.recordFileWrite(match[1], bytesWritten)
+		// Get the first index of the quotes and last index of the quotes. If they don't exist then just put "" otherwise take the values in between.
+		if bytesWritten > 0 {
+			firstQuoteIndex := strings.Index(args, "\"")
+			lastQuoteIndex := strings.LastIndex(args, "\"")
+			writeBuffer = args[firstQuoteIndex+1 : lastQuoteIndex]
+		}
+		r.recordFileWrite(match[1], writeBuffer, bytesWritten)
 	}
 	return nil
 }

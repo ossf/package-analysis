@@ -63,6 +63,7 @@ func RunDynamicAnalysis(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option) (result.
 
 		results.StraceSummary[phase] = &result.StraceSummary
 		results.FileWrites[phase] = &result.FileWrites
+		results.FileWriteBuffers = append(results.FileWriteBuffers, result.FileWriteBuffers...)
 		lastStatus = result.StraceSummary.Status
 
 		if lastStatus != analysis.StatusCompleted {
@@ -77,6 +78,5 @@ func RunDynamicAnalysis(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option) (result.
 	} else {
 		LogDynamicAnalysisResult(pkg, lastRunPhase, lastStatus)
 	}
-
 	return results, lastRunPhase, lastStatus, lastError
 }

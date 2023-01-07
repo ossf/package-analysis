@@ -18,8 +18,9 @@ const (
 )
 
 type Result struct {
-	StraceSummary result.StraceSummary
-	FileWrites    result.FileWrites
+	StraceSummary    result.StraceSummary
+	FileWrites       result.FileWrites
+	FileWriteBuffers []string
 }
 
 var resultError = &Result{
@@ -86,7 +87,10 @@ func (d *Result) setData(straceResult *strace.Result, dns *dnsanalyzer.DNSAnalyz
 			Delete: f.Delete,
 		})
 		if len(f.WriteInfo) > 0 {
-			d.FileWrites = append(d.FileWrites, result.FileWriteResult{f.Path, f.WriteInfo})
+			d.FileWrites = append(d.FileWrites, result.FileWriteResult{Path: f.Path, WriteInfo: f.WriteInfo})
+			for _, writeBuf := range f.WriteBuffers {
+				d.FileWriteBuffers = append(d.FileWriteBuffers, writeBuf)
+			}
 		}
 	}
 

@@ -14,6 +14,8 @@ import (
 	"github.com/ossf/package-analysis/internal/log"
 )
 
+const writeBufferFolder = "file-write-contents"
+
 type ResultStore struct {
 	bucket        string
 	basePath      string
@@ -53,18 +55,7 @@ func (rs *ResultStore) generatePath(p Pkg) string {
 	return path
 }
 
-func (rs *ResultStore) Save(ctx context.Context, p Pkg, analysis interface{}) error {
-	version := p.Version()
-	result := &result{
-		Package: pkg{
-			Name:      p.Name(),
-			Ecosystem: p.EcosystemName(),
-			Version:   version,
-		},
-		CreatedTimestamp: time.Now().UTC().Unix(),
-		Analysis:         analysis,
-	}
-
+func (rs *ResultStore) OpenAndWriteToBucket(ctx context.Context, result any, path, filename string) error {
 	b, err := json.Marshal(result)
 	if err != nil {
 		return err
@@ -76,12 +67,6 @@ func (rs *ResultStore) Save(ctx context.Context, p Pkg, analysis interface{}) er
 	}
 	defer bkt.Close()
 
-	filename := "results.json"
-	if version != "" {
-		filename = version + ".json"
-	}
-
-	path := rs.generatePath(p)
 	uploadPath := filepath.Join(path, filename)
 	log.Info("Uploading results",
 		"bucket", rs.bucket,
@@ -99,4 +84,28 @@ func (rs *ResultStore) Save(ctx context.Context, p Pkg, analysis interface{}) er
 	}
 
 	return nil
+}
+
+func (rs *ResultStore) SaveWriteBuffer(ctx context.Context, p Pkg, writeBuffer, fileName string) error {
+	path := filepath.Join(rs.generatePath(p), writeBufferFolder)
+	return rs.OpenAndWriteToBucket(ctx, writeBuffer, path, fileName+".json")
+}
+
+func (rs *ResultStore) Save(ctx context.Context, p Pkg, analysis interface{}) error {
+	version := p.Version()
+	result := &result{
+		Package: pkg{
+			Name:      p.Name(),
+			Ecosystem: p.EcosystemName(),
+			Version:   version,
+		},
+		CreatedTimestamp: time.Now().UTC().Unix(),
+		Analysis:         analysis,
+	}
+
+	filename := "results.json"
+	if version != "" {
+		filename = version + ".json"
+	}
+	return rs.OpenAndWriteToBucket(ctx, result, rs.generatePath(p), filename)
 }

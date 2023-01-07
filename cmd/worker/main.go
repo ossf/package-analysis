@@ -11,6 +11,7 @@ import (
 	"path"
 	"time"
 
+	"github.com/ossf/package-analysis/internal/utils"
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/fileblob"
 	_ "gocloud.dev/blob/gcsblob"
@@ -128,6 +129,12 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		err := resultstore.New(fileWritesBucket, resultstore.ConstructPath()).Save(ctx, pkg, results.FileWrites)
 		if err != nil {
 			return fmt.Errorf("failed to upload file write analysis to blobstore = %w", err)
+		}
+		for _, writeBuf := range results.FileWriteBuffers {
+			writeBuffErr := resultstore.New(fileWritesBucket, resultstore.ConstructPath()).SaveWriteBuffer(ctx, pkg, writeBuf, utils.GetSHA256Hash(writeBuf))
+			if writeBuffErr != nil {
+				log.Fatal(" Failed to upload file write buffer results to blobstore", "error")
+			}
 		}
 	}
 

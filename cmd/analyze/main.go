@@ -103,6 +103,12 @@ func dynamicAnalysis(pkg *pkgecosystem.Pkg) {
 		if err != nil {
 			log.Fatal("Failed to upload file write analysis results to blobstore", "error", err)
 		}
+		for _, writeBuf := range results.FileWriteBuffers {
+			writeBuffErr := resultstore.New(bucket, resultstore.BasePath(path)).SaveWriteBuffer(ctx, pkg, writeBuf, utils.GetSHA256Hash(writeBuf))
+			if writeBuffErr != nil {
+				log.Fatal(" Failed to upload file write buffer results to blobstore", "error")
+			}
+		}
 	}
 
 	// this is only valid if RunDynamicAnalysis() returns nil err
