@@ -70,9 +70,11 @@ func ComputeSignals(rawData FileData) FileSignals {
 	}
 
 	signals.Base64Strings = []string{}
+	signals.HexStrings = []string{}
 	signals.EscapedStrings = []EscapedString{}
 	for _, s := range rawData.StringLiterals {
 		signals.Base64Strings = append(signals.Base64Strings, detections.FindBase64Substrings(s.Value)...)
+		signals.HexStrings = append(signals.HexStrings, detections.FindHexSubstrings(s.Value)...)
 		if detections.IsHighlyEscaped(s, 8, 0.25) {
 			escapedString := EscapedString{
 				RawLiteral:       s.Raw,
