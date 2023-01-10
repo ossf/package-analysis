@@ -33,7 +33,6 @@ name_type_substitution = (
 #     }
 # into ones like
 #     { "Value": ..., "Raw": "..." }
-#
 value_raw_substitution = (
     re.compile('{$\\n^\\s*"Value": ?(.*),$\\n^\\s*"Raw": ?"(.*)"$\\n^\\s*}', re.MULTILINE),
     '{ "Value": \\1, "Raw": "\\2" }'
