@@ -1,4 +1,4 @@
-package base64
+package detections
 
 import (
 	"reflect"
@@ -30,6 +30,8 @@ func TestFindBase64Substrings(t *testing.T) {
 		{"actual base64 3 padding", "0XABCDEF12345678", []string{}},
 		{"long base64 string", longBase64String, []string{longBase64String}},
 		{"multiple base64 strings", longBase64String + " " + longBase64String,
+			[]string{longBase64String, longBase64String}},
+		{"multiple base64 strings 2", longBase64String + "!!!!====!!" + longBase64String,
 			[]string{longBase64String, longBase64String}},
 	}
 	for _, tt := range tests {
