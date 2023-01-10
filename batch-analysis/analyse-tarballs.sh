@@ -4,6 +4,18 @@
 # creates a new directory with all the static analysis results for each package.
 # Currently, it only supports NPM packages (as static analysis does).
 
+# replace with root of package analysis folder
+PACKAGE_ANALYSIS_ROOT=~/package-analysis
+RUN_ANALYSIS="$PACKAGE_ANALYSIS_ROOT/run_analysis.sh"
+FORMAT_JSON="$PACKAGE_ANALYSIS_ROOT/batch-analysis/format-json.py"
+
+if ! [[ -x "$RUN_ANALYSIS" ]]; then
+	echo "could not locate run_analysis.sh script at $RUN_ANALYSIS"
+	exit 1
+elif ! [[ -x "$FORMAT_JSON" ]]; then
+	echo "could not locate format-json.py script at $FORMAT_JSON"
+	exit 1
+fi
 
 ARCHIVES_DIR="$1"
 RESULTS_DIR=${2:-"$ARCHIVES_DIR-results"}
@@ -39,7 +51,7 @@ function process_archive {
 	PACKAGE_VERSION=${PACKAGE_VERSION_EXT%%.tgz}
 	PACKAGE_FIRST_LETTER=${PACKAGE_VERSION:0:1}
 	if [[ "$PACKAGE_FIRST_LETTER" < "$START_LETTER" ]]; then
-		echo SKIP $PACKAGE_VERSION
+		echo SKIP "$PACKAGE_VERSION"
 		return
 	fi
 	# package name is everything before the last '-' character
@@ -50,13 +62,10 @@ function process_archive {
 	echo "Version: $VERSION"
 
 	OUTPUT_RESULTS_DIR=$(mktemp -d)
-	STATIC_RESULTS_DIR=$OUTPUT_RESULTS_DIR ~/package-analysis/run_analysis.sh -ecosystem npm -package "$PACKAGE" -local "$ARCHIVE_PATH" -nopull -mode static -offline -fully-offline
+	STATIC_RESULTS_DIR=$OUTPUT_RESULTS_DIR "$RUN_ANALYSIS" -ecosystem npm -package "$PACKAGE" -local "$ARCHIVE_PATH" -nopull -mode static -offline -fully-offline
 
-	# python -m json.tool pretty prints JSON but it's a bit verbose; the
-	# awk script prints some of the small JSON structs on a single line
-	python3 -m json.tool "$OUTPUT_RESULTS_DIR/results.json" \
-		| awk -f process-json.awk - \
-		> "$RESULTS_DIR/$PACKAGE_VERSION-results.json"
+	# pretty print while keeping some of the small JSON structs on a single line
+	"$FORMAT_JSON" "$OUTPUT_RESULTS_DIR/results.json" "$RESULTS_DIR/$PACKAGE_VERSION-results.json"
 
 	rm -rf "$OUTPUT_RESULTS_DIR"
 }
