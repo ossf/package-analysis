@@ -66,6 +66,10 @@ type FileSignals struct {
 	// length in order to reduce the number of false positives.
 	Base64Strings []string
 
+	// HexStrings holds a list of (substrings of) string literals found in the
+	// file that contain long (>8 digits) hexadecimal digit sequences.
+	HexStrings []string
+
 	// EscapedStrings contain string literals that contain large amount of escape
 	// characters, which may indicate obfuscation
 	EscapedStrings []EscapedString

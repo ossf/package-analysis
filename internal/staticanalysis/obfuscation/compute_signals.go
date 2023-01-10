@@ -5,8 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/base64"
-	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/escaping"
+	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/detections"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stats"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stringentropy"
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
@@ -71,13 +70,15 @@ func ComputeSignals(rawData FileData) FileSignals {
 	}
 
 	signals.Base64Strings = []string{}
+	signals.HexStrings = []string{}
 	signals.EscapedStrings = []EscapedString{}
 	for _, s := range rawData.StringLiterals {
-		signals.Base64Strings = append(signals.Base64Strings, base64.FindBase64Substrings(s.Value)...)
-		if escaping.IsHighlyEscaped(s, 8, 0.25) {
+		signals.Base64Strings = append(signals.Base64Strings, detections.FindBase64Substrings(s.Value)...)
+		signals.HexStrings = append(signals.HexStrings, detections.FindHexSubstrings(s.Value)...)
+		if detections.IsHighlyEscaped(s, 8, 0.25) {
 			escapedString := EscapedString{
 				RawLiteral:       s.Raw,
-				LevenshteinRatio: escaping.LevenshteinRatio(s),
+				LevenshteinRatio: detections.LevenshteinRatio(s),
 			}
 			signals.EscapedStrings = append(signals.EscapedStrings, escapedString)
 		}
