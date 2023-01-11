@@ -7,7 +7,6 @@ Adapted from source of `python -m json.tool`
 reference: github.com/python/cpython/blob/main/Lib/json/tool.py
 """
 
-import functools
 import json
 import re
 import sys
@@ -67,11 +66,11 @@ def format_json(json_object) -> str:
     # pretty print with newlines and indent with 4 spaces,
     pretty_printed = json.dumps(json_object, indent=4)
 
-    def make_substitution(s: str, sub: tuple[re.Pattern, str]) -> str:
-        return re.sub(sub[0], sub[1], s)
-
     # apply all replacements in sequence
-    return functools.reduce(make_substitution, all_substitutions, pretty_printed)
+    for (pattern, replacement) in all_substitutions:
+        pretty_printed = re.sub(pattern, replacement, pretty_printed)
+
+    return pretty_printed
 
 
 def main(args: list[str]):
