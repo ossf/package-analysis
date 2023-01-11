@@ -7,6 +7,7 @@ Adapted from source of `python -m json.tool`
 reference: github.com/python/cpython/blob/main/Lib/json/tool.py
 """
 
+import functools
 import json
 import re
 import sys
@@ -36,15 +37,41 @@ value_raw_substitution = (
     '{ "Value": \\1, "Raw": "\\2" }'
 )
 
+# Changes JSON arrays that are formatted like:
+#     "Quartiles": [
+#         0.1762,
+#         1.3075,
+#         1.4424,
+#         1.4766,
+#         1.6646
+#     ]
+# into ones like
+#     "Quartiles": [ 0.1762, 1.3075, 1.4424, 1.4766, 1.6646 ]
+quartile_substitution = (
+    re.compile('"Quartiles": \\[$\\n'
+               '^\\s*(\\d+\\.?\\d*),$\\n'
+               '^\\s*(\\d+\\.?\\d*),$\\n'
+               '^\\s*(\\d+\\.?\\d*),$\\n'
+               '^\\s*(\\d+\\.?\\d*),$\\n'
+               '^\\s*(\\d+\\.?\\d*)$\\n'
+               '^\\s*]', re.MULTILINE),
+    '"Quartiles": [ \\1, \\2, \\3, \\4, \\5 ]'
+)
+
+all_substitutions = (name_type_substitution, value_raw_substitution, quartile_substitution)
+
 
 # Pretty prints a JSON object with newlines and indentation, then applies
 # the substitutions above while maintaining indentation level.
 def format_json(json_object) -> str:
     # pretty print with newlines and indent with 4 spaces,
     pretty_printed = json.dumps(json_object, indent=4)
-    sub1 = re.sub(*name_type_substitution, pretty_printed)
-    sub2 = re.sub(*value_raw_substitution, sub1)
-    return sub2
+
+    def make_substitution(s: str, sub: tuple[re.Pattern, str]) -> str:
+        return re.sub(sub[0], sub[1], s)
+
+    # apply all replacements in sequence
+    return functools.reduce(make_substitution, all_substitutions, pretty_printed)
 
 
 def main(args: list[str]):
