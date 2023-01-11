@@ -62,7 +62,7 @@ function process_archive {
 	echo "Version: $VERSION"
 
 	OUTPUT_RESULTS_DIR=$(mktemp -d)
-	STATIC_RESULTS_DIR=$OUTPUT_RESULTS_DIR "$RUN_ANALYSIS" -ecosystem npm -package "$PACKAGE" -local "$ARCHIVE_PATH" -nopull -mode static -offline -fully-offline
+	STATIC_RESULTS_DIR=$OUTPUT_RESULTS_DIR "$RUN_ANALYSIS" -ecosystem npm -package "$PACKAGE" -local "$ARCHIVE_PATH" -nopull -mode static -offline -fully-offline -nointeractive
 
 	# pretty print while keeping some of the small JSON structs on a single line
 	"$FORMAT_JSON" "$OUTPUT_RESULTS_DIR/results.json" "$RESULTS_DIR/$PACKAGE_VERSION-results.json"
