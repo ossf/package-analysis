@@ -1,4 +1,4 @@
-package base64
+package detections
 
 import (
 	"regexp"
@@ -68,7 +68,7 @@ func FindBase64Substrings(s string) []string {
 	matches := []string{}
 
 	for _, candidate := range base64Regex.FindAllString(s, -1) {
-		if looksLikeActualBase64(s) {
+		if looksLikeActualBase64(candidate) {
 			matches = append(matches, candidate)
 		}
 	}
