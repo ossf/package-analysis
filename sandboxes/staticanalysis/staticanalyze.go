@@ -24,6 +24,7 @@ var (
 	packageName = flag.String("package", "", "Package name (required)")
 	version     = flag.String("version", "", "Package version (ignored if local file is specified)")
 	localFile   = flag.String("local", "", "Local package archive containing package to be analysed. Name must match -package argument")
+	output      = flag.String("output", "", "where to write output JSON results (default stdout)")
 	help        = flag.Bool("help", false, "Prints this help and list of available analyses")
 	analyses    = utils.CommaSeparatedFlags("analyses", "", "comma-separated list of static analyses to perform")
 )
@@ -183,9 +184,11 @@ func run() (err error) {
 	}
 
 	log.Info("Static analysis launched",
+		log.Label("ecosystem", *ecosystem),
 		log.Label("package", *packageName),
 		log.Label("version", *version),
 		log.Label("local_path", *localFile),
+		log.Label("output_file", *output),
 		log.Label("analyses", strings.Join(uniqueAnalyses, ",")))
 
 	workDirs, err := makeWorkDirs()
@@ -230,7 +233,23 @@ func run() (err error) {
 		return fmt.Errorf("JSON marshall error: %v", err)
 	}
 
-	fmt.Printf("%s\n", string(jsonResult))
+	outputFile := os.Stdout
+	if *output != "" {
+		outputFile, err = os.Create(*output)
+		if err != nil {
+			return fmt.Errorf("could not open/create output file %s: %v", *output, err)
+		}
+
+		defer func() {
+			if err := outputFile.Close(); err != nil {
+				log.Warn("could not close output file", "path", *output, "error", err)
+			}
+		}()
+	}
+
+	if _, writeErr := outputFile.Write(jsonResult); writeErr != nil {
+		return fmt.Errorf("could not write JSON results: %v", writeErr)
+	}
 
 	return nil
 }

@@ -132,12 +132,12 @@ func staticAnalysis(pkg *pkgecosystem.Pkg) {
 	sb := sandbox.New(image, sbOpts...)
 	defer cleanupSandbox(sb)
 
-	results, err := worker.RunStaticAnalyses(sb, pkg, staticanalysis.ObfuscationDetection)
+	results, status, err := worker.RunStaticAnalyses(sb, pkg, staticanalysis.ObfuscationDetection)
 	if err != nil {
 		log.Fatal("Static analysis aborted", "error", err)
 	}
 
-	log.Info("Got results", "length", len(results))
+	log.Info("Static analysis completed", "status", status)
 
 	ctx := context.Background()
 	if *staticUpload != "" {
