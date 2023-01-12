@@ -66,7 +66,7 @@ func printAnalyses() {
 func doObfuscationDetection(workDirs workDirs) (*obfuscation.AnalysisResult, error) {
 	jsParserConfig, err := js.InitParser(path.Join(workDirs.parserDir, jsParserDirName))
 	if err != nil {
-		return nil, fmt.Errorf("failed to init js parser: %v", err)
+		return nil, fmt.Errorf("failed to init JS parser: %v", err)
 	}
 
 	if err != nil {
