@@ -1,5 +1,4 @@
-#FROM golang:1.19-alpine as build
-FROM golang@sha256:122f3484f844467ebe0674cf57272e61981770eb0bc7d316d1f0be281a88229f as build
+FROM golang:1.19-alpine@sha256:122f3484f844467ebe0674cf57272e61981770eb0bc7d316d1f0be281a88229f as build
 
 WORKDIR /src
 COPY . ./
@@ -9,7 +8,7 @@ RUN go mod download
 # If CGO is disabled then we don't need glibc
 RUN CGO_ENABLED=0 go build -o staticanalyze staticanalyze.go
 
-FROM alpine:latest
+FROM alpine:3.17.1@sha256:93d5a28ff72d288d69b5997b8ba47396d2cbb62a72b5d87cd3351094b5d578a0
 RUN apk add --no-cache nodejs && \
 	apk add --no-cache npm && \
 	apk add --no-cache python3
