@@ -14,10 +14,11 @@ import (
 	"github.com/ossf/package-analysis/internal/utils"
 )
 
+const staticAnalysisImage = "gcr.io/ossf-malware-analysis/static-analysis"
 const staticAnalyzeBinary = "/usr/local/bin/staticanalyze"
 const resultsJSONFile = "/results.json"
 
-func RunStaticAnalyses(sb sandbox.Sandbox, pkg *pkgecosystem.Pkg, tasks ...staticanalysis.Task) (json.RawMessage, analysis.Status, error) {
+func RunStaticAnalyses(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option, tasks ...staticanalysis.Task) (json.RawMessage, analysis.Status, error) {
 	if len(tasks) == 0 {
 		tasks = staticanalysis.AllTasks()
 	}
@@ -45,6 +46,16 @@ func RunStaticAnalyses(sb sandbox.Sandbox, pkg *pkgecosystem.Pkg, tasks ...stati
 		return nil, "", fmt.Errorf("could not create results JSON file: %v", err)
 	}
 	_ = resultsFile.Close()
+
+	// for saving static analysis results inside the sandbox
+	sbOpts = append(sbOpts, sandbox.Volume(resultsJSONFile, resultsJSONFile))
+
+	sb := sandbox.New(staticAnalysisImage, sbOpts...)
+	defer func() {
+		if err := sb.Clean(); err != nil {
+			log.Error("error cleaning up sandbox", "error", err)
+		}
+	}()
 
 	runResult, err := sb.Run(args...)
 	if err != nil {

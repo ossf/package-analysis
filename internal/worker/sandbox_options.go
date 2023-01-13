@@ -21,8 +21,6 @@ func DefaultSandboxOptions(mode analysis.Mode, imageTag string) []sandbox.Option
 		return []sandbox.Option{
 			sandbox.Tag(imageTag),
 			sandbox.EchoStdErr(),
-			// for saving static analysis results inside the sandbox
-			sandbox.Volume(resultsJSONFile, resultsJSONFile),
 		}
 	default:
 		return []sandbox.Option{}
