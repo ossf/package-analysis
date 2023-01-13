@@ -44,13 +44,6 @@ func parseBucketPath(path string) (string, string) {
 	return parsed.Scheme + "://" + parsed.Host, parsed.Path
 }
 
-func cleanupSandbox(sb sandbox.Sandbox) {
-	err := sb.Clean()
-	if err != nil {
-		log.Error("error cleaning up sandbox", "error", err)
-	}
-}
-
 func printAnalysisModes() {
 	println("Available analysis modes:")
 	for _, mode := range analysis.AllModes() {
@@ -86,11 +79,10 @@ func dynamicAnalysis(pkg *pkgecosystem.Pkg) {
 	if !*offline {
 		sandbox.InitNetwork()
 	}
-	sbOpts := makeSandboxOptions(analysis.Dynamic)
-	sb := sandbox.New(pkg.Manager().DynamicAnalysisImage(), sbOpts...)
-	defer cleanupSandbox(sb)
 
-	results, lastRunPhase, lastStatus, err := worker.RunDynamicAnalysis(sb, pkg)
+	sbOpts := makeSandboxOptions(analysis.Dynamic)
+
+	results, lastRunPhase, lastStatus, err := worker.RunDynamicAnalysis(pkg, sbOpts)
 	if err != nil {
 		log.Fatal("Dynamic analysis aborted (run error)", "error", err)
 	}
@@ -125,19 +117,15 @@ func staticAnalysis(pkg *pkgecosystem.Pkg) {
 	if !*offline {
 		sandbox.InitNetwork()
 	}
+
 	sbOpts := makeSandboxOptions(analysis.Static)
 
-	image := "gcr.io/ossf-malware-analysis/static-analysis"
-
-	sb := sandbox.New(image, sbOpts...)
-	defer cleanupSandbox(sb)
-
-	results, err := worker.RunStaticAnalyses(sb, pkg, staticanalysis.ObfuscationDetection)
+	results, status, err := worker.RunStaticAnalyses(pkg, sbOpts, staticanalysis.ObfuscationDetection)
 	if err != nil {
 		log.Fatal("Static analysis aborted", "error", err)
 	}
 
-	log.Info("Got results", "length", len(results))
+	log.Info("Static analysis completed", "status", status)
 
 	ctx := context.Background()
 	if *staticUpload != "" {
