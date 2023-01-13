@@ -2,8 +2,7 @@
 # They are meant to simulate packages commonly installed on a typical system.
 # Hashes are used to pin dependency artifacts (https://pip.pypa.io/en/stable/topics/secure-installs/)
 
-# The pairs of hashes below are for binary artifacts
-
+# The hashes below are for the binary distributions
 
 certifi==2022.12.7 \
     --hash=sha256:4ad3232f5e926d6718ec31cfc1fcadfde020920e278684144551c91769c7bc18
