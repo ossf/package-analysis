@@ -9,6 +9,7 @@ import (
 	"github.com/ossf/package-analysis/internal/packetcapture"
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/internal/strace"
+	"github.com/ossf/package-analysis/pkg/result"
 )
 
 const (
@@ -16,58 +17,13 @@ const (
 	maxOutputBytes = 4 * 1024
 )
 
-type fileResult struct {
-	Path   string
-	Read   bool
-	Write  bool
-	Delete bool
-}
-
-type fileWriteResult struct {
-	Path      string
-	WriteInfo strace.WriteInfo
-}
-
-type FileWrites []fileWriteResult
-
-type socketResult struct {
-	Address   string
-	Port      int
-	Hostnames []string
-}
-
-type commandResult struct {
-	Command     []string
-	Environment []string
-}
-
-type dnsQueries struct {
-	Hostname string
-	Types    []string
-}
-
-type dnsResult struct {
-	Class   string
-	Queries []dnsQueries
-}
-
-type StraceSummary struct {
-	Status   analysis.Status
-	Stdout   []byte
-	Stderr   []byte
-	Files    []fileResult
-	Sockets  []socketResult
-	Commands []commandResult
-	DNS      []dnsResult
-}
-
 type Result struct {
-	StraceSummary StraceSummary
-	FileWrites    FileWrites
+	StraceSummary result.StraceSummary
+	FileWrites    result.FileWrites
 }
 
 var resultError = &Result{
-	StraceSummary: StraceSummary{
+	StraceSummary: result.StraceSummary{
 		Status: analysis.StatusErrorOther,
 	},
 }
@@ -111,7 +67,7 @@ func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
 	}
 
 	result := Result{
-		StraceSummary: StraceSummary{
+		StraceSummary: result.StraceSummary{
 			Status: analysis.StatusForRunResult(r),
 			Stdout: lastLines(r.Stdout(), maxOutputLines, maxOutputBytes),
 			Stderr: lastLines(r.Stderr(), maxOutputLines, maxOutputBytes),
@@ -123,19 +79,19 @@ func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
 
 func (d *Result) setData(straceResult *strace.Result, dns *dnsanalyzer.DNSAnalyzer) {
 	for _, f := range straceResult.Files() {
-		d.StraceSummary.Files = append(d.StraceSummary.Files, fileResult{
+		d.StraceSummary.Files = append(d.StraceSummary.Files, result.FileResult{
 			Path:   f.Path,
 			Read:   f.Read,
 			Write:  f.Write,
 			Delete: f.Delete,
 		})
 		if len(f.WriteInfo) > 0 {
-			d.FileWrites = append(d.FileWrites, fileWriteResult{f.Path, f.WriteInfo})
+			d.FileWrites = append(d.FileWrites, result.FileWriteResult{f.Path, f.WriteInfo})
 		}
 	}
 
 	for _, s := range straceResult.Sockets() {
-		d.StraceSummary.Sockets = append(d.StraceSummary.Sockets, socketResult{
+		d.StraceSummary.Sockets = append(d.StraceSummary.Sockets, result.SocketResult{
 			Address:   s.Address,
 			Port:      s.Port,
 			Hostnames: dns.Hostnames(s.Address),
@@ -143,16 +99,16 @@ func (d *Result) setData(straceResult *strace.Result, dns *dnsanalyzer.DNSAnalyz
 	}
 
 	for _, c := range straceResult.Commands() {
-		d.StraceSummary.Commands = append(d.StraceSummary.Commands, commandResult{
+		d.StraceSummary.Commands = append(d.StraceSummary.Commands, result.CommandResult{
 			Command:     c.Command,
 			Environment: c.Env,
 		})
 	}
 
 	for dnsClass, queries := range dns.Questions() {
-		c := dnsResult{Class: dnsClass}
+		c := result.DnsResult{Class: dnsClass}
 		for host, types := range queries {
-			c.Queries = append(c.Queries, dnsQueries{
+			c.Queries = append(c.Queries, result.DnsQueries{
 				Hostname: host,
 				Types:    types,
 			})
