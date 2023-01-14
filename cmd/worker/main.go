@@ -130,9 +130,9 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		if err != nil {
 			return fmt.Errorf("failed to upload file write analysis to blobstore = %w", err)
 		}
-		for _, writeBuf := range results.FileWriteBuffers {
-			writeBuffErr := resultstore.New(fileWritesBucket, resultstore.ConstructPath()).SaveWriteBuffer(ctx, pkg, writeBuf, utils.GetSHA256Hash(writeBuf))
-			if writeBuffErr != nil {
+		for _, writeBuffer := range results.FileWriteBuffers {
+			writeBufferErr := resultstore.New(fileWritesBucket, resultstore.ConstructPath()).SaveWriteBuffer(ctx, pkg, writeBuffer, utils.GetSHA256Hash(writeBuffer))
+			if writeBufferErr != nil {
 				log.Fatal(" Failed to upload file write buffer results to blobstore", "error")
 			}
 		}

@@ -88,8 +88,8 @@ func (d *Result) setData(straceResult *strace.Result, dns *dnsanalyzer.DNSAnalyz
 		})
 		if len(f.WriteInfo) > 0 {
 			d.FileWrites = append(d.FileWrites, result.FileWriteResult{Path: f.Path, WriteInfo: f.WriteInfo})
-			for _, writeBuf := range f.WriteBuffers {
-				d.FileWriteBuffers = append(d.FileWriteBuffers, writeBuf)
+			for _, writeBuffer := range f.WriteBuffers {
+				d.FileWriteBuffers = append(d.FileWriteBuffers, writeBuffer)
 			}
 		}
 	}
