@@ -55,12 +55,7 @@ func (rs *ResultStore) generatePath(p Pkg) string {
 	return path
 }
 
-func (rs *ResultStore) OpenAndWriteToBucket(ctx context.Context, result any, path, filename string) error {
-	b, err := json.Marshal(result)
-	if err != nil {
-		return err
-	}
-
+func (rs *ResultStore) OpenAndWriteToBucket(ctx context.Context, contents []byte, path, filename string) error {
 	bkt, err := blob.OpenBucket(ctx, rs.bucket)
 	if err != nil {
 		return err
@@ -76,7 +71,7 @@ func (rs *ResultStore) OpenAndWriteToBucket(ctx context.Context, result any, pat
 	if err != nil {
 		return err
 	}
-	if _, err := w.Write(b); err != nil {
+	if _, err := w.Write(contents); err != nil {
 		return err
 	}
 	if err := w.Close(); err != nil {
@@ -88,7 +83,7 @@ func (rs *ResultStore) OpenAndWriteToBucket(ctx context.Context, result any, pat
 
 func (rs *ResultStore) SaveWriteBuffer(ctx context.Context, p Pkg, writeBuffer, fileName string) error {
 	path := filepath.Join(rs.generatePath(p), writeBufferFolder)
-	return rs.OpenAndWriteToBucket(ctx, writeBuffer, path, fileName+".json")
+	return rs.OpenAndWriteToBucket(ctx, []byte(writeBuffer), path, fileName+".json")
 }
 
 func (rs *ResultStore) Save(ctx context.Context, p Pkg, analysis interface{}) error {
@@ -107,5 +102,11 @@ func (rs *ResultStore) Save(ctx context.Context, p Pkg, analysis interface{}) er
 	if version != "" {
 		filename = version + ".json"
 	}
-	return rs.OpenAndWriteToBucket(ctx, result, rs.generatePath(p), filename)
+
+	b, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
+
+	return rs.OpenAndWriteToBucket(ctx, b, rs.generatePath(p), filename)
 }

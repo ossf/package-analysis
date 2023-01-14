@@ -192,11 +192,16 @@ func (r *Result) parseEnterSyscall(syscall, args string) error {
 		}
 		writeBuffer := ""
 		match := writePattern.FindStringSubmatch(args)
-		// Get the first index of the quotes and last index of the quotes. If they don't exist then just put "" otherwise take the values in between.
-		if bytesWritten > 0 {
-			firstQuoteIndex := strings.Index(args, "\"")
-			lastQuoteIndex := strings.LastIndex(args, "\"")
+		firstQuoteIndex := strings.Index(args, "\"")
+		lastQuoteIndex := strings.LastIndex(args, "\"")
+		if firstQuoteIndex != -1 && lastQuoteIndex != -1 && lastQuoteIndex > firstQuoteIndex {
+			// Save the contents between the first and last quote.
 			writeBuffer = args[firstQuoteIndex+1 : lastQuoteIndex]
+			lastIndexComma := strings.LastIndex(args, ",")
+			if lastQuoteIndex+1 != lastIndexComma {
+				// If the write buffer is truncated there will be an ellipses after the quoted write buffer. Save this as well.
+				writeBuffer += args[lastQuoteIndex+1 : lastIndexComma]
+			}
 		}
 		r.recordFileWrite(match[1], writeBuffer, bytesWritten)
 	}
