@@ -103,10 +103,10 @@ func doObfuscationDetection(workDirs workDirs) (*obfuscation.AnalysisResult, err
 				result.ExcludedFiles = append(result.ExcludedFiles, pathInArchive)
 			} else {
 				// rawData != nil, err == nil
-				result.FileData[f.Name()] = *rawData
+				result.FileData[pathInArchive] = *rawData
 				signals := obfuscation.ComputeSignals(*rawData)
 				obfuscation.RemoveNaNs(&signals)
-				result.FileSignals[f.Name()] = signals
+				result.FileSignals[pathInArchive] = signals
 			}
 		}
 		return nil
