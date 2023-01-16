@@ -1,0 +1,16 @@
+# These Python packages are installed in the sandbox prior to the package under analysis
+# They are meant to simulate packages commonly installed on a typical system.
+# Hashes are used to pin dependency artifacts (https://pip.pypa.io/en/stable/topics/secure-installs/)
+
+# The hashes below are for the binary distributions
+
+certifi==2022.12.7 \
+    --hash=sha256:4ad3232f5e926d6718ec31cfc1fcadfde020920e278684144551c91769c7bc18
+charset-normalizer==2.1.1 \
+    --hash=sha256:83e9a75d1911279afd89352c68b45348559d1fc0506b054b346651b5e7fee29f
+idna==3.4 \
+    --hash=sha256:90b77e79eaa3eba6de819a0c442c0b4ceefc341a7a2ab77d7562bf49f425c5c2
+requests==2.28.1 \
+    --hash=sha256:8fefa2a1a1365bf5520aac41836fbee479da67864514bdb821f31ce07ce65349
+urllib3==1.26.14 \
+    --hash=sha256:75edcdc2f7d85b137124a6c3c9fc3933cdeaa12ecb9a6a959f22797a0feca7e1

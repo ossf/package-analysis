@@ -11,7 +11,8 @@ RUN apt-get update && \
 RUN echo "ALL ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 # Some Python packages expect certain dependencies to already be installed.
-RUN pip install requests urllib3
+COPY runtime-packages.txt ./
+RUN pip install -r runtime-packages.txt
 
 COPY analyze.py /usr/local/bin/
 RUN chmod 755 /usr/local/bin/analyze.py
