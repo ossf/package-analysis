@@ -104,7 +104,7 @@ type AnalysisResult struct {
 	// FileHashes maps file names to SHA256 hashes of the files.
 	FileHashes map[string]string
 
-	// FileHashes maps file names to the output of the `file`
+	// FileTypes maps file names to the output of the `file`
 	// command run on that file
 	FileTypes map[string]string
 }
