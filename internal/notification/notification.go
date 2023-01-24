@@ -6,16 +6,14 @@ import (
 	"fmt"
 
 	"gocloud.dev/pubsub"
+
+	"github.com/ossf/package-analysis/pkg/notification"
 	"github.com/ossf/package-analysis/pkg/pkgidentifier"
 )
 
-type AnalysisCompletion struct {
-	Package	pkgidentifier.PkgIdentifier
-}
-
 func PublishAnalysisCompletion(ctx context.Context, notificationTopic *pubsub.Topic, name, version, ecosystem string) error {
 	pkgDetails := pkgidentifier.PkgIdentifier{name, version, ecosystem}
-	notificationMsg, err := json.Marshal(AnalysisCompletion{pkgDetails})
+	notificationMsg, err := json.Marshal(notification.AnalysisCompletion{pkgDetails})
 	if err != nil {
 		return fmt.Errorf("failed to encode completion notification: %w", err)
 	}
