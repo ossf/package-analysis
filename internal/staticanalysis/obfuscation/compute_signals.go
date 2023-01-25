@@ -2,7 +2,6 @@ package obfuscation
 
 import (
 	"math"
-	"regexp"
 	"strings"
 
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/detections"
@@ -11,11 +10,6 @@ import (
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 	"github.com/ossf/package-analysis/internal/utils"
 )
-
-var suspiciousIdentifierPatterns = map[string]*regexp.Regexp{
-	"hex":     regexp.MustCompile("^_0x\\d{3,}$"),
-	"numeric": regexp.MustCompile("^[A-Za-z_]?\\d{3,}$"),
-}
 
 /*
 characterAnalysis performs analysis on a collection of string symbols, returning:
@@ -60,7 +54,7 @@ func ComputeSignals(rawData FileData) FileSignals {
 		characterAnalysis(identifierNames)
 
 	signals.SuspiciousIdentifiers = map[string][]string{}
-	for ruleName, pattern := range suspiciousIdentifierPatterns {
+	for ruleName, pattern := range detections.SuspiciousIdentifierPatterns {
 		signals.SuspiciousIdentifiers[ruleName] = []string{}
 		for _, name := range identifierNames {
 			if pattern.MatchString(name) {
