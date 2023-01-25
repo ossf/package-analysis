@@ -82,6 +82,10 @@ docker_build_static_analysis_sandbox: DIR=$(PREFIX)
 docker_build_static_analysis_sandbox: DOCKERFILE=$(SANDBOX_DIR)/staticanalysis/Dockerfile
 docker_build_static_analysis_sandbox: IMAGE_NAME=static-analysis
 
+docker_build_dynamic_analysis_sandbox: DIR=$(SANDBOX_DIR)/dynamicanalysis
+docker_build_dynamic_analysis_sandbox: DOCKERFILE=$(SANDBOX_DIR)/dynamicanalysis/Dockerfile
+docker_build_dynamic_analysis_sandbox: IMAGE_NAME=dynamic-analysis
+
 .PHONY: docker_build_all_sandboxes
 docker_build_all_sandboxes: docker_build_node_sandbox docker_build_python_sandbox docker_build_ruby_sandbox docker_build_packagist_sandbox docker_build_crates_sandbox docker_build_static_analysis_sandbox
 

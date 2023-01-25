@@ -35,29 +35,29 @@ RUN curl -fsSL "https://packages.microsoft.com/config/ubuntu/22.04/packages-micr
 	dpkg -i packages-microsoft-prod.deb
 
 # Extra packages for realistic runtime
-#RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
-#	auditd \
-#	awscli \
-#	build-essential \
-#	cmake \
-#	clang \
-#	golang \
-#	iproute2 \
-#	iputils-ping \
-#	kubectl \
-#	libpng-dev \
-#	libzip-dev \
-#	net-tools \
-#	netcat \
-#	powershell \
-#	protobuf-compiler \
-#	python \
-#	sshpass \
-#	sudo \
-#	tcpdump \
-#	telnet \
-#	tshark \
-#	zip
+RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
+	auditd \
+	awscli \
+	build-essential \
+	cmake \
+	clang \
+	golang \
+	iproute2 \
+	iputils-ping \
+	kubectl \
+	libpng-dev \
+	libzip-dev \
+	net-tools \
+	netcat \
+	powershell \
+	protobuf-compiler \
+	python2 \
+	sshpass \
+	sudo \
+	tcpdump \
+	telnet \
+	tshark \
+	zip
 
 # Configure sudo for passwordless execution
 RUN echo "ALL ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
