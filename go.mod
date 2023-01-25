@@ -9,7 +9,7 @@ require (
 	github.com/texttheater/golang-levenshtein/levenshtein v0.0.0-20200805054039-cae8b0eaed6c
 	go.uber.org/zap v1.24.0
 	gocloud.dev v0.28.0
-	gocloud.dev/pubsub/kafkapubsub v0.27.0
+	gocloud.dev/pubsub/kafkapubsub v0.28.0
 	golang.org/x/exp v0.0.0-20221031165847-c99f073a8326
 )
 
@@ -20,7 +20,7 @@ require (
 	cloud.google.com/go/iam v0.7.0 // indirect
 	cloud.google.com/go/pubsub v1.27.0 // indirect
 	cloud.google.com/go/storage v1.28.0 // indirect
-	github.com/Shopify/sarama v1.37.0 // indirect
+	github.com/Shopify/sarama v1.37.2 // indirect
 	github.com/aws/aws-sdk-go v1.44.151 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.17.1 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.9 // indirect
@@ -62,7 +62,7 @@ require (
 	github.com/jcmturner/gokrb5/v8 v8.4.3 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
-	github.com/klauspost/compress v1.15.11 // indirect
+	github.com/klauspost/compress v1.15.12 // indirect
 	github.com/pierrec/lz4/v4 v4.1.17 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
