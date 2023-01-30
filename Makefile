@@ -1,27 +1,41 @@
 # This Makefile contains common development / build commands for Package Analysis. For everything to work properly, it needs to be kept in the top-level project directory.
 
-REGISTRY := gcr.io/ossf-malware-analysis
-
+# Get absolute path to top-level package analysis project directory
 # outermost abspath removes the trailing slash from the directory path
 PREFIX := $(abspath $(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 SANDBOX_DIR := $(PREFIX)/sandboxes
 
-#
-# This is just the old 'build everything script'
-#
-.PHONY: legacy_build_docker
-legacy_build_docker:
-	bash build/build_docker.sh
+# Registry for Docker images built and used by package analysis
+REGISTRY := gcr.io/ossf-malware-analysis
+
+# If RELEASE_TAG environment variable is not specified, images will be tagged
+# as 'latest' which is equivalent to just tagging without specifying a version
+TAG := ${RELEASE_TAG}
+ifeq ($(TAG), )
+	TAG := latest
+	BUILD_ARG=
+else
+	# pass tag into analysis image build
+	BUILD_ARG=--build-arg=SANDBOX_IMAGE_TAG=$(TAG)
+endif
+
+# whether to push docker images
+DOCKER_PUSH := ${PUSH}
+ifeq ($(DOCKER_PUSH), )
+	DOCKER_PUSH := false
+endif
+
 
 .PHONY: all
 all: docker_build_all
 
 #
 # These recipes build all the top-level docker images
-# TODO grab release tag from env vars
 
 docker_build_%_image:
-	docker build -t ${REGISTRY}/$(IMAGE_NAME) -f $(DOCKERFILE) $(DIR)
+	@# if TAG is 'latest', the two -t arguments are equivalent and do the same thing
+	docker build $(BUILD_ARG) -t ${REGISTRY}/$(IMAGE_NAME) -t ${REGISTRY}/$(IMAGE_NAME):$(TAG) -f $(DOCKERFILE) $(DIR)
+	if [[ "$(PUSH)" == "true" ]]; then docker push --all-tags ${REGISTRY}/$(IMAGE_NAME); fi
 
 #
 # These build the sandbox images and also update (sync) them locally
@@ -29,8 +43,11 @@ docker_build_%_image:
 # to use these updated images, pass 'nopull' to run_analysis.sh
 #
 docker_build_%_sandbox:
-	docker build -t ${REGISTRY}/$(IMAGE_NAME) -f $(DOCKERFILE) $(DIR)
-	sudo buildah pull docker-daemon:${REGISTRY}/${IMAGE_NAME}:latest
+	@# if TAG is 'latest', the two -t arguments are equivalent and do the same thing
+	docker build -t ${REGISTRY}/$(IMAGE_NAME) -t ${REGISTRY}/$(IMAGE_NAME):$(TAG) -f $(DOCKERFILE) $(DIR)
+	if [[ "$(PUSH)" == "true" ]]; then docker push --all-tags ${REGISTRY}/$(IMAGE_NAME); fi
+
+	sudo buildah pull docker-daemon:${REGISTRY}/${IMAGE_NAME}:$(TAG)
 
 docker_build_analysis_image: DIR=$(PREFIX)
 docker_build_analysis_image: DOCKERFILE=$(PREFIX)/cmd/analyze/Dockerfile
