@@ -19,13 +19,6 @@ else
 	BUILD_ARG=--build-arg=SANDBOX_IMAGE_TAG=$(TAG)
 endif
 
-# whether to push docker images
-DOCKER_PUSH := ${PUSH}
-ifeq ($(DOCKER_PUSH), )
-	DOCKER_PUSH := false
-endif
-
-
 .PHONY: all
 all: docker_build_all
 
@@ -35,7 +28,6 @@ all: docker_build_all
 docker_build_%_image:
 	@# if TAG is 'latest', the two -t arguments are equivalent and do the same thing
 	docker build $(BUILD_ARG) -t ${REGISTRY}/$(IMAGE_NAME) -t ${REGISTRY}/$(IMAGE_NAME):$(TAG) -f $(DOCKERFILE) $(DIR)
-	if [[ "$(PUSH)" == "true" ]]; then docker push --all-tags ${REGISTRY}/$(IMAGE_NAME); fi
 
 #
 # These build the sandbox images and also update (sync) them locally
@@ -45,8 +37,6 @@ docker_build_%_image:
 docker_build_%_sandbox:
 	@# if TAG is 'latest', the two -t arguments are equivalent and do the same thing
 	docker build -t ${REGISTRY}/$(IMAGE_NAME) -t ${REGISTRY}/$(IMAGE_NAME):$(TAG) -f $(DOCKERFILE) $(DIR)
-	if [[ "$(PUSH)" == "true" ]]; then docker push --all-tags ${REGISTRY}/$(IMAGE_NAME); fi
-
 	sudo buildah pull docker-daemon:${REGISTRY}/${IMAGE_NAME}:$(TAG)
 
 docker_build_analysis_image: DIR=$(PREFIX)
@@ -86,6 +76,37 @@ docker_build_all_sandboxes: docker_build_node_sandbox docker_build_python_sandbo
 
 .PHONY: docker_build_all
 docker_build_all: docker_build_all_sandboxes docker_build_analysis_image docker_build_scheduler_image
+
+#
+# Builds then pushes analysis and sandbox images
+#
+
+docker_push_%:
+	docker push --all-tags ${REGISTRY}/$(IMAGE_NAME)
+
+docker_push_analysis_image: docker_build_analysis_image
+docker_push_scheduler_image: docker_build_scheduler_image
+docker_push_node_sandbox: docker_build_node_sandbox
+docker_push_python_sandbox: docker_build_python_sandbox
+docker_push_ruby_sandbox: docker_build_ruby_sandbox
+docker_push_packagist_sandbox: docker_build_packagist_sandbox
+docker_push_crates_sandbox: docker_build_crates_sandbox
+docker_push_static_analysis_sandbox: docker_build_static_analysis_sandbox
+
+docker_push_analysis_image: IMAGE_NAME=analysis
+docker_push_scheduler_image: IMAGE_NAME=scheduler
+docker_push_node_sandbox: IMAGE_NAME=node
+docker_push_python_sandbox: IMAGE_NAME=python
+docker_push_ruby_sandbox: IMAGE_NAME=ruby
+docker_push_packagist_sandbox:	IMAGE_NAME=packagist
+docker_push_crates_sandbox: IMAGE_NAME=crates.io
+docker_push_static_analysis_sandbox: IMAGE_NAME=static-analysis
+
+.PHONY: docker_push_all_sandboxes
+docker_push_all_sandboxes: docker_push_node_sandbox docker_push_python_sandbox docker_push_ruby_sandbox docker_push_packagist_sandbox docker_push_crates_sandbox docker_push_static_analysis_sandbox
+
+.PHONY: docker_push_all
+docker_push_all: docker_push_all_sandboxes docker_push_analysis_image docker_push_scheduler_image
 
 
 #
