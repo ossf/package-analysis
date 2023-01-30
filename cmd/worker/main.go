@@ -160,9 +160,12 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		return err
 	}
 
-	staticResults, _, err := worker.RunStaticAnalyses(pkg, staticSandboxOpts)
-	if err != nil {
-		return err
+	var staticResults result.StaticAnalysisResults
+	if resultsBuckets.staticAnalysis != "" {
+		staticResults, _, err = worker.RunStaticAnalyses(pkg, staticSandboxOpts)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = saveResults(ctx, pkg, resultsBuckets, results, staticResults)
