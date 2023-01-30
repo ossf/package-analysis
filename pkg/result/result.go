@@ -1,6 +1,8 @@
 package result
 
 import (
+	"encoding/json"
+
 	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 	"github.com/ossf/package-analysis/internal/strace"
@@ -13,6 +15,8 @@ type DynamicAnalysisResults struct {
 	StraceSummary DynamicAnalysisStraceSummary
 	FileWrites    DynamicAnalysisFileWrites
 }
+
+type StaticAnalysisResults = json.RawMessage
 
 type StraceSummary struct {
 	Status   analysis.Status
