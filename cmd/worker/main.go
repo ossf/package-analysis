@@ -59,7 +59,6 @@ func copyPackageToLocalFile(ctx context.Context, packagesBucket *blob.Bucket, bu
 	if err != nil {
 		return "", nil, err
 	}
-	defer os.Remove(f.Name())
 
 	if _, err := io.Copy(f, r); err != nil {
 		return "", nil, err
@@ -139,6 +138,9 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		if err != nil {
 			return err
 		}
+
+		defer os.Remove(pkgFile.Name())
+
 		localPkgPath = tmpPkgPath
 		mountOption := sandbox.Volume(pkgFile.Name(), localPkgPath)
 		// mount temp file into the sandboxes
