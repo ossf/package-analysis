@@ -148,6 +148,11 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		staticSandboxOpts = append(staticSandboxOpts, mountOption)
 	}
 
+	if os.Getenv("SANDBOX_NOPULL") != "" {
+		dynamicSandboxOpts = append(dynamicSandboxOpts, sandbox.NoPull())
+		staticSandboxOpts = append(staticSandboxOpts, sandbox.NoPull())
+	}
+
 	pkg, err := worker.ResolvePkg(manager, name, version, localPkgPath)
 	if err != nil {
 		log.Error("Error resolving package",
