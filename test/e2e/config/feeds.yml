@@ -1,0 +1,13 @@
+feeds:
+  - type: pypi
+  - type: rubygems
+  - type: packagist
+  - type: npm
+  - type: crates
+publisher:
+  type: kafka
+  config:
+    brokers: ["kafka:9092"]
+    topic: "package-feeds"
+
+poll_rate: "10h"

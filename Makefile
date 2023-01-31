@@ -125,22 +125,36 @@ run:
 # These recipes control docker-compose, which is used for
 # end-to-end testing of the complete scheduler/worker system
 #
-.PHONY: docker_compose_start
-docker_compose_start:
-	cd ./examples/e2e && docker-compose up -d
-	sleep 3
-	curl localhost:8080
+E2E_TEST_DIR := ./test/e2e
+
+.PHONY: e2e_test_start
+e2e_test_start:
+	cd $(E2E_TEST_DIR) && docker-compose up -d
 	@echo
 	@echo "To see analysis results, go to http://localhost:9000/minio/package-analysis"
-	@echo "Remember to run `make docker_compose_stop` when done!"
+	@echo "Remember to run 'make e2e_test_stop' when done!"
+	sleep 5
+	curl localhost:8080
 
-.PHONY: docker_compose_logs
-docker_compose_logs:
-	cd ./examples/e2e && docker-compose logs
+.PHONY: e2e_test_stop
+e2e_test_stop:
+	cd $(E2E_TEST_DIR) && docker-compose down
 
-.PHONY: docker_compose_stop
-docker_compose_stop:
-	cd ./examples/e2e && docker-compose down
+.PHONY: e2e_test_logs_all
+e2e_test_logs_all:
+	cd $(E2E_TEST_DIR) && docker-compose logs
+
+.PHONY: e2e_test_logs_feeds
+e2e_test_logs_feeds:
+	cd $(E2E_TEST_DIR) && docker-compose logs -f feeds
+
+.PHONY: e2e_test_logs_scheduler
+e2e_test_logs_scheduler:
+	cd $(E2E_TEST_DIR) && docker-compose logs -f scheduler
+
+.PHONY: e2e_test_logs_analysis:
+e2e_test_logs_analysis:
+	cd $(E2E_TEST_DIR) && docker-compose logs -f analysis
 
 
 .PHONY: test
