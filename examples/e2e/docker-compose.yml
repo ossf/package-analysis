@@ -33,7 +33,7 @@ services:
       MINIO_ROOT_PASSWORD: minio123
       MINIO_REGION_NAME: dummy_region
     entrypoint: sh
-    command: -c 'mkdir -p /data/{package-analysis,package-analysis-file-writes} && /usr/bin/minio server /data'
+    command: -c 'mkdir -p /data/package-analysis{,-static,-file-writes} && /usr/bin/minio server /data'
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
@@ -48,6 +48,7 @@ services:
       OSSMALWARE_WORKER_SUBSCRIPTION: kafka://worker?topic=workers
       OSSF_MALWARE_NOTIFICATION_TOPIC: kafka://notifications
       OSSF_MALWARE_ANALYSIS_RESULTS: s3://package-analysis?endpoint=minio:9000&disableSSL=true&s3ForcePathStyle=true
+      OSSF_MALWARE_STATIC_ANALYSIS_RESULTS: s3://package-analysis-static?endpoint=minio:9000&disableSSL=true&s3ForcePathStyle=true
       OSSF_MALWARE_ANALYSIS_FILE_WRITE_RESULTS: s3://package-analysis-file-writes?endpoint=minio:9000&disableSSL=true&s3ForcePathStyle=true
       KAFKA_BROKERS: kafka:9092
       AWS_ACCESS_KEY_ID: minio
@@ -65,7 +66,7 @@ services:
       OSSMALWARE_WORKER_TOPIC: kafka://workers
       OSSMALWARE_SUBSCRIPTION_URL: kafka://worker?topic=package-feeds
       KAFKA_BROKERS: kafka:9092
-  
+
   feeds:
     restart: "on-failure"
     image: gcr.io/ossf-malware-analysis/scheduled-feeds:latest
