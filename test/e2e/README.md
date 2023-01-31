@@ -5,8 +5,8 @@ to ensure everything is working properly.
 In particular, local changes to both the worker/analysis and sandbox images can be tested
 before they are pushed to the docker registry.
 
-The test is orchestrated using docker-compose, using a setup adapted from the `examples/e2e` directory.
-However all the necessary commands can be run easily using the project Makefile.
+The test is orchestrated using docker-compose, using a setup adapted from the end-to-end
+example under `examples/e2e`. However, all the commands can be run via the project Makefile.
 
 ## Running
 
