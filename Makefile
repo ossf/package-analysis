@@ -126,7 +126,7 @@ run:
 # end-to-end testing of the complete scheduler/worker system
 #
 
-E2E_TEST_COMPOSE_ARGS := -p pa-testing -f ./configs/e2e/docker-compose.yml -f ./test/e2e/docker-compose.test.yml
+E2E_TEST_COMPOSE_ARGS := -p pa-e2e-testing -f ./configs/e2e/docker-compose.yml -f ./test/e2e/docker-compose.test.yml
 
 .PHONY: e2e_test_start
 e2e_test_start:
