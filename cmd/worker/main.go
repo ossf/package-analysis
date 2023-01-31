@@ -43,6 +43,11 @@ type resultBucketPaths struct {
 	fileWrites      string
 }
 
+type sandboxImageSpec struct {
+	tag    string
+	noPull bool
+}
+
 func copyPackageToLocalFile(ctx context.Context, packagesBucket *blob.Bucket, bucketPath string) (string, *os.File, error) {
 	if packagesBucket == nil {
 		return "", nil, errors.New("packages bucket not set")
@@ -94,7 +99,7 @@ func saveResults(ctx context.Context, pkg *pkgecosystem.Pkg, dest resultBucketPa
 	return nil
 }
 
-func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blob.Bucket, resultsBuckets resultBucketPaths, imageTag string, notificationTopic *pubsub.Topic) error {
+func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blob.Bucket, resultsBuckets resultBucketPaths, imageSpec sandboxImageSpec, notificationTopic *pubsub.Topic) error {
 	name := msg.Metadata["name"]
 	if name == "" {
 		log.Warn("name is empty")
@@ -130,8 +135,8 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	worker.LogRequest(ecosystem, name, version, remotePkgPath, resultsBucketOverride)
 
 	localPkgPath := ""
-	dynamicSandboxOpts := worker.DefaultSandboxOptions(analysis.Dynamic, imageTag)
-	staticSandboxOpts := worker.DefaultSandboxOptions(analysis.Static, imageTag)
+	dynamicSandboxOpts := worker.DefaultSandboxOptions(analysis.Dynamic, imageSpec.tag)
+	staticSandboxOpts := worker.DefaultSandboxOptions(analysis.Static, imageSpec.tag)
 
 	if remotePkgPath != "" {
 		tmpPkgPath, pkgFile, err := copyPackageToLocalFile(ctx, packagesBucket, remotePkgPath)
@@ -148,7 +153,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		staticSandboxOpts = append(staticSandboxOpts, mountOption)
 	}
 
-	if os.Getenv("SANDBOX_NOPULL") != "" {
+	if imageSpec.noPull {
 		dynamicSandboxOpts = append(dynamicSandboxOpts, sandbox.NoPull())
 		staticSandboxOpts = append(staticSandboxOpts, sandbox.NoPull())
 	}
@@ -188,7 +193,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	return nil
 }
 
-func messageLoop(ctx context.Context, subURL, packagesBucket, imageTag, notificationTopicURL string, resultsBuckets resultBucketPaths) error {
+func messageLoop(ctx context.Context, subURL, packagesBucket, notificationTopicURL string, imageSpec sandboxImageSpec, resultsBuckets resultBucketPaths) error {
 	sub, err := pubsub.OpenSubscription(ctx, subURL)
 	if err != nil {
 		return err
@@ -225,7 +230,7 @@ func messageLoop(ctx context.Context, subURL, packagesBucket, imageTag, notifica
 			return fmt.Errorf("error receiving message: %w", err)
 		}
 
-		if err := handleMessage(ctx, msg, pkgsBkt, resultsBuckets, imageTag, notificationTopic); err != nil {
+		if err := handleMessage(ctx, msg, pkgsBkt, resultsBuckets, imageSpec, notificationTopic); err != nil {
 			log.Error("Failed to process message",
 				"error", err)
 		}
@@ -237,11 +242,19 @@ func main() {
 	ctx := context.Background()
 	subURL := os.Getenv("OSSMALWARE_WORKER_SUBSCRIPTION")
 	packagesBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_PACKAGES")
-	resultsBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS")
-	staticResultsBucket := os.Getenv("OSSF_MALWARE_STATIC_ANALYSIS_RESULTS")
-	fileWritesBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_FILE_WRITE_RESULTS")
-	imageTag := os.Getenv("OSSF_SANDBOX_IMAGE_TAG")
 	notificationTopicURL := os.Getenv("OSSF_MALWARE_NOTIFICATION_TOPIC")
+
+	resultsBuckets := resultBucketPaths{
+		dynamicAnalysis: os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS"),
+		staticAnalysis:  os.Getenv("OSSF_MALWARE_STATIC_ANALYSIS_RESULTS"),
+		fileWrites:      os.Getenv("OSSF_MALWARE_ANALYSIS_FILE_WRITE_RESULTS"),
+	}
+
+	imageSpec := sandboxImageSpec{
+		tag:    os.Getenv("OSSF_SANDBOX_IMAGE_TAG"),
+		noPull: os.Getenv("OSSF_SANDBOX_NOPULL") != "",
+	}
+
 	log.Initialize(os.Getenv("LOGGER_ENV"))
 	sandbox.InitNetwork()
 
@@ -249,20 +262,15 @@ func main() {
 	log.Info("Starting worker",
 		log.Label("subscription", subURL),
 		log.Label("package_bucket", packagesBucket),
-		log.Label("results_bucket", resultsBucket),
-		log.Label("static_results_bucket", staticResultsBucket),
-		log.Label("file_write_results_bucket", fileWritesBucket),
-		log.Label("image_tag", imageTag),
+		log.Label("results_bucket", resultsBuckets.dynamicAnalysis),
+		log.Label("static_results_bucket", resultsBuckets.staticAnalysis),
+		log.Label("file_write_results_bucket", resultsBuckets.fileWrites),
+		log.Label("image_tag", imageSpec.tag),
+		log.Label("image_nopull", fmt.Sprintf("%v", imageSpec.noPull)),
 		log.Label("topic_notification", notificationTopicURL))
 
-	resultsBuckets := resultBucketPaths{
-		dynamicAnalysis: resultsBucket,
-		staticAnalysis:  staticResultsBucket,
-		fileWrites:      fileWritesBucket,
-	}
-
 	for {
-		err := messageLoop(ctx, subURL, packagesBucket, imageTag, notificationTopicURL, resultsBuckets)
+		err := messageLoop(ctx, subURL, packagesBucket, notificationTopicURL, imageSpec, resultsBuckets)
 		if err != nil {
 			if retryCount++; retryCount >= maxRetries {
 				log.Error("Retries exceeded",
