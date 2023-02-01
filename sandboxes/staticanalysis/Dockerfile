@@ -1,10 +1,23 @@
 FROM golang:1.19-alpine@sha256:122f3484f844467ebe0674cf57272e61981770eb0bc7d316d1f0be281a88229f as build
 
-WORKDIR /src
-COPY . ./
+# Note: Dockerfile uses paths relative to the top-level project directory,
+# so it should be built from that directory, i.e:
+# $ cd package-analysis
+# $ docker build -f sandboxes/staticanalysis/Dockerfile .
 
+# Cache dependencies to avoid downloading again on code change
 WORKDIR /src/sandboxes/staticanalysis
+# Dependencies for package analysis
+COPY ./go.mod /src/
+COPY ./go.sum /src/
+# Dependencies for sandbox binary
+COPY ./sandboxes/staticanalysis/go.mod ./
+COPY ./sandboxes/staticanalysis/go.sum ./
+
 RUN go mod download
+
+COPY . /src/
+
 # If CGO is disabled then we don't need glibc
 RUN CGO_ENABLED=0 go build -o staticanalyze staticanalyze.go
 
@@ -22,10 +35,8 @@ COPY --from=build /src/internal/staticanalysis/parsing/js/package.json /npm_deps
 COPY --from=build /src/internal/staticanalysis/parsing/js/package-lock.json /npm_deps
 
 # cache NPM installs in /npm_cache so that static analysis binary can use them
-RUN mkdir /npm_cache && \
-	chmod 755 /npm_cache && \
+RUN mkdir -m 755 /npm_cache && \
 	npm ci --prefix /npm_deps --cache /npm_cache
-
 
 WORKDIR /app
 
