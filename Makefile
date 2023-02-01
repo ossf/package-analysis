@@ -1,27 +1,33 @@
 # This Makefile contains common development / build commands for Package Analysis. For everything to work properly, it needs to be kept in the top-level project directory.
 
-REGISTRY := gcr.io/ossf-malware-analysis
-
+# Get absolute path to top-level package analysis project directory
 # outermost abspath removes the trailing slash from the directory path
 PREFIX := $(abspath $(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 SANDBOX_DIR := $(PREFIX)/sandboxes
 
-#
-# This is just the old 'build everything script'
-#
-.PHONY: legacy_build_docker
-legacy_build_docker:
-	bash build/build_docker.sh
+# Registry for Docker images built and used by package analysis
+REGISTRY := gcr.io/ossf-malware-analysis
+
+# If RELEASE_TAG environment variable is not specified, images will be tagged
+# as 'latest' which is equivalent to just tagging without specifying a version
+TAG := ${RELEASE_TAG}
+ifeq ($(TAG), )
+	TAG := latest
+	BUILD_ARG=
+else
+	# pass tag into analysis image build
+	BUILD_ARG=--build-arg=SANDBOX_IMAGE_TAG=$(TAG)
+endif
 
 .PHONY: all
 all: docker_build_all
 
 #
 # These recipes build all the top-level docker images
-# TODO grab release tag from env vars
 
 docker_build_%_image:
-	docker build -t ${REGISTRY}/$(IMAGE_NAME) -f $(DOCKERFILE) $(DIR)
+	@# if TAG is 'latest', the two -t arguments are equivalent and do the same thing
+	docker build $(BUILD_ARG) -t ${REGISTRY}/$(IMAGE_NAME) -t ${REGISTRY}/$(IMAGE_NAME):$(TAG) -f $(DOCKERFILE) $(DIR)
 
 #
 # These build the sandbox images and also update (sync) them locally
@@ -29,8 +35,9 @@ docker_build_%_image:
 # to use these updated images, pass 'nopull' to run_analysis.sh
 #
 docker_build_%_sandbox:
-	docker build -t ${REGISTRY}/$(IMAGE_NAME) -f $(DOCKERFILE) $(DIR)
-	sudo buildah pull docker-daemon:${REGISTRY}/${IMAGE_NAME}:latest
+	@# if TAG is 'latest', the two -t arguments are equivalent and do the same thing
+	docker build -t ${REGISTRY}/$(IMAGE_NAME) -t ${REGISTRY}/$(IMAGE_NAME):$(TAG) -f $(DOCKERFILE) $(DIR)
+	sudo buildah pull docker-daemon:${REGISTRY}/${IMAGE_NAME}:$(TAG)
 
 docker_build_analysis_image: DIR=$(PREFIX)
 docker_build_analysis_image: DOCKERFILE=$(PREFIX)/cmd/analyze/Dockerfile
@@ -69,6 +76,43 @@ docker_build_all_sandboxes: docker_build_node_sandbox docker_build_python_sandbo
 
 .PHONY: docker_build_all
 docker_build_all: docker_build_all_sandboxes docker_build_analysis_image docker_build_scheduler_image
+
+#
+# Builds then pushes analysis and sandbox images
+#
+
+docker_push_%:
+	docker push --all-tags ${REGISTRY}/$(IMAGE_NAME)
+
+docker_push_analysis_image: IMAGE_NAME=analysis
+docker_push_analysis_image: docker_build_analysis_image
+
+docker_push_scheduler_image: IMAGE_NAME=scheduler
+docker_push_scheduler_image: docker_build_scheduler_image
+
+docker_push_node_sandbox: IMAGE_NAME=node
+docker_push_node_sandbox: docker_build_node_sandbox
+
+docker_push_python_sandbox: docker_build_python_sandbox
+docker_push_python_sandbox: IMAGE_NAME=python
+
+docker_push_ruby_sandbox: IMAGE_NAME=ruby
+docker_push_ruby_sandbox: docker_build_ruby_sandbox
+
+docker_push_packagist_sandbox:	IMAGE_NAME=packagist
+docker_push_packagist_sandbox: docker_build_packagist_sandbox
+
+docker_push_crates_sandbox: IMAGE_NAME=crates.io
+docker_push_crates_sandbox: docker_build_crates_sandbox
+
+docker_push_static_analysis_sandbox: IMAGE_NAME=static-analysis
+docker_push_static_analysis_sandbox: docker_build_static_analysis_sandbox
+
+.PHONY: docker_push_all_sandboxes
+docker_push_all_sandboxes: docker_push_node_sandbox docker_push_python_sandbox docker_push_ruby_sandbox docker_push_packagist_sandbox docker_push_crates_sandbox docker_push_static_analysis_sandbox
+
+.PHONY: docker_push_all
+docker_push_all: docker_push_all_sandboxes docker_push_analysis_image docker_push_scheduler_image
 
 
 #
