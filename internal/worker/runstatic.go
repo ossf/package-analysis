@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/log"
@@ -30,6 +31,8 @@ func RunStaticAnalyses(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option, tasks ...
 	}
 
 	log.Info("Running static analysis tasks", "tasks", tasks)
+
+	startTime := time.Now()
 
 	analyses := utils.Transform(tasks, func(t staticanalysis.Task) string { return string(t) })
 
@@ -77,7 +80,8 @@ func RunStaticAnalyses(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option, tasks ...
 
 	status := analysis.StatusForRunResult(runResult)
 
-	// TODO log status
+	totalTime := time.Since(startTime)
+	log.Info(fmt.Sprintf("Analysis finished in %.1f seconds", totalTime.Seconds()), "status", status)
 
 	return resultsJSON, status, nil
 }
