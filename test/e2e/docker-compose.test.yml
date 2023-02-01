@@ -1,0 +1,12 @@
+version: "3"
+services:
+  analysis:
+    image: gcr.io/ossf-malware-analysis/analysis:test
+    environment:
+      OSSF_SANDBOX_NOPULL: "true"
+    # for mounting local sandbox images inside container
+    volumes:
+      - "/var/lib/containers:/var/lib/containers"
+
+  scheduler:
+    image: gcr.io/ossf-malware-analysis/scheduler:test
