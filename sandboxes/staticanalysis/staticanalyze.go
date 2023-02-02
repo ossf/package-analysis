@@ -280,11 +280,11 @@ func run() (err error) {
 	otherTime := totalTime - writingResultsTime - analysisTime - extractionTime
 
 	log.Info("Execution times (s)",
-		"extraction", extractionTime.String(),
-		"analysis", analysisTime.String(),
-		"writing results", writingResultsTime.String(),
-		"other", otherTime.String(),
-		"total", totalTime.String())
+		"extraction", extractionTime,
+		"analysis", analysisTime,
+		"writing results", writingResultsTime,
+		"other", otherTime,
+		"total", totalTime)
 
 	return nil
 }

@@ -86,7 +86,7 @@ func RunStaticAnalyses(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option, tasks ...
 		"name", pkg.Name(),
 		"version", pkg.Version(),
 		log.Label("result_status", string(status)),
-		"static_analysis_duration_sec", fmt.Sprintf("%.1f", totalTime.Seconds()),
+		"static_analysis_duration", totalTime,
 	)
 
 	return resultsJSON, status, nil

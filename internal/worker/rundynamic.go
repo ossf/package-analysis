@@ -1,7 +1,6 @@
 package worker
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/ossf/package-analysis/internal/analysis"
@@ -64,7 +63,7 @@ func RunDynamicAnalysis(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option) (result.
 			"version", pkg.Version(),
 			log.Label("phase", string(phase)),
 			"error", err,
-			"dynamic_analysis_phase_duration_sec", fmt.Sprintf("%.1f", runDuration.Seconds()),
+			"dynamic_analysis_phase_duration", runDuration,
 		)
 
 		if err != nil {
