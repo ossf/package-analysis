@@ -25,6 +25,7 @@ import (
 	"github.com/ossf/package-analysis/internal/resultstore"
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/internal/worker"
+	"github.com/ossf/package-analysis/pkg/api"
 	"github.com/ossf/package-analysis/pkg/result"
 )
 
@@ -115,7 +116,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		return nil
 	}
 
-	manager := pkgecosystem.Manager(pkgecosystem.Ecosystem(ecosystem))
+	manager := pkgecosystem.Manager(api.Ecosystem(ecosystem))
 	if manager == nil {
 		log.Warn("Unsupported pkg manager",
 			log.Label("ecosystem", ecosystem),

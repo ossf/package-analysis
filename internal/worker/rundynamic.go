@@ -8,6 +8,7 @@ import (
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 	"github.com/ossf/package-analysis/internal/sandbox"
+	"github.com/ossf/package-analysis/pkg/api"
 	"github.com/ossf/package-analysis/pkg/result"
 )
 
@@ -34,7 +35,7 @@ error: Any error that occurred in the runtime/sandbox infrastructure.
 This does not include errors caused by the package under analysis.
 */
 
-func RunDynamicAnalysis(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option) (result.DynamicAnalysisResults, pkgecosystem.RunPhase, analysis.Status, error) {
+func RunDynamicAnalysis(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option) (result.DynamicAnalysisResults, api.RunPhase, analysis.Status, error) {
 	results := result.DynamicAnalysisResults{
 		StraceSummary: make(result.DynamicAnalysisStraceSummary),
 		FileWrites:    make(result.DynamicAnalysisFileWrites),
@@ -48,7 +49,7 @@ func RunDynamicAnalysis(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option) (result.
 		}
 	}()
 
-	var lastRunPhase pkgecosystem.RunPhase
+	var lastRunPhase api.RunPhase
 	var lastStatus analysis.Status
 	var lastError error
 	for _, phase := range pkg.Manager().RunPhases() {

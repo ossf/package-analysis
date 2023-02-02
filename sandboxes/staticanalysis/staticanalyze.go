@@ -19,6 +19,7 @@ import (
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing/js"
 	"github.com/ossf/package-analysis/internal/utils"
 	"github.com/ossf/package-analysis/internal/worker"
+	"github.com/ossf/package-analysis/pkg/api"
 )
 
 var (
@@ -183,7 +184,7 @@ func run() (err error) {
 		return fmt.Errorf("ecosystem and package are required arguments")
 	}
 
-	manager := pkgecosystem.Manager(pkgecosystem.Ecosystem(*ecosystem))
+	manager := pkgecosystem.Manager(api.Ecosystem(*ecosystem))
 	if manager == nil {
 		return fmt.Errorf("unsupported pkg manager for ecosystem %s", *ecosystem)
 	}
