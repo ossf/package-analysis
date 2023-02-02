@@ -1,6 +1,8 @@
 package worker
 
 import (
+	"time"
+
 	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/dynamicanalysis"
 	"github.com/ossf/package-analysis/internal/log"
@@ -50,8 +52,19 @@ func RunDynamicAnalysis(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option) (result.
 	var lastStatus analysis.Status
 	var lastError error
 	for _, phase := range pkg.Manager().RunPhases() {
-		result, err := dynamicanalysis.Run(sb, pkg.Command(phase))
+		startTime := time.Now()
+		phaseResult, err := dynamicanalysis.Run(sb, pkg.Command(phase))
 		lastRunPhase = phase
+
+		runDuration := time.Since(startTime)
+		log.Info("Dynamic analysis phase finished",
+			log.Label("ecosystem", pkg.EcosystemName()),
+			"name", pkg.Name(),
+			"version", pkg.Version(),
+			log.Label("phase", string(phase)),
+			"error", err,
+			"dynamic_analysis_phase_duration", runDuration,
+		)
 
 		if err != nil {
 			// Error when trying to actually run; don't record the result for this phase
@@ -61,9 +74,9 @@ func RunDynamicAnalysis(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option) (result.
 			break
 		}
 
-		results.StraceSummary[phase] = &result.StraceSummary
-		results.FileWrites[phase] = &result.FileWrites
-		lastStatus = result.StraceSummary.Status
+		results.StraceSummary[phase] = &phaseResult.StraceSummary
+		results.FileWrites[phase] = &phaseResult.FileWrites
+		lastStatus = phaseResult.StraceSummary.Status
 
 		if lastStatus != analysis.StatusCompleted {
 			// Error caused by an issue with the package (probably).

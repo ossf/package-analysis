@@ -32,7 +32,7 @@ docker_build_%_image:
 #
 # These build the sandbox images and also update (sync) them locally
 # from Docker to podman. This is needed for local analyses; in order
-# to use these updated images, pass 'nopull' to run_analysis.sh
+# to use these updated images, pass 'nopull' to scripts/run_analysis.sh
 #
 docker_build_%_sandbox:
 	@# if TAG is 'latest', the two -t arguments are equivalent and do the same thing
