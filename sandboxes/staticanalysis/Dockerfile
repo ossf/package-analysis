@@ -8,11 +8,9 @@ FROM golang:1.19-alpine@sha256:122f3484f844467ebe0674cf57272e61981770eb0bc7d316d
 # Cache dependencies to avoid downloading again on code change
 WORKDIR /src/sandboxes/staticanalysis
 # Dependencies for package analysis
-COPY ./go.mod /src/
-COPY ./go.sum /src/
+COPY ./go.mod ./go.sum /src/
 # Dependencies for sandbox binary
-COPY ./sandboxes/staticanalysis/go.mod ./
-COPY ./sandboxes/staticanalysis/go.sum ./
+COPY ./sandboxes/staticanalysis/go.mod ./sandboxes/staticanalysis/go.sum ./
 
 RUN go mod download
 
