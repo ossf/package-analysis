@@ -118,13 +118,13 @@ To run this on a live package (e.g. the latest version of the "Django" package o
 [pypi.org](https://pypi.org))
 
 ```bash
-$ ./run_analysis.sh -ecosystem pypi -package Django
+$ scripts/run_analysis.sh -ecosystem pypi -package Django
 ```
 
 Or with a specific version
 
 ```bash
-$ ./run_analysis.sh -ecosystem pypi -package Django -version 4.1.3
+$ scripts/run_analysis.sh -ecosystem pypi -package Django -version 4.1.3
 ```
 
 ### Local package
@@ -134,16 +134,16 @@ located in local archive `/path/to/test.whl`
 
 
 ```bash
-$ ./run_analysis.sh -ecosystem pypi -package test -local /path/to/test.whl
+$ scripts/run_analysis.sh -ecosystem pypi -package test -local /path/to/test.whl
 ```
 
 ### Docker notes
 
-(Note: these options are handled by the `run_analysis.sh` script).
+(Note: these options are handled by the `scripts/run_analysis.sh` script).
 
 `--privileged` and a compatible filesystem are required to properly run nested
-containers. `-v /var/lib/containers:/var/lib/containers` is used in `run_analysis.sh`
-as it allows caching the sandbox images and supports local developement.
+containers. `-v /var/lib/containers:/var/lib/containers` is also used as it
+allows caching the sandbox images and supports local developement.
 
 ## Development
 

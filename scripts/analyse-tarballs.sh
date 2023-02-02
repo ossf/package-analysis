@@ -1,13 +1,15 @@
 #! /bin/bash
 
+# Replace with root of package analysis folder
+PACKAGE_ANALYSIS_ROOT=~/package-analysis
+
 # This script runs static analysis on all packages in a directory and
 # creates a new directory with all the static analysis results for each package.
 # Currently, it only supports NPM packages (as static analysis does).
 
-# replace with root of package analysis folder
-PACKAGE_ANALYSIS_ROOT=~/package-analysis
-RUN_ANALYSIS="$PACKAGE_ANALYSIS_ROOT/run_analysis.sh"
-FORMAT_JSON="$PACKAGE_ANALYSIS_ROOT/batch-analysis/format-json.py"
+
+RUN_ANALYSIS="$PACKAGE_ANALYSIS_ROOT/scripts/run_analysis.sh"
+FORMAT_JSON="$PACKAGE_ANALYSIS_ROOT/scripts/format-static-analysis-json.py"
 
 if ! [[ -x "$RUN_ANALYSIS" ]]; then
 	echo "could not locate run_analysis.sh script at $RUN_ANALYSIS"
