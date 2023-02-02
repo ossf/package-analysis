@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 
 	"github.com/ossf/package-analysis/internal/analysis"
-	"github.com/ossf/package-analysis/internal/pkgecosystem"
 	"github.com/ossf/package-analysis/internal/strace"
+	"github.com/ossf/package-analysis/pkg/api"
 )
 
-type DynamicAnalysisStraceSummary map[pkgecosystem.RunPhase]*StraceSummary
-type DynamicAnalysisFileWrites map[pkgecosystem.RunPhase]*FileWrites
+type DynamicAnalysisStraceSummary map[api.RunPhase]*StraceSummary
+type DynamicAnalysisFileWrites map[api.RunPhase]*FileWrites
 
 type DynamicAnalysisResults struct {
 	StraceSummary DynamicAnalysisStraceSummary

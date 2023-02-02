@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/ossf/package-analysis/pkg/api"
 )
 
 type cratesJSON struct {
@@ -30,11 +32,11 @@ func getCratesLatest(pkg string) (string, error) {
 }
 
 var cratesPkgManager = PkgManager{
-	ecosystem:     CratesIO,
+	ecosystem:     api.EcosystemCratesIO,
 	image:         "gcr.io/ossf-malware-analysis/crates.io",
 	command:       "/usr/local/bin/analyze.py",
 	latestVersion: getCratesLatest,
-	runPhases: []RunPhase{
-		Install,
+	runPhases: []api.RunPhase{
+		api.RunPhaseInstall,
 	},
 }

@@ -3,40 +3,24 @@ package pkgecosystem
 import (
 	"fmt"
 	"strings"
-)
 
-// Ecosystem represents an open source package ecosystem from which packages can be downloaded
-type Ecosystem string
-
-// RunPhase represents a way to 'run' a package during its usage lifecycle.
-// This is relevant to dynamic analysis.
-type RunPhase string
-
-const (
-	Import  RunPhase = "import"
-	Install RunPhase = "install"
-
-	CratesIO  Ecosystem = "crates.io"
-	NPM       Ecosystem = "npm"
-	Packagist Ecosystem = "packagist"
-	PyPI      Ecosystem = "pypi"
-	RubyGems  Ecosystem = "rubygems"
+	"github.com/ossf/package-analysis/pkg/api"
 )
 
 // PkgManager
 // Represents how packages from a common ecosystem are accessed
 type PkgManager struct {
-	ecosystem      Ecosystem
+	ecosystem      api.Ecosystem
 	image          string
 	command        string
 	latestVersion  func(string) (string, error)
 	archiveUrl     func(string, string) (string, error)
 	extractArchive func(string, string) error
-	runPhases      []RunPhase
+	runPhases      []api.RunPhase
 }
 
 var (
-	supportedPkgManagers = map[Ecosystem]*PkgManager{
+	supportedPkgManagers = map[api.Ecosystem]*PkgManager{
 		npmPkgManager.ecosystem:       &npmPkgManager,
 		pypiPkgManager.ecosystem:      &pypiPkgManager,
 		rubygemsPkgManager.ecosystem:  &rubygemsPkgManager,
@@ -45,7 +29,7 @@ var (
 	}
 )
 
-func Manager(ecosystem Ecosystem) *PkgManager {
+func Manager(ecosystem api.Ecosystem) *PkgManager {
 	return supportedPkgManagers[ecosystem]
 }
 
@@ -58,7 +42,7 @@ func (p *PkgManager) DynamicAnalysisImage() string {
 	return p.image
 }
 
-func (p *PkgManager) RunPhases() []RunPhase {
+func (p *PkgManager) RunPhases() []api.RunPhase {
 	return p.runPhases
 }
 
