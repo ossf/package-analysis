@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
@@ -164,6 +165,8 @@ func makeWorkDirs() (workDirs, error) {
 }
 
 func run() (err error) {
+	startTime := time.Now()
+
 	log.Initialize(os.Getenv("LOGGER_ENV"))
 	analyses.InitFlag()
 	flag.Parse()
@@ -200,19 +203,19 @@ func run() (err error) {
 
 	log.Info("Static analysis launched",
 		log.Label("ecosystem", *ecosystem),
-		log.Label("package", *packageName),
-		log.Label("version", *version),
-		log.Label("local_path", *localFile),
-		log.Label("output_file", *output),
-		log.Label("analyses", strings.Join(uniqueAnalyses, ",")))
+		"package", *packageName,
+		"version", *version,
+		"local_path", *localFile,
+		"output_file", *output,
+		"analyses", uniqueAnalyses)
 
 	workDirs, err := makeWorkDirs()
 	if err != nil {
 		return fmt.Errorf("failed to create work directories: %v", err)
 	}
-
 	defer workDirs.cleanup()
 
+	startExtractionTime := time.Now()
 	var archivePath string
 	if *localFile != "" {
 		archivePath = *localFile
@@ -228,8 +231,10 @@ func run() (err error) {
 		return fmt.Errorf("archive extraction failed: %v", err)
 	}
 
-	results := make(staticanalysis.Result)
+	extractionTime := time.Since(startExtractionTime)
 
+	startAnalysisTime := time.Now()
+	results := make(staticanalysis.Result)
 	for _, task := range analysisTasks {
 		switch task {
 		case staticanalysis.ObfuscationDetection:
@@ -242,6 +247,9 @@ func run() (err error) {
 			return fmt.Errorf("static analysis task not implemented: %s", task)
 		}
 	}
+	analysisTime := time.Since(startAnalysisTime)
+
+	startWritingResultsTime := time.Now()
 
 	jsonResult, err := json.Marshal(results)
 	if err != nil {
@@ -265,6 +273,18 @@ func run() (err error) {
 	if _, writeErr := outputFile.Write(jsonResult); writeErr != nil {
 		return fmt.Errorf("could not write JSON results: %v", writeErr)
 	}
+
+	writingResultsTime := time.Since(startWritingResultsTime)
+
+	totalTime := time.Since(startTime)
+	otherTime := totalTime - writingResultsTime - analysisTime - extractionTime
+
+	log.Info("Execution times",
+		"download and extraction", extractionTime,
+		"analysis", analysisTime,
+		"writing results", writingResultsTime,
+		"other", otherTime,
+		"total", totalTime)
 
 	return nil
 }
