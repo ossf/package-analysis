@@ -4,9 +4,10 @@ This example provides a simple way to spin up an end to end deployment of packag
 
 ## Running
 
+# Run the following commands from the top-level package analysis directory
+
 ```shell
-$ cd examples/e2e # must be run from the e2e folder
-$ docker-compose up -d
+$ docker-compose -f configs/e2e/docker-compose.yml up -d
 $ curl localhost:8080
 ```
 
@@ -24,11 +25,11 @@ using the following credentials for authentication:
 
 ## Logs Access
 
-`docker-compose logs -f feeds` will provide information on the packages which have been send downstream.
+`docker-compose -f configs/e2e/docker-compose.yml logs -f feeds` will provide information on the packages which have been send downstream.
 
-`docker-compose logs -f scheduler` will provide information on the packages which have been received and proxied onto the analysis workers.
+`docker-compose -f configs/e2e/docker-compose.yml logs -f scheduler` will provide information on the packages which have been received and proxied onto the analysis workers.
 
-`docker-compose logs -f analysis` provides too much stdout to be useful, outputs are sent to minio as mentioned above.
+`docker-compose -f configs/e2e/docker-compose.yml logs -f analysis` provides too much stdout to be useful, outputs are sent to minio as mentioned above.
 
 ## PubSub (Kafka) Inspection
 
@@ -45,17 +46,17 @@ Output from the Kafka PubSub topics can be inspected using
 
 ### Limitations
 
-- Locally built sandbox images are currently ignored.
+- Locally built sandbox images are ignored (see test/e2e directory for how to use local images)
 
 ### Feeds does not start (missing config)
 
-This can happen if `./config` is not world-readable. You will see the error message `open /config/feeds.yml: permission denied` in the feeds logs.
+This can happen if `configs/e2e/config` is not world-readable. You will see the error message `open /config/feeds.yml: permission denied` in the feeds logs.
 
-To fix simply run:
+To fix simply run the following commands from the top-level package analysis directory:
 
 ```shell
-$ chmod ugo+rx ./config
-$ chmod ugo+r ./config/feeds.yml
+$ chmod ugo+rx configs/e2e/config
+$ chmod ugo+r configs/e2e/config/feeds.yml
 ```
 
 ### Sandbox container is not starting (cgroups v2)
@@ -86,8 +87,7 @@ To build the necessary images yourself for the docker-compose, you can do the fo
 
 ```
 # In package-analysis
-cd build
-./build_docker.sh
+make docker_build_all
 
 # In package-feeds
 docker build . -t gcr.io/ossf-malware-analysis/scheduled-feeds:latest

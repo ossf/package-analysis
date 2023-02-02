@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/ossf/package-analysis/pkg/api"
 )
 
 type packagistJSON struct {
@@ -47,12 +49,12 @@ func getPackagistLatest(pkg string) (string, error) {
 }
 
 var packagistPkgManager = PkgManager{
-	ecosystem:     Packagist,
+	ecosystem:     api.EcosystemPackagist,
 	image:         "gcr.io/ossf-malware-analysis/packagist",
 	command:       "/usr/local/bin/analyze.php",
 	latestVersion: getPackagistLatest,
-	runPhases: []RunPhase{
-		Install,
-		Import,
+	runPhases: []api.RunPhase{
+		api.RunPhaseInstall,
+		api.RunPhaseImport,
 	},
 }

@@ -3,7 +3,6 @@ package js
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"math/big"
 	"os/exec"
 	"strings"
@@ -36,37 +35,35 @@ either by filename (jsFilePath) or piping jsSource to the program's stdin.
 If sourcePath is empty, sourceString will be parsed as JS code
 */
 func runParser(parserPath, jsFilePath, jsSource string) (string, error) {
-	var out []byte
-	var err error
+	nodeArgs := []string{parserPath}
 	if len(jsFilePath) > 0 {
-		cmd := exec.Command(parserPath, jsFilePath)
-		out, err = cmd.Output()
-	} else {
-		cmd := exec.Command(parserPath)
-		var pipe io.WriteCloser
-		pipe, err = cmd.StdinPipe()
-		if err == nil {
-			var bytesWritten int
-			//fmt.Printf("Writing %s\n", jsSource)
-			bytesWritten, err = pipe.Write([]byte(jsSource))
-			if err == nil && bytesWritten != len(jsSource) {
-				// couldn't write all data
-				err = fmt.Errorf("failed to pipe source string to parser (%d of %d bytes written)",
-					bytesWritten, len(jsSource))
-			}
-			//fmt.Printf("Wrote %d bytes\n", bytesWritten)
-			err = pipe.Close()
+		nodeArgs = append(nodeArgs, jsFilePath)
+	}
+
+	cmd := exec.Command("node", nodeArgs...)
+
+	if len(jsFilePath) == 0 {
+		// create a pipe to send the source code to the parser via stdin
+		pipe, pipeErr := cmd.StdinPipe()
+		if pipeErr != nil {
+			return "", fmt.Errorf("runParser failed to create pipe: %v", pipeErr)
 		}
-		if err == nil {
-			out, err = cmd.Output()
+
+		if _, pipeErr = pipe.Write([]byte(jsSource)); pipeErr != nil {
+			return "", fmt.Errorf("runParser failed to write source string to pipe: %w", pipeErr)
+		}
+
+		if pipeErr = pipe.Close(); pipeErr != nil {
+			return "", fmt.Errorf("runParser failed to close pipe: %w", pipeErr)
 		}
 	}
 
-	if err == nil {
-		return string(out), nil
+	out, err := cmd.Output()
+	if err != nil {
+		return "", err
 	}
 
-	return "", err
+	return string(out), nil
 }
 
 /*
@@ -79,10 +76,6 @@ If the input contains a syntax error (which could mean it's not actually JavaScr
 then a pointer to parsing.InvalidInput is returned.
 */
 func ParseJS(parserConfig ParserConfig, filePath string, sourceString string) (result parsing.ParseResult, parserOutput string, err error) {
-	if err != nil {
-		return
-	}
-
 	parserOutput, err = runParser(parserConfig.ParserPath, filePath, sourceString)
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {

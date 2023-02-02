@@ -1,10 +1,10 @@
 package worker
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/log"
@@ -12,18 +12,27 @@ import (
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/internal/staticanalysis"
 	"github.com/ossf/package-analysis/internal/utils"
+	"github.com/ossf/package-analysis/pkg/result"
 )
 
 const staticAnalysisImage = "gcr.io/ossf-malware-analysis/static-analysis"
 const staticAnalyzeBinary = "/usr/local/bin/staticanalyze"
 const resultsJSONFile = "/results.json"
 
-func RunStaticAnalyses(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option, tasks ...staticanalysis.Task) (json.RawMessage, analysis.Status, error) {
+/*
+RunStaticAnalyses performs sandboxed static analysis on the given package.
+Use sbOpts to customise sandbox behaviour.
+If len(tasks) > 0, only the specified static analysis tasks will be performed.
+Otherwise, all available tasks [staticanalysis.AllTasks()] will be performed.
+*/
+func RunStaticAnalyses(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option, tasks ...staticanalysis.Task) (result.StaticAnalysisResults, analysis.Status, error) {
 	if len(tasks) == 0 {
 		tasks = staticanalysis.AllTasks()
 	}
 
 	log.Info("Running static analysis tasks", "tasks", tasks)
+
+	startTime := time.Now()
 
 	analyses := utils.Transform(tasks, func(t staticanalysis.Task) string { return string(t) })
 
@@ -69,5 +78,16 @@ func RunStaticAnalyses(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option, tasks ...
 
 	log.Info("Got results", "length", len(resultsJSON))
 
-	return resultsJSON, analysis.StatusForRunResult(runResult), nil
+	status := analysis.StatusForRunResult(runResult)
+
+	totalTime := time.Since(startTime)
+	log.Info("Static analysis finished",
+		log.Label("ecosystem", pkg.EcosystemName()),
+		"name", pkg.Name(),
+		"version", pkg.Version(),
+		log.Label("result_status", string(status)),
+		"static_analysis_duration", totalTime,
+	)
+
+	return resultsJSON, status, nil
 }

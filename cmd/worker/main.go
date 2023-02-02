@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"os"
 	"path"
@@ -27,6 +26,8 @@ import (
 	"github.com/ossf/package-analysis/internal/resultstore"
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/internal/worker"
+	"github.com/ossf/package-analysis/pkg/api"
+	"github.com/ossf/package-analysis/pkg/result"
 )
 
 const (
@@ -37,7 +38,70 @@ const (
 	localPkgPathFmt = "/local/%s"
 )
 
-func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blob.Bucket, resultsBucket, fileWritesBucket, imageTag string, notificationTopic *pubsub.Topic) error {
+// resultBucketPaths holds bucket paths for the different types of results
+type resultBucketPaths struct {
+	dynamicAnalysis string
+	staticAnalysis  string
+	fileWrites      string
+}
+
+type sandboxImageSpec struct {
+	tag    string
+	noPull bool
+}
+
+func copyPackageToLocalFile(ctx context.Context, packagesBucket *blob.Bucket, bucketPath string) (string, *os.File, error) {
+	if packagesBucket == nil {
+		return "", nil, errors.New("packages bucket not set")
+	}
+
+	// Copy remote package path to temporary file.
+	r, err := packagesBucket.NewReader(ctx, bucketPath, nil)
+	if err != nil {
+		return "", nil, err
+	}
+	defer r.Close()
+
+	f, err := os.CreateTemp("", "")
+	if err != nil {
+		return "", nil, err
+	}
+
+	if _, err := io.Copy(f, r); err != nil {
+		return "", nil, err
+	}
+
+	if err := f.Close(); err != nil {
+		return "", nil, err
+	}
+
+	return fmt.Sprintf(localPkgPathFmt, path.Base(bucketPath)), f, nil
+}
+
+func saveResults(ctx context.Context, pkg *pkgecosystem.Pkg, dest resultBucketPaths, dynamicResults result.DynamicAnalysisResults, staticResults result.StaticAnalysisResults) error {
+	if dest.dynamicAnalysis != "" {
+		err := resultstore.New(dest.dynamicAnalysis, resultstore.ConstructPath()).Save(ctx, pkg, dynamicResults.StraceSummary)
+		if err != nil {
+			return fmt.Errorf("failed to upload to blobstore = %w", err)
+		}
+	}
+	if dest.staticAnalysis != "" {
+		err := resultstore.New(dest.staticAnalysis, resultstore.ConstructPath()).Save(ctx, pkg, staticResults)
+		if err != nil {
+			return fmt.Errorf("failed to upload static analysis results to blobstore = %w", err)
+		}
+	}
+	if dest.fileWrites != "" {
+		err := resultstore.New(dest.fileWrites, resultstore.ConstructPath()).Save(ctx, pkg, dynamicResults.FileWrites)
+		if err != nil {
+			return fmt.Errorf("failed to upload file write analysis to blobstore = %w", err)
+		}
+	}
+
+	return nil
+}
+
+func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blob.Bucket, resultsBuckets resultBucketPaths, imageSpec sandboxImageSpec, notificationTopic *pubsub.Topic) error {
 	name := msg.Metadata["name"]
 	if name == "" {
 		log.Warn("name is empty")
@@ -53,7 +117,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		return nil
 	}
 
-	manager := pkgecosystem.Manager(pkgecosystem.Ecosystem(ecosystem))
+	manager := pkgecosystem.Manager(api.Ecosystem(ecosystem))
 	if manager == nil {
 		log.Warn("Unsupported pkg manager",
 			log.Label("ecosystem", ecosystem),
@@ -63,46 +127,37 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	}
 
 	version := msg.Metadata["version"]
-	pkgPath := msg.Metadata["package_path"]
+	remotePkgPath := msg.Metadata["package_path"]
 
 	resultsBucketOverride := msg.Metadata["results_bucket_override"]
 	if resultsBucketOverride != "" {
-		resultsBucket = resultsBucketOverride
+		resultsBuckets.dynamicAnalysis = resultsBucketOverride
 	}
 
-	worker.LogRequest(ecosystem, name, version, pkgPath, resultsBucketOverride)
+	worker.LogRequest(ecosystem, name, version, remotePkgPath, resultsBucketOverride)
 
 	localPkgPath := ""
-	sbOpts := worker.DefaultSandboxOptions(analysis.Dynamic, imageTag)
+	dynamicSandboxOpts := worker.DefaultSandboxOptions(analysis.Dynamic, imageSpec.tag)
+	staticSandboxOpts := worker.DefaultSandboxOptions(analysis.Static, imageSpec.tag)
 
-	if pkgPath != "" {
-		if packagesBucket == nil {
-			return errors.New("packages bucket not set")
-		}
-
-		// Copy remote package path to temporary file.
-		r, err := packagesBucket.NewReader(ctx, pkgPath, nil)
+	if remotePkgPath != "" {
+		tmpPkgPath, pkgFile, err := copyPackageToLocalFile(ctx, packagesBucket, remotePkgPath)
 		if err != nil {
 			return err
 		}
-		defer r.Close()
 
-		f, err := ioutil.TempFile("", "")
-		if err != nil {
-			return err
-		}
-		defer os.Remove(f.Name())
+		defer os.Remove(pkgFile.Name())
 
-		if _, err := io.Copy(f, r); err != nil {
-			return err
-		}
+		localPkgPath = tmpPkgPath
+		mountOption := sandbox.Volume(pkgFile.Name(), localPkgPath)
+		// mount temp file into the sandboxes
+		dynamicSandboxOpts = append(dynamicSandboxOpts, mountOption)
+		staticSandboxOpts = append(staticSandboxOpts, mountOption)
+	}
 
-		if err := f.Close(); err != nil {
-			return err
-		}
-
-		localPkgPath = fmt.Sprintf(localPkgPathFmt, path.Base(pkgPath))
-		sbOpts = append(sbOpts, sandbox.Volume(f.Name(), localPkgPath))
+	if imageSpec.noPull {
+		dynamicSandboxOpts = append(dynamicSandboxOpts, sandbox.NoPull())
+		staticSandboxOpts = append(staticSandboxOpts, sandbox.NoPull())
 	}
 
 	pkg, err := worker.ResolvePkg(manager, name, version, localPkgPath)
@@ -114,21 +169,16 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		return err
 	}
 
-	results, _, _, err := worker.RunDynamicAnalysis(pkg, sbOpts)
+	results, _, _, err := worker.RunDynamicAnalysis(pkg, dynamicSandboxOpts)
 	if err != nil {
 		return err
 	}
 
-	if resultsBucket != "" {
-		err := resultstore.New(resultsBucket, resultstore.ConstructPath()).Save(ctx, pkg, results.StraceSummary)
+	var staticResults result.StaticAnalysisResults
+	if resultsBuckets.staticAnalysis != "" {
+		staticResults, _, err = worker.RunStaticAnalyses(pkg, staticSandboxOpts)
 		if err != nil {
-			return fmt.Errorf("failed to upload to blobstore = %w", err)
-		}
-	}
-	if fileWritesBucket != "" {
-		err := resultstore.New(fileWritesBucket, resultstore.ConstructPath()).Save(ctx, pkg, results.FileWrites)
-		if err != nil {
-			return fmt.Errorf("failed to upload file write analysis to blobstore = %w", err)
+			return err
 		}
 		for _, writeBuffer := range results.FileWriteBuffers {
 			writeBufferErr := resultstore.New(fileWritesBucket, resultstore.ConstructPath()).SaveWriteBuffer(ctx, pkg, writeBuffer, utils.GetSHA256Hash(writeBuffer))
@@ -137,6 +187,8 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 			}
 		}
 	}
+
+	err = saveResults(ctx, pkg, resultsBuckets, results, staticResults)
 
 	if notificationTopic != nil {
 		err := notification.PublishAnalysisCompletion(ctx, notificationTopic, name, version, ecosystem)
@@ -149,7 +201,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	return nil
 }
 
-func messageLoop(ctx context.Context, subURL, packagesBucket, resultsBucket, fileWritesBucket, imageTag, notificationTopicURL string) error {
+func messageLoop(ctx context.Context, subURL, packagesBucket, notificationTopicURL string, imageSpec sandboxImageSpec, resultsBuckets resultBucketPaths) error {
 	sub, err := pubsub.OpenSubscription(ctx, subURL)
 	if err != nil {
 		return err
@@ -186,7 +238,7 @@ func messageLoop(ctx context.Context, subURL, packagesBucket, resultsBucket, fil
 			return fmt.Errorf("error receiving message: %w", err)
 		}
 
-		if err := handleMessage(ctx, msg, pkgsBkt, resultsBucket, fileWritesBucket, imageTag, notificationTopic); err != nil {
+		if err := handleMessage(ctx, msg, pkgsBkt, resultsBuckets, imageSpec, notificationTopic); err != nil {
 			log.Error("Failed to process message",
 				"error", err)
 		}
@@ -198,10 +250,19 @@ func main() {
 	ctx := context.Background()
 	subURL := os.Getenv("OSSMALWARE_WORKER_SUBSCRIPTION")
 	packagesBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_PACKAGES")
-	resultsBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS")
-	fileWritesBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_FILE_WRITE_RESULTS")
-	imageTag := os.Getenv("OSSF_SANDBOX_IMAGE_TAG")
 	notificationTopicURL := os.Getenv("OSSF_MALWARE_NOTIFICATION_TOPIC")
+
+	resultsBuckets := resultBucketPaths{
+		dynamicAnalysis: os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS"),
+		staticAnalysis:  os.Getenv("OSSF_MALWARE_STATIC_ANALYSIS_RESULTS"),
+		fileWrites:      os.Getenv("OSSF_MALWARE_ANALYSIS_FILE_WRITE_RESULTS"),
+	}
+
+	imageSpec := sandboxImageSpec{
+		tag:    os.Getenv("OSSF_SANDBOX_IMAGE_TAG"),
+		noPull: os.Getenv("OSSF_SANDBOX_NOPULL") != "",
+	}
+
 	log.Initialize(os.Getenv("LOGGER_ENV"))
 	sandbox.InitNetwork()
 
@@ -209,13 +270,15 @@ func main() {
 	log.Info("Starting worker",
 		log.Label("subscription", subURL),
 		log.Label("package_bucket", packagesBucket),
-		log.Label("results_bucket", resultsBucket),
-		log.Label("file_write_results_bucket", fileWritesBucket),
-		log.Label("image_tag", imageTag),
+		log.Label("results_bucket", resultsBuckets.dynamicAnalysis),
+		log.Label("static_results_bucket", resultsBuckets.staticAnalysis),
+		log.Label("file_write_results_bucket", resultsBuckets.fileWrites),
+		log.Label("image_tag", imageSpec.tag),
+		log.Label("image_nopull", fmt.Sprintf("%v", imageSpec.noPull)),
 		log.Label("topic_notification", notificationTopicURL))
 
 	for {
-		err := messageLoop(ctx, subURL, packagesBucket, resultsBucket, fileWritesBucket, imageTag, notificationTopicURL)
+		err := messageLoop(ctx, subURL, packagesBucket, notificationTopicURL, imageSpec, resultsBuckets)
 		if err != nil {
 			if retryCount++; retryCount >= maxRetries {
 				log.Error("Retries exceeded",

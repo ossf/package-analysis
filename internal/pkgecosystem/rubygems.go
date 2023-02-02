@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/ossf/package-analysis/pkg/api"
 )
 
 type rubygemsJSON struct {
@@ -28,12 +30,12 @@ func getRubyGemsLatest(pkg string) (string, error) {
 }
 
 var rubygemsPkgManager = PkgManager{
-	ecosystem:     RubyGems,
+	ecosystem:     api.EcosystemRubyGems,
 	image:         "gcr.io/ossf-malware-analysis/ruby",
 	command:       "/usr/local/bin/analyze.rb",
 	latestVersion: getRubyGemsLatest,
-	runPhases: []RunPhase{
-		Install,
-		Import,
+	runPhases: []api.RunPhase{
+		api.RunPhaseInstall,
+		api.RunPhaseImport,
 	},
 }

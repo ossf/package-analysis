@@ -15,6 +15,7 @@ import (
 	"github.com/ossf/package-analysis/internal/staticanalysis"
 	"github.com/ossf/package-analysis/internal/utils"
 	"github.com/ossf/package-analysis/internal/worker"
+	"github.com/ossf/package-analysis/pkg/api"
 )
 
 var (
@@ -164,7 +165,7 @@ func main() {
 		return
 	}
 
-	manager := pkgecosystem.Manager(pkgecosystem.Ecosystem(*ecosystem))
+	manager := pkgecosystem.Manager(api.Ecosystem(*ecosystem))
 	if manager == nil {
 		log.Panic("Unsupported pkg manager",
 			log.Label("ecosystem", *ecosystem))

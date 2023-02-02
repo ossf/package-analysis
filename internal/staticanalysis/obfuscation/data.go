@@ -95,10 +95,18 @@ type AnalysisResult struct {
 	// parsers encountered syntax errors when analysing the file.
 	ExcludedFiles []string
 
-	// FileSizes is a map from file name to size in bytes, and
-	// is populated with data from all files in the package,
-	// regardless of whether they were included in the analysis.
+	// The maps below contain data on all files in the package,
+	// regardless of whether they were included in analysis.
+
+	// FileSizes maps file names to file sizes in bytes.
 	FileSizes map[string]int64
+
+	// FileHashes maps file names to SHA256 hashes of the files.
+	FileHashes map[string]string
+
+	// FileTypes maps file names to the output of the `file`
+	// command run on that file
+	FileTypes map[string]string
 }
 
 func (rd FileData) String() string {

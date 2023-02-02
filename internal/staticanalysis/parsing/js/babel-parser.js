@@ -1,6 +1,6 @@
-#!/usr/bin/env node
 // eslint no-var: 0
 // jshint esversion: 6
+// jshint node: true
 "use strict";
 
 import fs from "fs";

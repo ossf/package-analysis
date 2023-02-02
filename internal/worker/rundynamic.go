@@ -1,11 +1,14 @@
 package worker
 
 import (
+	"time"
+
 	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/dynamicanalysis"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 	"github.com/ossf/package-analysis/internal/sandbox"
+	"github.com/ossf/package-analysis/pkg/api"
 	"github.com/ossf/package-analysis/pkg/result"
 )
 
@@ -32,7 +35,7 @@ error: Any error that occurred in the runtime/sandbox infrastructure.
 This does not include errors caused by the package under analysis.
 */
 
-func RunDynamicAnalysis(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option) (result.DynamicAnalysisResults, pkgecosystem.RunPhase, analysis.Status, error) {
+func RunDynamicAnalysis(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option) (result.DynamicAnalysisResults, api.RunPhase, analysis.Status, error) {
 	results := result.DynamicAnalysisResults{
 		StraceSummary: make(result.DynamicAnalysisStraceSummary),
 		FileWrites:    make(result.DynamicAnalysisFileWrites),
@@ -46,12 +49,23 @@ func RunDynamicAnalysis(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option) (result.
 		}
 	}()
 
-	var lastRunPhase pkgecosystem.RunPhase
+	var lastRunPhase api.RunPhase
 	var lastStatus analysis.Status
 	var lastError error
 	for _, phase := range pkg.Manager().RunPhases() {
-		result, err := dynamicanalysis.Run(sb, pkg.Command(phase))
+		startTime := time.Now()
+		phaseResult, err := dynamicanalysis.Run(sb, pkg.Command(phase))
 		lastRunPhase = phase
+
+		runDuration := time.Since(startTime)
+		log.Info("Dynamic analysis phase finished",
+			log.Label("ecosystem", pkg.EcosystemName()),
+			"name", pkg.Name(),
+			"version", pkg.Version(),
+			log.Label("phase", string(phase)),
+			"error", err,
+			"dynamic_analysis_phase_duration", runDuration,
+		)
 
 		if err != nil {
 			// Error when trying to actually run; don't record the result for this phase
@@ -61,10 +75,10 @@ func RunDynamicAnalysis(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option) (result.
 			break
 		}
 
-		results.StraceSummary[phase] = &result.StraceSummary
-		results.FileWrites[phase] = &result.FileWrites
-		results.FileWriteBuffers = append(results.FileWriteBuffers, result.FileWriteBuffers...)
-		lastStatus = result.StraceSummary.Status
+		results.StraceSummary[phase] = &phaseResult.StraceSummary
+		results.FileWrites[phase] = &phaseResult.FileWrites
+		lastStatus = phaseResult.StraceSummary.Status
+		results.FileWriteBuffers = append(results.FileWriteBuffers, phaseResult.FileWriteBuffers...)
 
 		if lastStatus != analysis.StatusCompleted {
 			// Error caused by an issue with the package (probably).

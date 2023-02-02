@@ -3,6 +3,8 @@ package pkgecosystem
 import (
 	"os"
 	"testing"
+
+	"github.com/ossf/package-analysis/pkg/api"
 )
 
 type downloadTestSpec struct {
@@ -57,7 +59,7 @@ func TestDownloadNpmArchive(t *testing.T) {
 		{"pkgname=(invalid)", "fr(2t5j923)", "latest", true},
 	}
 
-	testDownload(t, tests, Manager(NPM))
+	testDownload(t, tests, Manager(api.EcosystemNPM))
 }
 
 func TestDownloadPyPIArchive(t *testing.T) {
@@ -67,7 +69,7 @@ func TestDownloadPyPIArchive(t *testing.T) {
 		{"pkgname=(invalid)", "fr(2t5j923)", "123", true},
 	}
 
-	testDownload(t, tests, Manager(PyPI))
+	testDownload(t, tests, Manager(api.EcosystemPyPI))
 }
 
 func TestDownloadToDirectory(t *testing.T) {
