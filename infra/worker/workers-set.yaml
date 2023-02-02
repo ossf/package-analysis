@@ -25,8 +25,8 @@ spec:
           value: gcppubsub://projects/ossf-malware-analysis/subscriptions/workers
         - name: OSSF_MALWARE_ANALYSIS_RESULTS
           value: gs://ossf-malware-analysis-results
-        - name: OSSF_MALWARE_STATIC_ANALYSIS_RESULTS
-          value: gs://ossf-malware-static-analysis-results
+#       - name: OSSF_MALWARE_STATIC_ANALYSIS_RESULTS
+#         value: gs://ossf-malware-static-analysis-results
         - name: OSSF_MALWARE_ANALYSIS_FILE_WRITE_RESULTS
           value: gs://ossf-malware-analysis-file-write-results
         - name: LOGGER_ENV
