@@ -2,7 +2,6 @@ package worker
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/ossf/package-analysis/internal/analysis"
@@ -60,12 +59,12 @@ func RunDynamicAnalysis(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option) (result.
 
 		runDuration := time.Since(startTime)
 		log.Info("Dynamic analysis phase finished",
-			log.Label("ecosystem", pkg.EcosystemName()),
-			log.Label("name", pkg.Name()),
-			log.Label("version", pkg.Version()),
-			log.Label("phase", string(phase)),
-			log.Label("error", strconv.FormatBool(err != nil)),
-			log.Label("dynamic_analysis_phase_duration_sec", fmt.Sprintf("%.1f", runDuration.Seconds())),
+			"ecosystem", pkg.EcosystemName(),
+			"name", pkg.Name(),
+			"version", pkg.Version(),
+			"phase", string(phase),
+			"error", err,
+			"dynamic_analysis_phase_duration_sec", fmt.Sprintf("%.1f", runDuration.Seconds()),
 		)
 
 		if err != nil {

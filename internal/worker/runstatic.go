@@ -82,11 +82,11 @@ func RunStaticAnalyses(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option, tasks ...
 
 	totalTime := time.Since(startTime)
 	log.Info("Static analysis finished",
-		log.Label("ecosystem", pkg.EcosystemName()),
-		log.Label("name", pkg.Name()),
-		log.Label("version", pkg.Version()),
-		log.Label("status", string(status)),
-		log.Label("static_analysis_duration_sec", fmt.Sprintf("%.1f", totalTime.Seconds())),
+		"ecosystem", pkg.EcosystemName(),
+		"name", pkg.Name(),
+		"version", pkg.Version(),
+		"status", string(status),
+		"static_analysis_duration_sec", fmt.Sprintf("%.1f", totalTime.Seconds()),
 	)
 
 	return resultsJSON, status, nil

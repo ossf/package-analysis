@@ -202,12 +202,12 @@ func run() (err error) {
 	}
 
 	log.Info("Static analysis launched",
-		log.Label("ecosystem", *ecosystem),
-		log.Label("package", *packageName),
-		log.Label("version", *version),
-		log.Label("local_path", *localFile),
-		log.Label("output_file", *output),
-		log.Label("analyses", strings.Join(uniqueAnalyses, ",")))
+		"ecosystem", *ecosystem,
+		"package", *packageName,
+		"version", *version,
+		"local_path", *localFile,
+		"output_file", *output,
+		"analyses", strings.Join(uniqueAnalyses, ","))
 
 	workDirs, err := makeWorkDirs()
 	if err != nil {
@@ -280,11 +280,11 @@ func run() (err error) {
 	otherTime := totalTime - writingResultsTime - analysisTime - extractionTime
 
 	log.Info("Execution times (s)",
-		log.Label("extraction", extractionTime.String()),
-		log.Label("analysis", analysisTime.String()),
-		log.Label("writing results", writingResultsTime.String()),
-		log.Label("other", otherTime.String()),
-		log.Label("total", totalTime.String()))
+		"extraction", extractionTime.String(),
+		"analysis", analysisTime.String(),
+		"writing results", writingResultsTime.String(),
+		"other", otherTime.String(),
+		"total", totalTime.String())
 
 	return nil
 }
