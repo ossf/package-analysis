@@ -202,12 +202,12 @@ func run() (err error) {
 	}
 
 	log.Info("Static analysis launched",
-		"ecosystem", *ecosystem,
+		log.Label("ecosystem", *ecosystem),
 		"package", *packageName,
 		"version", *version,
 		"local_path", *localFile,
 		"output_file", *output,
-		"analyses", strings.Join(uniqueAnalyses, ","))
+		"analyses", uniqueAnalyses)
 
 	workDirs, err := makeWorkDirs()
 	if err != nil {

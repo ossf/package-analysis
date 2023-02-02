@@ -59,10 +59,10 @@ func RunDynamicAnalysis(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option) (result.
 
 		runDuration := time.Since(startTime)
 		log.Info("Dynamic analysis phase finished",
-			"ecosystem", pkg.EcosystemName(),
+			log.Label("ecosystem", pkg.EcosystemName()),
 			"name", pkg.Name(),
 			"version", pkg.Version(),
-			"phase", string(phase),
+			log.Label("phase", string(phase)),
 			"error", err,
 			"dynamic_analysis_phase_duration_sec", fmt.Sprintf("%.1f", runDuration.Seconds()),
 		)
