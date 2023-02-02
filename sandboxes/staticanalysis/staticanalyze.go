@@ -279,7 +279,7 @@ func run() (err error) {
 	totalTime := time.Since(startTime)
 	otherTime := totalTime - writingResultsTime - analysisTime - extractionTime
 
-	log.Info("Execution times (s)",
+	log.Info("Execution times",
 		"download and extraction", extractionTime,
 		"analysis", analysisTime,
 		"writing results", writingResultsTime,
