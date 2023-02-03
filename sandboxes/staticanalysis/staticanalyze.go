@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -16,8 +15,7 @@ import (
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 	"github.com/ossf/package-analysis/internal/staticanalysis"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation"
-	"github.com/ossf/package-analysis/internal/staticanalysis/parsing/js"
-	"github.com/ossf/package-analysis/internal/utils"
+	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"github.com/ossf/package-analysis/internal/worker"
 	"github.com/ossf/package-analysis/pkg/api"
 )
@@ -29,7 +27,6 @@ var (
 	localFile   = flag.String("local", "", "Local package archive containing package to be analysed. Name must match -package argument")
 	output      = flag.String("output", "", "where to write output JSON results (default stdout)")
 	help        = flag.Bool("help", false, "Prints this help and list of available analyses")
-	analyses    = utils.CommaSeparatedFlags("analyses", "", "comma-separated list of static analyses to perform")
 )
 
 type workDirs struct {
@@ -47,90 +44,43 @@ func (wd *workDirs) cleanup() {
 
 const jsParserDirName = "jsparser"
 
-func checkAnalyses(names []string) ([]staticanalysis.Task, error) {
-	var tasks []staticanalysis.Task
-	for _, name := range names {
-		task, ok := staticanalysis.TaskFromString(name)
-		if !ok {
-			return nil, fmt.Errorf("unrecognised static analysis task: %s", name)
-		}
-		tasks = append(tasks, task)
-	}
-	return tasks, nil
-}
-
-func printAnalyses() {
-	fmt.Fprintln(os.Stderr, "Available analyses are:")
-	for _, task := range staticanalysis.AllTasks() {
-		fmt.Fprintln(os.Stderr, task)
-	}
-}
-
-func doObfuscationDetection(workDirs workDirs) (*obfuscation.AnalysisResult, error) {
-	jsParserConfig, err := js.InitParser(path.Join(workDirs.parserDir, jsParserDirName))
-	if err != nil {
-		return nil, fmt.Errorf("failed to init JS parser: %v", err)
+func doStaticAnalysis(d workDirs) (*staticanalysis.Result, error) {
+	jsParserConfig, parserInitErr := parsing.InitParser(path.Join(d.parserDir, jsParserDirName))
+	if parserInitErr != nil {
+		log.Error("failed to init JS parser", "error", parserInitErr)
 	}
 
-	if err != nil {
-		return nil, err
+	result := &staticanalysis.Result{
+		BasicData:   map[string]staticanalysis.BasicFileData{},
+		ParseData:   map[string]parsing.Result{},
+		Obfuscation: nil,
 	}
 
-	result := &obfuscation.AnalysisResult{
-		FileData:      map[string]obfuscation.FileData{},
-		FileSignals:   map[string]obfuscation.FileSignals{},
-		ExcludedFiles: []string{},
-		FileSizes:     map[string]int64{},
-		FileHashes:    map[string]string{},
-		FileTypes:     map[string]string{},
-	}
-	err = filepath.WalkDir(workDirs.extractDir, func(path string, f fs.DirEntry, err error) error {
+	walkErr := filepath.WalkDir(d.extractDir, func(path string, f fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if f.Type().IsRegular() {
-			pathInArchive := strings.TrimPrefix(path, workDirs.extractDir+string(os.PathSeparator))
+			pathInArchive := strings.TrimPrefix(path, d.extractDir+string(os.PathSeparator))
 			log.Info("Processing " + pathInArchive)
-			// file size
-			if fileInfo, err := f.Info(); err != nil {
-				result.FileSizes[pathInArchive] = -1 // error value
+
+			result.BasicData[pathInArchive] = staticanalysis.GetBasicFileData(path, pathInArchive)
+
+			parseData, parseErr := parsing.ParseSingle(jsParserConfig, path, "", false)
+			if parseErr != nil {
+				log.Error("Error parsing file", "filename", pathInArchive, "error", parseErr)
+				result.ParseData[pathInArchive] = nil
 			} else {
-				result.FileSizes[pathInArchive] = fileInfo.Size()
-			}
-			// file hash
-			if hash, err := utils.HashFile(path); err != nil {
-				log.Error("Error hashing file", "path", pathInArchive, "error", err)
-			} else {
-				result.FileHashes[pathInArchive] = hash
-			}
-			// file type
-			cmd := exec.Command("file", "--brief", path)
-			if fileCmdOutput, err := cmd.Output(); err != nil {
-				log.Error("Error running file command", "path", pathInArchive, "error", err)
-			} else {
-				result.FileTypes[pathInArchive] = strings.TrimSpace(string(fileCmdOutput))
-			}
-			// obfuscation
-			rawData, err := obfuscation.CollectData(jsParserConfig, path, "", false)
-			if err != nil {
-				log.Error("Error parsing file", "filename", pathInArchive, "error", err)
-				result.ExcludedFiles = append(result.ExcludedFiles, pathInArchive)
-			} else if rawData == nil {
-				// syntax error - could not parse file
-				result.ExcludedFiles = append(result.ExcludedFiles, pathInArchive)
-			} else {
-				// rawData != nil, err == nil
-				result.FileData[pathInArchive] = *rawData
-				signals := obfuscation.ComputeSignals(*rawData)
-				obfuscation.RemoveNaNs(&signals)
-				result.FileSignals[pathInArchive] = signals
+				result.ParseData[pathInArchive] = parseData
 			}
 		}
 		return nil
 	})
-	if err != nil {
-		return nil, fmt.Errorf("error while walking package files: %v", err)
+	if walkErr != nil {
+		return nil, fmt.Errorf("error while walking package files: %w", walkErr)
 	}
+
+	result.Obfuscation = obfuscation.ComputeResult(result.ParseData)
 
 	return result, nil
 }
@@ -169,13 +119,10 @@ func run() (err error) {
 	startTime := time.Now()
 
 	log.Initialize(os.Getenv("LOGGER_ENV"))
-	analyses.InitFlag()
 	flag.Parse()
 
 	if len(os.Args) == 1 || *help == true {
 		flag.Usage()
-		fmt.Fprintln(os.Stderr, "")
-		printAnalyses()
 		return
 	}
 
@@ -194,21 +141,12 @@ func run() (err error) {
 		return fmt.Errorf("package error: %v", err)
 	}
 
-	uniqueAnalyses := utils.RemoveDuplicates(analyses.Values)
-	analysisTasks, err := checkAnalyses(uniqueAnalyses)
-
-	if err != nil {
-		printAnalyses()
-		return err
-	}
-
 	log.Info("Static analysis launched",
 		log.Label("ecosystem", *ecosystem),
 		"package", *packageName,
 		"version", *version,
 		"local_path", *localFile,
-		"output_file", *output,
-		"analyses", uniqueAnalyses)
+		"output_file", *output)
 
 	workDirs, err := makeWorkDirs()
 	if err != nil {
@@ -235,19 +173,7 @@ func run() (err error) {
 	extractionTime := time.Since(startExtractionTime)
 
 	startAnalysisTime := time.Now()
-	results := make(staticanalysis.Result)
-	for _, task := range analysisTasks {
-		switch task {
-		case staticanalysis.ObfuscationDetection:
-			analysisResult, err := doObfuscationDetection(workDirs)
-			if err != nil {
-				log.Error("Error occurred during obfuscation detection", "error", err)
-			}
-			results[staticanalysis.ObfuscationDetection] = analysisResult
-		default:
-			return fmt.Errorf("static analysis task not implemented: %s", task)
-		}
-	}
+	results, err := doStaticAnalysis(workDirs)
 	analysisTime := time.Since(startAnalysisTime)
 
 	startWritingResultsTime := time.Now()

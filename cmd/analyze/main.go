@@ -12,7 +12,6 @@ import (
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 	"github.com/ossf/package-analysis/internal/resultstore"
 	"github.com/ossf/package-analysis/internal/sandbox"
-	"github.com/ossf/package-analysis/internal/staticanalysis"
 	"github.com/ossf/package-analysis/internal/utils"
 	"github.com/ossf/package-analysis/internal/worker"
 	"github.com/ossf/package-analysis/pkg/api"
@@ -121,7 +120,7 @@ func staticAnalysis(pkg *pkgecosystem.Pkg) {
 
 	sbOpts := makeSandboxOptions(analysis.Static)
 
-	results, status, err := worker.RunStaticAnalyses(pkg, sbOpts, staticanalysis.ObfuscationDetection)
+	results, status, err := worker.RunStaticAnalyses(pkg, sbOpts)
 	if err != nil {
 		log.Fatal("Static analysis aborted", "error", err)
 	}
