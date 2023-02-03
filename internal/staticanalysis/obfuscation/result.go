@@ -8,9 +8,9 @@ import (
 // Result holds all data produced by obfuscation analysis (see Analyze() in analyze.go)
 type Result struct {
 	// SuspiciousFiles lists all files in the package that are suspected to contain
-	// obfuscated code. This should be treated not as an absolute determination but
-	// more of a flag for human review.
-	SuspiciousFiles []string `json:"suspicious_files"`
+	// obfuscated code, along with the reason why they were flagged as suspicious.
+	// This should be considered as a flag for review instead of an absolute determination
+	SuspiciousFiles map[string]string `json:"suspicious_files"`
 
 	// ExcludedFiles is a list of package files that were excluded from analysis,
 	// e.g. because they could not be parsed by any supported parser
