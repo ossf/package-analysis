@@ -244,49 +244,19 @@ console.log(Rectangle.name);
 		},
 	},
 	{
-		name: "test class definition",
+		name: "test use strict",
 		inputJs: `
-// unnamed
-let Rectangle = class {
-    constructor(height, width) {
-        this.height = height;
-        this.width = width;
-    }
-};
-console.log(Rectangle.name);
-// output: "Rectangle"
-
-// named
-Rectangle = class Rectangle2 {
-    #test = false;
-    constructor(height, width) {
-        this.height = height;
-        this.width = width;
-    }
-};
-console.log(Rectangle.name);
-// output: "Rectangle2"
+'use strict';
+console.log("Hello");
 `,
 		want: parsing.ParseResult{
 			Identifiers: []parsing.ParsedIdentifier{
-				{token.Variable, "Rectangle", token.Position{3, 4}},
-				{token.Parameter, "height", token.Position{4, 16}},
-				{token.Parameter, "width", token.Position{4, 24}},
-				{token.Member, "height", token.Position{5, 13}},
-				{token.Member, "width", token.Position{6, 13}},
-				{token.Member, "log", token.Position{9, 8}},
-				{token.Member, "name", token.Position{9, 22}},
-				//{Variable, "Rectangle", Position{4, 22}},
-				{token.Class, "Rectangle2", token.Position{13, 18}},
-				{token.Property, "test", token.Position{14, 5}},
-				{token.Parameter, "height", token.Position{15, 16}},
-				{token.Parameter, "width", token.Position{15, 24}},
-				{token.Member, "height", token.Position{16, 13}},
-				{token.Member, "width", token.Position{17, 13}},
-				{token.Member, "log", token.Position{20, 8}},
-				{token.Member, "name", token.Position{20, 22}},
+				{token.Member, "log", token.Position{3, 8}},
 			},
-			Literals: []parsing.ParsedLiteral[any]{},
+			Literals: []parsing.ParsedLiteral[any]{
+				{"String", "string", "use strict", `'use strict'`, false, token.Position{2, 0}},
+				{"String", "string", "Hello", `"Hello"`, false, token.Position{3, 12}},
+			},
 		},
 	},
 	{
@@ -382,23 +352,6 @@ let d = 0b11101001010101010101n; // 955733
 			},
 		},
 		printJson: false,
-	},
-}
-
-var test6 = jsTestCase{
-	name: "test use strict",
-	inputJs: `
-'use strict';
-console.log("Hello");
-`,
-	want: parsing.ParseResult{
-		Identifiers: []parsing.ParsedIdentifier{
-			{token.Member, "log", token.Position{3, 8}},
-		},
-		Literals: []parsing.ParsedLiteral[any]{
-			{"String", "string", "use strict", `'use strict'`, false, token.Position{2, 0}},
-			{"String", "string", "Hello", `"Hello"`, false, token.Position{3, 12}},
-		},
 	},
 }
 
