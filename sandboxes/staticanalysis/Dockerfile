@@ -29,8 +29,7 @@ COPY --from=build /src/sandboxes/staticanalysis/staticanalyze /usr/local/bin/sta
 RUN chmod 755 /usr/local/bin/staticanalyze
 
 RUN mkdir /npm_deps
-COPY --from=build /src/internal/staticanalysis/parsing/js/package.json /npm_deps
-COPY --from=build /src/internal/staticanalysis/parsing/js/package-lock.json /npm_deps
+COPY --from=build /src/internal/staticanalysis/parsing/package.json /src/internal/staticanalysis/parsing/package-lock.json /npm_deps/
 
 # cache NPM installs in /npm_cache so that static analysis binary can use them
 RUN mkdir -m 755 /npm_cache && \

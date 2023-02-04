@@ -1,4 +1,4 @@
-package js
+package parsing
 
 import (
 	"encoding/json"
@@ -8,17 +8,16 @@ import (
 	"strings"
 
 	"github.com/ossf/package-analysis/internal/log"
-	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
 
 // parserOutputElement represents the output JSON format of the JS parser
 type parserOutputElement struct {
-	SymbolType    parsing.SymbolType `json:"type"`
-	SymbolSubtype string             `json:"subtype"`
-	Data          any                `json:"data"`
-	Pos           [2]int             `json:"pos"`
-	Extra         map[string]any     `json:"extra"`
+	SymbolType    SymbolType     `json:"type"`
+	SymbolSubtype string         `json:"subtype"`
+	Data          any            `json:"data"`
+	Pos           [2]int         `json:"pos"`
+	Extra         map[string]any `json:"extra"`
 }
 
 /*
@@ -75,12 +74,12 @@ parserConfig specifies options relevant to the parser itself, and is produced by
 If the input contains a syntax error (which could mean it's not actually JavaScript),
 then a pointer to parsing.InvalidInput is returned.
 */
-func ParseJS(parserConfig ParserConfig, filePath string, sourceString string) (result parsing.ParseResult, parserOutput string, err error) {
+func ParseJS(parserConfig ParserConfig, filePath string, sourceString string) (result ParseResult, parserOutput string, err error) {
 	parserOutput, err = runParser(parserConfig.ParserPath, filePath, sourceString)
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			if exitErr.ExitCode() == syntaxErrorExitCode {
-				return parsing.InvalidInput, "", nil
+				return InvalidInput, "", nil
 			}
 			parserOutput = string(exitErr.Stderr)
 		}
@@ -100,18 +99,18 @@ func ParseJS(parserConfig ParserConfig, filePath string, sourceString string) (r
 	// convert the elements into more natural data structure
 	for _, element := range storage {
 		switch element.SymbolType {
-		case parsing.Identifier:
+		case Identifier:
 			symbolSubtype := token.CheckIdentifierType(element.SymbolSubtype)
 			if symbolSubtype == token.Other || symbolSubtype == token.Unknown {
 				break
 			}
-			result.Identifiers = append(result.Identifiers, parsing.ParsedIdentifier{
+			result.Identifiers = append(result.Identifiers, ParsedIdentifier{
 				Type: token.CheckIdentifierType(element.SymbolSubtype),
 				Name: element.Data.(string),
 				Pos:  element.Pos,
 			})
-		case parsing.Literal:
-			literal := parsing.ParsedLiteral[any]{
+		case Literal:
+			literal := ParsedLiteral[any]{
 				Type:     element.SymbolSubtype,
 				GoType:   fmt.Sprintf("%T", element.Data),
 				Value:    element.Data,
@@ -130,15 +129,15 @@ func ParseJS(parserConfig ParserConfig, filePath string, sourceString string) (r
 				}
 			}
 			result.Literals = append(result.Literals, literal)
-		case parsing.Comment:
-			result.Comments = append(result.Comments, parsing.ParsedComment{
+		case Comment:
+			result.Comments = append(result.Comments, ParsedComment{
 				Type: element.SymbolSubtype,
 				Data: element.Data.(string),
 				Pos:  element.Pos,
 			})
-		case parsing.Info:
+		case Info:
 			fallthrough
-		case parsing.Error:
+		case Error:
 			// ignore for now
 		default:
 			log.Warn(fmt.Sprintf("ParseJS: unrecognised symbol type %s", element.SymbolType))

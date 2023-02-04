@@ -16,7 +16,7 @@ import (
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 	"github.com/ossf/package-analysis/internal/staticanalysis"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation"
-	"github.com/ossf/package-analysis/internal/staticanalysis/parsing/js"
+	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"github.com/ossf/package-analysis/internal/utils"
 	"github.com/ossf/package-analysis/internal/worker"
 	"github.com/ossf/package-analysis/pkg/api"
@@ -67,7 +67,7 @@ func printAnalyses() {
 }
 
 func doObfuscationDetection(workDirs workDirs) (*obfuscation.AnalysisResult, error) {
-	jsParserConfig, err := js.InitParser(path.Join(workDirs.parserDir, jsParserDirName))
+	jsParserConfig, err := parsing.InitParser(path.Join(workDirs.parserDir, jsParserDirName))
 	if err != nil {
 		return nil, fmt.Errorf("failed to init JS parser: %v", err)
 	}

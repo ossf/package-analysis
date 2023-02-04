@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/ossf/package-analysis/internal/staticanalysis/linelengths"
-	"github.com/ossf/package-analysis/internal/staticanalysis/parsing/js"
+	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
 
@@ -26,8 +26,8 @@ In Javascript, there is little distinction between integer and floating point li
 all parsed as floating point. This function will record a numeric literal as an integer if it can be
 converted to an integer using strconv.Atoi(), otherwise it will be recorded as a floating point literal.
 */
-func CollectData(parserConfig js.ParserConfig, jsSourceFile string, jsSourceString string, printDebug bool) (*FileData, error) {
-	parseResult, parserOutput, err := js.ParseJS(parserConfig, jsSourceFile, jsSourceString)
+func CollectData(parserConfig parsing.ParserConfig, jsSourceFile string, jsSourceString string, printDebug bool) (*FileData, error) {
+	parseResult, parserOutput, err := parsing.ParseJS(parserConfig, jsSourceFile, jsSourceString)
 	if printDebug {
 		fmt.Fprintf(os.Stderr, "\nRaw JSON:\n%s\n", parserOutput)
 	}

@@ -1,4 +1,4 @@
-package js
+package parsing
 
 import (
 	"math/big"
@@ -6,14 +6,13 @@ import (
 	"testing"
 
 	"github.com/ossf/package-analysis/internal/log"
-	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
 
 type jsTestCase struct {
 	name      string
 	inputJs   string
-	want      parsing.ParseResult
+	want      ParseResult
 	printJson bool // set to true to see raw parser output
 }
 
@@ -36,8 +35,8 @@ function test() {
 //"'11"'` + "`" + `;
 	var mystring12 = ` + "`hello\"'${5.6 + 6.4}\"'`" + `;
 }`,
-		want: parsing.ParseResult{
-			Identifiers: []parsing.ParsedIdentifier{
+		want: ParseResult{
+			Identifiers: []ParsedIdentifier{
 				{token.Function, "test", token.Position{2, 9}},
 				{token.Variable, "mystring1", token.Position{3, 8}},
 				{token.Variable, "mystring2", token.Position{4, 8}},
@@ -52,7 +51,7 @@ function test() {
 				{token.Variable, "mystring11", token.Position{13, 5}},
 				{token.Variable, "mystring12", token.Position{15, 5}},
 			},
-			Literals: []parsing.ParsedLiteral[any]{
+			Literals: []ParsedLiteral[any]{
 				{"String", "string", "hello1", `"hello1"`, false, token.Position{3, 20}},
 				{"String", "string", "hello2", `'hello2'`, false, token.Position{4, 20}},
 				{"String", "string", "hello'3'", `"hello'3'"`, false, token.Position{5, 20}},
@@ -80,14 +79,14 @@ function test() {
 function test2(param1, param2, param3 = "ahd") {
 	return param1 + param2 + param3;
 }`,
-		want: parsing.ParseResult{
-			Identifiers: []parsing.ParsedIdentifier{
+		want: ParseResult{
+			Identifiers: []ParsedIdentifier{
 				{token.Function, "test2", token.Position{2, 9}},
 				{token.Parameter, "param1", token.Position{2, 15}},
 				{token.Parameter, "param2", token.Position{2, 23}},
 				{token.Parameter, "param3", token.Position{2, 31}},
 			},
-			Literals: []parsing.ParsedLiteral[any]{
+			Literals: []ParsedLiteral[any]{
 				{"String", "string", "ahd", `"ahd"`, false, token.Position{2, 40}},
 			},
 		},
@@ -113,8 +112,8 @@ outer:
     }
     console.log("End");
 }`,
-		want: parsing.ParseResult{
-			Identifiers: []parsing.ParsedIdentifier{
+		want: ParseResult{
+			Identifiers: []ParsedIdentifier{
 				{token.Function, "test3", token.Position{2, 9}},
 				{token.Parameter, "a", token.Position{2, 15}},
 				{token.Parameter, "b", token.Position{2, 18}},
@@ -126,7 +125,7 @@ outer:
 				{token.Member, "log", token.Position{16, 16}},
 				{token.Member, "log", token.Position{18, 12}},
 			},
-			Literals: []parsing.ParsedLiteral[any]{
+			Literals: []ParsedLiteral[any]{
 				{"Numeric", "float64", 1.0, "1", false, token.Position{5, 21}},
 				{"Numeric", "float64", 3.0, "3", false, token.Position{5, 28}},
 				{"Numeric", "float64", 10.0, "10", false, token.Position{6, 36}},
@@ -165,8 +164,8 @@ function test4() {
             break;
     }
 }`,
-		want: parsing.ParseResult{
-			Identifiers: []parsing.ParsedIdentifier{
+		want: ParseResult{
+			Identifiers: []ParsedIdentifier{
 				{token.Function, "test4", token.Position{2, 9}},
 				{token.Variable, "a", token.Position{3, 10}},
 				{token.Member, "log", token.Position{6, 20}},
@@ -178,7 +177,7 @@ function test4() {
 				{token.Member, "log", token.Position{19, 20}},
 				{token.Member, "log", token.Position{22, 20}},
 			},
-			Literals: []parsing.ParsedLiteral[any]{
+			Literals: []ParsedLiteral[any]{
 				{"Numeric", "float64", 1.0, "1", true, token.Position{3, 15}},
 				{"Numeric", "float64", 2.0, "2", true, token.Position{3, 18}},
 				{"Numeric", "float64", 3.0, "3", true, token.Position{3, 21}},
@@ -221,8 +220,8 @@ Rectangle = class Rectangle2 {
 console.log(Rectangle.name);
 // output: "Rectangle2"
 `,
-		want: parsing.ParseResult{
-			Identifiers: []parsing.ParsedIdentifier{
+		want: ParseResult{
+			Identifiers: []ParsedIdentifier{
 				{token.Variable, "Rectangle", token.Position{3, 4}},
 				{token.Parameter, "height", token.Position{4, 16}},
 				{token.Parameter, "width", token.Position{4, 24}},
@@ -240,7 +239,7 @@ console.log(Rectangle.name);
 				{token.Member, "log", token.Position{20, 8}},
 				{token.Member, "name", token.Position{20, 22}},
 			},
-			Literals: []parsing.ParsedLiteral[any]{},
+			Literals: []ParsedLiteral[any]{},
 		},
 	},
 	{
@@ -249,11 +248,11 @@ console.log(Rectangle.name);
 'use strict';
 console.log("Hello");
 `,
-		want: parsing.ParseResult{
-			Identifiers: []parsing.ParsedIdentifier{
+		want: ParseResult{
+			Identifiers: []ParsedIdentifier{
 				{token.Member, "log", token.Position{3, 8}},
 			},
-			Literals: []parsing.ParsedLiteral[any]{
+			Literals: []ParsedLiteral[any]{
 				{"String", "string", "use strict", `'use strict'`, false, token.Position{2, 0}},
 				{"String", "string", "Hello", `"Hello"`, false, token.Position{3, 12}},
 			},
@@ -269,8 +268,8 @@ var index = 0,
     {length, width} = 10,
     cancelled = false;
 `,
-		want: parsing.ParseResult{
-			Identifiers: []parsing.ParsedIdentifier{
+		want: ParseResult{
+			Identifiers: []ParsedIdentifier{
 				{token.Variable, "a", token.Position{2, 5}},
 				{token.Variable, "b", token.Position{2, 8}},
 				{token.Variable, "_", token.Position{3, 5}},
@@ -281,7 +280,7 @@ var index = 0,
 				{token.Variable, "width", token.Position{6, 13}},
 				{token.Variable, "cancelled", token.Position{7, 4}},
 			},
-			Literals: []parsing.ParsedLiteral[any]{
+			Literals: []ParsedLiteral[any]{
 				{"Numeric", "float64", 1.0, "1", true, token.Position{2, 14}},
 				{"Numeric", "float64", 2.0, "2", true, token.Position{2, 17}},
 				{"Numeric", "float64", 3.0, "3", true, token.Position{3, 14}},
@@ -304,9 +303,9 @@ function validateIPAddress(ipaddress) {
     return (false)
 }
 `,
-		want: parsing.ParseResult{
+		want: ParseResult{
 			ValidInput: true,
-			Identifiers: []parsing.ParsedIdentifier{
+			Identifiers: []ParsedIdentifier{
 				{token.Function, "validateIPAddress", token.Position{2, 9}},
 				{token.Parameter, "ipaddress", token.Position{2, 27}},
 				{token.Variable, "regex", token.Position{3, 7}},
@@ -314,7 +313,7 @@ function validateIPAddress(ipaddress) {
 				{token.Member, "toLowerCase", token.Position{4, 43}},
 				{token.Member, "includes", token.Position{4, 57}},
 			},
-			Literals: []parsing.ParsedLiteral[any]{
+			Literals: []ParsedLiteral[any]{
 				{
 					Type:     "Regexp",
 					GoType:   "string",
@@ -336,15 +335,15 @@ let b = 0o777777777777n;         // 68719476735
 let c = 0x123456789ABCDEFn;      // 81985529216486895
 let d = 0b11101001010101010101n; // 955733
 `,
-		want: parsing.ParseResult{
+		want: ParseResult{
 			ValidInput: true,
-			Identifiers: []parsing.ParsedIdentifier{
+			Identifiers: []ParsedIdentifier{
 				{token.Variable, "a", token.Position{2, 4}},
 				{token.Variable, "b", token.Position{3, 4}},
 				{token.Variable, "c", token.Position{4, 4}},
 				{token.Variable, "d", token.Position{5, 4}},
 			},
-			Literals: []parsing.ParsedLiteral[any]{
+			Literals: []ParsedLiteral[any]{
 				{"Numeric", "big.Int", big.NewInt(123456789123456789), "123456789123456789n", false, token.Position{2, 8}},
 				{"Numeric", "big.Int", big.NewInt(68719476735), "0o777777777777n", false, token.Position{3, 8}},
 				{"Numeric", "big.Int", big.NewInt(81985529216486895), "0x123456789ABCDEFn", false, token.Position{4, 8}},
