@@ -5,17 +5,8 @@ import (
 	"strings"
 
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stats"
-	"github.com/ossf/package-analysis/internal/staticanalysis/token"
+	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 )
-
-type FileData struct {
-	LineLengths    map[int]int
-	Identifiers    []token.Identifier
-	StringLiterals []token.String
-	IntLiterals    []token.Int
-	FloatLiterals  []token.Float
-	Comments       []token.Comment
-}
 
 type EscapedString struct {
 	RawLiteral       string
@@ -79,7 +70,7 @@ type FileSignals struct {
 // obfuscation analysis of a single package artifact.
 type AnalysisResult struct {
 	// FileData maps analysed file names to the FileData collected for that file.
-	FileData map[string]FileData
+	FileData map[string]parsing.Data
 
 	// FileSignals maps file names in the package to
 	// the FileSignals computed for that file.
@@ -107,17 +98,6 @@ type AnalysisResult struct {
 	// FileTypes maps file names to the output of the `file`
 	// command run on that file
 	FileTypes map[string]string
-}
-
-func (rd FileData) String() string {
-	parts := []string{
-		fmt.Sprintf("line lengths\n%v\n", rd.LineLengths),
-		fmt.Sprintf("identifiers\n%v\n", rd.Identifiers),
-		fmt.Sprintf("string literals\n%v\n", rd.StringLiterals),
-		fmt.Sprintf("integer literals\n%v\n", rd.IntLiterals),
-		fmt.Sprintf("float literals\n%v\n", rd.FloatLiterals),
-	}
-	return strings.Join(parts, "\n-------------------\n")
 }
 
 func (s FileSignals) String() string {

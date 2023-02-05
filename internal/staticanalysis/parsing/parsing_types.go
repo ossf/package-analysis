@@ -6,15 +6,28 @@ import (
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
 
+// Language represents a programming language used for parsing
+type Language string
+
+// SymbolType denotes a type of information collected during parsing.
+// It may be a source code token (see token package), or status about the parsing process (info or error)
 type SymbolType string
 
 const (
+	JavaScript Language = "JavaScript"
+
 	Identifier SymbolType = "Identifier" // source code identifier (variable, class, function name)
 	Literal    SymbolType = "Literal"    // source code data (string, integer, floating point literals)
 	Comment    SymbolType = "Comment"    // source code comments
 	Info       SymbolType = "Info"       // information about the parsing (e.g. number of bytes read by parser)
 	Error      SymbolType = "Error"      // any error encountered by parser; some are recoverable and some are not
 )
+
+var allLanguages = []Language{JavaScript}
+
+func SupportedLanguages() []Language {
+	return allLanguages[:]
+}
 
 type ParsedIdentifier struct {
 	Type token.IdentifierType
@@ -49,11 +62,12 @@ type ParsedComment struct {
 	Pos  token.Position
 }
 
-type ParseResult struct {
+// parserOutput holds intermediate data from language-specific parsing functions
+type parserOutput struct {
 	ValidInput  bool
 	Identifiers []ParsedIdentifier
 	Literals    []ParsedLiteral[any]
 	Comments    []ParsedComment
 }
 
-var InvalidInput = ParseResult{ValidInput: false}
+var InvalidInput = parserOutput{ValidInput: false}

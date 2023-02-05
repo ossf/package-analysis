@@ -77,7 +77,7 @@ func doObfuscationDetection(workDirs workDirs) (*obfuscation.AnalysisResult, err
 	}
 
 	result := &obfuscation.AnalysisResult{
-		FileData:      map[string]obfuscation.FileData{},
+		FileData:      map[string]parsing.Data{},
 		FileSignals:   map[string]obfuscation.FileSignals{},
 		ExcludedFiles: []string{},
 		FileSizes:     map[string]int64{},
@@ -111,17 +111,18 @@ func doObfuscationDetection(workDirs workDirs) (*obfuscation.AnalysisResult, err
 				result.FileTypes[pathInArchive] = strings.TrimSpace(string(fileCmdOutput))
 			}
 			// obfuscation
-			rawData, err := obfuscation.CollectData(jsParserConfig, path, "", false)
+			rawData, err := parsing.ParseSingle(jsParserConfig, path, "", false)
 			if err != nil {
 				log.Error("Error parsing file", "filename", pathInArchive, "error", err)
 				result.ExcludedFiles = append(result.ExcludedFiles, pathInArchive)
-			} else if rawData == nil {
+			} else if rawData == nil || rawData[parsing.JavaScript] == nil {
 				// syntax error - could not parse file
 				result.ExcludedFiles = append(result.ExcludedFiles, pathInArchive)
 			} else {
 				// rawData != nil, err == nil
-				result.FileData[pathInArchive] = *rawData
-				signals := obfuscation.ComputeSignals(*rawData)
+				fileData := *rawData[parsing.JavaScript]
+				result.FileData[pathInArchive] = fileData
+				signals := obfuscation.ComputeSignals(fileData)
 				obfuscation.RemoveNaNs(&signals)
 				result.FileSignals[pathInArchive] = signals
 			}
