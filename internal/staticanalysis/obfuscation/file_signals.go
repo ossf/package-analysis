@@ -121,14 +121,14 @@ func characterAnalysis(symbols []string) (
 ComputeFileSignals creates a FileSignals object based on the data obtained from ParseFile
 for a given file. These signals may be useful to determine whether the code is obfuscated.
 */
-func ComputeFileSignals(rawData parsing.SingleResult) FileSignals {
+func ComputeFileSignals(parseData parsing.SingleResult) FileSignals {
 	signals := FileSignals{}
 
-	literals := utils.Transform(rawData.StringLiterals, func(s token.String) string { return s.Value })
+	literals := utils.Transform(parseData.StringLiterals, func(s token.String) string { return s.Value })
 	signals.StringLengths, signals.StringEntropySummary, signals.CombinedStringEntropy =
 		characterAnalysis(literals)
 
-	identifierNames := utils.Transform(rawData.Identifiers, func(i token.Identifier) string { return i.Name })
+	identifierNames := utils.Transform(parseData.Identifiers, func(i token.Identifier) string { return i.Name })
 	signals.IdentifierLengths, signals.IdentifierEntropySummary, signals.CombinedIdentifierEntropy =
 		characterAnalysis(identifierNames)
 
@@ -145,7 +145,7 @@ func ComputeFileSignals(rawData parsing.SingleResult) FileSignals {
 	signals.Base64Strings = []string{}
 	signals.HexStrings = []string{}
 	signals.EscapedStrings = []EscapedString{}
-	for _, s := range rawData.StringLiterals {
+	for _, s := range parseData.StringLiterals {
 		signals.Base64Strings = append(signals.Base64Strings, detections.FindBase64Substrings(s.Value)...)
 		signals.HexStrings = append(signals.HexStrings, detections.FindHexSubstrings(s.Value)...)
 		if detections.IsHighlyEscaped(s, 8, 0.25) {

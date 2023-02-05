@@ -13,12 +13,12 @@ import (
 	"github.com/ossf/package-analysis/internal/utils"
 )
 
-type computeSignalsTestCase struct {
+type fileSignalsTestCase struct {
 	name     string
 	fileData parsing.SingleResult
 }
 
-var computeSignalsTestCases = []computeSignalsTestCase{
+var fileSignalsTestCases = []fileSignalsTestCase{
 	{
 		name: "simple 1",
 		fileData: parsing.SingleResult{
@@ -109,7 +109,7 @@ func init() {
 }
 
 func TestComputeSignals(t *testing.T) {
-	for _, test := range computeSignalsTestCases {
+	for _, test := range fileSignalsTestCases {
 		t.Run(test.name, func(t *testing.T) {
 			signals := ComputeFileSignals(test.fileData)
 			testSignals(t, signals, test.fileData.StringLiterals, test.fileData.Identifiers)
