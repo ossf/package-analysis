@@ -160,17 +160,6 @@ func ComputeFileSignals(parseData parsing.SingleResult) FileSignals {
 	return signals
 }
 
-func NoSignals() FileSignals {
-	return FileSignals{
-		StringLengths:             map[int]int{},
-		StringEntropySummary:      stats.NoData(),
-		CombinedStringEntropy:     math.NaN(),
-		IdentifierLengths:         map[int]int{},
-		IdentifierEntropySummary:  stats.NoData(),
-		CombinedIdentifierEntropy: math.NaN(),
-	}
-}
-
 // RemoveNaNs replaces all NaN values in this object with zeros
 func RemoveNaNs(s *FileSignals) {
 	s.StringEntropySummary = s.StringEntropySummary.ReplaceNaNs(0)
