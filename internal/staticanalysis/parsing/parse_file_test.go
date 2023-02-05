@@ -11,7 +11,7 @@ import (
 type collectDataTestCase struct {
 	name         string
 	jsSource     string
-	expectedData Data
+	expectedData SingleResult
 }
 
 var collectDataTestCases = []collectDataTestCase{
@@ -20,7 +20,7 @@ var collectDataTestCases = []collectDataTestCase{
 		jsSource: `
 var a = "hello"
 	`,
-		expectedData: Data{
+		expectedData: SingleResult{
 			Identifiers: []token.Identifier{
 				{Name: "a", Type: token.Variable},
 			},
@@ -44,7 +44,7 @@ function test(a, b = 2) {
 	}
 }
 	`,
-		expectedData: Data{
+		expectedData: SingleResult{
 			Identifiers: []token.Identifier{
 				{Name: "test", Type: token.Function},
 				{Name: "a", Type: token.Parameter},
@@ -77,7 +77,7 @@ func TestCollectData(t *testing.T) {
 
 	for _, tt := range collectDataTestCases {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := ParseSingle(parserConfig, "", tt.jsSource, false)
+			result, err := ParseFile(parserConfig, "", tt.jsSource, false)
 			if err != nil {
 				t.Errorf("%v", err)
 				return

@@ -1,6 +1,7 @@
 package obfuscation
 
 import (
+	"fmt"
 	"math"
 	"strings"
 
@@ -11,6 +12,83 @@ import (
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 	"github.com/ossf/package-analysis/internal/utils"
 )
+
+// FileSignals holds information related to the presence of obfuscated code in a single file
+type FileSignals struct {
+	// StringLengths is a map from length (in characters) to number of
+	// string literals in the file having that length. If a length key is
+	// missing, it is assumed to be zero.
+	StringLengths map[int]int
+
+	// StringEntropySummary provides sample statistics for the set of entropy
+	// values calculated on each string literal. Character probabilities for the
+	// entropy calculation are estimated empirically from aggregated counts
+	// of characters across all string literals in the file.
+	StringEntropySummary stats.SampleStatistics
+
+	// CombinedStringEntropy is the entropy of the string obtained from
+	// concatenating all string literals in the file together. It may be used
+	// to normalise the values in StringEntropySummary
+	CombinedStringEntropy float64
+
+	// IdentifierLengths is a map from length (in characters) to number of
+	// identifiers in the file having that length. If a length key is missing,
+	// it is assumed to be zero.
+	IdentifierLengths map[int]int
+
+	// IdentifierEntropySummary provides sample statistics for the set of entropy
+	// values calculated on each identifier. Character probabilities for the
+	// entropy calculation are estimated empirically from aggregated counts
+	// of characters across all identifiers in the file.
+	IdentifierEntropySummary stats.SampleStatistics
+
+	// CombinedIdentifierEntropy is the entropy of the string obtained from
+	// concatenating all identifiers in the file together. It may be used to
+	// normalise the values in IdentifierEntropySummary
+	CombinedIdentifierEntropy float64
+
+	// SuspiciousIdentifiers holds lists of identifiers that are deemed 'suspicious'
+	// (i.e. indicative of obfuscation) according to certain rules. The keys of the
+	// map are the rule names, and the values are the identifiers matching each rule.
+	// See
+	SuspiciousIdentifiers map[string][]string
+
+	// Base64Strings holds a list of (substrings of) string literals found in the
+	// file that match a base64 regex pattern. This patten has a minimum matching
+	// length in order to reduce the number of false positives.
+	Base64Strings []string
+
+	// HexStrings holds a list of (substrings of) string literals found in the
+	// file that contain long (>8 digits) hexadecimal digit sequences.
+	HexStrings []string
+
+	// EscapedStrings contain string literals that contain large amount of escape
+	// characters, which may indicate obfuscation
+	EscapedStrings []EscapedString
+}
+
+func (s FileSignals) String() string {
+	parts := []string{
+		fmt.Sprintf("string lengths: %v", s.StringLengths),
+		fmt.Sprintf("string entropy: %s", s.StringEntropySummary),
+		fmt.Sprintf("combined string entropy: %f", s.CombinedStringEntropy),
+
+		fmt.Sprintf("identifier lengths: %v", s.IdentifierLengths),
+		fmt.Sprintf("identifier entropy: %s", s.IdentifierEntropySummary),
+		fmt.Sprintf("combined identifier entropy: %f", s.CombinedIdentifierEntropy),
+
+		fmt.Sprintf("suspicious identifiers: %v", s.SuspiciousIdentifiers),
+		fmt.Sprintf("potential base64 strings: %v", s.Base64Strings),
+		fmt.Sprintf("hex strings: %v", s.HexStrings),
+		fmt.Sprintf("escaped strings: %v", s.EscapedStrings),
+	}
+	return strings.Join(parts, "\n")
+}
+
+type EscapedString struct {
+	RawLiteral       string
+	LevenshteinRatio float64
+}
 
 /*
 characterAnalysis performs analysis on a collection of string symbols, returning:
@@ -40,10 +118,10 @@ func characterAnalysis(symbols []string) (
 }
 
 /*
-ComputeSignals creates a FileSignals object based on the data obtained from ParseSingle
+ComputeFileSignals creates a FileSignals object based on the data obtained from ParseFile
 for a given file. These signals may be useful to determine whether the code is obfuscated.
 */
-func ComputeSignals(rawData parsing.Data) FileSignals {
+func ComputeFileSignals(rawData parsing.SingleResult) FileSignals {
 	signals := FileSignals{}
 
 	literals := utils.Transform(rawData.StringLiterals, func(s token.String) string { return s.Value })
