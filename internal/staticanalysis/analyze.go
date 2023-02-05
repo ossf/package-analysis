@@ -23,10 +23,10 @@ task is requested, a nil result is returned along with the corresponding error o
 */
 func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig, analysisTasks []Task) (*Result, error) {
 	// whether the analysis needs to be run
-	var runAnalysis map[Task]bool
+	runAnalysis := map[Task]bool{}
 	// whether the analysis should be output. If a task is not included in analysisTasks
 	// but its data is needed for another task, it will be performed but not output
-	var outputAnalysis map[Task]bool
+	outputAnalysis := map[Task]bool{}
 
 	for _, task := range analysisTasks {
 		switch task {
@@ -46,7 +46,9 @@ func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig,
 			return nil, fmt.Errorf("static analysis task not implemented: %s", task)
 		}
 	}
-	basicData := BasicPackageData{}
+	basicData := BasicPackageData{
+		Files: map[string]BasicFileData{},
+	}
 	parsingData := parsing.PackageResult{}
 
 	walkErr := filepath.WalkDir(extractDir, func(path string, f fs.DirEntry, err error) error {

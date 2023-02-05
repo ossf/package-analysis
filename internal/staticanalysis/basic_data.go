@@ -83,7 +83,7 @@ func GetBasicFileData(path, pathInArchive string) BasicFileData {
 		result.FileType = strings.TrimSpace(string(fileCmdOutput))
 	}
 
-	// line lengths o
+	// line lengths
 	lineLengths, err := linelengths.GetLineLengths(path, "")
 	if err != nil {
 		log.Error("Error collecting line lengths", "path", pathInArchive, "error", err)
