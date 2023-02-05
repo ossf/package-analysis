@@ -104,13 +104,13 @@ func parseJS(parserConfig ParserConfig, filePath string, sourceString string) (r
 			if symbolSubtype == token.Other || symbolSubtype == token.Unknown {
 				break
 			}
-			result.Identifiers = append(result.Identifiers, ParsedIdentifier{
+			result.Identifiers = append(result.Identifiers, parsedIdentifier{
 				Type: token.CheckIdentifierType(element.SymbolSubtype),
 				Name: element.Data.(string),
 				Pos:  element.Pos,
 			})
 		case Literal:
-			literal := ParsedLiteral[any]{
+			literal := parsedLiteral[any]{
 				Type:     element.SymbolSubtype,
 				GoType:   fmt.Sprintf("%T", element.Data),
 				Value:    element.Data,
@@ -130,7 +130,7 @@ func parseJS(parserConfig ParserConfig, filePath string, sourceString string) (r
 			}
 			result.Literals = append(result.Literals, literal)
 		case Comment:
-			result.Comments = append(result.Comments, ParsedComment{
+			result.Comments = append(result.Comments, parsedComment{
 				Type: element.SymbolSubtype,
 				Data: element.Data.(string),
 				Pos:  element.Pos,
