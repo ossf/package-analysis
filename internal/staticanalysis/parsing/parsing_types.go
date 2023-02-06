@@ -2,8 +2,10 @@ package parsing
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
+	"github.com/ossf/package-analysis/internal/utils"
 )
 
 // Language represents a programming language used for parsing
@@ -62,12 +64,50 @@ type parsedComment struct {
 	Pos  token.Position
 }
 
-// parserOutput holds intermediate data from language-specific parsing functions
-type parserOutput struct {
+func (c parsedComment) String() string {
+	return fmt.Sprintf("%s %s pos %d:%d", c.Type, c.Data, c.Pos.Row(), c.Pos.Col())
+}
+
+type parserStatus struct {
+	Type    string
+	Name    string
+	Message string
+	Pos     token.Position
+}
+
+func (s parserStatus) String() string {
+	return fmt.Sprintf("[%s] %s: %s pos %d:%d", s.Type, s.Name, s.Message, s.Pos.Row(), s.Pos.Col())
+}
+
+// parseOutput holds intermediate data from language-specific parsing functions
+type parseOutput struct {
 	ValidInput  bool
 	Identifiers []parsedIdentifier
 	Literals    []parsedLiteral[any]
 	Comments    []parsedComment
+	Info        []parserStatus
+	Errors      []parserStatus
 }
 
-var InvalidInput = parserOutput{ValidInput: false}
+func (p parseOutput) String() string {
+	identifiers := utils.Transform(p.Identifiers, func(pi parsedIdentifier) string { return pi.String() })
+	literals := utils.Transform(p.Literals, func(pl parsedLiteral[any]) string { return pl.String() })
+	comments := utils.Transform(p.Comments, func(c parsedComment) string { return c.String() })
+	info := utils.Transform(p.Info, func(i parserStatus) string { return i.String() })
+	errors := utils.Transform(p.Errors, func(e parserStatus) string { return e.String() })
+
+	parts := []string{
+		"== Identifiers ==",
+		strings.Join(identifiers, "\n"),
+		"== Literals ==",
+		strings.Join(literals, "\n"),
+		"== Comments ==",
+		strings.Join(comments, "\n"),
+		"== Info ==",
+		strings.Join(info, "\n"),
+		"== Errors ==",
+		strings.Join(errors, "\n"),
+	}
+
+	return strings.Join(parts, "\n")
+}
