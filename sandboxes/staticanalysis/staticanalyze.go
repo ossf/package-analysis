@@ -24,7 +24,7 @@ var (
 	localFile   = flag.String("local", "", "Local package archive containing package to be analysed. Name must match -package argument")
 	output      = flag.String("output", "", "where to write output JSON results (default stdout)")
 	help        = flag.Bool("help", false, "Prints this help and list of available analyses")
-	analyses    = utils.CommaSeparatedFlags("analyses", "", "comma-separated list of static analyses to perform")
+	analyses    = utils.CommaSeparatedFlags("analyses", "all", "comma-separated list of static analyses to perform")
 )
 
 type workDirs struct {
@@ -43,14 +43,20 @@ func (wd *workDirs) cleanup() {
 const jsParserDirName = "jsparser"
 
 func checkAnalyses(names []string) ([]staticanalysis.Task, error) {
+	uniqueNames := utils.RemoveDuplicates(names)
 	var tasks []staticanalysis.Task
-	for _, name := range names {
+	for _, name := range uniqueNames {
 		task, ok := staticanalysis.TaskFromString(name)
 		if !ok {
-			return nil, fmt.Errorf("unrecognised static analysis task: %s", name)
+			return nil, fmt.Errorf("unrecognised static analysis task '%s'", name)
 		}
-		tasks = append(tasks, task)
+		if task == staticanalysis.All {
+			tasks = append(tasks, staticanalysis.AllTasks()...)
+		} else {
+			tasks = append(tasks, task)
+		}
 	}
+
 	return tasks, nil
 }
 
@@ -120,13 +126,14 @@ func run() (err error) {
 		return fmt.Errorf("package error: %v", err)
 	}
 
-	uniqueAnalyses := utils.RemoveDuplicates(analyses.Values)
-	analysisTasks, err := checkAnalyses(uniqueAnalyses)
+	analysisTasks, err := checkAnalyses(analyses.Values)
 
 	if err != nil {
 		printAnalyses()
 		return err
 	}
+
+	fmt.Printf("%v", analysisTasks)
 
 	log.Info("Static analysis launched",
 		log.Label("ecosystem", *ecosystem),
@@ -134,7 +141,7 @@ func run() (err error) {
 		"version", *version,
 		"local_path", *localFile,
 		"output_file", *output,
-		"analyses", uniqueAnalyses)
+		"analyses", analysisTasks)
 
 	workDirs, err := makeWorkDirs()
 	if err != nil {
@@ -168,6 +175,9 @@ func run() (err error) {
 	startAnalysisTime := time.Now()
 	results, err := staticanalysis.AnalyzePackageFiles(workDirs.extractDir, jsParserConfig, analysisTasks)
 	analysisTime := time.Since(startAnalysisTime)
+	if err != nil {
+		return fmt.Errorf("static analysis error: %w", err)
+	}
 
 	startWritingResultsTime := time.Now()
 

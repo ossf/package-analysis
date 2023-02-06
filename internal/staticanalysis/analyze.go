@@ -38,6 +38,8 @@ func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig,
 			// parsing needed for obfuscation detection
 			runTask[Parsing] = true
 			runTask[Obfuscation] = true
+		case All:
+			// ignore
 		default:
 			return nil, fmt.Errorf("static analysis task not implemented: %s", task)
 		}

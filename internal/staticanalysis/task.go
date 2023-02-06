@@ -18,12 +18,16 @@ const (
 	// obfuscated code. It depends on the output of the Parsing task, but does not
 	// require reading files directly.
 	Obfuscation Task = "obfuscation"
+
+	// All is not a task itself, but represents/'depends on' all other tasks
+	All Task = "all"
 )
 
 var allTasks = []Task{
 	Basic,
 	Parsing,
 	Obfuscation,
+	All,
 }
 
 func AllTasks() []Task {
@@ -38,6 +42,8 @@ func TaskFromString(s string) (Task, bool) {
 		return Parsing, true
 	case Obfuscation:
 		return Obfuscation, true
+	case All:
+		return All, true
 	default:
 		return "", false
 	}
