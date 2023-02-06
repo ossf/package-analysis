@@ -9,32 +9,32 @@ import (
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
 
-type testCase struct {
+type collectDataTestCase struct {
 	name         string
 	jsSource     string
 	expectedData FileData
 }
 
-var test1 = testCase{
-	name: "simple 1",
-	jsSource: `
+var collectDataTestCases = []collectDataTestCase{
+	{
+		name: "simple 1",
+		jsSource: `
 var a = "hello"
 	`,
-	expectedData: FileData{
-		Identifiers: []token.Identifier{
-			{Name: "a", Type: token.Variable},
+		expectedData: FileData{
+			Identifiers: []token.Identifier{
+				{Name: "a", Type: token.Variable},
+			},
+			StringLiterals: []token.String{
+				{Value: "hello", Raw: `"hello"`},
+			},
+			IntLiterals:   []token.Int{},
+			FloatLiterals: []token.Float{},
 		},
-		StringLiterals: []token.String{
-			{Value: "hello", Raw: `"hello"`},
-		},
-		IntLiterals:   []token.Int{},
-		FloatLiterals: []token.Float{},
 	},
-}
-
-var test2 = testCase{
-	name: "simple 2",
-	jsSource: `
+	{
+		name: "simple 2",
+		jsSource: `
 function test(a, b = 2) {
 	console.log("hello")
 	var c = a + b
@@ -45,23 +45,24 @@ function test(a, b = 2) {
 	}
 }
 	`,
-	expectedData: FileData{
-		Identifiers: []token.Identifier{
-			{Name: "test", Type: token.Function},
-			{Name: "a", Type: token.Parameter},
-			{Name: "b", Type: token.Parameter},
-			{Name: "c", Type: token.Variable},
+		expectedData: FileData{
+			Identifiers: []token.Identifier{
+				{Name: "test", Type: token.Function},
+				{Name: "a", Type: token.Parameter},
+				{Name: "b", Type: token.Parameter},
+				{Name: "c", Type: token.Variable},
+			},
+			StringLiterals: []token.String{
+				{Value: "hello", Raw: `"hello"`},
+				{Value: "apple", Raw: `"apple"`},
+			},
+			IntLiterals: []token.Int{
+				{Value: 2, Raw: "2"},
+				{Value: 3, Raw: "3"},
+				{Value: 4, Raw: "4"},
+			},
+			FloatLiterals: []token.Float{},
 		},
-		StringLiterals: []token.String{
-			{Value: "hello", Raw: `"hello"`},
-			{Value: "apple", Raw: `"apple"`},
-		},
-		IntLiterals: []token.Int{
-			{Value: 2, Raw: "2"},
-			{Value: 3, Raw: "3"},
-			{Value: 4, Raw: "4"},
-		},
-		FloatLiterals: []token.Float{},
 	},
 }
 
@@ -75,8 +76,7 @@ func TestCollectData(t *testing.T) {
 		t.Fatalf("failed to init parser: %v", err)
 	}
 
-	tests := []testCase{test1, test2}
-	for _, tt := range tests {
+	for _, tt := range collectDataTestCases {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := CollectData(parserConfig, "", tt.jsSource, false)
 			if err != nil {
