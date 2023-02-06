@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/ossf/package-analysis/internal/log"
-	"github.com/ossf/package-analysis/internal/staticanalysis/parsing/js"
+	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
 
@@ -71,7 +71,7 @@ func init() {
 }
 
 func TestCollectData(t *testing.T) {
-	parserConfig, err := js.InitParser(t.TempDir())
+	parserConfig, err := parsing.InitParser(t.TempDir())
 	if err != nil {
 		t.Fatalf("failed to init parser: %v", err)
 	}
