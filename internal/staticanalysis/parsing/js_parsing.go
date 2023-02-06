@@ -13,16 +13,23 @@ import (
 
 // parseOutput represents the output JSON format of the JS parser
 type parseDataJSON struct {
-	Symbols []parseDataJSONElement `json:"symbols"`
-	Status  []parseDataJSONElement `json:"status"`
+	Tokens []parserTokenJSON  `json:"tokens"`
+	Status []parserStatusJSON `json:"status"`
 }
 
-type parseDataJSONElement struct {
-	SymbolType    SymbolType     `json:"type"`
-	SymbolSubtype string         `json:"subtype"`
-	Data          any            `json:"data"`
-	Pos           [2]int         `json:"pos"`
-	Extra         map[string]any `json:"extra"`
+type parserTokenJSON struct {
+	TokenType    tokenType      `json:"type"`
+	TokenSubType string         `json:"subtype"`
+	Data         any            `json:"data"`
+	Pos          [2]int         `json:"pos"`
+	Extra        map[string]any `json:"extra"`
+}
+
+type parserStatusJSON struct {
+	StatusType    statusType `json:"type"`
+	StatusSubType string     `json:"subtype"`
+	Message       string     `json:"data"`
+	Pos           [2]int     `json:"pos"`
 }
 
 // fatalSyntaxErrorMarker is used by the parser to signal that it is unable to
@@ -102,21 +109,21 @@ func parseJS(parserConfig ParserConfig, filePath string, sourceString string) (*
 	}
 
 	// convert the elements into more natural data structure
-	for _, element := range parserData.Symbols {
-		switch element.SymbolType {
-		case Identifier:
-			symbolSubtype := token.CheckIdentifierType(element.SymbolSubtype)
+	for _, element := range parserData.Tokens {
+		switch element.TokenType {
+		case identifier:
+			symbolSubtype := token.CheckIdentifierType(element.TokenSubType)
 			if symbolSubtype == token.Other || symbolSubtype == token.Unknown {
 				break
 			}
 			result.Identifiers = append(result.Identifiers, parsedIdentifier{
-				Type: token.CheckIdentifierType(element.SymbolSubtype),
+				Type: token.CheckIdentifierType(element.TokenSubType),
 				Name: element.Data.(string),
 				Pos:  element.Pos,
 			})
-		case Literal:
+		case literal:
 			literal := parsedLiteral[any]{
-				Type:     element.SymbolSubtype,
+				Type:     element.TokenSubType,
 				GoType:   fmt.Sprintf("%T", element.Data),
 				Value:    element.Data,
 				RawValue: element.Extra["raw"].(string),
@@ -134,27 +141,27 @@ func parseJS(parserConfig ParserConfig, filePath string, sourceString string) (*
 				}
 			}
 			result.Literals = append(result.Literals, literal)
-		case Comment:
+		case comment:
 			result.Comments = append(result.Comments, parsedComment{
-				Type: element.SymbolSubtype,
+				Type: element.TokenSubType,
 				Data: element.Data.(string),
 				Pos:  element.Pos,
 			})
 		default:
-			log.Warn(fmt.Sprintf("parseJS: unrecognised symbol type %s", element.SymbolType))
+			log.Warn(fmt.Sprintf("parseJS: unrecognised token type %s", element.TokenType))
 		}
 	}
 	for _, element := range parserData.Status {
 		status := parserStatus{
-			Type:    string(element.SymbolType),
-			Name:    element.SymbolSubtype,
-			Message: element.Data.(string),
+			Type:    element.StatusType,
+			Name:    element.StatusSubType,
+			Message: element.Message,
 			Pos:     element.Pos,
 		}
-		switch element.SymbolType {
-		case Info:
+		switch element.StatusType {
+		case parseInfo:
 			result.Info = append(result.Info, status)
-		case Error:
+		case parseError:
 			result.Errors = append(result.Errors, status)
 			if strings.Contains(status.Message, fatalSyntaxErrorMarker) {
 				result.ValidInput = false

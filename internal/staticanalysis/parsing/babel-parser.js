@@ -21,8 +21,8 @@ function position(node) {
 // Holds all parsing data for a single file
 class ParseData {
     constructor() {
-        // holds symbol information (function, variable names)
-        this.symbols = [];
+        // holds token information (function, variable names)
+        this.tokens = [];
         // holds status information (info, errors)
         this.status = [];
     }
@@ -40,7 +40,7 @@ class ParseData {
     }
 
     logComment(commentType, comment, pos) {
-        this.symbols.push(ParseData.makeOutputDict("Comment", commentType, comment, pos));
+        this.tokens.push(ParseData.makeOutputDict("Comment", commentType, comment, pos));
     }
 
     logIdentifierOrPrivateName(identifierType, node) {
@@ -65,7 +65,7 @@ class ParseData {
             console.log("Error: undefined identifier name at pos " + pos);
         }
 
-        this.symbols.push(ParseData.makeOutputDict("Identifier", identifierType, name, pos));
+        this.tokens.push(ParseData.makeOutputDict("Identifier", identifierType, name, pos));
     }
 
     logLiteral(literalType, value, pos, inArray, extra = null) {
@@ -79,7 +79,7 @@ class ParseData {
         }
 
         extra.array = inArray;
-        this.symbols.push(ParseData.makeOutputDict("Literal", literalType, value, pos, extra));
+        this.tokens.push(ParseData.makeOutputDict("Literal", literalType, value, pos, extra));
     }
 }
 
