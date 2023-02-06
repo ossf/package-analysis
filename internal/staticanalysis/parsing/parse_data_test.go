@@ -1,18 +1,17 @@
-package obfuscation
+package parsing
 
 import (
 	"reflect"
 	"testing"
 
 	"github.com/ossf/package-analysis/internal/log"
-	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
 
 type collectDataTestCase struct {
 	name         string
 	jsSource     string
-	expectedData FileData
+	expectedData Data
 }
 
 var collectDataTestCases = []collectDataTestCase{
@@ -21,7 +20,7 @@ var collectDataTestCases = []collectDataTestCase{
 		jsSource: `
 var a = "hello"
 	`,
-		expectedData: FileData{
+		expectedData: Data{
 			Identifiers: []token.Identifier{
 				{Name: "a", Type: token.Variable},
 			},
@@ -45,7 +44,7 @@ function test(a, b = 2) {
 	}
 }
 	`,
-		expectedData: FileData{
+		expectedData: Data{
 			Identifiers: []token.Identifier{
 				{Name: "test", Type: token.Function},
 				{Name: "a", Type: token.Parameter},
@@ -71,18 +70,20 @@ func init() {
 }
 
 func TestCollectData(t *testing.T) {
-	parserConfig, err := parsing.InitParser(t.TempDir())
+	parserConfig, err := InitParser(t.TempDir())
 	if err != nil {
 		t.Fatalf("failed to init parser: %v", err)
 	}
 
 	for _, tt := range collectDataTestCases {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := CollectData(parserConfig, "", tt.jsSource, false)
+			result, err := ParseSingle(parserConfig, "", tt.jsSource, false)
 			if err != nil {
 				t.Errorf("%v", err)
 				return
 			}
+			got := result[JavaScript]
+
 			if !reflect.DeepEqual(got.Identifiers, tt.expectedData.Identifiers) {
 				t.Errorf("Identifiers mismatch: got %v, want %v", got.Identifiers, tt.expectedData.Identifiers)
 			}

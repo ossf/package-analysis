@@ -7,6 +7,7 @@ import (
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/detections"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stats"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stringentropy"
+	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 	"github.com/ossf/package-analysis/internal/utils"
 )
@@ -39,10 +40,10 @@ func characterAnalysis(symbols []string) (
 }
 
 /*
-ComputeSignals creates a FileSignals object based on the data obtained from CollectData
+ComputeSignals creates a FileSignals object based on the data obtained from ParseSingle
 for a given file. These signals may be useful to determine whether the code is obfuscated.
 */
-func ComputeSignals(rawData FileData) FileSignals {
+func ComputeSignals(rawData parsing.Data) FileSignals {
 	signals := FileSignals{}
 
 	literals := utils.Transform(rawData.StringLiterals, func(s token.String) string { return s.Value })

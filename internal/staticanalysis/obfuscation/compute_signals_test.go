@@ -8,19 +8,20 @@ import (
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stats"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stringentropy"
+	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 	"github.com/ossf/package-analysis/internal/utils"
 )
 
 type computeSignalsTestCase struct {
 	name     string
-	fileData FileData
+	fileData parsing.Data
 }
 
 var computeSignalsTestCases = []computeSignalsTestCase{
 	{
 		name: "simple 1",
-		fileData: FileData{
+		fileData: parsing.Data{
 			Identifiers: []token.Identifier{
 				{Name: "a", Type: token.Variable},
 			},
@@ -33,7 +34,7 @@ var computeSignalsTestCases = []computeSignalsTestCase{
 	},
 	{
 		name: "simple 2",
-		fileData: FileData{
+		fileData: parsing.Data{
 			Identifiers: []token.Identifier{
 				{Name: "test", Type: token.Function},
 				{Name: "a", Type: token.Parameter},

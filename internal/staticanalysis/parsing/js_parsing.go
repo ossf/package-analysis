@@ -66,7 +66,7 @@ func runParser(parserPath, jsFilePath, jsSource string) (string, error) {
 }
 
 /*
-ParseJS extracts source code identifiers and string literals from JavaScript code.
+parseJS extracts source code identifiers and string literals from JavaScript code.
 If sourcePath is empty, sourceString will be parsed as JS code.
 
 parserConfig specifies options relevant to the parser itself, and is produced by InitParser
@@ -74,7 +74,7 @@ parserConfig specifies options relevant to the parser itself, and is produced by
 If the input contains a syntax error (which could mean it's not actually JavaScript),
 then a pointer to parsing.InvalidInput is returned.
 */
-func ParseJS(parserConfig ParserConfig, filePath string, sourceString string) (result ParseResult, parserOutput string, err error) {
+func parseJS(parserConfig ParserConfig, filePath string, sourceString string) (result parserOutput, parserOutput string, err error) {
 	parserOutput, err = runParser(parserConfig.ParserPath, filePath, sourceString)
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
@@ -104,13 +104,13 @@ func ParseJS(parserConfig ParserConfig, filePath string, sourceString string) (r
 			if symbolSubtype == token.Other || symbolSubtype == token.Unknown {
 				break
 			}
-			result.Identifiers = append(result.Identifiers, ParsedIdentifier{
+			result.Identifiers = append(result.Identifiers, parsedIdentifier{
 				Type: token.CheckIdentifierType(element.SymbolSubtype),
 				Name: element.Data.(string),
 				Pos:  element.Pos,
 			})
 		case Literal:
-			literal := ParsedLiteral[any]{
+			literal := parsedLiteral[any]{
 				Type:     element.SymbolSubtype,
 				GoType:   fmt.Sprintf("%T", element.Data),
 				Value:    element.Data,
@@ -130,7 +130,7 @@ func ParseJS(parserConfig ParserConfig, filePath string, sourceString string) (r
 			}
 			result.Literals = append(result.Literals, literal)
 		case Comment:
-			result.Comments = append(result.Comments, ParsedComment{
+			result.Comments = append(result.Comments, parsedComment{
 				Type: element.SymbolSubtype,
 				Data: element.Data.(string),
 				Pos:  element.Pos,
@@ -140,14 +140,14 @@ func ParseJS(parserConfig ParserConfig, filePath string, sourceString string) (r
 		case Error:
 			// ignore for now
 		default:
-			log.Warn(fmt.Sprintf("ParseJS: unrecognised symbol type %s", element.SymbolType))
+			log.Warn(fmt.Sprintf("parseJS: unrecognised symbol type %s", element.SymbolType))
 		}
 	}
 	return
 }
 
 func RunExampleParsing(config ParserConfig, jsFilePath string, jsSourceString string) {
-	parseResult, parserOutput, err := ParseJS(config, jsFilePath, jsSourceString)
+	parseResult, parserOutput, err := parseJS(config, jsFilePath, jsSourceString)
 
 	println("\nRaw JSON:\n", parserOutput)
 
