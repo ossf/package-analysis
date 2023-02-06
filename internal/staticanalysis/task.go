@@ -4,10 +4,11 @@ package staticanalysis
 // Some tasks may depend on other tasks, for example Obfuscation depends on Parsing
 type Task string
 
+// Note: these names match the JSON field names in result.go
 const (
-	// BasicData analysis consists of information about a file that can be determined
+	// Basic analysis consists of information about a file that can be determined
 	// without parsing, for example file size, file type and hash
-	BasicData Task = "basic_data"
+	Basic Task = "basic"
 
 	// Parsing analysis involves using a programming language parser to extract
 	// source code information from the file
@@ -20,7 +21,7 @@ const (
 )
 
 var allTasks = []Task{
-	BasicData,
+	Basic,
 	Parsing,
 	Obfuscation,
 }
@@ -31,8 +32,8 @@ func AllTasks() []Task {
 
 func TaskFromString(s string) (Task, bool) {
 	switch Task(s) {
-	case BasicData:
-		return BasicData, true
+	case Basic:
+		return Basic, true
 	case Parsing:
 		return Parsing, true
 	case Obfuscation:

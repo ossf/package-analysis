@@ -4,8 +4,8 @@ import "github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 
 // Analyze performs obfuscation analysis for a package, operating on the data
 // obtained from parsing each file in the package
-func Analyze(fileParseData parsing.PackageResult) *Result {
-	result := &Result{
+func Analyze(fileParseData parsing.PackageResult) Result {
+	result := Result{
 		SuspiciousFiles: []string{},
 		ExcludedFiles:   []string{},
 		Signals:         map[string]FileSignals{},

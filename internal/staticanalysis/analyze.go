@@ -13,8 +13,12 @@ import (
 )
 
 /*
-AnalyzePackageFiles walks a tree of extracted package files and runs the specified analysis
-tasks to produce the result data.
+AnalyzePackageFiles walks a tree of extracted package files and runs the analysis tasks
+listed in analysisTasks to produce the result data.
+
+Note that to some tasks depend on the data from other tasks; for example, 'obfuscation'
+depends on 'parsing'. If a task listed in analysisTasks depends on a task not listed
+in analysisTasks, then both tasks are performed.
 
 If staticanalysis.Parsing is not in the list of analysisTasks, jsParserConfig may be empty.
 
@@ -22,34 +26,34 @@ If an error occurs while traversing the extracted package directory tree, or an 
 task is requested, a nil result is returned along with the corresponding error object.
 */
 func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig, analysisTasks []Task) (*Result, error) {
-	// whether the analysis needs to be run
-	runAnalysis := map[Task]bool{}
-	// whether the analysis should be output. If a task is not included in analysisTasks
-	// but its data is needed for another task, it will be performed but not output
-	outputAnalysis := map[Task]bool{}
+	runTask := map[Task]bool{}
 
 	for _, task := range analysisTasks {
 		switch task {
-		case BasicData:
-			runAnalysis[BasicData] = true
-			outputAnalysis[BasicData] = true
+		case Basic:
+			runTask[Basic] = true
 		case Parsing:
-			runAnalysis[Parsing] = true
-			outputAnalysis[Parsing] = true
+			runTask[Parsing] = true
 		case Obfuscation:
 			// parsing needed for obfuscation detection
-			runAnalysis[Parsing] = true
-
-			runAnalysis[Obfuscation] = true
-			outputAnalysis[Obfuscation] = true
+			runTask[Parsing] = true
+			runTask[Obfuscation] = true
 		default:
 			return nil, fmt.Errorf("static analysis task not implemented: %s", task)
 		}
 	}
-	basicData := BasicPackageData{
-		Files: map[string]BasicFileData{},
+
+	result := Result{}
+
+	if runTask[Basic] {
+		result.BasicData = &BasicPackageData{
+			Files: map[string]BasicFileData{},
+		}
 	}
-	parsingData := parsing.PackageResult{}
+
+	if runTask[Parsing] {
+		result.ParsingData = parsing.PackageResult{}
+	}
 
 	walkErr := filepath.WalkDir(extractDir, func(path string, f fs.DirEntry, err error) error {
 		if err != nil {
@@ -59,17 +63,17 @@ func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig,
 			pathInArchive := strings.TrimPrefix(path, extractDir+string(os.PathSeparator))
 			log.Info("Processing " + pathInArchive)
 
-			if runAnalysis[BasicData] {
-				basicData.Files[pathInArchive] = GetBasicFileData(path, pathInArchive)
+			if runTask[Basic] {
+				result.BasicData.Files[pathInArchive] = GetBasicFileData(path, pathInArchive)
 			}
 
-			if runAnalysis[Parsing] {
+			if runTask[Parsing] {
 				fileParseData, parseErr := parsing.ParseFile(jsParserConfig, path, "", false)
 				if parseErr != nil {
 					log.Error("Error parsing file", "filename", pathInArchive, "error", parseErr)
-					parsingData[pathInArchive] = nil
+					result.ParsingData[pathInArchive] = nil
 				} else {
-					parsingData[pathInArchive] = fileParseData
+					result.ParsingData[pathInArchive] = fileParseData
 				}
 			}
 		}
@@ -79,21 +83,9 @@ func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig,
 		return nil, fmt.Errorf("error while walking package files: %w", walkErr)
 	}
 
-	var obfuscationData *obfuscation.Result
-	if runAnalysis[Obfuscation] {
-		obfuscationData = obfuscation.Analyze(parsingData)
-	}
-
-	result := Result{}
-
-	if outputAnalysis[BasicData] {
-		result[BasicData] = basicData
-	}
-	if outputAnalysis[Parsing] {
-		result[Parsing] = parsingData
-	}
-	if outputAnalysis[Obfuscation] {
-		result[Obfuscation] = obfuscationData
+	if _, run := runTask[Obfuscation]; run {
+		obfuscationData := obfuscation.Analyze(result.ParsingData)
+		result.ObfuscationData = &obfuscationData
 	}
 
 	return &result, nil
