@@ -25,7 +25,7 @@ Use sbOpts to customise sandbox behaviour.
 If len(tasks) > 0, only the specified static analysis tasks will be performed.
 Otherwise, all available tasks [staticanalysis.AllTasks()] will be performed.
 */
-func RunStaticAnalyses(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option, tasks ...staticanalysis.Task) (result.StaticAnalysisResults, analysis.Status, error) {
+func RunStaticAnalyses(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option, tasks []staticanalysis.Task) (result.StaticAnalysisResults, analysis.Status, error) {
 	if len(tasks) == 0 {
 		tasks = staticanalysis.AllTasks()
 	}

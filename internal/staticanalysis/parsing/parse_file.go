@@ -4,41 +4,13 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"strings"
 
-	"github.com/ossf/package-analysis/internal/staticanalysis/linelengths"
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
 
-// Result holds the full set of parsing data for a single file, which may
-// contain valid parsing results for multiple languages
-type Result map[Language]*Data
-
-// Data (parsing.Data) holds information about source code tokens found
-// in a given input text when parsed as particular language.
-type Data struct {
-	LineLengths    map[int]int
-	Identifiers    []token.Identifier
-	StringLiterals []token.String
-	IntLiterals    []token.Int
-	FloatLiterals  []token.Float
-	Comments       []token.Comment
-}
-
-func (rd Data) String() string {
-	parts := []string{
-		fmt.Sprintf("line lengths\n%v\n", rd.LineLengths),
-		fmt.Sprintf("identifiers\n%v\n", rd.Identifiers),
-		fmt.Sprintf("string literals\n%v\n", rd.StringLiterals),
-		fmt.Sprintf("integer literals\n%v\n", rd.IntLiterals),
-		fmt.Sprintf("float literals\n%v\n", rd.FloatLiterals),
-	}
-	return strings.Join(parts, "\n-------------------\n")
-}
-
 /*
-ParseSingle parses the given input source code (either a file or string) using all
-supported language parsers and returns a map of language to parsing.Data, which holds
+ParseFile parses the given input source code (either a file or string) using all
+supported language parsers and returns a map of language to parsing.SingleResult, which holds
 information about the source code tokens found for that language.
 
 Currently, the only supported language is JavaScript, however more language parsers will
@@ -58,7 +30,7 @@ they are normally both parsed as floating point. This function records a numeric
 as an integer if it can be converted using strconv.Atoi(), otherwise it is recorded as
 floating point.
 */
-func ParseSingle(parserConfig ParserConfig, sourceFile string, sourceString string, printDebug bool) (Result, error) {
+func ParseFile(parserConfig ParserConfig, sourceFile string, sourceString string, printDebug bool) (FileResult, error) {
 	parseResult, parserOutput, err := parseJS(parserConfig, sourceFile, sourceString)
 	if printDebug {
 		fmt.Fprintf(os.Stderr, "\nRaw JSON:\n%s\n", parserOutput)
@@ -67,17 +39,11 @@ func ParseSingle(parserConfig ParserConfig, sourceFile string, sourceString stri
 		return nil, err
 	}
 	if !parseResult.ValidInput {
-		return map[Language]*Data{JavaScript: nil}, nil
-	}
-
-	lineLengths, err := linelengths.GetLineLengths(sourceFile, sourceString)
-	if err != nil {
-		return nil, err
+		return map[Language]*SingleResult{JavaScript: nil}, nil
 	}
 
 	// Initialise with empty slices to avoid null values in JSON
-	data := &Data{
-		LineLengths:    lineLengths,
+	data := &SingleResult{
 		Identifiers:    []token.Identifier{},
 		StringLiterals: []token.String{},
 		IntLiterals:    []token.Int{},
@@ -116,5 +82,5 @@ func ParseSingle(parserConfig ParserConfig, sourceFile string, sourceString stri
 		data.Comments = append(data.Comments, token.Comment{Value: comment.Data})
 	}
 
-	return map[Language]*Data{JavaScript: data}, nil
+	return map[Language]*SingleResult{JavaScript: data}, nil
 }
