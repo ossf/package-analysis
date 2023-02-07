@@ -24,6 +24,7 @@ import (
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 	"github.com/ossf/package-analysis/internal/resultstore"
 	"github.com/ossf/package-analysis/internal/sandbox"
+	"github.com/ossf/package-analysis/internal/staticanalysis"
 	"github.com/ossf/package-analysis/internal/worker"
 	"github.com/ossf/package-analysis/pkg/api"
 	"github.com/ossf/package-analysis/pkg/result"
@@ -175,7 +176,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 
 	var staticResults result.StaticAnalysisResults
 	if resultsBuckets.staticAnalysis != "" {
-		staticResults, _, err = worker.RunStaticAnalyses(pkg, staticSandboxOpts)
+		staticResults, _, err = worker.RunStaticAnalyses(pkg, staticSandboxOpts, staticanalysis.AllTasks())
 		if err != nil {
 			return err
 		}
