@@ -12,9 +12,9 @@ type DynamicAnalysisStraceSummary map[api.RunPhase]*StraceSummary
 type DynamicAnalysisFileWrites map[api.RunPhase]*FileWrites
 
 type DynamicAnalysisResults struct {
-	StraceSummary    DynamicAnalysisStraceSummary
-	FileWrites       DynamicAnalysisFileWrites
-	FileWriteBuffers []string
+	StraceSummary        DynamicAnalysisStraceSummary
+	FileWrites           DynamicAnalysisFileWrites
+	FileWriteBufferPaths []string
 }
 
 type StaticAnalysisResults = json.RawMessage

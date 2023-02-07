@@ -96,6 +96,17 @@ func saveResults(ctx context.Context, pkg *pkgecosystem.Pkg, dest resultBucketPa
 		if err != nil {
 			return fmt.Errorf("failed to upload file write analysis to blobstore = %w", err)
 		}
+		for _, writeBufferPath := range dynamicResults.FileWriteBufferPaths {
+			writeBuffer, err := utils.ReadTempFile(writeBufferPath)
+			if err != nil {
+				log.Error("Could not read file", err)
+			}
+			writeBufferErr := resultstore.New(dest.fileWrites, resultstore.ConstructPath()).SaveWriteBuffer(ctx, pkg, string(writeBuffer), utils.GetSHA256Hash(string(writeBuffer)))
+			if writeBufferErr != nil {
+				log.Fatal(" Failed to upload file write buffer results to blobstore", "error")
+			}
+		}
+		utils.CleanUpTempFiles()
 	}
 
 	return nil
@@ -179,12 +190,6 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		staticResults, _, err = worker.RunStaticAnalyses(pkg, staticSandboxOpts)
 		if err != nil {
 			return err
-		}
-		for _, writeBuffer := range results.FileWriteBuffers {
-			writeBufferErr := resultstore.New(fileWritesBucket, resultstore.ConstructPath()).SaveWriteBuffer(ctx, pkg, writeBuffer, utils.GetSHA256Hash(writeBuffer))
-			if writeBufferErr != nil {
-				log.Fatal(" Failed to upload file write buffer results to blobstore", "error")
-			}
 		}
 	}
 

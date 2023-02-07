@@ -54,12 +54,12 @@ var (
 const hexPrefix = "0x"
 
 type FileInfo struct {
-	Path         string
-	Read         bool
-	Write        bool
-	Delete       bool
-	WriteInfo    WriteInfo
-	WriteBuffers []string
+	Path             string
+	Read             bool
+	Write            bool
+	Delete           bool
+	WriteInfo        WriteInfo
+	WriteBufferPaths []string
 }
 
 type WriteInfo []WriteContentInfo
@@ -149,9 +149,14 @@ func (r *Result) recordFileAccess(file string, read, write, delete bool) {
 
 func (r *Result) recordFileWrite(file, writeBuffer string, bytesWritten int64) {
 	r.recordFileAccess(file, false, true, false)
-	writeContentsAndBytes := WriteContentInfo{BytesWritten: bytesWritten, WriteBufferId: utils.GetSHA256Hash(writeBuffer)}
+	SHA256WriteId := utils.GetSHA256Hash(writeBuffer)
+	writeContentsAndBytes := WriteContentInfo{BytesWritten: bytesWritten, WriteBufferId: SHA256WriteId}
 	r.files[file].WriteInfo = append(r.files[file].WriteInfo, writeContentsAndBytes)
-	r.files[file].WriteBuffers = append(r.files[file].WriteBuffers, writeBuffer)
+	fileName, error := utils.CreateAndWriteTempFile(SHA256WriteId+".json", []byte(writeBuffer))
+	r.files[file].WriteBufferPaths = append(r.files[file].WriteBufferPaths, fileName)
+	if error != nil {
+		log.Error("Could not create and write file", error)
+	}
 }
 
 func (r *Result) recordSocket(address string, port int) {
@@ -197,11 +202,6 @@ func (r *Result) parseEnterSyscall(syscall, args string) error {
 		if firstQuoteIndex != -1 && lastQuoteIndex != -1 && lastQuoteIndex > firstQuoteIndex {
 			// Save the contents between the first and last quote.
 			writeBuffer = args[firstQuoteIndex+1 : lastQuoteIndex]
-			lastIndexComma := strings.LastIndex(args, ",")
-			if lastQuoteIndex+1 != lastIndexComma {
-				// If the write buffer is truncated there will be an ellipses after the quoted write buffer. Save this as well.
-				writeBuffer += args[lastQuoteIndex+1 : lastIndexComma]
-			}
 		}
 		r.recordFileWrite(match[1], writeBuffer, bytesWritten)
 	}

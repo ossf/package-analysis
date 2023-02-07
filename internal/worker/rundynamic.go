@@ -78,7 +78,7 @@ func RunDynamicAnalysis(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option) (result.
 		results.StraceSummary[phase] = &phaseResult.StraceSummary
 		results.FileWrites[phase] = &phaseResult.FileWrites
 		lastStatus = phaseResult.StraceSummary.Status
-		results.FileWriteBuffers = append(results.FileWriteBuffers, phaseResult.FileWriteBuffers...)
+		results.FileWriteBufferPaths = append(results.FileWriteBufferPaths, phaseResult.FileWriteBufferPaths...)
 
 		if lastStatus != analysis.StatusCompleted {
 			// Error caused by an issue with the package (probably).
