@@ -14,14 +14,14 @@ import (
 )
 
 type fileSignalsTestCase struct {
-	name     string
-	fileData parsing.SingleResult
+	name      string
+	parseData parsing.SingleResult
 }
 
 var fileSignalsTestCases = []fileSignalsTestCase{
 	{
 		name: "simple 1",
-		fileData: parsing.SingleResult{
+		parseData: parsing.SingleResult{
 			Identifiers: []token.Identifier{
 				{Name: "a", Type: token.Variable},
 			},
@@ -34,7 +34,7 @@ var fileSignalsTestCases = []fileSignalsTestCase{
 	},
 	{
 		name: "simple 2",
-		fileData: parsing.SingleResult{
+		parseData: parsing.SingleResult{
 			Identifiers: []token.Identifier{
 				{Name: "test", Type: token.Function},
 				{Name: "a", Type: token.Parameter},
@@ -111,8 +111,8 @@ func init() {
 func TestComputeSignals(t *testing.T) {
 	for _, test := range fileSignalsTestCases {
 		t.Run(test.name, func(t *testing.T) {
-			signals := ComputeFileSignals(test.fileData)
-			testSignals(t, signals, test.fileData.StringLiterals, test.fileData.Identifiers)
+			signals := ComputeFileSignals(test.parseData)
+			testSignals(t, signals, test.parseData.StringLiterals, test.parseData.Identifiers)
 		})
 	}
 }
