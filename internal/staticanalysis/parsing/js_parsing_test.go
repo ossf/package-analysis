@@ -12,7 +12,7 @@ import (
 type jsTestCase struct {
 	name      string
 	inputJs   string
-	want      parserOutput
+	want      parseOutput
 	printJson bool // set to true to see raw parser output
 }
 
@@ -35,7 +35,7 @@ function test() {
 //"'11"'` + "`" + `;
 	var mystring12 = ` + "`hello\"'${5.6 + 6.4}\"'`" + `;
 }`,
-		want: parserOutput{
+		want: parseOutput{
 			Identifiers: []parsedIdentifier{
 				{token.Function, "test", token.Position{2, 9}},
 				{token.Variable, "mystring1", token.Position{3, 8}},
@@ -79,7 +79,7 @@ function test() {
 function test2(param1, param2, param3 = "ahd") {
 	return param1 + param2 + param3;
 }`,
-		want: parserOutput{
+		want: parseOutput{
 			Identifiers: []parsedIdentifier{
 				{token.Function, "test2", token.Position{2, 9}},
 				{token.Parameter, "param1", token.Position{2, 15}},
@@ -112,7 +112,7 @@ outer:
     }
     console.log("End");
 }`,
-		want: parserOutput{
+		want: parseOutput{
 			Identifiers: []parsedIdentifier{
 				{token.Function, "test3", token.Position{2, 9}},
 				{token.Parameter, "a", token.Position{2, 15}},
@@ -164,7 +164,7 @@ function test4() {
             break;
     }
 }`,
-		want: parserOutput{
+		want: parseOutput{
 			Identifiers: []parsedIdentifier{
 				{token.Function, "test4", token.Position{2, 9}},
 				{token.Variable, "a", token.Position{3, 10}},
@@ -220,7 +220,7 @@ Rectangle = class Rectangle2 {
 console.log(Rectangle.name);
 // output: "Rectangle2"
 `,
-		want: parserOutput{
+		want: parseOutput{
 			Identifiers: []parsedIdentifier{
 				{token.Variable, "Rectangle", token.Position{3, 4}},
 				{token.Parameter, "height", token.Position{4, 16}},
@@ -248,7 +248,7 @@ console.log(Rectangle.name);
 'use strict';
 console.log("Hello");
 `,
-		want: parserOutput{
+		want: parseOutput{
 			Identifiers: []parsedIdentifier{
 				{token.Member, "log", token.Position{3, 8}},
 			},
@@ -268,7 +268,7 @@ var index = 0,
     {length, width} = 10,
     cancelled = false;
 `,
-		want: parserOutput{
+		want: parseOutput{
 			Identifiers: []parsedIdentifier{
 				{token.Variable, "a", token.Position{2, 5}},
 				{token.Variable, "b", token.Position{2, 8}},
@@ -303,7 +303,7 @@ function validateIPAddress(ipaddress) {
     return (false)
 }
 `,
-		want: parserOutput{
+		want: parseOutput{
 			ValidInput: true,
 			Identifiers: []parsedIdentifier{
 				{token.Function, "validateIPAddress", token.Position{2, 9}},
@@ -335,7 +335,7 @@ let b = 0o777777777777n;         // 68719476735
 let c = 0x123456789ABCDEFn;      // 81985529216486895
 let d = 0b11101001010101010101n; // 955733
 `,
-		want: parserOutput{
+		want: parseOutput{
 			ValidInput: true,
 			Identifiers: []parsedIdentifier{
 				{token.Variable, "a", token.Position{2, 4}},
@@ -348,6 +348,25 @@ let d = 0b11101001010101010101n; // 955733
 				{"Numeric", "big.Int", big.NewInt(68719476735), "0o777777777777n", false, token.Position{3, 8}},
 				{"Numeric", "big.Int", big.NewInt(81985529216486895), "0x123456789ABCDEFn", false, token.Position{4, 8}},
 				{"Numeric", "big.Int", big.NewInt(955733), "0b11101001010101010101n", false, token.Position{5, 8}},
+			},
+		},
+		printJson: false,
+	},
+	{
+		name: "test syntax error",
+		inputJs: `
+a = w w;
+`,
+		want: parseOutput{
+			ValidInput:  false,
+			Identifiers: []parsedIdentifier{},
+			Errors: []parserStatus{
+				{
+					"Error", "SyntaxError", "BABEL_PARSER_SYNTAX_ERROR: MissingSemicolon", token.Position{2, 5},
+				},
+				{
+					"Error", "SyntaxError", "FATAL SYNTAX ERROR (unable to parse remainder of file)", token.Position{2, 5},
+				},
 			},
 		},
 		printJson: false,
@@ -398,6 +417,20 @@ func TestParseJS(t *testing.T) {
 					gotIdentifier := got.Identifiers[i]
 					if !reflect.DeepEqual(gotIdentifier, wantIdentifier) {
 						t.Errorf("Identifier mismatch (#%d):\ngot  %v\nwant %v", i+1, gotIdentifier, wantIdentifier)
+					}
+				}
+			}
+
+			if len(tt.want.Errors) != len(got.Errors) {
+				t.Errorf("Mismatch in number of errors: want %d, got %d", len(tt.want.Errors), len(got.Errors))
+			}
+			if len(tt.want.Errors) > 0 {
+				for i, wantErr := range tt.want.Errors {
+					if i >= len(got.Errors) {
+						t.Errorf("Error missing: want %v", wantErr)
+					} else if got.Errors[i] != wantErr {
+						t.Errorf("Error mismatch (#%d):\ngot  %v\nwant %v", i+1, got.Errors[i], wantErr)
+
 					}
 				}
 			}
