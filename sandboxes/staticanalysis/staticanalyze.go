@@ -24,7 +24,7 @@ var (
 	localFile   = flag.String("local", "", "Local package archive containing package to be analysed. Name must match -package argument")
 	output      = flag.String("output", "", "where to write output JSON results (default stdout)")
 	help        = flag.Bool("help", false, "Prints this help and list of available analyses")
-	analyses    = utils.CommaSeparatedFlags("analyses", "all", "comma-separated list of static analyses to perform")
+	analyses    = utils.CommaSeparatedFlags("analyses", "all", "comma-separated list of static analysis tasks to perform")
 )
 
 type workDirs struct {
@@ -42,15 +42,13 @@ func (wd *workDirs) cleanup() {
 
 const jsParserDirName = "jsparser"
 
-func checkAnalyses(names []string) ([]staticanalysis.Task, error) {
+func checkTasks(names []string) ([]staticanalysis.Task, error) {
 	uniqueNames := utils.RemoveDuplicates(names)
 	var tasks []staticanalysis.Task
 	for _, name := range uniqueNames {
-		task, ok := staticanalysis.TaskFromString(name)
-		if !ok {
+		if task, ok := staticanalysis.TaskFromString(name); !ok {
 			return nil, fmt.Errorf("unrecognised static analysis task '%s'", name)
-		}
-		if task == staticanalysis.All {
+		} else if task == staticanalysis.All {
 			tasks = append(tasks, staticanalysis.AllTasks()...)
 		} else {
 			tasks = append(tasks, task)
@@ -60,8 +58,8 @@ func checkAnalyses(names []string) ([]staticanalysis.Task, error) {
 	return tasks, nil
 }
 
-func printAnalyses() {
-	fmt.Fprintln(os.Stderr, "Available analyses are:")
+func printAllTasks() {
+	fmt.Fprintln(os.Stderr, "Available analysis tasks are:")
 	for _, task := range staticanalysis.AllTasks() {
 		fmt.Fprintln(os.Stderr, task)
 	}
@@ -107,7 +105,7 @@ func run() (err error) {
 	if len(os.Args) == 1 || *help == true {
 		flag.Usage()
 		fmt.Fprintln(os.Stderr, "")
-		printAnalyses()
+		printAllTasks()
 		return
 	}
 
@@ -126,14 +124,11 @@ func run() (err error) {
 		return fmt.Errorf("package error: %v", err)
 	}
 
-	analysisTasks, err := checkAnalyses(analyses.Values)
-
+	analysisTasks, err := checkTasks(analyses.Values)
 	if err != nil {
-		printAnalyses()
+		printAllTasks()
 		return err
 	}
-
-	fmt.Printf("%v", analysisTasks)
 
 	log.Info("Static analysis launched",
 		log.Label("ecosystem", *ecosystem),

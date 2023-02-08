@@ -176,7 +176,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 
 	var staticResults result.StaticAnalysisResults
 	if resultsBuckets.staticAnalysis != "" {
-		staticResults, _, err = worker.RunStaticAnalyses(pkg, staticSandboxOpts, staticanalysis.AllTasks())
+		staticResults, _, err = worker.RunStaticAnalysis(pkg, staticSandboxOpts, staticanalysis.All)
 		if err != nil {
 			return err
 		}
