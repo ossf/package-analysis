@@ -132,7 +132,7 @@ func staticAnalysis(pkg *pkgecosystem.Pkg) {
 
 	sbOpts := makeSandboxOptions(analysis.Static)
 
-	results, status, err := worker.RunStaticAnalyses(pkg, sbOpts, staticanalysis.ObfuscationDetection)
+	results, status, err := worker.RunStaticAnalysis(pkg, sbOpts, staticanalysis.All)
 	if err != nil {
 		log.Fatal("Static analysis aborted", "error", err)
 	}

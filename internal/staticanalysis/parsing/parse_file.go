@@ -1,33 +1,37 @@
-package obfuscation
+package parsing
 
 import (
 	"fmt"
 	"os"
 	"strconv"
 
-	"github.com/ossf/package-analysis/internal/staticanalysis/linelengths"
-	"github.com/ossf/package-analysis/internal/staticanalysis/parsing/js"
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
 
 /*
-CollectData parses the given JavaScript input (source file or raw source string) and
-produces a FileData object capturing data about the source code. This data can be
-further analysed by ComputeSignals.
+ParseFile parses the given input source code (either a file or string) using all
+supported language parsers and returns a map of language to parsing.SingleResult, which holds
+information about the source code tokens found for that language.
 
-To parse a file, specify its path using jsSourceFile; the value of jsSourceString is ignored.
-If jsSourceFile is empty, then jsSourceString is parsed directly as JavaScript code.
-The input is assumed to be valid JavaScript source.
+Currently, the only supported language is JavaScript, however more language parsers will
+be added in the future.
 
-If a syntax error is found, a nil pointer is returned with no error. This indicates that
-the file may not be JavaScript and could be parsed using other methods.
+Input can be specified either by file path or by passing the source code string directly.
+To parse a file, specify its path using sourceFile; the value of sourceString is ignored.
+If sourceFile is empty, then sourceString is parsed directly as code.
 
-In Javascript, there is little distinction between integer and floating point literals - they are
-all parsed as floating point. This function will record a numeric literal as an integer if it can be
-converted to an integer using strconv.Atoi(), otherwise it will be recorded as a floating point literal.
+If parsing is attempted in a given langauge and fails due to syntax errors, the value
+for that language in the returned map is nil, with no other error.
+
+If an internal error occurs during parsing, parsing is interrupted and the error returned.
+
+Note: In JavaScript, there is no distinction between integer and floating point literals;
+they are normally both parsed as floating point. This function records a numeric literal
+as an integer if it can be converted using strconv.Atoi(), otherwise it is recorded as
+floating point.
 */
-func CollectData(parserConfig js.ParserConfig, jsSourceFile string, jsSourceString string, printDebug bool) (*FileData, error) {
-	parseResult, parserOutput, err := js.ParseJS(parserConfig, jsSourceFile, jsSourceString)
+func ParseFile(parserConfig ParserConfig, sourceFile string, sourceString string, printDebug bool) (FileResult, error) {
+	parseResult, parserOutput, err := parseJS(parserConfig, sourceFile, sourceString)
 	if printDebug {
 		fmt.Fprintf(os.Stderr, "\nRaw JSON:\n%s\n", parserOutput)
 	}
@@ -35,17 +39,11 @@ func CollectData(parserConfig js.ParserConfig, jsSourceFile string, jsSourceStri
 		return nil, err
 	}
 	if !parseResult.ValidInput {
-		return nil, nil
-	}
-
-	lineLengths, err := linelengths.GetLineLengths(jsSourceFile, jsSourceString)
-	if err != nil {
-		return nil, err
+		return map[Language]*SingleResult{JavaScript: nil}, nil
 	}
 
 	// Initialise with empty slices to avoid null values in JSON
-	data := FileData{
-		LineLengths:    lineLengths,
+	data := &SingleResult{
 		Identifiers:    []token.Identifier{},
 		StringLiterals: []token.String{},
 		IntLiterals:    []token.Int{},
@@ -84,5 +82,5 @@ func CollectData(parserConfig js.ParserConfig, jsSourceFile string, jsSourceStri
 		data.Comments = append(data.Comments, token.Comment{Value: comment.Data})
 	}
 
-	return &data, nil
+	return map[Language]*SingleResult{JavaScript: data}, nil
 }

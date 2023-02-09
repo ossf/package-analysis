@@ -38,7 +38,7 @@ func processGzipFile(path string, process func(io.Reader) error) error {
 		}
 	}()
 
-	if err = process(unzippedBytes); err != nil {
+	if err := process(unzippedBytes); err != nil {
 		return err
 	}
 

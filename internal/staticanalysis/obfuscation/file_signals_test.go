@@ -8,10 +8,52 @@ import (
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stats"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stringentropy"
-	"github.com/ossf/package-analysis/internal/staticanalysis/parsing/js"
+	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 	"github.com/ossf/package-analysis/internal/utils"
 )
+
+type fileSignalsTestCase struct {
+	name      string
+	parseData parsing.SingleResult
+}
+
+var fileSignalsTestCases = []fileSignalsTestCase{
+	{
+		name: "simple 1",
+		parseData: parsing.SingleResult{
+			Identifiers: []token.Identifier{
+				{Name: "a", Type: token.Variable},
+			},
+			StringLiterals: []token.String{
+				{Value: "hello", Raw: `"hello"`},
+			},
+			IntLiterals:   []token.Int{},
+			FloatLiterals: []token.Float{},
+		},
+	},
+	{
+		name: "simple 2",
+		parseData: parsing.SingleResult{
+			Identifiers: []token.Identifier{
+				{Name: "test", Type: token.Function},
+				{Name: "a", Type: token.Parameter},
+				{Name: "b", Type: token.Parameter},
+				{Name: "c", Type: token.Variable},
+			},
+			StringLiterals: []token.String{
+				{Value: "hello", Raw: `"hello"`},
+				{Value: "apple", Raw: `"apple"`},
+			},
+			IntLiterals: []token.Int{
+				{Value: 2, Raw: "2"},
+				{Value: 3, Raw: "3"},
+				{Value: 4, Raw: "4"},
+			},
+			FloatLiterals: []token.Float{},
+		},
+	},
+}
 
 func symbolEntropySummary(symbols []string) stats.SampleStatistics {
 	probs := stringentropy.CharacterProbabilities(symbols)
@@ -67,22 +109,10 @@ func init() {
 }
 
 func TestComputeSignals(t *testing.T) {
-	parserConfig, err := js.InitParser(t.TempDir())
-	if err != nil {
-		t.Fatalf("failed to init parser: %v", err)
-	}
-
-	testCases := []testCase{test1, test2}
-
-	for _, test := range testCases {
+	for _, test := range fileSignalsTestCases {
 		t.Run(test.name, func(t *testing.T) {
-			rawData, err := CollectData(parserConfig, "", test.jsSource, true)
-			if err != nil {
-				t.Error(err)
-			} else {
-				signals := ComputeSignals(*rawData)
-				testSignals(t, signals, test.expectedData.StringLiterals, test.expectedData.Identifiers)
-			}
+			signals := ComputeFileSignals(test.parseData)
+			testSignals(t, signals, test.parseData.StringLiterals, test.parseData.Identifiers)
 		})
 	}
 }

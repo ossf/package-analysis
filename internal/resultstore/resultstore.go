@@ -55,7 +55,7 @@ func (rs *ResultStore) generatePath(p Pkg) string {
 	return path
 }
 
-func (rs *ResultStore) OpenAndWriteToBucket(ctx context.Context, contents []byte, path, filename string) error {
+func (rs *ResultStore) WriteToBucket(ctx context.Context, contents []byte, path, filename string) error {
 	bkt, err := blob.OpenBucket(ctx, rs.bucket)
 	if err != nil {
 		return err
@@ -83,7 +83,7 @@ func (rs *ResultStore) OpenAndWriteToBucket(ctx context.Context, contents []byte
 
 func (rs *ResultStore) SaveWriteBuffer(ctx context.Context, p Pkg, writeBuffer, fileName string) error {
 	path := filepath.Join(rs.generatePath(p), writeBufferFolder)
-	return rs.OpenAndWriteToBucket(ctx, []byte(writeBuffer), path, fileName+".json")
+	return rs.WriteToBucket(ctx, []byte(writeBuffer), path, fileName+".json")
 }
 
 func (rs *ResultStore) Save(ctx context.Context, p Pkg, analysis interface{}) error {
@@ -108,5 +108,5 @@ func (rs *ResultStore) Save(ctx context.Context, p Pkg, analysis interface{}) er
 		return err
 	}
 
-	return rs.OpenAndWriteToBucket(ctx, b, rs.generatePath(p), filename)
+	return rs.WriteToBucket(ctx, b, rs.generatePath(p), filename)
 }
