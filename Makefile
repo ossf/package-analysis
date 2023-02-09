@@ -19,8 +19,13 @@ else
 	BUILD_ARG=--build-arg=SANDBOX_IMAGE_TAG=$(TAG)
 endif
 
-.PHONY: all
-all: docker_build_all
+
+#
+# This recipe builds images for production. Note: RELEASE_TAG must be set
+#
+.PHONY: cloudbuild
+cloudbuild: docker_build_all docker_push_all
+
 
 #
 # These recipes build all the top-level docker images
