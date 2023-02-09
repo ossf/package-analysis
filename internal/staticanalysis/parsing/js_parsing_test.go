@@ -12,7 +12,7 @@ import (
 type jsTestCase struct {
 	name      string
 	inputJs   string
-	want      parseOutput
+	want      languageData
 	printJson bool // set to true to see raw parser output
 }
 
@@ -35,7 +35,7 @@ function test() {
 //"'11"'` + "`" + `;
 	var mystring12 = ` + "`hello\"'${5.6 + 6.4}\"'`" + `;
 }`,
-		want: parseOutput{
+		want: languageData{
 			Identifiers: []parsedIdentifier{
 				{token.Function, "test", token.Position{2, 9}},
 				{token.Variable, "mystring1", token.Position{3, 8}},
@@ -79,7 +79,7 @@ function test() {
 function test2(param1, param2, param3 = "ahd") {
 	return param1 + param2 + param3;
 }`,
-		want: parseOutput{
+		want: languageData{
 			Identifiers: []parsedIdentifier{
 				{token.Function, "test2", token.Position{2, 9}},
 				{token.Parameter, "param1", token.Position{2, 15}},
@@ -112,7 +112,7 @@ outer:
     }
     console.log("End");
 }`,
-		want: parseOutput{
+		want: languageData{
 			Identifiers: []parsedIdentifier{
 				{token.Function, "test3", token.Position{2, 9}},
 				{token.Parameter, "a", token.Position{2, 15}},
@@ -164,7 +164,7 @@ function test4() {
             break;
     }
 }`,
-		want: parseOutput{
+		want: languageData{
 			Identifiers: []parsedIdentifier{
 				{token.Function, "test4", token.Position{2, 9}},
 				{token.Variable, "a", token.Position{3, 10}},
@@ -220,7 +220,7 @@ Rectangle = class Rectangle2 {
 console.log(Rectangle.name);
 // output: "Rectangle2"
 `,
-		want: parseOutput{
+		want: languageData{
 			Identifiers: []parsedIdentifier{
 				{token.Variable, "Rectangle", token.Position{3, 4}},
 				{token.Parameter, "height", token.Position{4, 16}},
@@ -248,7 +248,7 @@ console.log(Rectangle.name);
 'use strict';
 console.log("Hello");
 `,
-		want: parseOutput{
+		want: languageData{
 			Identifiers: []parsedIdentifier{
 				{token.Member, "log", token.Position{3, 8}},
 			},
@@ -268,7 +268,7 @@ var index = 0,
     {length, width} = 10,
     cancelled = false;
 `,
-		want: parseOutput{
+		want: languageData{
 			Identifiers: []parsedIdentifier{
 				{token.Variable, "a", token.Position{2, 5}},
 				{token.Variable, "b", token.Position{2, 8}},
@@ -303,7 +303,7 @@ function validateIPAddress(ipaddress) {
     return (false)
 }
 `,
-		want: parseOutput{
+		want: languageData{
 			ValidInput: true,
 			Identifiers: []parsedIdentifier{
 				{token.Function, "validateIPAddress", token.Position{2, 9}},
@@ -335,7 +335,7 @@ let b = 0o777777777777n;         // 68719476735
 let c = 0x123456789ABCDEFn;      // 81985529216486895
 let d = 0b11101001010101010101n; // 955733
 `,
-		want: parseOutput{
+		want: languageData{
 			ValidInput: true,
 			Identifiers: []parsedIdentifier{
 				{token.Variable, "a", token.Position{2, 4}},
@@ -357,7 +357,7 @@ let d = 0b11101001010101010101n; // 955733
 		inputJs: `
 a = w w;
 `,
-		want: parseOutput{
+		want: languageData{
 			ValidInput:  false,
 			Identifiers: []parsedIdentifier{},
 			Errors: []parserStatus{
@@ -387,10 +387,11 @@ func TestParseJS(t *testing.T) {
 
 	for _, tt := range jsTestCases {
 		t.Run(tt.name, func(t *testing.T) {
-			got, parserOutput, err := parseJS(jsParserConfig, "", tt.inputJs)
+			result, rawOutput, err := parseJS(jsParserConfig, StringInput(tt.inputJs))
+			got := result["stdin"]
 			if err != nil {
 				t.Errorf("parseJS() error = %v", err)
-				println("Parser output:\n", parserOutput)
+				println("Parser output:\n", rawOutput)
 				return
 			}
 			if len(tt.want.Literals) != len(got.Literals) {
@@ -436,7 +437,7 @@ func TestParseJS(t *testing.T) {
 			}
 
 			if t.Failed() || printAllJson {
-				println("Raw JSON:\n", parserOutput)
+				println("Raw JSON:\n", rawOutput)
 			}
 
 		})

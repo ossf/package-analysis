@@ -7,8 +7,7 @@ import (
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
 
-// PackageResult holds parsing data for all files in a package, mapping
-// file paths to the FileResult for that file
+// PackageResult maps file paths (e.g. in a package) to the FileResult for that file
 type PackageResult map[string]FileResult
 
 // FileResult holds the full set of parsing data for a single file, which may

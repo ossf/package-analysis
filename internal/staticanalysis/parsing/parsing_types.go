@@ -83,8 +83,11 @@ func (s parserStatus) String() string {
 	return fmt.Sprintf("[%s] %s: %s pos %d:%d", s.Type, s.Name, s.Message, s.Pos.Row(), s.Pos.Col())
 }
 
-// parseOutput holds intermediate data from language-specific parsing functions
-type parseOutput struct {
+// languageResult maps filenames to languageData for that file (i.e. parsing results for a single language)
+type languageResult map[string]languageData
+
+// languageData holds data for a single file processed by a single language parser
+type languageData struct {
 	ValidInput  bool
 	Identifiers []parsedIdentifier
 	Literals    []parsedLiteral[any]
@@ -93,7 +96,7 @@ type parseOutput struct {
 	Errors      []parserStatus
 }
 
-func (p parseOutput) String() string {
+func (p languageData) String() string {
 	identifiers := utils.Transform(p.Identifiers, func(pi parsedIdentifier) string { return pi.String() })
 	literals := utils.Transform(p.Literals, func(pl parsedLiteral[any]) string { return pl.String() })
 	comments := utils.Transform(p.Comments, func(c parsedComment) string { return c.String() })
