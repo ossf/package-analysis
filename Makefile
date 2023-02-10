@@ -24,7 +24,12 @@ endif
 # This recipe builds and pushes images for production. Note: RELEASE_TAG must be set
 #
 .PHONY: cloudbuild
-cloudbuild: docker_push_all
+cloudbuild: require_release_tag docker_push_all
+
+require_release_tag:
+ifndef RELEASE_TAG
+	$(error RELEASE_TAG must be set)
+endif
 
 
 #
