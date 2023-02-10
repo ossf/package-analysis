@@ -21,10 +21,10 @@ endif
 
 
 #
-# This recipe builds images for production. Note: RELEASE_TAG must be set
+# This recipe builds and pushes images for production. Note: RELEASE_TAG must be set
 #
 .PHONY: cloudbuild
-cloudbuild: docker_build_all docker_push_all
+cloudbuild: docker_push_all
 
 
 #
