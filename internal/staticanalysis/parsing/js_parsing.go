@@ -80,78 +80,74 @@ func runParser(parserPath string, input InputStrategy, extraArgs ...string) (str
 	}
 }
 
-func (p parseOutputJSON) process() languageResult {
-	processedOutput := languageResult{}
-
-	// convert the elements into more natural data structure
-	for filename, data := range p {
-		fileData := languageData{
-			ValidInput: true,
-		}
-		for _, t := range data.Tokens {
-			switch t.TokenType {
-			case identifier:
-				symbolSubtype := token.CheckIdentifierType(t.TokenSubType)
-				if symbolSubtype == token.Other || symbolSubtype == token.Unknown {
-					break
-				}
-				fileData.Identifiers = append(fileData.Identifiers, parsedIdentifier{
-					Type: token.CheckIdentifierType(t.TokenSubType),
-					Name: t.Data.(string),
-					Pos:  t.Pos,
-				})
-			case literal:
-				literal := parsedLiteral[any]{
-					Type:     t.TokenSubType,
-					GoType:   fmt.Sprintf("%T", t.Data),
-					Value:    t.Data,
-					RawValue: t.Extra["raw"].(string),
-					InArray:  t.Extra["array"] == true,
-					Pos:      t.Pos,
-				}
-				// check for BigInteger types which have to be represented as strings in JSON
-				if literal.Type == "Numeric" && literal.GoType == "string" {
-					if intAsString, ok := literal.Value.(string); ok {
-						var bigInt big.Int
-						if _, valid := bigInt.SetString(intAsString, 0); valid {
-							literal.Value = &bigInt
-							literal.GoType = fmt.Sprintf("%T", bigInt)
-						}
-					}
-				}
-				fileData.Literals = append(fileData.Literals, literal)
-			case comment:
-				fileData.Comments = append(fileData.Comments, parsedComment{
-					Type: t.TokenSubType,
-					Data: t.Data.(string),
-					Pos:  t.Pos,
-				})
-			default:
-				log.Warn(fmt.Sprintf("parseJS: unrecognised token type %s", t.TokenType))
-			}
-		}
-		for _, s := range data.Status {
-			status := parserStatus{
-				Type:    s.StatusType,
-				Name:    s.StatusSubType,
-				Message: s.Message,
-				Pos:     s.Pos,
-			}
-			switch s.StatusType {
-			case parseInfo:
-				fileData.Info = append(fileData.Info, status)
-			case parseError:
-				fileData.Errors = append(fileData.Errors, status)
-				if strings.Contains(status.Message, fatalSyntaxErrorMarker) {
-					fileData.ValidInput = false
-				}
-			}
-		}
-
-		processedOutput[filename] = fileData
+func (pd parseDataJSON) process() languageData {
+	processed := languageData{
+		ValidInput: true,
 	}
 
-	return processedOutput
+	// process source code tokens
+	for _, t := range pd.Tokens {
+		switch t.TokenType {
+		case identifier:
+			symbolSubtype := token.CheckIdentifierType(t.TokenSubType)
+			if symbolSubtype == token.Other || symbolSubtype == token.Unknown {
+				break
+			}
+			processed.Identifiers = append(processed.Identifiers, parsedIdentifier{
+				Type: token.CheckIdentifierType(t.TokenSubType),
+				Name: t.Data.(string),
+				Pos:  t.Pos,
+			})
+		case literal:
+			literal := parsedLiteral[any]{
+				Type:     t.TokenSubType,
+				GoType:   fmt.Sprintf("%T", t.Data),
+				Value:    t.Data,
+				RawValue: t.Extra["raw"].(string),
+				InArray:  t.Extra["array"] == true,
+				Pos:      t.Pos,
+			}
+			// check for BigInteger types which have to be represented as strings in JSON
+			if literal.Type == "Numeric" && literal.GoType == "string" {
+				if intAsString, ok := literal.Value.(string); ok {
+					var bigInt big.Int
+					if _, valid := bigInt.SetString(intAsString, 0); valid {
+						literal.Value = &bigInt
+						literal.GoType = fmt.Sprintf("%T", bigInt)
+					}
+				}
+			}
+			processed.Literals = append(processed.Literals, literal)
+		case comment:
+			processed.Comments = append(processed.Comments, parsedComment{
+				Type: t.TokenSubType,
+				Data: t.Data.(string),
+				Pos:  t.Pos,
+			})
+		default:
+			log.Warn(fmt.Sprintf("parseJS: unrecognised token type %s", t.TokenType))
+		}
+	}
+	// process parser status (info/errors)
+	for _, s := range pd.Status {
+		status := parserStatus{
+			Type:    s.StatusType,
+			Name:    s.StatusSubType,
+			Message: s.Message,
+			Pos:     s.Pos,
+		}
+		switch s.StatusType {
+		case parseInfo:
+			processed.Info = append(processed.Info, status)
+		case parseError:
+			processed.Errors = append(processed.Errors, status)
+			if strings.Contains(status.Message, fatalSyntaxErrorMarker) {
+				processed.ValidInput = false
+			}
+		}
+	}
+
+	return processed
 }
 
 /*
@@ -180,7 +176,13 @@ func parseJS(parserConfig ParserConfig, input InputStrategy) (languageResult, st
 		return nil, rawOutput, err
 	}
 
-	return parseOutput.process(), rawOutput, nil
+	// convert the elements into more natural data structure
+	result := languageResult{}
+	for filename, data := range parseOutput {
+		result[filename] = data.process()
+	}
+
+	return result, rawOutput, nil
 }
 
 func RunExampleParsing(config ParserConfig, input InputStrategy) {
