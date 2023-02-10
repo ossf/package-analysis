@@ -45,15 +45,10 @@ runParser handles calling the parser program and provide the specified Javascrip
 either by filename (jsFilePath) or piping jsSource to the program's stdin.
 If sourcePath is empty, sourceString will be parsed as JS code
 */
-func runParser(parserPath string, input InputSpec, extraArgs ...string) (string, error) {
-	nodeArgs := []string{parserPath}
-	if err := input.isValid(); err != nil {
-		return "", err
-	}
-
+func runParser(parserPath string, input InputStrategy, extraArgs ...string) (string, error) {
 	workingDir, err := os.MkdirTemp("", "package-analysis-run-parser-*")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("runParser failed to create temp working directory: %w", err)
 	}
 	defer func() {
 		if err := os.RemoveAll(workingDir); err != nil {
@@ -61,44 +56,17 @@ func runParser(parserPath string, input InputSpec, extraArgs ...string) (string,
 		}
 	}()
 
-	if len(input.filePaths) > 0 {
-		if len(input.filePaths) == 1 {
-			nodeArgs = append(nodeArgs, "--file", input.filePaths[0])
-		} else {
-			// write input file paths to temp file
-			inFilePath := workingDir + string(os.PathSeparator) + "input.txt"
-			nodeArgs = append(nodeArgs, "--batch", inFilePath)
-
-			filePathData := []byte(strings.Join(input.filePaths, "\n"))
-			if err := os.WriteFile(inFilePath, filePathData, 0o666); err != nil {
-				return "", fmt.Errorf("runParser failed to write file paths to temp file: %w", err)
-			}
-		}
-	}
-
 	outFilePath := workingDir + string(os.PathSeparator) + "output.json"
-	nodeArgs = append(nodeArgs, "--output", outFilePath)
 
+	nodeArgs := []string{parserPath, "--output", outFilePath}
 	if len(extraArgs) > 0 {
 		nodeArgs = append(nodeArgs, extraArgs...)
 	}
 
 	cmd := exec.Command("node", nodeArgs...)
 
-	if len(input.filePaths) == 0 {
-		// create a pipe to send the source code to the parser via stdin
-		pipe, pipeErr := cmd.StdinPipe()
-		if pipeErr != nil {
-			return "", fmt.Errorf("runParser failed to create pipe: %v", pipeErr)
-		}
-
-		if _, pipeErr = pipe.Write([]byte(input.rawString)); pipeErr != nil {
-			return "", fmt.Errorf("runParser failed to write source string to pipe: %w", pipeErr)
-		}
-
-		if pipeErr = pipe.Close(); pipeErr != nil {
-			return "", fmt.Errorf("runParser failed to close pipe: %w", pipeErr)
-		}
+	if err := input.SendTo(cmd, workingDir); err != nil {
+		return "", fmt.Errorf("runParser failed to prepare parsing input: %w", err)
 	}
 
 	if _, err := cmd.Output(); err != nil {
@@ -196,7 +164,7 @@ The other two return values are the raw parser output and the error respectively
 Otherwise, the first return value points to the parsing result object while the second
 contains the raw JSON output from the parser.
 */
-func parseJS(parserConfig ParserConfig, input InputSpec) (languageResult, string, error) {
+func parseJS(parserConfig ParserConfig, input InputStrategy) (languageResult, string, error) {
 	rawOutput, err := runParser(parserConfig.ParserPath, input)
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
@@ -215,7 +183,7 @@ func parseJS(parserConfig ParserConfig, input InputSpec) (languageResult, string
 	return parseOutput.process(), rawOutput, nil
 }
 
-func RunExampleParsing(config ParserConfig, input InputSpec) {
+func RunExampleParsing(config ParserConfig, input InputStrategy) {
 	parseResult, rawOutput, err := parseJS(config, input)
 
 	println("\nRaw JSON:\n", rawOutput)

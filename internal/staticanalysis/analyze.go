@@ -15,18 +15,18 @@ import (
 // enumeratePackageFiles returns a list of absolute paths to all (regular) files
 // in a directory or any descendent directory
 func enumeratePackageFiles(extractDir string) ([]string, error) {
-	var fileList []string
+	var paths []string
 	err := filepath.WalkDir(extractDir, func(path string, f fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if f.Type().IsRegular() {
-			fileList = append(fileList, path)
+			paths = append(paths, path)
 		}
 		return nil
 	})
 
-	return fileList, err
+	return paths, err
 }
 
 func getPathInArchive(path, extractDir string) string {

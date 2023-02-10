@@ -86,7 +86,7 @@ they are normally both parsed as floating point. This function records a numeric
 as an integer if it can be converted using strconv.Atoi(), otherwise it is recorded as
 floating point.
 */
-func Analyze(parserConfig ParserConfig, input InputSpec, printDebug bool) (PackageResult, error) {
+func Analyze(parserConfig ParserConfig, input InputStrategy, printDebug bool) (PackageResult, error) {
 	resultsByLanguage := map[Language]languageResult{}
 
 	// JavaScript parsing
