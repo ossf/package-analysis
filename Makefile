@@ -26,6 +26,7 @@ endif
 .PHONY: cloudbuild
 cloudbuild: require_release_tag docker_push_all
 
+.PHONY: require_release_tag
 require_release_tag:
 ifndef RELEASE_TAG
 	$(error RELEASE_TAG must be set)
