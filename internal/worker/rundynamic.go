@@ -37,8 +37,8 @@ This does not include errors caused by the package under analysis.
 
 func RunDynamicAnalysis(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option) (result.DynamicAnalysisResults, api.RunPhase, analysis.Status, error) {
 	results := result.DynamicAnalysisResults{
-		StraceSummary: make(result.DynamicAnalysisStraceSummary),
-		FileWrites:    make(result.DynamicAnalysisFileWrites),
+		StraceSummary:     make(result.DynamicAnalysisStraceSummary),
+		FileWritesSummary: make(result.DynamicAnalysisFileWritesSummary),
 	}
 
 	sb := sandbox.New(pkg.Manager().DynamicAnalysisImage(), sbOpts...)
@@ -76,7 +76,7 @@ func RunDynamicAnalysis(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option) (result.
 		}
 
 		results.StraceSummary[phase] = &phaseResult.StraceSummary
-		results.FileWrites[phase] = &phaseResult.FileWrites
+		results.FileWritesSummary[phase] = &phaseResult.FileWritesSummary
 		lastStatus = phaseResult.StraceSummary.Status
 		results.FileWriteBufferPaths = append(results.FileWriteBufferPaths, phaseResult.FileWriteBufferPaths...)
 

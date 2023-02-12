@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 )
 
-const tempFolder = "tempWritesFolder"
+const tempFolder = "temp_writes_folder"
 
 /*
 WriteFile writes the given file contents to the given path.
@@ -26,11 +26,11 @@ func WriteFile(path string, contents []byte, executable bool) error {
 	return nil
 }
 
-/* Writes a a file and flushes the buffer */
+/* Writes a temp file and flushes the buffer */
 func CreateAndWriteTempFile(fileName string, data []byte) (string, error) {
-	dirPath := filepath.Join(os.TempDir(), tempFolder)
-	os.Mkdir(dirPath, 0666)
-	f, err := os.CreateTemp(dirPath, fileName)
+	//path := filepath.Join(os.TempDir(), tempFolder, fileName)
+	dir, err := os.MkdirTemp("", tempFolder)
+	f, err := os.CreateTemp(dir, fileName)
 	if err != nil {
 		return "", err
 	}
@@ -41,7 +41,9 @@ func CreateAndWriteTempFile(fileName string, data []byte) (string, error) {
 
 }
 
+// change return type to rune?
 func ReadTempFile(fileName string) ([]byte, error) {
+	// permissions?
 	f, err := os.OpenFile(fileName, os.O_RDWR, 0666)
 	if err != nil {
 		return []byte{}, err

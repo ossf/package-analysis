@@ -93,7 +93,7 @@ func saveResults(ctx context.Context, pkg *pkgecosystem.Pkg, dest resultBucketPa
 		}
 	}
 	if dest.fileWrites != "" {
-		err := resultstore.New(dest.fileWrites, resultstore.ConstructPath()).Save(ctx, pkg, dynamicResults.FileWrites)
+		err := resultstore.New(dest.fileWrites, resultstore.ConstructPath()).Save(ctx, pkg, dynamicResults.FileWritesSummary)
 		if err != nil {
 			return fmt.Errorf("failed to upload file write analysis to blobstore = %w", err)
 		}

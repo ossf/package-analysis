@@ -100,7 +100,7 @@ func dynamicAnalysis(pkg *pkgecosystem.Pkg) {
 
 	if *uploadFileWriteInfo != "" {
 		bucket, path := parseBucketPath(*uploadFileWriteInfo)
-		err := resultstore.New(bucket, resultstore.BasePath(path)).Save(ctx, pkg, results.FileWrites)
+		err := resultstore.New(bucket, resultstore.BasePath(path)).Save(ctx, pkg, results.FileWritesSummary)
 		if err != nil {
 			log.Fatal("Failed to upload file write analysis results to blobstore", "error", err)
 		}
@@ -109,7 +109,8 @@ func dynamicAnalysis(pkg *pkgecosystem.Pkg) {
 			if err != nil {
 				log.Error("Could not read file", err)
 			}
-			writeBufferErr := resultstore.New(bucket, resultstore.BasePath(path)).SaveWriteBuffer(ctx, pkg, string(writeBuffer), utils.GetSHA256Hash(string(writeBuffer)))
+			writeBufferString := string(writeBuffer)
+			writeBufferErr := resultstore.New(bucket, resultstore.BasePath(path)).SaveWriteBuffer(ctx, pkg, writeBufferString, utils.GetSHA256Hash(writeBufferString))
 			if writeBufferErr != nil {
 				log.Fatal(" Failed to upload file write buffer results to blobstore", "error")
 			}

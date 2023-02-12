@@ -9,11 +9,11 @@ import (
 )
 
 type DynamicAnalysisStraceSummary map[api.RunPhase]*StraceSummary
-type DynamicAnalysisFileWrites map[api.RunPhase]*FileWrites
+type DynamicAnalysisFileWritesSummary map[api.RunPhase]*FileWritesSummary
 
 type DynamicAnalysisResults struct {
 	StraceSummary        DynamicAnalysisStraceSummary
-	FileWrites           DynamicAnalysisFileWrites
+	FileWritesSummary    DynamicAnalysisFileWritesSummary
 	FileWriteBufferPaths []string
 }
 
@@ -29,7 +29,7 @@ type StraceSummary struct {
 	DNS      []DnsResult
 }
 
-type FileWrites []FileWriteResult
+type FileWritesSummary []FileWriteResult
 
 type FileWriteResult struct {
 	Path      string
