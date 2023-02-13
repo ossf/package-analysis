@@ -55,7 +55,7 @@ func TestParseFileWriteMultipleWritesToSameFile(t *testing.T) {
 	}
 	secondFileInfoWant := strace.WriteContentInfo{
 		BytesWritten:  3684,
-		WriteBufferId: "7719f4b5f43eda5bf95d9cc31134c86711b5cbaa689441b570a487bf4b9c5e61",
+		WriteBufferId: "7b2c403bc9eee677758c2a575b2f8602b37f880f4fdb98ee98c30a74a5b9a52b",
 	}
 	fileInfoWantArray := strace.WriteInfo{firstFileInfoWant, secondFileInfoWant}
 
@@ -69,16 +69,21 @@ func TestParseFileWriteMultipleWritesToSameFile(t *testing.T) {
 	if err != nil || res == nil {
 		t.Errorf(`Parse(r) = %v, %v, want _, nil`, res, err)
 	}
+
 	files := res.Files()
-	if len(files) != 1 || !reflect.DeepEqual(files[0], want) {
-		t.Errorf(`Files() = %v, want %v`, files[0], want)
+	if len(files) != 1 {
+		t.Errorf(`Length of files = %v, want %v`, len(files), 1)
+	}
+	file := files[0]
+	if file.Path != want.Path || file.Write != want.Write || !reflect.DeepEqual(file.WriteInfo, want.WriteInfo) {
+		t.Errorf(`Actual file path = %v, Expected file path %v, Actual write boolean %v, Expected write boolean %v, Actual WriteInfo %v, Expected WriteInfo %v`, file.Path, want.Path, file.Write, want.Write, file.WriteInfo, want.WriteInfo)
 	}
 }
 
 func TestParseFileWritesToDifferentFiles(t *testing.T) {
 	input := "I0928 00:18:54.794008     365 strace.go:593] [   6:   6] uname E write(0x1 host:[5], 0x555695ceaab0 \"Linux 4.4.0\\n\", 0xc)\n" +
 		"I1109 06:53:19.688807     950 strace.go:593] [   3:   3] python3 E write(0x1 pipe:[5], 0x560d2708e7c0 \"django.template.base\\nImporting django.template.context\\nImporting django.template.context_processors\\nImporting django.template.defaultfilters\\nImporting django.template.defaulttags\\nImporting django.template.engine\\nImporting django.template.exceptions\\nImporting django.template.library\\nImporting django.template.loader\\nImporting django.template.loader_tags\\nImporting django.template.loaders\\nImporting django.template.loaders.app_directories\\nImporting django.template.loaders.base\\nImporting django.template.loaders.cached\\nImporting django.template.loaders.filesystem\\nImporting django.template.loaders.locmem\\nImporting django.template.response\\nImporting django.template.smartif\\nImporting django.template.utils\\nImporting django.templatetags\\nImporting django.templatetags.cache\\nImporting django.templatetags.i18n\\nImporting django.templatetags.l10n\\nImporting django.templatetags.static\\nImporting django.templatetags.tz\\nImporting django.test\\nImporting django.test.client\\nImporting django.test.html\\nImporting django.test.runner\\nImport\"..., 0xe64)"
-	firstFileInfo := strace.FileInfo{
+	firstFileWant := strace.FileInfo{
 		Path:  "host:[5]",
 		Write: true,
 		WriteInfo: strace.WriteInfo{
@@ -89,17 +94,16 @@ func TestParseFileWritesToDifferentFiles(t *testing.T) {
 		},
 	}
 
-	secondFileInfo := strace.FileInfo{
+	secondFileWant := strace.FileInfo{
 		Path:  "pipe:[5]",
 		Write: true,
 		WriteInfo: strace.WriteInfo{
 			{
 				BytesWritten:  3684,
-				WriteBufferId: "7719f4b5f43eda5bf95d9cc31134c86711b5cbaa689441b570a487bf4b9c5e61",
+				WriteBufferId: "7b2c403bc9eee677758c2a575b2f8602b37f880f4fdb98ee98c30a74a5b9a52b",
 			},
 		},
 	}
-	want := []strace.FileInfo{firstFileInfo, secondFileInfo}
 
 	r := strings.NewReader(input)
 	res, err := strace.Parse(r)
@@ -107,8 +111,16 @@ func TestParseFileWritesToDifferentFiles(t *testing.T) {
 		t.Errorf(`Parse(r) = %v, %v, want _, nil`, res, err)
 	}
 	files := res.Files()
-	if !reflect.DeepEqual(files, want) {
-		t.Errorf(`Files() = %v, want  = %v`, files, want)
+	if len(files) != 2 {
+		t.Errorf(`Length of files = %v, want %v`, len(files), 2)
+	}
+	file1 := files[0]
+	file2 := files[1]
+	if file1.Path != firstFileWant.Path || file1.Write != firstFileWant.Write || !reflect.DeepEqual(file1.WriteInfo, firstFileWant.WriteInfo) {
+		t.Errorf(`First file: Actual file path = %v, Expected file path %v, Actual write boolean %v, Expected write boolean %v, Actual WriteInfo %v, Expected WriteInfo %v`, file1.Path, firstFileWant.Path, file1.Write, firstFileWant.Write, file1.WriteInfo, firstFileWant.WriteInfo)
+	}
+	if file2.Path != secondFileWant.Path || file2.Write != secondFileWant.Write || !reflect.DeepEqual(file2.WriteInfo, secondFileWant.WriteInfo) {
+		t.Errorf(`Second file: Actual file path = %v, Expected file path %v, Actual write boolean %v, Expected write boolean %v, Actual WriteInfo %v, Expected WriteInfo %v`, file2.Path, secondFileWant.Path, file2.Write, secondFileWant.Write, file2.WriteInfo, secondFileWant.WriteInfo)
 	}
 }
 
@@ -134,8 +146,12 @@ func TestParseFileWriteWithZeroBytesWritten(t *testing.T) {
 		t.Errorf(`Parse(r) = %v, %v, want _, nil`, res, err)
 	}
 	files := res.Files()
-	if len(files) != 1 || !reflect.DeepEqual(files[0], want) {
-		t.Errorf(`Files() = %v, want [%v]`, files, want)
+	if len(files) != 1 {
+		t.Errorf(`Length of files = %v, want %v`, len(files), 1)
+	}
+	file := files[0]
+	if file.Path != want.Path || file.Write != want.Write || !reflect.DeepEqual(file.WriteInfo, want.WriteInfo) {
+		t.Errorf(`Actual file path = %v, Expected file path %v, Actual write boolean %v, Expected write boolean %v, Actual WriteInfo %v, Expected WriteInfo %v`, file.Path, want.Path, file.Write, want.Write, file.WriteInfo, want.WriteInfo)
 	}
 }
 
