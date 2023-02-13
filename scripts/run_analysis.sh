@@ -113,7 +113,7 @@ if [[ $# -eq 0 ]]; then
 	HELP=1
 fi
 
-DOCKER_OPTS=("run" "--cgroupns=host" "--privileged")
+DOCKER_OPTS=("run" "--cgroupns=host" "--privileged" "--rm")
 
 DOCKER_MOUNTS=("-v" "/var/lib/containers:/var/lib/containers" "-v" "$RESULTS_DIR:/results" "-v" "$STATIC_RESULTS_DIR:/staticResults" "-v" "$FILE_WRITE_RESULTS_DIR:/writeResults" "-v" "$LOGS_DIR:/tmp")
 
