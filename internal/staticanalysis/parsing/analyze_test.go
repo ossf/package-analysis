@@ -77,20 +77,12 @@ func TestCollectData(t *testing.T) {
 
 	for _, tt := range collectDataTestCases {
 		t.Run(tt.name, func(t *testing.T) {
-<<<<<<<< HEAD:internal/staticanalysis/parsing/analyze_test.go
 			result, err := Analyze(parserConfig, StringInput(tt.jsSource), false)
-========
-			result, err := ParseFile(parserConfig, "", tt.jsSource, false)
->>>>>>>> e855118 (Merge branch 'main' into combined_sandbox):internal/staticanalysis/parsing/parse_file_test.go
 			if err != nil {
 				t.Errorf("%v", err)
 				return
 			}
-<<<<<<<< HEAD:internal/staticanalysis/parsing/analyze_test.go
 			got := result["stdin"][JavaScript]
-========
-			got := result[JavaScript]
->>>>>>>> e855118 (Merge branch 'main' into combined_sandbox):internal/staticanalysis/parsing/parse_file_test.go
 
 			if !reflect.DeepEqual(got.Identifiers, tt.expectedData.Identifiers) {
 				t.Errorf("Identifiers mismatch: got %v, want %v", got.Identifiers, tt.expectedData.Identifiers)
