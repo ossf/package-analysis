@@ -13,6 +13,7 @@ type PkgManager struct {
 	ecosystem      api.Ecosystem
 	image          string
 	command        string
+	unifiedCommand string
 	latestVersion  func(string) (string, error)
 	archiveUrl     func(string, string) (string, error)
 	extractArchive func(string, string) error

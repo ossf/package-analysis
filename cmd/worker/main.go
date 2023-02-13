@@ -169,7 +169,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		return err
 	}
 
-	results, _, _, err := worker.RunDynamicAnalysis(pkg, dynamicSandboxOpts)
+	results, _, _, err := worker.RunDynamicAnalysis(pkg, dynamicSandboxOpts, false)
 	if err != nil {
 		return err
 	}

@@ -29,6 +29,7 @@ var (
 	staticUpload        = flag.String("upload-static", "", "bucket path for uploading static analysis results")
 	uploadFileWriteInfo = flag.String("upload-file-write-info", "", "bucket path for uploading information from file writes")
 	offline             = flag.Bool("offline", false, "disables sandbox network access")
+	combinedSandbox     = flag.Bool("combined-sandbox", false, "use combined dynamic analysis sandbox")
 	listModes           = flag.Bool("list-modes", false, "prints out a list of available analysis modes")
 	help                = flag.Bool("help", false, "print help on available options")
 	analysisMode        = utils.CommaSeparatedFlags("mode", "dynamic",
@@ -83,7 +84,7 @@ func dynamicAnalysis(pkg *pkgecosystem.Pkg) {
 
 	sbOpts := makeSandboxOptions(analysis.Dynamic)
 
-	results, lastRunPhase, lastStatus, err := worker.RunDynamicAnalysis(pkg, sbOpts)
+	results, lastRunPhase, lastStatus, err := worker.RunDynamicAnalysis(pkg, sbOpts, *combinedSandbox)
 	if err != nil {
 		log.Fatal("Dynamic analysis aborted (run error)", "error", err)
 	}

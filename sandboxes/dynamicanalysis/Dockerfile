@@ -71,6 +71,9 @@ RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" &&
     php -r "unlink('composer-setup.php');" && \
     mv composer.phar /usr/local/bin/
 
+COPY analyze-php.php /usr/local/bin/
+RUN chmod 755 /usr/local/bin/analyze-php.php
+
 #
 # NPM
 COPY analyze-node.js /usr/local/bin/

@@ -82,6 +82,7 @@ var pypiPkgManager = PkgManager{
 	ecosystem:      api.EcosystemPyPI,
 	image:          "gcr.io/ossf-malware-analysis/python",
 	command:        "/usr/local/bin/analyze.py",
+	unifiedCommand: "/usr/local/bin/analyze-python.py",
 	latestVersion:  getPyPILatest,
 	archiveUrl:     getPyPIArchiveURL,
 	extractArchive: utils.ExtractTarGzFile,

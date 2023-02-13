@@ -49,10 +49,11 @@ func getPackagistLatest(pkg string) (string, error) {
 }
 
 var packagistPkgManager = PkgManager{
-	ecosystem:     api.EcosystemPackagist,
-	image:         "gcr.io/ossf-malware-analysis/packagist",
-	command:       "/usr/local/bin/analyze.php",
-	latestVersion: getPackagistLatest,
+	ecosystem:      api.EcosystemPackagist,
+	image:          "gcr.io/ossf-malware-analysis/packagist",
+	command:        "/usr/local/bin/analyze.php",
+	unifiedCommand: "/usr/local/bin/analyze-php.php",
+	latestVersion:  getPackagistLatest,
 	runPhases: []api.RunPhase{
 		api.RunPhaseInstall,
 		api.RunPhaseImport,
