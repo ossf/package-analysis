@@ -77,12 +77,12 @@ func TestCollectData(t *testing.T) {
 
 	for _, tt := range collectDataTestCases {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := ParseFile(parserConfig, "", tt.jsSource, false)
+			result, err := Analyze(parserConfig, StringInput(tt.jsSource), false)
 			if err != nil {
 				t.Errorf("%v", err)
 				return
 			}
-			got := result[JavaScript]
+			got := result["stdin"][JavaScript]
 
 			if !reflect.DeepEqual(got.Identifiers, tt.expectedData.Identifiers) {
 				t.Errorf("Identifiers mismatch: got %v, want %v", got.Identifiers, tt.expectedData.Identifiers)

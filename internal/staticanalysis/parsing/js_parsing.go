@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -11,7 +12,10 @@ import (
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
 
-// parseOutput represents the output JSON format of the JS parser
+// parseOutputJSON represents the output JSON format of the JS parser
+// it maps filenames to parse data
+type parseOutputJSON map[string]parseDataJSON
+
 type parseDataJSON struct {
 	Tokens []parserTokenJSON  `json:"tokens"`
 	Status []parserStatusJSON `json:"status"`
@@ -41,94 +45,67 @@ runParser handles calling the parser program and provide the specified Javascrip
 either by filename (jsFilePath) or piping jsSource to the program's stdin.
 If sourcePath is empty, sourceString will be parsed as JS code
 */
-func runParser(parserPath, jsFilePath, jsSource string, extraArgs ...string) (string, error) {
-	nodeArgs := []string{parserPath}
-	if len(jsFilePath) > 0 {
-		nodeArgs = append(nodeArgs, jsFilePath)
+func runParser(parserPath string, input InputStrategy, extraArgs ...string) (string, error) {
+	workingDir, err := os.MkdirTemp("", "package-analysis-run-parser-*")
+	if err != nil {
+		return "", fmt.Errorf("runParser failed to create temp working directory: %w", err)
 	}
+	defer func() {
+		if err := os.RemoveAll(workingDir); err != nil {
+			log.Error("could not remove working directory", "path", workingDir, "error", err)
+		}
+	}()
+
+	outFilePath := workingDir + string(os.PathSeparator) + "output.json"
+
+	nodeArgs := []string{parserPath, "--output", outFilePath}
 	if len(extraArgs) > 0 {
 		nodeArgs = append(nodeArgs, extraArgs...)
 	}
 
 	cmd := exec.Command("node", nodeArgs...)
 
-	if len(jsFilePath) == 0 {
-		// create a pipe to send the source code to the parser via stdin
-		pipe, pipeErr := cmd.StdinPipe()
-		if pipeErr != nil {
-			return "", fmt.Errorf("runParser failed to create pipe: %v", pipeErr)
-		}
-
-		if _, pipeErr = pipe.Write([]byte(jsSource)); pipeErr != nil {
-			return "", fmt.Errorf("runParser failed to write source string to pipe: %w", pipeErr)
-		}
-
-		if pipeErr = pipe.Close(); pipeErr != nil {
-			return "", fmt.Errorf("runParser failed to close pipe: %w", pipeErr)
-		}
+	if err := input.SendTo(cmd, workingDir); err != nil {
+		return "", fmt.Errorf("runParser failed to prepare parsing input: %w", err)
 	}
 
-	out, err := cmd.Output()
-	if err != nil {
+	if _, err := cmd.Output(); err != nil {
 		return "", err
 	}
 
-	return string(out), nil
+	if output, err := os.ReadFile(outFilePath); err != nil {
+		return "", fmt.Errorf("runParser failed to read output file: %w", err)
+	} else {
+		return string(output), nil
+	}
 }
 
-/*
-parseJS extracts source code identifiers and string literals from JavaScript code.
-If sourcePath is empty, sourceString will be parsed as JS code.
-
-parserConfig specifies options relevant to the parser itself, and is produced by InitParser
-
-If internal errors occurred during parsing, then a nil parseOutput pointer is returned.
-The other two return values are the raw parser output and the error object respectively.
-Otherwise, the first return value points to the results of parsing while the second
-contains the raw JSON output from the parser.
-*/
-func parseJS(parserConfig ParserConfig, filePath string, sourceString string) (*parseOutput, string, error) {
-	parserOutput, err := runParser(parserConfig.ParserPath, filePath, sourceString)
-	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			parserOutput = string(exitErr.Stderr)
-		}
-		return nil, parserOutput, err
-	}
-
-	// parse JSON to get results as Go struct
-	decoder := json.NewDecoder(strings.NewReader(parserOutput))
-	var parserData parseDataJSON
-	err = decoder.Decode(&parserData)
-	if err != nil {
-		return nil, parserOutput, err
-	}
-
-	result := &parseOutput{
+func (pd parseDataJSON) process() languageData {
+	processed := languageData{
 		ValidInput: true,
 	}
 
-	// convert the elements into more natural data structure
-	for _, element := range parserData.Tokens {
-		switch element.TokenType {
+	// process source code tokens
+	for _, t := range pd.Tokens {
+		switch t.TokenType {
 		case identifier:
-			symbolSubtype := token.CheckIdentifierType(element.TokenSubType)
+			symbolSubtype := token.CheckIdentifierType(t.TokenSubType)
 			if symbolSubtype == token.Other || symbolSubtype == token.Unknown {
 				break
 			}
-			result.Identifiers = append(result.Identifiers, parsedIdentifier{
-				Type: token.CheckIdentifierType(element.TokenSubType),
-				Name: element.Data.(string),
-				Pos:  element.Pos,
+			processed.Identifiers = append(processed.Identifiers, parsedIdentifier{
+				Type: token.CheckIdentifierType(t.TokenSubType),
+				Name: t.Data.(string),
+				Pos:  t.Pos,
 			})
 		case literal:
 			literal := parsedLiteral[any]{
-				Type:     element.TokenSubType,
-				GoType:   fmt.Sprintf("%T", element.Data),
-				Value:    element.Data,
-				RawValue: element.Extra["raw"].(string),
-				InArray:  element.Extra["array"] == true,
-				Pos:      element.Pos,
+				Type:     t.TokenSubType,
+				GoType:   fmt.Sprintf("%T", t.Data),
+				Value:    t.Data,
+				RawValue: t.Extra["raw"].(string),
+				InArray:  t.Extra["array"] == true,
+				Pos:      t.Pos,
 			}
 			// check for BigInteger types which have to be represented as strings in JSON
 			if literal.Type == "Numeric" && literal.GoType == "string" {
@@ -140,42 +117,78 @@ func parseJS(parserConfig ParserConfig, filePath string, sourceString string) (*
 					}
 				}
 			}
-			result.Literals = append(result.Literals, literal)
+			processed.Literals = append(processed.Literals, literal)
 		case comment:
-			result.Comments = append(result.Comments, parsedComment{
-				Type: element.TokenSubType,
-				Data: element.Data.(string),
-				Pos:  element.Pos,
+			processed.Comments = append(processed.Comments, parsedComment{
+				Type: t.TokenSubType,
+				Data: t.Data.(string),
+				Pos:  t.Pos,
 			})
 		default:
-			log.Warn(fmt.Sprintf("parseJS: unrecognised token type %s", element.TokenType))
+			log.Warn(fmt.Sprintf("parseJS: unrecognised token type %s", t.TokenType))
 		}
 	}
-	for _, element := range parserData.Status {
+	// process parser status (info/errors)
+	for _, s := range pd.Status {
 		status := parserStatus{
-			Type:    element.StatusType,
-			Name:    element.StatusSubType,
-			Message: element.Message,
-			Pos:     element.Pos,
+			Type:    s.StatusType,
+			Name:    s.StatusSubType,
+			Message: s.Message,
+			Pos:     s.Pos,
 		}
-		switch element.StatusType {
+		switch s.StatusType {
 		case parseInfo:
-			result.Info = append(result.Info, status)
+			processed.Info = append(processed.Info, status)
 		case parseError:
-			result.Errors = append(result.Errors, status)
+			processed.Errors = append(processed.Errors, status)
 			if strings.Contains(status.Message, fatalSyntaxErrorMarker) {
-				result.ValidInput = false
+				processed.ValidInput = false
 			}
 		}
 	}
 
-	return result, parserOutput, nil
+	return processed
 }
 
-func RunExampleParsing(config ParserConfig, jsFilePath string, jsSourceString string) {
-	parseResult, parserOutput, err := parseJS(config, jsFilePath, jsSourceString)
+/*
+parseJS extracts source code identifiers and string literals from JavaScript code.
 
-	println("\nRaw JSON:\n", parserOutput)
+parserConfig specifies options relevant to the parser itself, and is produced by InitParser
+
+If internal errors occurred during parsing, then a nil languageResult pointer is returned.
+The other two return values are the raw parser output and the error respectively.
+Otherwise, the first return value points to the parsing result object while the second
+contains the raw JSON output from the parser.
+*/
+func parseJS(parserConfig ParserConfig, input InputStrategy) (languageResult, string, error) {
+	rawOutput, err := runParser(parserConfig.ParserPath, input)
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			rawOutput = string(exitErr.Stderr)
+		}
+		return nil, rawOutput, err
+	}
+
+	decoder := json.NewDecoder(strings.NewReader(rawOutput))
+	var parseOutput parseOutputJSON
+	err = decoder.Decode(&parseOutput)
+	if err != nil {
+		return nil, rawOutput, err
+	}
+
+	// convert the elements into more natural data structure
+	result := languageResult{}
+	for filename, data := range parseOutput {
+		result[filename] = data.process()
+	}
+
+	return result, rawOutput, nil
+}
+
+func RunExampleParsing(config ParserConfig, input InputStrategy) {
+	parseResult, rawOutput, err := parseJS(config, input)
+
+	println("\nRaw JSON:\n", rawOutput)
 
 	if err != nil {
 		fmt.Printf("Error: %s\n", err)
@@ -186,5 +199,7 @@ func RunExampleParsing(config ParserConfig, jsFilePath string, jsSourceString st
 		return
 	}
 
-	fmt.Printf("%s\n", parseResult.String())
+	for _, data := range parseResult {
+		fmt.Printf("%s\n", data.String())
+	}
 }

@@ -5,6 +5,8 @@
 
 import fs from "fs";
 import parser from "@babel/parser";
+import {parseArgs} from "node:util";
+import path from "node:path";
 
 // See https://github.com/babel/babel/issues/13855
 import _traverse from "@babel/traverse";
@@ -274,33 +276,106 @@ function parseFile(fileName, allowSyntaxErrors, includeAST) {
     return parseData;
 }
 
+function usage(full = false) {
+    // abbreviate full path to node and script with just base names
+    const program = path.basename(process.argv[0]) + " " + path.basename(process.argv[1]);
+    console.log("usage: " + program + " [--file <input.js> | --batch <paths.txt>] " +
+        " [--output <out.json>] [--ast] [--permissive]");
+    if (full) {
+        console.log("Default behaviour is to parse stdin and output to stdout");
+    }
+}
+
+const cliOptions = {
+    file: { type: "string", short: "f", default: "" },
+    batch: { type: "string", short: "b", default: "" },
+    output: { type: "string", short: "o", default: "" },
+    ast: { type: "boolean", short: "a", default: false },
+    help: { type: "boolean", short: "h", default: false },
+    permissive: { type: "boolean", short: "p", default: false },
+};
+
+// Parse command line arguments
+function parseCliArgs(args) {
+    let argValues;
+    try {
+        const parseArgsResult = parseArgs({ args, options: cliOptions });
+        argValues = parseArgsResult.values;
+    } catch (e) {
+        if (e instanceof TypeError) {
+            console.log(e.message + "\n");
+            argValues = null;
+        }
+    }
+
+    return argValues;
+}
+
 function main() {
+    const args = process.argv.slice(2);
+    const cliArgs = parseCliArgs(args);
+    if (cliArgs === null || cliArgs.help || args.length === 0)  {
+        const printFull = cliArgs !== null; // if null, then there was also an error message printed
+        usage(printFull);
+        return;
+    }
+
+    if (cliArgs.file !== "" && cliArgs.batch !== "") {
+        console.log("error: --file (parse single file) cannot be used with --batch (parse multiple files)");
+        usage();
+        return;
+    }
+
     /*
      If allowSyntaxErrors is false, any syntax error results in immediate termination
      of parsing for a file. If true, the parser will recover from minor syntax errors
      where possible. All error details are recorded in the returned parseData object.
      */
-    let allowSyntaxErrors = false;
+    let allowSyntaxErrors = cliArgs.permissive;
+    let withAST = cliArgs.ast;
 
-    let printDebug = false;
+    let outputData = {};
+    if (cliArgs.batch !== "") {
+        // see comment below for use of 0 as stdin
+        const sourceFilesPath = (cliArgs.batch === "-") ? 0 : cliArgs.batch;
+        const fileNames = fs.readFileSync(sourceFilesPath, "utf8").split("\n");
 
-    /*
-     Use stdin if no filename is specified.
+        for (const sourceFile of fileNames) {
+            if (sourceFile.trim().length > 0) {
+                try {
+                    outputData[sourceFile] = parseFile(sourceFile, allowSyntaxErrors, withAST);
+                } catch (e) {
+                    let data = new ParseData();
+                    data.logError(e.type, e.message, []);
+                    outputData[sourceFile] = data;
+                }
+            }
+        }
+    } else {
+        let sourceFile, sourceFileName;
+        if (cliArgs.file === "" || cliArgs.file === "-") {
+            /* Note: referencing process.stdin.fd (actually just process.stdin) causes stdin
+            to become nonblocking. Therefore, running this in a terminal in interactive mode
+            with no file piped into stdin will cause the read to fail with EAGAIN.
+            Passing 0 as the fd avoids this issue. See https://github.com/nodejs/help/issues/2663
+            */
+            sourceFile = 0;
+            sourceFileName = "stdin"; // don't call stdin "0" in output JSON
+        } else {
+            sourceFile = cliArgs.file;
+            sourceFileName = cliArgs.file;
+        }
 
-     Referencing process.stdin.fd (actually just process.stdin) causes stdin to become nonblocking
-     Therefore running this in a terminal in interactive mode with no file piped into stdin will
-     cause the read to fail with EAGAIN. Passing the raw '0' as the fd avoids this issue.
-     See https://github.com/nodejs/help/issues/2663
-     */
-    const sourceFile = process.argv.length >= 3 ? process.argv[2] : 0;
-
-    if (process.argv[process.argv.length - 1] === "debug") {
-        printDebug = true;
+        outputData[sourceFileName] = parseFile(sourceFile, allowSyntaxErrors, withAST);
     }
 
-    const parseData = parseFile(sourceFile, allowSyntaxErrors, printDebug);
-
-    console.log(JSON.stringify(parseData, null, "  "));
+    const outputString = JSON.stringify(outputData, null, "  ");
+    if (cliArgs.output === "") {
+        console.log(outputString);
+    } else {
+        fs.writeFileSync(cliArgs.output, outputString, "utf8");
+    }
 }
 
 main();
+
