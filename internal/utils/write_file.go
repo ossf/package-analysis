@@ -3,7 +3,6 @@ package utils
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 )
 
 const tempFolder = "temp_writes_folder"
@@ -28,22 +27,22 @@ func WriteFile(path string, contents []byte, executable bool) error {
 
 /* Writes a temp file and flushes the buffer */
 func CreateAndWriteTempFile(fileName string, data []byte) (string, error) {
-	//path := filepath.Join(os.TempDir(), tempFolder, fileName)
-	dir, err := os.MkdirTemp("", tempFolder)
-	f, err := os.CreateTemp(dir, fileName)
+	f, err := os.CreateTemp("", fileName)
 	if err != nil {
 		return "", err
 	}
-	f.Write(data)
+	_, writeErr := f.Write(data)
+	if writeErr != nil {
+		return "", writeErr
+	}
 	f.Close()
 	f.Sync()
 	return f.Name(), nil
 
 }
 
-// change return type to rune?
-func ReadTempFile(fileName string) ([]byte, error) {
-	// permissions?
+/* Reads the temp file at fileName and removes the file afterwards */
+func ReadAndRemoveTempFile(fileName string) ([]byte, error) {
 	f, err := os.OpenFile(fileName, os.O_RDWR, 0666)
 	if err != nil {
 		return []byte{}, err
@@ -52,10 +51,6 @@ func ReadTempFile(fileName string) ([]byte, error) {
 	f.Seek(0, 0)
 	fileContents, err := os.ReadFile(fileName)
 	f.Close()
-	return fileContents, nil
-}
-
-func CleanUpTempFiles() {
-	dirPath := filepath.Join(os.TempDir(), tempFolder)
-	os.RemoveAll(dirPath)
+	os.Remove(fileName)
+	return fileContents, err
 }

@@ -12,8 +12,9 @@ type DynamicAnalysisStraceSummary map[api.RunPhase]*StraceSummary
 type DynamicAnalysisFileWritesSummary map[api.RunPhase]*FileWritesSummary
 
 type DynamicAnalysisResults struct {
-	StraceSummary        DynamicAnalysisStraceSummary
-	FileWritesSummary    DynamicAnalysisFileWritesSummary
+	StraceSummary     DynamicAnalysisStraceSummary
+	FileWritesSummary DynamicAnalysisFileWritesSummary
+	// Paths to files on disk that contain write buffer data from write syscalls
 	FileWriteBufferPaths []string
 }
 

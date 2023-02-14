@@ -92,5 +92,6 @@ func RunDynamicAnalysis(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option) (result.
 	} else {
 		LogDynamicAnalysisResult(pkg, lastRunPhase, lastStatus)
 	}
+
 	return results, lastRunPhase, lastStatus, lastError
 }

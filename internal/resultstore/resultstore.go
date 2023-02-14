@@ -81,9 +81,9 @@ func (rs *ResultStore) OpenAndWriteToBucket(ctx context.Context, contents []byte
 	return nil
 }
 
-func (rs *ResultStore) SaveWriteBuffer(ctx context.Context, p Pkg, writeBuffer, fileName string) error {
+func (rs *ResultStore) SaveWriteBuffer(ctx context.Context, p Pkg, fileName string, writeBuffer []byte) error {
 	path := filepath.Join(rs.generatePath(p), writeBufferFolder)
-	return rs.OpenAndWriteToBucket(ctx, []byte(writeBuffer), path, fileName+".json")
+	return rs.OpenAndWriteToBucket(ctx, writeBuffer, path, fileName+".json")
 }
 
 func (rs *ResultStore) Save(ctx context.Context, p Pkg, analysis interface{}) error {

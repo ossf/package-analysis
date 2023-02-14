@@ -98,16 +98,15 @@ func saveResults(ctx context.Context, pkg *pkgecosystem.Pkg, dest resultBucketPa
 			return fmt.Errorf("failed to upload file write analysis to blobstore = %w", err)
 		}
 		for _, writeBufferPath := range dynamicResults.FileWriteBufferPaths {
-			writeBuffer, err := utils.ReadTempFile(writeBufferPath)
+			writeBuffer, err := utils.ReadAndRemoveTempFile(writeBufferPath)
 			if err != nil {
 				log.Error("Could not read file", err)
 			}
-			writeBufferErr := resultstore.New(dest.fileWrites, resultstore.ConstructPath()).SaveWriteBuffer(ctx, pkg, string(writeBuffer), utils.GetSHA256Hash(string(writeBuffer)))
+			writeBufferErr := resultstore.New(dest.fileWrites, resultstore.ConstructPath()).SaveWriteBuffer(ctx, pkg, utils.GetSHA256Hash(writeBuffer), writeBuffer)
 			if writeBufferErr != nil {
-				log.Fatal(" Failed to upload file write buffer results to blobstore", "error")
+				log.Fatal(" Failed to upload file write buffer results to blobstore", writeBufferErr)
 			}
 		}
-		utils.CleanUpTempFiles()
 	}
 
 	return nil

@@ -147,12 +147,12 @@ func (r *Result) recordFileAccess(file string, read, write, delete bool) {
 	r.files[file].Delete = r.files[file].Delete || delete
 }
 
-func (r *Result) recordFileWrite(file, writeBuffer string, bytesWritten int64) {
+func (r *Result) recordFileWrite(file string, writeBuffer []byte, bytesWritten int64) {
 	r.recordFileAccess(file, false, true, false)
 	SHA256WriteId := utils.GetSHA256Hash(writeBuffer)
 	writeContentsAndBytes := WriteContentInfo{BytesWritten: bytesWritten, WriteBufferId: SHA256WriteId}
 	r.files[file].WriteInfo = append(r.files[file].WriteInfo, writeContentsAndBytes)
-	fileName, error := utils.CreateAndWriteTempFile(SHA256WriteId+".json", []byte(writeBuffer))
+	fileName, error := utils.CreateAndWriteTempFile("temp_"+SHA256WriteId, writeBuffer)
 	r.files[file].WriteBufferPaths = append(r.files[file].WriteBufferPaths, fileName)
 	if error != nil {
 		log.Error("Could not create and write file", error)
@@ -203,7 +203,7 @@ func (r *Result) parseEnterSyscall(syscall, args string) error {
 			// Save the contents between the first and last quote.
 			writeBuffer = args[firstQuoteIndex+1 : lastQuoteIndex]
 		}
-		r.recordFileWrite(match[1], writeBuffer, bytesWritten)
+		r.recordFileWrite(match[1], []byte(writeBuffer), bytesWritten)
 	}
 	return nil
 }
