@@ -7,23 +7,11 @@
 # buildpack-deps 22.04 [ubuntu]
 FROM buildpack-deps@sha256:d76488a56e1e85930e053b794daa9f990636565bf0de54903d65d93c43c3cad5 AS image
 
+# Suppress questions relating to package installs
 ENV DEBIAN_FRONTEND noninteractive
 # Silence 'debconf: delaying package configuation, since apt-utils is not installed' warning
 # as it related to interactive configuration anyway
 ENV DEBCONF_NOWARNINGS="yes"
-
-# Essentials
-RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
-	apt-transport-https \
-	npm \
-	php \
-	php-zip \
-	php-gd \
-	python3-pip \
-	ruby \
-	ruby-rubygems \
-	rust-all \
-	software-properties-common
 
 # set repo for kubectl
 RUN mkdir -m 0700 -p /etc/apt/keyrings && \
@@ -36,6 +24,7 @@ RUN curl -fsSL "https://packages.microsoft.com/config/ubuntu/22.04/packages-micr
 
 # Extra packages for realistic runtime
 RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
+	apt-transport-https \
 	auditd \
 	awscli \
 	build-essential \
@@ -57,6 +46,7 @@ RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-reco
 	tcpdump \
 	telnet \
 	tshark \
+	software-properties-common \
 	zip
 
 # Configure sudo for passwordless execution
@@ -64,6 +54,13 @@ RUN echo "ALL ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 #
 # PHP
+#
+WORKDIR /setup/php
+RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
+	php \
+	php-zip \
+	php-gd
+
 # Install Composer
 RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" && \
     php -r "if (hash_file('sha384', 'composer-setup.php') === '55ce33d7678c5a611085589f1f3ddf8b3c52d662cd01d4ba75c0ee0459970c2200a51f492d557530c71c15d8dba01eae') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;" && \
@@ -76,12 +73,24 @@ RUN chmod 755 /usr/local/bin/analyze-php.php
 
 #
 # NPM
+#
+WORKDIR /setup/node
+RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
+	nodejs \
+	npm
+
 COPY analyze-node.js /usr/local/bin/
 RUN chmod 755 /usr/local/bin/analyze-node.js
 COPY bowerrc /app/.bowerrc
 
 #
 # Python
+#
+WORKDIR /setup/python
+RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
+	python3 \
+	python3-pip
+
 # Some Python packages expect certain dependencies to already be installed
 COPY pypi-packages.txt ./
 RUN pip install -r pypi-packages.txt
@@ -91,19 +100,26 @@ RUN chmod 755 /usr/local/bin/analyze-python.py
 
 #
 # Rubygems
+#
+WORKDIR /setup/ruby
+RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
+	ruby \
+	ruby-rubygems
+
 COPY analyze-ruby.rb /usr/local/bin/
 RUN chmod 755 /usr/local/bin/analyze-ruby.rb
 
 #
 # Rust
+#
+WORKDIR /setup/rust
+RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
+	rust-all
+
 COPY analyze-rust.py /usr/local/bin/
 RUN chmod 755 /usr/local/bin/analyze-rust.py
 
-
 WORKDIR /app
-
-#
-# Rust (in /app)
 RUN cargo init
 
 #
