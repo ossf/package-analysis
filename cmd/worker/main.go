@@ -117,7 +117,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		return nil
 	}
 
-	manager := pkgecosystem.Manager(api.Ecosystem(ecosystem))
+	manager := pkgecosystem.Manager(api.Ecosystem(ecosystem), false)
 	if manager == nil {
 		log.Warn("Unsupported pkg manager",
 			log.Label("ecosystem", ecosystem),
@@ -169,7 +169,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		return err
 	}
 
-	results, _, _, err := worker.RunDynamicAnalysis(pkg, dynamicSandboxOpts, false)
+	results, _, _, err := worker.RunDynamicAnalysis(pkg, dynamicSandboxOpts)
 	if err != nil {
 		return err
 	}

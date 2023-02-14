@@ -38,13 +38,9 @@ func (p *Pkg) LocalPath() string {
 }
 
 // Command returns the analysis command for the package.
-func (p *Pkg) Command(phase api.RunPhase, useCombinedSandboxCommand bool) []string {
+func (p *Pkg) Command(phase api.RunPhase) []string {
 	args := make([]string, 0)
-	if useCombinedSandboxCommand {
-		args = append(args, p.manager.unifiedCommand)
-	} else {
-		args = append(args, p.manager.command)
-	}
+	args = append(args, p.manager.command)
 
 	if p.local != "" {
 		args = append(args, "--local", p.local)

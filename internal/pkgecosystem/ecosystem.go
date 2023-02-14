@@ -13,12 +13,13 @@ type PkgManager struct {
 	ecosystem      api.Ecosystem
 	image          string
 	command        string
-	unifiedCommand string
 	latestVersion  func(string) (string, error)
 	archiveUrl     func(string, string) (string, error)
 	extractArchive func(string, string) error
 	runPhases      []api.RunPhase
 }
+
+const combinedDynamicAnalysisImage = "gcr.io/ossf-malware-analysis/dynamic-analysis"
 
 var (
 	supportedPkgManagers = map[api.Ecosystem]*PkgManager{
@@ -28,9 +29,21 @@ var (
 		packagistPkgManager.ecosystem: &packagistPkgManager,
 		cratesPkgManager.ecosystem:    &cratesPkgManager,
 	}
+
+	supportedPkgManagersCombinedSandbox = map[api.Ecosystem]*PkgManager{
+		npmPkgManagerCombinedSandbox.ecosystem:       &npmPkgManagerCombinedSandbox,
+		pypiPkgManagerCombinedSandbox.ecosystem:      &pypiPkgManagerCombinedSandbox,
+		rubygemsPkgManagerCombinedSandbox.ecosystem:  &rubygemsPkgManagerCombinedSandbox,
+		packagistPkgManagerCombinedSandbox.ecosystem: &packagistPkgManagerCombinedSandbox,
+		cratesPkgManagerCombinedSandbox.ecosystem:    &cratesPkgManagerCombinedSandbox,
+	}
 )
 
-func Manager(ecosystem api.Ecosystem) *PkgManager {
+func Manager(ecosystem api.Ecosystem, combinedSandbox bool) *PkgManager {
+	if combinedSandbox {
+		return supportedPkgManagersCombinedSandbox[ecosystem]
+	}
+
 	return supportedPkgManagers[ecosystem]
 }
 

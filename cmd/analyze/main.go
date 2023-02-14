@@ -84,7 +84,7 @@ func dynamicAnalysis(pkg *pkgecosystem.Pkg) {
 
 	sbOpts := makeSandboxOptions(analysis.Dynamic)
 
-	results, lastRunPhase, lastStatus, err := worker.RunDynamicAnalysis(pkg, sbOpts, *combinedSandbox)
+	results, lastRunPhase, lastStatus, err := worker.RunDynamicAnalysis(pkg, sbOpts)
 	if err != nil {
 		log.Fatal("Dynamic analysis aborted (run error)", "error", err)
 	}
@@ -160,7 +160,7 @@ func main() {
 		return
 	}
 
-	manager := pkgecosystem.Manager(api.Ecosystem(*ecosystem))
+	manager := pkgecosystem.Manager(api.Ecosystem(*ecosystem), *combinedSandbox)
 	if manager == nil {
 		log.Panic("Unsupported pkg manager",
 			log.Label("ecosystem", *ecosystem))

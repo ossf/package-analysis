@@ -82,7 +82,19 @@ var pypiPkgManager = PkgManager{
 	ecosystem:      api.EcosystemPyPI,
 	image:          "gcr.io/ossf-malware-analysis/python",
 	command:        "/usr/local/bin/analyze.py",
-	unifiedCommand: "/usr/local/bin/analyze-python.py",
+	latestVersion:  getPyPILatest,
+	archiveUrl:     getPyPIArchiveURL,
+	extractArchive: utils.ExtractTarGzFile,
+	runPhases: []api.RunPhase{
+		api.RunPhaseInstall,
+		api.RunPhaseImport,
+	},
+}
+
+var pypiPkgManagerCombinedSandbox = PkgManager{
+	ecosystem:      api.EcosystemPyPI,
+	image:          combinedDynamicAnalysisImage,
+	command:        "/usr/local/bin/analyze-python.py",
 	latestVersion:  getPyPILatest,
 	archiveUrl:     getPyPIArchiveURL,
 	extractArchive: utils.ExtractTarGzFile,

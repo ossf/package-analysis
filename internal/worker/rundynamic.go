@@ -12,8 +12,6 @@ import (
 	"github.com/ossf/package-analysis/pkg/result"
 )
 
-var combinedDynamicAnalyisImage = "gcr.io/ossf-malware-analysis/dynamic-analysis"
-
 /*
 RunDynamicAnalysis runs dynamic analysis on the given package in the sandbox
 provided, across all phases (e.g. import, install) valid in the package ecosystem.
@@ -37,19 +35,13 @@ error: Any error that occurred in the runtime/sandbox infrastructure.
 This does not include errors caused by the package under analysis.
 */
 
-func RunDynamicAnalysis(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option, useCombinedSandbox bool) (result.DynamicAnalysisResults, api.RunPhase, analysis.Status, error) {
+func RunDynamicAnalysis(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option) (result.DynamicAnalysisResults, api.RunPhase, analysis.Status, error) {
 	results := result.DynamicAnalysisResults{
 		StraceSummary: make(result.DynamicAnalysisStraceSummary),
 		FileWrites:    make(result.DynamicAnalysisFileWrites),
 	}
 
-	var image string
-	if useCombinedSandbox {
-		image = combinedDynamicAnalyisImage
-	} else {
-		image = pkg.Manager().DynamicAnalysisImage()
-	}
-	sb := sandbox.New(image, sbOpts...)
+	sb := sandbox.New(pkg.Manager().DynamicAnalysisImage(), sbOpts...)
 
 	defer func() {
 		if err := sb.Clean(); err != nil {
@@ -62,7 +54,7 @@ func RunDynamicAnalysis(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option, useCombi
 	var lastError error
 	for _, phase := range pkg.Manager().RunPhases() {
 		startTime := time.Now()
-		phaseResult, err := dynamicanalysis.Run(sb, pkg.Command(phase, useCombinedSandbox))
+		phaseResult, err := dynamicanalysis.Run(sb, pkg.Command(phase))
 		lastRunPhase = phase
 
 		runDuration := time.Since(startTime)

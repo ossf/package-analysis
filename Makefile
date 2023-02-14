@@ -183,7 +183,15 @@ e2e_test_logs_scheduler:
 e2e_test_logs_analysis:
 	docker-compose $(E2E_TEST_COMPOSE_ARGS) logs -f analysis
 
-.PHONY: test
-test:
+.PHONY: test_go
+test_go:
 	go test -v ./...
 
+.PHONY: test_dynamic_analysis
+test_dynamic_analysis:
+	scripts/run_analysis.sh -mode dynamic -combined-sandbox -nopull -ecosystem npm -package async
+	scripts/run_analysis.sh -mode dynamic -combined-sandbox -nopull -ecosystem pypi -package requests
+	scripts/run_analysis.sh -mode dynamic -combined-sandbox -nopull -ecosystem packagist -package symfony/deprecation-contracts
+	scripts/run_analysis.sh -mode dynamic -combined-sandbox -nopull -ecosystem crates.io -package itoa
+	scripts/run_analysis.sh -mode dynamic -combined-sandbox -nopull -ecosystem rubygems -package guwor_palindrome
+	@echo "Test successfully completed"

@@ -32,11 +32,20 @@ func getCratesLatest(pkg string) (string, error) {
 }
 
 var cratesPkgManager = PkgManager{
-	ecosystem:      api.EcosystemCratesIO,
-	image:          "gcr.io/ossf-malware-analysis/crates.io",
-	command:        "/usr/local/bin/analyze.py",
-	unifiedCommand: "/usr/local/bin/analyze-rust.py",
-	latestVersion:  getCratesLatest,
+	ecosystem:     api.EcosystemCratesIO,
+	image:         "gcr.io/ossf-malware-analysis/crates.io",
+	command:       "/usr/local/bin/analyze.py",
+	latestVersion: getCratesLatest,
+	runPhases: []api.RunPhase{
+		api.RunPhaseInstall,
+	},
+}
+
+var cratesPkgManagerCombinedSandbox = PkgManager{
+	ecosystem:     api.EcosystemCratesIO,
+	image:         combinedDynamicAnalysisImage,
+	command:       "/usr/local/bin/analyze-rust.py",
+	latestVersion: getCratesLatest,
 	runPhases: []api.RunPhase{
 		api.RunPhaseInstall,
 	},
