@@ -3,6 +3,7 @@ package externalcmd
 import (
 	"os"
 	"os/exec"
+	"path/filepath"
 	"reflect"
 	"testing"
 )
@@ -70,7 +71,7 @@ func TestMultipleFileInput(t *testing.T) {
 			} else if tt.wantErr {
 				return
 			}
-			inputFile := workingDir + string(os.PathSeparator) + "input.txt"
+			inputFile := filepath.Join(workingDir + "input.txt")
 			expectedArgs := tt.argHandler.FileListArg(inputFile)
 			if reflect.DeepEqual(expectedArgs, cmd.Args) {
 				t.Errorf("expected cmd args did not match actual. Expected: %v, actual: %v", expectedArgs, cmd.Args)

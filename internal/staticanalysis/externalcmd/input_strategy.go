@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -92,7 +93,7 @@ func (s singleFileInput) SendTo(cmd *exec.Cmd, args InputArgHandler, tempDir str
 
 func (m multipleFileInput) SendTo(cmd *exec.Cmd, argHandler InputArgHandler, tempDir string) error {
 	// write input file paths to temp file
-	infilePath := tempDir + string(os.PathSeparator) + "input.txt"
+	infilePath := filepath.Join(tempDir, "input.txt")
 	cmd.Args = append(cmd.Args, argHandler.FileListArg(infilePath)...)
 
 	filePathData := []byte(strings.Join(m.filePaths, "\n"))
