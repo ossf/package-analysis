@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/ossf/package-analysis/internal/log"
+	"github.com/ossf/package-analysis/internal/staticanalysis/externalcmd"
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
 
@@ -387,7 +388,7 @@ func TestParseJS(t *testing.T) {
 
 	for _, tt := range jsTestCases {
 		t.Run(tt.name, func(t *testing.T) {
-			result, rawOutput, err := parseJS(jsParserConfig, StringInput(tt.inputJs))
+			result, rawOutput, err := parseJS(jsParserConfig, externalcmd.StringInput(tt.inputJs))
 			got := result["stdin"]
 			if err != nil {
 				t.Errorf("parseJS() error = %v", err)

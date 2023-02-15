@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/ossf/package-analysis/internal/log"
+	"github.com/ossf/package-analysis/internal/staticanalysis/externalcmd"
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
 
@@ -40,12 +41,27 @@ type parserStatusJSON struct {
 // parse a file completely due to syntax errors that cannot be recovered from.
 const fatalSyntaxErrorMarker = "FATAL SYNTAX ERROR"
 
+// parserArgsHandler specifies how to pass CLI args for the parser to externalcmd.Input
+type parserArgsHandler struct{}
+
+func (h parserArgsHandler) SingleFileArg(filePath string) []string {
+	return []string{"--file", filePath}
+}
+
+func (h parserArgsHandler) FileListArg(fileListPath string) []string {
+	return []string{"--batch", fileListPath}
+}
+
+func (h parserArgsHandler) ReadStdinArg() []string {
+	return []string{} // no argument needed
+}
+
 /*
 runParser handles calling the parser program and provide the specified Javascript source to it,
 either by filename (jsFilePath) or piping jsSource to the program's stdin.
 If sourcePath is empty, sourceString will be parsed as JS code
 */
-func runParser(parserPath string, input InputStrategy, extraArgs ...string) (string, error) {
+func runParser(parserPath string, input externalcmd.Input, extraArgs ...string) (string, error) {
 	workingDir, err := os.MkdirTemp("", "package-analysis-run-parser-*")
 	if err != nil {
 		return "", fmt.Errorf("runParser failed to create temp working directory: %w", err)
@@ -65,7 +81,7 @@ func runParser(parserPath string, input InputStrategy, extraArgs ...string) (str
 
 	cmd := exec.Command("node", nodeArgs...)
 
-	if err := input.SendTo(cmd, workingDir); err != nil {
+	if err := input.SendTo(cmd, parserArgsHandler{}, workingDir); err != nil {
 		return "", fmt.Errorf("runParser failed to prepare parsing input: %w", err)
 	}
 
@@ -160,7 +176,7 @@ The other two return values are the raw parser output and the error respectively
 Otherwise, the first return value points to the parsing result object while the second
 contains the raw JSON output from the parser.
 */
-func parseJS(parserConfig ParserConfig, input InputStrategy) (languageResult, string, error) {
+func parseJS(parserConfig ParserConfig, input externalcmd.Input) (languageResult, string, error) {
 	rawOutput, err := runParser(parserConfig.ParserPath, input)
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
@@ -185,7 +201,7 @@ func parseJS(parserConfig ParserConfig, input InputStrategy) (languageResult, st
 	return result, rawOutput, nil
 }
 
-func RunExampleParsing(config ParserConfig, input InputStrategy) {
+func RunExampleParsing(config ParserConfig, input externalcmd.Input) {
 	parseResult, rawOutput, err := parseJS(config, input)
 
 	println("\nRaw JSON:\n", rawOutput)

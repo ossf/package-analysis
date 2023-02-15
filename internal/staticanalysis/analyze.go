@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/ossf/package-analysis/internal/log"
+	"github.com/ossf/package-analysis/internal/staticanalysis/externalcmd"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 )
@@ -75,22 +76,24 @@ func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig,
 
 	result := Result{}
 
+	archivePath := map[string]string{}
+	for _, path := range fileList {
+		archivePath[path] = getPathInArchive(path, extractDir)
+	}
+
 	if runTask[Basic] {
 		log.Info("run basic analysis")
-
-		result.BasicData = &BasicPackageData{
-			Files: map[string]BasicFileData{},
+		basicData, err := GetBasicData(fileList, archivePath)
+		if err != nil {
+			return nil, fmt.Errorf("error when collecting basic data: %w", err)
 		}
-		for _, path := range fileList {
-			pathInArchive := getPathInArchive(path, extractDir)
-			result.BasicData.Files[pathInArchive] = GetBasicFileData(path, pathInArchive)
-		}
+		result.BasicData = basicData
 	}
 
 	if runTask[Parsing] {
 		log.Info("run parsing analysis")
 
-		input := parsing.MultipleFileInput(fileList)
+		input := externalcmd.MultipleFileInput(fileList)
 		parsingResults, err := parsing.Analyze(jsParserConfig, input, false)
 
 		result.ParsingData = parsing.PackageResult{}
@@ -98,7 +101,7 @@ func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig,
 			return nil, fmt.Errorf("error while parsing package files: %w", err)
 		}
 		for path, parseResult := range parsingResults {
-			pathInArchive := getPathInArchive(path, extractDir)
+			pathInArchive := archivePath[path]
 			result.ParsingData[pathInArchive] = parseResult
 		}
 	}

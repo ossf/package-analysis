@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/ossf/package-analysis/internal/log"
+	"github.com/ossf/package-analysis/internal/staticanalysis/externalcmd"
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
 
@@ -77,7 +78,7 @@ func TestCollectData(t *testing.T) {
 
 	for _, tt := range collectDataTestCases {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := Analyze(parserConfig, StringInput(tt.jsSource), false)
+			result, err := Analyze(parserConfig, externalcmd.StringInput(tt.jsSource), false)
 			if err != nil {
 				t.Errorf("%v", err)
 				return
