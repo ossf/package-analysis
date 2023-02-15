@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/ossf/package-analysis/internal/log"
@@ -72,7 +73,7 @@ func runParser(parserPath string, input externalcmd.Input, extraArgs ...string) 
 		}
 	}()
 
-	outFilePath := workingDir + string(os.PathSeparator) + "output.json"
+	outFilePath := filepath.Join(workingDir, "output.json")
 
 	nodeArgs := []string{parserPath, "--output", outFilePath}
 	if len(extraArgs) > 0 {
