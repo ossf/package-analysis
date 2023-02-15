@@ -66,15 +66,15 @@ func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
 		return resultError, fmt.Errorf("strace parsing failed (%w)", err)
 	}
 
-	analysisResult := Result{
+	result := Result{
 		StraceSummary: result.StraceSummary{
 			Status: analysis.StatusForRunResult(r),
 			Stdout: lastLines(r.Stdout(), maxOutputLines, maxOutputBytes),
 			Stderr: lastLines(r.Stderr(), maxOutputLines, maxOutputBytes),
 		},
 	}
-	analysisResult.setData(straceResult, dns)
-	return &analysisResult, nil
+	result.setData(straceResult, dns)
+	return &result, nil
 }
 
 func (d *Result) setData(straceResult *strace.Result, dns *dnsanalyzer.DNSAnalyzer) {
