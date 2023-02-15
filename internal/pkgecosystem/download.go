@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 )
 
 /*
@@ -15,7 +16,7 @@ On successful download, the full path to the downloaded file is returned.
 */
 func downloadToDirectory(dir string, url string) (string, error) {
 	fileName := path.Base(url)
-	filePath := dir + string(os.PathSeparator) + fileName
+	filePath := filepath.Join(dir, fileName)
 	err := downloadToPath(filePath, url)
 
 	if err != nil {
