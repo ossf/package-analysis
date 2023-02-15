@@ -2,14 +2,15 @@ package staticanalysis
 
 import (
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 )
 
 func TestGetFileTypes(t *testing.T) {
 	testDir := t.TempDir()
-	fileName1 := testDir + string(os.PathSeparator) + "test1.txt"
-	fileName2 := testDir + string(os.PathSeparator) + "test2.txt"
+	fileName1 := filepath.Join(testDir, "test1.txt")
+	fileName2 := filepath.Join(testDir, "test2.txt")
 
 	if err := os.WriteFile(fileName1, []byte("hello test 1!\n"), 0o666); err != nil {
 		t.Fatalf("failed to write test file 1: %v", err)
