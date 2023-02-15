@@ -114,7 +114,7 @@ func run() (err error) {
 		return fmt.Errorf("ecosystem and package are required arguments")
 	}
 
-	manager := pkgecosystem.Manager(api.Ecosystem(*ecosystem))
+	manager := pkgecosystem.Manager(api.Ecosystem(*ecosystem), false)
 	if manager == nil {
 		return fmt.Errorf("unsupported pkg manager for ecosystem %s", *ecosystem)
 	}
