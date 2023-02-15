@@ -39,3 +39,14 @@ var rubygemsPkgManager = PkgManager{
 		api.RunPhaseImport,
 	},
 }
+
+var rubygemsPkgManagerCombinedSandbox = PkgManager{
+	ecosystem:     api.EcosystemRubyGems,
+	image:         combinedDynamicAnalysisImage,
+	command:       "/usr/local/bin/analyze-ruby.rb",
+	latestVersion: getRubyGemsLatest,
+	runPhases: []api.RunPhase{
+		api.RunPhaseInstall,
+		api.RunPhaseImport,
+	},
+}

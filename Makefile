@@ -82,8 +82,12 @@ docker_build_static_analysis_sandbox: DIR=$(PREFIX)
 docker_build_static_analysis_sandbox: DOCKERFILE=$(SANDBOX_DIR)/staticanalysis/Dockerfile
 docker_build_static_analysis_sandbox: IMAGE_NAME=static-analysis
 
+docker_build_dynamic_analysis_sandbox: DIR=$(SANDBOX_DIR)/dynamicanalysis
+docker_build_dynamic_analysis_sandbox: DOCKERFILE=$(SANDBOX_DIR)/dynamicanalysis/Dockerfile
+docker_build_dynamic_analysis_sandbox: IMAGE_NAME=dynamic-analysis
+
 .PHONY: docker_build_all_sandboxes
-docker_build_all_sandboxes: docker_build_node_sandbox docker_build_python_sandbox docker_build_ruby_sandbox docker_build_packagist_sandbox docker_build_crates_sandbox docker_build_static_analysis_sandbox
+docker_build_all_sandboxes: docker_build_node_sandbox docker_build_python_sandbox docker_build_ruby_sandbox docker_build_packagist_sandbox docker_build_crates_sandbox docker_build_dynamic_analysis_sandbox docker_build_static_analysis_sandbox
 
 .PHONY: docker_build_all
 docker_build_all: docker_build_all_sandboxes docker_build_analysis_image docker_build_scheduler_image
@@ -116,11 +120,14 @@ docker_push_packagist_sandbox: docker_build_packagist_sandbox
 docker_push_crates_sandbox: IMAGE_NAME=crates.io
 docker_push_crates_sandbox: docker_build_crates_sandbox
 
+docker_push_dynamic_analysis_sandbox: IMAGE_NAME=dynamic-analysis
+docker_push_dynamic_analysis_sandbox: docker_build_static_analysis_sandbox
+
 docker_push_static_analysis_sandbox: IMAGE_NAME=static-analysis
 docker_push_static_analysis_sandbox: docker_build_static_analysis_sandbox
 
 .PHONY: docker_push_all_sandboxes
-docker_push_all_sandboxes: docker_push_node_sandbox docker_push_python_sandbox docker_push_ruby_sandbox docker_push_packagist_sandbox docker_push_crates_sandbox docker_push_static_analysis_sandbox
+docker_push_all_sandboxes: docker_push_node_sandbox docker_push_python_sandbox docker_push_ruby_sandbox docker_push_packagist_sandbox docker_push_crates_sandbox docker_push_dynamic_analysis_sandbox docker_push_static_analysis_sandbox
 
 .PHONY: docker_push_all
 docker_push_all: docker_push_all_sandboxes docker_push_analysis_image docker_push_scheduler_image
@@ -176,7 +183,26 @@ e2e_test_logs_scheduler:
 e2e_test_logs_analysis:
 	docker-compose $(E2E_TEST_COMPOSE_ARGS) logs -f analysis
 
-.PHONY: test
-test:
+.PHONY: test_go
+test_go:
 	go test -v ./...
 
+.PHONY: test_dynamic_analysis
+test_dynamic_analysis:
+	@echo -e "\n##\n## Test NPM \n##\n"
+	scripts/run_analysis.sh -mode dynamic -combined-sandbox -nopull -ecosystem npm -package async
+	@echo -e "\n##\n## Test PyPI \n##\n"
+	scripts/run_analysis.sh -mode dynamic -combined-sandbox -nopull -ecosystem pypi -package requests
+	@echo -e "\n##\n## Test Packagist \n##\n"
+	scripts/run_analysis.sh -mode dynamic -combined-sandbox -nopull -ecosystem packagist -package symfony/deprecation-contracts
+	@echo -e "\n##\n## Test Crates.io \n##\n"
+	scripts/run_analysis.sh -mode dynamic -combined-sandbox -nopull -ecosystem crates.io -package itoa
+	@echo -e "\n##\n## Test RubyGems \n##\n"
+	scripts/run_analysis.sh -mode dynamic -combined-sandbox -nopull -ecosystem rubygems -package guwor_palindrome
+	@echo "Dynamic analysis test passed"
+
+.PHONY: test_static_analysis
+test_static_analysis:
+	@echo -e "\n##\n## Test NPM \n##\n"
+	scripts/run_analysis.sh -mode static -combined-sandbox -nopull -ecosystem npm -package async
+	@echo "Static analysis test passed"

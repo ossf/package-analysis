@@ -59,7 +59,7 @@ func TestDownloadNpmArchive(t *testing.T) {
 		{"pkgname=(invalid)", "fr(2t5j923)", "latest", true},
 	}
 
-	testDownload(t, tests, Manager(api.EcosystemNPM))
+	testDownload(t, tests, Manager(api.EcosystemNPM, false))
 }
 
 func TestDownloadPyPIArchive(t *testing.T) {
@@ -69,7 +69,7 @@ func TestDownloadPyPIArchive(t *testing.T) {
 		{"pkgname=(invalid)", "fr(2t5j923)", "123", true},
 	}
 
-	testDownload(t, tests, Manager(api.EcosystemPyPI))
+	testDownload(t, tests, Manager(api.EcosystemPyPI, false))
 }
 
 func TestDownloadToDirectory(t *testing.T) {

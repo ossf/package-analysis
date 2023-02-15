@@ -19,6 +19,8 @@ type PkgManager struct {
 	runPhases      []api.RunPhase
 }
 
+const combinedDynamicAnalysisImage = "gcr.io/ossf-malware-analysis/dynamic-analysis"
+
 var (
 	supportedPkgManagers = map[api.Ecosystem]*PkgManager{
 		npmPkgManager.ecosystem:       &npmPkgManager,
@@ -27,9 +29,21 @@ var (
 		packagistPkgManager.ecosystem: &packagistPkgManager,
 		cratesPkgManager.ecosystem:    &cratesPkgManager,
 	}
+
+	supportedPkgManagersCombinedSandbox = map[api.Ecosystem]*PkgManager{
+		npmPkgManagerCombinedSandbox.ecosystem:       &npmPkgManagerCombinedSandbox,
+		pypiPkgManagerCombinedSandbox.ecosystem:      &pypiPkgManagerCombinedSandbox,
+		rubygemsPkgManagerCombinedSandbox.ecosystem:  &rubygemsPkgManagerCombinedSandbox,
+		packagistPkgManagerCombinedSandbox.ecosystem: &packagistPkgManagerCombinedSandbox,
+		cratesPkgManagerCombinedSandbox.ecosystem:    &cratesPkgManagerCombinedSandbox,
+	}
 )
 
-func Manager(ecosystem api.Ecosystem) *PkgManager {
+func Manager(ecosystem api.Ecosystem, combinedSandbox bool) *PkgManager {
+	if combinedSandbox {
+		return supportedPkgManagersCombinedSandbox[ecosystem]
+	}
+
 	return supportedPkgManagers[ecosystem]
 }
 
