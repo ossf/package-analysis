@@ -24,7 +24,7 @@ endif
 # This recipe builds and pushes images for production. Note: RELEASE_TAG must be set
 #
 .PHONY: cloudbuild
-cloudbuild: require_release_tag docker_push_all
+cloudbuild: require_release_tag push_all_containers
 
 .PHONY: require_release_tag
 require_release_tag:
@@ -36,7 +36,7 @@ endif
 #
 # These recipes build all the top-level docker images
 
-docker_build_%_image:
+build_%_image:
 	@# if TAG is 'latest', the two -t arguments are equivalent and do the same thing
 	docker build $(BUILD_ARG) -t ${REGISTRY}/$(IMAGE_NAME) -t ${REGISTRY}/$(IMAGE_NAME):$(TAG) -f $(DOCKERFILE) $(DIR)
 
@@ -45,92 +45,92 @@ docker_build_%_image:
 # from Docker to podman. This is needed for local analyses; in order
 # to use these updated images, pass 'nopull' to scripts/run_analysis.sh
 #
-docker_build_%_sandbox:
+build_%_sandbox:
 	@# if TAG is 'latest', the two -t arguments are equivalent and do the same thing
 	docker build -t ${REGISTRY}/$(IMAGE_NAME) -t ${REGISTRY}/$(IMAGE_NAME):$(TAG) -f $(DOCKERFILE) $(DIR)
 	sudo buildah pull docker-daemon:${REGISTRY}/${IMAGE_NAME}:$(TAG)
 
-docker_build_analysis_image: DIR=$(PREFIX)
-docker_build_analysis_image: DOCKERFILE=$(PREFIX)/cmd/analyze/Dockerfile
-docker_build_analysis_image: IMAGE_NAME=analysis
+build_analysis_image: DIR=$(PREFIX)
+build_analysis_image: DOCKERFILE=$(PREFIX)/cmd/analyze/Dockerfile
+build_analysis_image: IMAGE_NAME=analysis
 
-docker_build_scheduler_image: DIR=$(PREFIX)
-docker_build_scheduler_image: DOCKERFILE=$(PREFIX)/cmd/scheduler/Dockerfile
-docker_build_scheduler_image: IMAGE_NAME=scheduler
+build_scheduler_image: DIR=$(PREFIX)
+build_scheduler_image: DOCKERFILE=$(PREFIX)/cmd/scheduler/Dockerfile
+build_scheduler_image: IMAGE_NAME=scheduler
 
-docker_build_node_sandbox: DIR=$(SANDBOX_DIR)/npm
-docker_build_node_sandbox: DOCKERFILE=$(SANDBOX_DIR)/npm/Dockerfile
-docker_build_node_sandbox: IMAGE_NAME=node
+build_node_sandbox: DIR=$(SANDBOX_DIR)/npm
+build_node_sandbox: DOCKERFILE=$(SANDBOX_DIR)/npm/Dockerfile
+build_node_sandbox: IMAGE_NAME=node
 
-docker_build_python_sandbox: DIR=$(SANDBOX_DIR)/pypi
-docker_build_python_sandbox: DOCKERFILE=$(SANDBOX_DIR)/pypi/Dockerfile
-docker_build_python_sandbox: IMAGE_NAME=python
+build_python_sandbox: DIR=$(SANDBOX_DIR)/pypi
+build_python_sandbox: DOCKERFILE=$(SANDBOX_DIR)/pypi/Dockerfile
+build_python_sandbox: IMAGE_NAME=python
 
-docker_build_ruby_sandbox: DIR=$(SANDBOX_DIR)/rubygems
-docker_build_ruby_sandbox: DOCKERFILE=$(SANDBOX_DIR)/rubygems/Dockerfile
-docker_build_ruby_sandbox: IMAGE_NAME=ruby
+build_ruby_sandbox: DIR=$(SANDBOX_DIR)/rubygems
+build_ruby_sandbox: DOCKERFILE=$(SANDBOX_DIR)/rubygems/Dockerfile
+build_ruby_sandbox: IMAGE_NAME=ruby
 
-docker_build_packagist_sandbox: DIR=$(SANDBOX_DIR)/packagist
-docker_build_packagist_sandbox: DOCKERFILE=$(SANDBOX_DIR)/packagist/Dockerfile
-docker_build_packagist_sandbox:	IMAGE_NAME=packagist
+build_packagist_sandbox: DIR=$(SANDBOX_DIR)/packagist
+build_packagist_sandbox: DOCKERFILE=$(SANDBOX_DIR)/packagist/Dockerfile
+build_packagist_sandbox:	IMAGE_NAME=packagist
 
-docker_build_crates_sandbox: DIR=$(SANDBOX_DIR)/crates.io
-docker_build_crates_sandbox: DOCKERFILE=$(SANDBOX_DIR)/crates.io/Dockerfile
-docker_build_crates_sandbox: IMAGE_NAME=crates.io
+build_crates_sandbox: DIR=$(SANDBOX_DIR)/crates.io
+build_crates_sandbox: DOCKERFILE=$(SANDBOX_DIR)/crates.io/Dockerfile
+build_crates_sandbox: IMAGE_NAME=crates.io
 
-docker_build_static_analysis_sandbox: DIR=$(PREFIX)
-docker_build_static_analysis_sandbox: DOCKERFILE=$(SANDBOX_DIR)/staticanalysis/Dockerfile
-docker_build_static_analysis_sandbox: IMAGE_NAME=static-analysis
+build_static_analysis_sandbox: DIR=$(PREFIX)
+build_static_analysis_sandbox: DOCKERFILE=$(SANDBOX_DIR)/staticanalysis/Dockerfile
+build_static_analysis_sandbox: IMAGE_NAME=static-analysis
 
-docker_build_dynamic_analysis_sandbox: DIR=$(SANDBOX_DIR)/dynamicanalysis
-docker_build_dynamic_analysis_sandbox: DOCKERFILE=$(SANDBOX_DIR)/dynamicanalysis/Dockerfile
-docker_build_dynamic_analysis_sandbox: IMAGE_NAME=dynamic-analysis
+build_dynamic_analysis_sandbox: DIR=$(SANDBOX_DIR)/dynamicanalysis
+build_dynamic_analysis_sandbox: DOCKERFILE=$(SANDBOX_DIR)/dynamicanalysis/Dockerfile
+build_dynamic_analysis_sandbox: IMAGE_NAME=dynamic-analysis
 
-.PHONY: docker_build_all_sandboxes
-docker_build_all_sandboxes: docker_build_node_sandbox docker_build_python_sandbox docker_build_ruby_sandbox docker_build_packagist_sandbox docker_build_crates_sandbox docker_build_dynamic_analysis_sandbox docker_build_static_analysis_sandbox
+.PHONY: build_all_sandboxes
+build_all_sandboxes: build_node_sandbox build_python_sandbox build_ruby_sandbox build_packagist_sandbox build_crates_sandbox build_dynamic_analysis_sandbox build_static_analysis_sandbox
 
-.PHONY: docker_build_all
-docker_build_all: docker_build_all_sandboxes docker_build_analysis_image docker_build_scheduler_image
+.PHONY: build_all_containers
+build_all_containers: build_all_sandboxes build_analysis_image build_scheduler_image
 
 #
 # Builds then pushes analysis and sandbox images
 #
 
-docker_push_%:
+push_%:
 	docker push --all-tags ${REGISTRY}/$(IMAGE_NAME)
 
-docker_push_analysis_image: IMAGE_NAME=analysis
-docker_push_analysis_image: docker_build_analysis_image
+push_analysis_image: IMAGE_NAME=analysis
+push_analysis_image: build_analysis_image
 
-docker_push_scheduler_image: IMAGE_NAME=scheduler
-docker_push_scheduler_image: docker_build_scheduler_image
+push_scheduler_image: IMAGE_NAME=scheduler
+push_scheduler_image: build_scheduler_image
 
-docker_push_node_sandbox: IMAGE_NAME=node
-docker_push_node_sandbox: docker_build_node_sandbox
+push_node_sandbox: IMAGE_NAME=node
+push_node_sandbox: build_node_sandbox
 
-docker_push_python_sandbox: docker_build_python_sandbox
-docker_push_python_sandbox: IMAGE_NAME=python
+push_python_sandbox: build_python_sandbox
+push_python_sandbox: IMAGE_NAME=python
 
-docker_push_ruby_sandbox: IMAGE_NAME=ruby
-docker_push_ruby_sandbox: docker_build_ruby_sandbox
+push_ruby_sandbox: IMAGE_NAME=ruby
+push_ruby_sandbox: build_ruby_sandbox
 
-docker_push_packagist_sandbox:	IMAGE_NAME=packagist
-docker_push_packagist_sandbox: docker_build_packagist_sandbox
+push_packagist_sandbox:	IMAGE_NAME=packagist
+push_packagist_sandbox: build_packagist_sandbox
 
-docker_push_crates_sandbox: IMAGE_NAME=crates.io
-docker_push_crates_sandbox: docker_build_crates_sandbox
+push_crates_sandbox: IMAGE_NAME=crates.io
+push_crates_sandbox: build_crates_sandbox
 
-docker_push_dynamic_analysis_sandbox: IMAGE_NAME=dynamic-analysis
-docker_push_dynamic_analysis_sandbox: docker_build_static_analysis_sandbox
+push_dynamic_analysis_sandbox: IMAGE_NAME=dynamic-analysis
+push_dynamic_analysis_sandbox: build_static_analysis_sandbox
 
-docker_push_static_analysis_sandbox: IMAGE_NAME=static-analysis
-docker_push_static_analysis_sandbox: docker_build_static_analysis_sandbox
+push_static_analysis_sandbox: IMAGE_NAME=static-analysis
+push_static_analysis_sandbox: build_static_analysis_sandbox
 
-.PHONY: docker_push_all_sandboxes
-docker_push_all_sandboxes: docker_push_node_sandbox docker_push_python_sandbox docker_push_ruby_sandbox docker_push_packagist_sandbox docker_push_crates_sandbox docker_push_dynamic_analysis_sandbox docker_push_static_analysis_sandbox
+.PHONY: push_all_sandboxes
+push_all_sandboxes: push_node_sandbox push_python_sandbox push_ruby_sandbox push_packagist_sandbox push_crates_sandbox push_dynamic_analysis_sandbox push_static_analysis_sandbox
 
-.PHONY: docker_push_all
-docker_push_all: docker_push_all_sandboxes docker_push_analysis_image docker_push_scheduler_image
+.PHONY: push_all_containers
+push_all_containers: push_all_sandboxes push_analysis_image push_scheduler_image
 
 
 #
