@@ -112,7 +112,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	ecosystem := msg.Metadata["ecosystem"]
 	if ecosystem == "" {
 		log.Warn("ecosystem is empty",
-			log.Label("name", name))
+			"name", name)
 		msg.Ack()
 		return nil
 	}
@@ -121,7 +121,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	if manager == nil {
 		log.Warn("Unsupported pkg manager",
 			log.Label("ecosystem", ecosystem),
-			log.Label("name", name))
+			"name", name)
 		msg.Ack()
 		return nil
 	}
@@ -262,14 +262,14 @@ func main() {
 
 	// Log the configuration of the worker at startup so we can observe it.
 	log.Info("Starting worker",
-		log.Label("subscription", subURL),
-		log.Label("package_bucket", packagesBucket),
-		log.Label("results_bucket", resultsBuckets.dynamicAnalysis),
-		log.Label("static_results_bucket", resultsBuckets.staticAnalysis),
-		log.Label("file_write_results_bucket", resultsBuckets.fileWrites),
-		log.Label("image_tag", imageSpec.tag),
-		log.Label("image_nopull", fmt.Sprintf("%v", imageSpec.noPull)),
-		log.Label("topic_notification", notificationTopicURL))
+		"subscription", subURL,
+		"package_bucket", packagesBucket,
+		"results_bucket", resultsBuckets.dynamicAnalysis,
+		"static_results_bucket", resultsBuckets.staticAnalysis,
+		"file_write_results_bucket", resultsBuckets.fileWrites,
+		"image_tag", imageSpec.tag,
+		"image_nopull", fmt.Sprintf("%v", imageSpec.noPull),
+		"topic_notification", notificationTopicURL)
 
 	for {
 		err := messageLoop(ctx, subURL, packagesBucket, notificationTopicURL, imageSpec, resultsBuckets)
