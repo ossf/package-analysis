@@ -26,9 +26,9 @@ const gotRequestLogMsg = "Got request"
 func LogDynamicAnalysisError(pkg *pkgecosystem.Pkg, errorPhase api.RunPhase, err error) {
 	log.Error(runErrorLogMsg,
 		log.Label("ecosystem", pkg.EcosystemName()),
-		log.Label("name", pkg.Name()),
 		log.Label("phase", string(errorPhase)),
-		log.Label("version", pkg.Version()),
+		"name", pkg.Name(),
+		"version", pkg.Version(),
 		"error", err)
 }
 
@@ -36,16 +36,11 @@ func LogDynamicAnalysisError(pkg *pkgecosystem.Pkg, errorPhase api.RunPhase, err
 // and what happened when it was run. This may include errors in the analysis
 // of the package, but not errors in the running itself.
 func LogDynamicAnalysisResult(pkg *pkgecosystem.Pkg, finalPhase api.RunPhase, finalStatus analysis.Status) {
-	ecosystem := pkg.EcosystemName()
-	name := pkg.Name()
-	version := pkg.Version()
-	lastPhase := string(finalPhase)
-
 	labels := []interface{}{
-		log.Label("ecosystem", ecosystem),
-		log.Label("name", name),
-		log.Label("version", version),
-		log.Label("last_phase", lastPhase),
+		log.Label("ecosystem", pkg.EcosystemName()),
+		log.Label("last_phase", string(finalPhase)),
+		"name", pkg.Name(),
+		"version", pkg.Version(),
 	}
 
 	switch finalStatus {
@@ -64,9 +59,9 @@ func LogDynamicAnalysisResult(pkg *pkgecosystem.Pkg, finalPhase api.RunPhase, fi
 func LogRequest(ecosystem, name, version, localPath, resultsBucketOverride string) {
 	log.Info(gotRequestLogMsg,
 		log.Label("ecosystem", ecosystem),
-		log.Label("name", name),
-		log.Label("version", version),
-		log.Label("package_path", localPath),
-		log.Label("results_bucket_override", resultsBucketOverride),
+		"name", name,
+		"version", version,
+		"package_path", localPath,
+		"results_bucket_override", resultsBucketOverride,
 	)
 }

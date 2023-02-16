@@ -188,7 +188,7 @@ func main() {
 	if err != nil {
 		log.Panic("Error resolving package",
 			log.Label("ecosystem", *ecosystem),
-			log.Label("name", *pkgName),
+			"name", *pkgName,
 			"error", err)
 	}
 
