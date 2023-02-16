@@ -57,6 +57,8 @@ services:
   analysis:
     image: gcr.io/ossf-malware-analysis/analysis:latest
     privileged: true
+    ports:
+      - 6060:6060
     restart: unless-stopped
     entrypoint: "/usr/local/bin/worker"
     environment:
@@ -65,6 +67,7 @@ services:
       OSSF_MALWARE_ANALYSIS_RESULTS: s3://package-analysis?endpoint=minio:9000&disableSSL=true&s3ForcePathStyle=true
       OSSF_MALWARE_STATIC_ANALYSIS_RESULTS: s3://package-analysis-static?endpoint=minio:9000&disableSSL=true&s3ForcePathStyle=true
       OSSF_MALWARE_ANALYSIS_FILE_WRITE_RESULTS: s3://package-analysis-file-writes?endpoint=minio:9000&disableSSL=true&s3ForcePathStyle=true
+      OSSF_MALWARE_ANALYSIS_ENABLE_PROFILER: "true"
       KAFKA_BROKERS: kafka:9092
       AWS_ACCESS_KEY_ID: minio
       AWS_SECRET_ACCESS_KEY: minio123
