@@ -24,7 +24,7 @@ endif
 # This recipe builds and pushes images for production. Note: RELEASE_TAG must be set
 #
 .PHONY: cloudbuild
-cloudbuild: require_release_tag push_all_containers
+cloudbuild: require_release_tag push_all_images
 
 .PHONY: require_release_tag
 require_release_tag:
@@ -89,8 +89,8 @@ build_dynamic_analysis_sandbox: IMAGE_NAME=dynamic-analysis
 .PHONY: build_all_sandboxes
 build_all_sandboxes: build_node_sandbox build_python_sandbox build_ruby_sandbox build_packagist_sandbox build_crates_sandbox build_dynamic_analysis_sandbox build_static_analysis_sandbox
 
-.PHONY: build_all_containers
-build_all_containers: build_all_sandboxes build_analysis_image build_scheduler_image
+.PHONY: build_all_images
+build_all_images: build_all_sandboxes build_analysis_image build_scheduler_image
 
 #
 # Builds then pushes analysis and sandbox images
@@ -129,8 +129,8 @@ push_static_analysis_sandbox: build_static_analysis_sandbox
 .PHONY: push_all_sandboxes
 push_all_sandboxes: push_node_sandbox push_python_sandbox push_ruby_sandbox push_packagist_sandbox push_crates_sandbox push_dynamic_analysis_sandbox push_static_analysis_sandbox
 
-.PHONY: push_all_containers
-push_all_containers: push_all_sandboxes push_analysis_image push_scheduler_image
+.PHONY: push_all_images
+push_all_images: push_all_sandboxes push_analysis_image push_scheduler_image
 
 
 #
