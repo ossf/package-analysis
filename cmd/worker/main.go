@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"path"
 	"time"
@@ -245,6 +247,7 @@ func main() {
 	subURL := os.Getenv("OSSMALWARE_WORKER_SUBSCRIPTION")
 	packagesBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_PACKAGES")
 	notificationTopicURL := os.Getenv("OSSF_MALWARE_NOTIFICATION_TOPIC")
+	enableProfiler := os.Getenv("OSSF_MALWARE_ANALYSIS_ENABLE_PROFILER")
 
 	resultsBuckets := resultBucketPaths{
 		dynamicAnalysis: os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS"),
@@ -259,6 +262,15 @@ func main() {
 
 	log.Initialize(os.Getenv("LOGGER_ENV"))
 	sandbox.InitNetwork()
+
+	// If configured, start a webserver so that Go's pprof can be accessed for
+	// debugging and profiling.
+	if enableProfiler != "" {
+		go func() {
+			log.Info("Starting profiler")
+			http.ListenAndServe(":6060", nil)
+		}()
+	}
 
 	// Log the configuration of the worker at startup so we can observe it.
 	log.Info("Starting worker",
