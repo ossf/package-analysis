@@ -87,7 +87,7 @@ To build the necessary images yourself for the docker-compose, you can do the fo
 
 ```
 # In package-analysis
-make docker_build_all
+make build_all_images
 
 # In package-feeds
 docker build . -t gcr.io/ossf-malware-analysis/scheduled-feeds:latest
