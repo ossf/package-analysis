@@ -28,5 +28,4 @@ jobs:
         docker version -f '{{.Server.Experimental}}'
 
     - name: build_docker
-      run: NOPUSH=true ./build_docker.sh
-      working-directory: build
+      run: make build_all_images

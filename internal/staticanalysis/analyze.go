@@ -8,9 +8,31 @@ import (
 	"strings"
 
 	"github.com/ossf/package-analysis/internal/log"
+	"github.com/ossf/package-analysis/internal/staticanalysis/externalcmd"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 )
+
+// enumeratePackageFiles returns a list of absolute paths to all (regular) files
+// in a directory or any descendent directory
+func enumeratePackageFiles(extractDir string) ([]string, error) {
+	var paths []string
+	err := filepath.WalkDir(extractDir, func(path string, f fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if f.Type().IsRegular() {
+			paths = append(paths, path)
+		}
+		return nil
+	})
+
+	return paths, err
+}
+
+func getPathInArchive(path, extractDir string) string {
+	return strings.TrimPrefix(path, extractDir+string(os.PathSeparator))
+}
 
 /*
 AnalyzePackageFiles walks a tree of extracted package files and runs the analysis tasks
@@ -35,7 +57,9 @@ func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig,
 		case Parsing:
 			runTask[Parsing] = true
 		case Obfuscation:
-			// parsing needed for obfuscation detection
+			if !runTask[Parsing] {
+				log.Info("adding staticanalysis.Parsing to task list (needed by staticanalysis.Obfuscation)")
+			}
 			runTask[Parsing] = true
 			runTask[Obfuscation] = true
 		case All:
@@ -45,47 +69,46 @@ func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig,
 		}
 	}
 
+	fileList, err := enumeratePackageFiles(extractDir)
+	if err != nil {
+		return nil, fmt.Errorf("error enumerating package files: %w", err)
+	}
+
 	result := Result{}
 
+	archivePath := map[string]string{}
+	for _, path := range fileList {
+		archivePath[path] = getPathInArchive(path, extractDir)
+	}
+
 	if runTask[Basic] {
-		result.BasicData = &BasicPackageData{
-			Files: map[string]BasicFileData{},
+		log.Info("run basic analysis")
+		basicData, err := GetBasicData(fileList, archivePath)
+		if err != nil {
+			return nil, fmt.Errorf("error when collecting basic data: %w", err)
 		}
+		result.BasicData = basicData
 	}
 
 	if runTask[Parsing] {
+		log.Info("run parsing analysis")
+
+		input := externalcmd.MultipleFileInput(fileList)
+		parsingResults, err := parsing.Analyze(jsParserConfig, input, false)
+
 		result.ParsingData = parsing.PackageResult{}
-	}
-
-	walkErr := filepath.WalkDir(extractDir, func(path string, f fs.DirEntry, err error) error {
 		if err != nil {
-			return err
+			return nil, fmt.Errorf("error while parsing package files: %w", err)
 		}
-		if f.Type().IsRegular() {
-			pathInArchive := strings.TrimPrefix(path, extractDir+string(os.PathSeparator))
-			log.Info("Processing " + pathInArchive)
-
-			if runTask[Basic] {
-				result.BasicData.Files[pathInArchive] = GetBasicFileData(path, pathInArchive)
-			}
-
-			if runTask[Parsing] {
-				fileParseData, parseErr := parsing.ParseFile(jsParserConfig, path, "", false)
-				if parseErr != nil {
-					log.Error("Error parsing file", "filename", pathInArchive, "error", parseErr)
-					result.ParsingData[pathInArchive] = nil
-				} else {
-					result.ParsingData[pathInArchive] = fileParseData
-				}
-			}
+		for path, parseResult := range parsingResults {
+			pathInArchive := archivePath[path]
+			result.ParsingData[pathInArchive] = parseResult
 		}
-		return nil
-	})
-	if walkErr != nil {
-		return nil, fmt.Errorf("error while walking package files: %w", walkErr)
 	}
 
-	if _, run := runTask[Obfuscation]; run {
+	if runTask[Obfuscation] {
+		log.Info("run obfuscation analysis")
+
 		obfuscationData := obfuscation.Analyze(result.ParsingData)
 		result.ObfuscationData = &obfuscationData
 	}

@@ -40,3 +40,13 @@ var cratesPkgManager = PkgManager{
 		api.RunPhaseInstall,
 	},
 }
+
+var cratesPkgManagerCombinedSandbox = PkgManager{
+	ecosystem:     api.EcosystemCratesIO,
+	image:         combinedDynamicAnalysisImage,
+	command:       "/usr/local/bin/analyze-rust.py",
+	latestVersion: getCratesLatest,
+	runPhases: []api.RunPhase{
+		api.RunPhaseInstall,
+	},
+}

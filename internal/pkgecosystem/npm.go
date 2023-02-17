@@ -82,3 +82,16 @@ var npmPkgManager = PkgManager{
 		api.RunPhaseImport,
 	},
 }
+
+var npmPkgManagerCombinedSandbox = PkgManager{
+	ecosystem:      api.EcosystemNPM,
+	image:          combinedDynamicAnalysisImage,
+	command:        "/usr/local/bin/analyze-node.js",
+	latestVersion:  getNPMLatest,
+	archiveUrl:     getNPMArchiveURL,
+	extractArchive: utils.ExtractTarGzFile,
+	runPhases: []api.RunPhase{
+		api.RunPhaseInstall,
+		api.RunPhaseImport,
+	},
+}

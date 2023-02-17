@@ -90,3 +90,16 @@ var pypiPkgManager = PkgManager{
 		api.RunPhaseImport,
 	},
 }
+
+var pypiPkgManagerCombinedSandbox = PkgManager{
+	ecosystem:      api.EcosystemPyPI,
+	image:          combinedDynamicAnalysisImage,
+	command:        "/usr/local/bin/analyze-python.py",
+	latestVersion:  getPyPILatest,
+	archiveUrl:     getPyPIArchiveURL,
+	extractArchive: utils.ExtractTarGzFile,
+	runPhases: []api.RunPhase{
+		api.RunPhaseInstall,
+		api.RunPhaseImport,
+	},
+}

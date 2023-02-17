@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"path"
 	"time"
@@ -125,16 +127,16 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	ecosystem := msg.Metadata["ecosystem"]
 	if ecosystem == "" {
 		log.Warn("ecosystem is empty",
-			log.Label("name", name))
+			"name", name)
 		msg.Ack()
 		return nil
 	}
 
-	manager := pkgecosystem.Manager(api.Ecosystem(ecosystem))
+	manager := pkgecosystem.Manager(api.Ecosystem(ecosystem), false)
 	if manager == nil {
 		log.Warn("Unsupported pkg manager",
 			log.Label("ecosystem", ecosystem),
-			log.Label("name", name))
+			"name", name)
 		msg.Ack()
 		return nil
 	}
@@ -258,6 +260,7 @@ func main() {
 	subURL := os.Getenv("OSSMALWARE_WORKER_SUBSCRIPTION")
 	packagesBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_PACKAGES")
 	notificationTopicURL := os.Getenv("OSSF_MALWARE_NOTIFICATION_TOPIC")
+	enableProfiler := os.Getenv("OSSF_MALWARE_ANALYSIS_ENABLE_PROFILER")
 
 	resultsBuckets := resultBucketPaths{
 		dynamicAnalysis: os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS"),
@@ -273,16 +276,25 @@ func main() {
 	log.Initialize(os.Getenv("LOGGER_ENV"))
 	sandbox.InitNetwork()
 
+	// If configured, start a webserver so that Go's pprof can be accessed for
+	// debugging and profiling.
+	if enableProfiler != "" {
+		go func() {
+			log.Info("Starting profiler")
+			http.ListenAndServe(":6060", nil)
+		}()
+	}
+
 	// Log the configuration of the worker at startup so we can observe it.
 	log.Info("Starting worker",
-		log.Label("subscription", subURL),
-		log.Label("package_bucket", packagesBucket),
-		log.Label("results_bucket", resultsBuckets.dynamicAnalysis),
-		log.Label("static_results_bucket", resultsBuckets.staticAnalysis),
-		log.Label("file_write_results_bucket", resultsBuckets.fileWrites),
-		log.Label("image_tag", imageSpec.tag),
-		log.Label("image_nopull", fmt.Sprintf("%v", imageSpec.noPull)),
-		log.Label("topic_notification", notificationTopicURL))
+		"subscription", subURL,
+		"package_bucket", packagesBucket,
+		"results_bucket", resultsBuckets.dynamicAnalysis,
+		"static_results_bucket", resultsBuckets.staticAnalysis,
+		"file_write_results_bucket", resultsBuckets.fileWrites,
+		"image_tag", imageSpec.tag,
+		"image_nopull", fmt.Sprintf("%v", imageSpec.noPull),
+		"topic_notification", notificationTopicURL)
 
 	for {
 		err := messageLoop(ctx, subURL, packagesBucket, notificationTopicURL, imageSpec, resultsBuckets)

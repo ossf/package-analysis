@@ -21,3 +21,5 @@ jobs:
     - run: go build -o analyze cmd/analyze/main.go
     - run: go build -o loader load.go
       working-directory: function/loader
+    - run: go build -o staticanalyze staticanalyze.go
+      working-directory: sandboxes/staticanalysis

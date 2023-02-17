@@ -58,3 +58,14 @@ var packagistPkgManager = PkgManager{
 		api.RunPhaseImport,
 	},
 }
+
+var packagistPkgManagerCombinedSandbox = PkgManager{
+	ecosystem:     api.EcosystemPackagist,
+	image:         combinedDynamicAnalysisImage,
+	command:       "/usr/local/bin/analyze-php.php",
+	latestVersion: getPackagistLatest,
+	runPhases: []api.RunPhase{
+		api.RunPhaseInstall,
+		api.RunPhaseImport,
+	},
+}

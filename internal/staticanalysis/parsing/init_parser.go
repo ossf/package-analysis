@@ -48,7 +48,7 @@ type parserFile struct {
 }
 
 var parserFiles = []parserFile{
-	{parserFileName, babelParser, true},
+	{parserFileName, babelParser, false},
 	{packageJSONFileName, packageJSON, false},
 	{packageLockJSONFileName, packageLockJSON, false},
 }
