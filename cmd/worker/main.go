@@ -185,6 +185,9 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	}
 
 	err = saveResults(ctx, pkg, resultsBuckets, results, staticResults)
+	if err != nil {
+		return err
+	}
 
 	if notificationTopic != nil {
 		err := notification.PublishAnalysisCompletion(ctx, notificationTopic, name, version, ecosystem)
