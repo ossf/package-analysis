@@ -88,6 +88,7 @@ func createTgzFile(path string, headers []*tar.Header) (err error) {
 }
 
 func makePaths(t *testing.T, testName string) (workDir, archivePath, extractPath string, err error) {
+	t.Helper()
 	workDir = t.TempDir()
 	archivePath = path.Join(workDir, testName+".tar.gz")
 	extractPath = path.Join(workDir, "extracted")
