@@ -12,13 +12,13 @@ import (
 )
 
 func PublishAnalysisCompletion(ctx context.Context, notificationTopic *pubsub.Topic, name, version, ecosystem string) error {
-	pkgDetails := pkgidentifier.PkgIdentifier{name, version, ecosystem}
-	notificationMsg, err := json.Marshal(notification.AnalysisCompletion{pkgDetails})
+	pkgDetails := pkgidentifier.PkgIdentifier{Name: name, Version: version, Ecosystem: ecosystem}
+	notificationMsg, err := json.Marshal(notification.AnalysisCompletion{Package: pkgDetails})
 	if err != nil {
 		return fmt.Errorf("failed to encode completion notification: %w", err)
 	}
 	err = notificationTopic.Send(ctx, &pubsub.Message{
-		Body: []byte(notificationMsg),
+		Body:     []byte(notificationMsg),
 		Metadata: nil,
 	})
 	if err != nil {

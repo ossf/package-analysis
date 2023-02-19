@@ -125,12 +125,13 @@ func (d *DNSAnalyzer) Hostnames(address string) []string {
 // "TXT").
 //
 // For example:
-//     {
-//         "IN": {
-//             "example.com": {"A", "AAAA"},
-//             "example.org": {"TXT"},
-//         },
-//     }
+//
+//	{
+//	    "IN": map[string][]string{
+//	        "example.com": []string{"A", "AAAA"},
+//	        "example.org": []string{"TXT"},
+//	    },
+//	}
 func (d *DNSAnalyzer) Questions() map[string]map[string][]string {
 	result := make(map[string]map[string][]string)
 	for class, nameMap := range d.questions {

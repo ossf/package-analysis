@@ -9,11 +9,10 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/ossf/package-feeds/pkg/feeds"
 	"gocloud.dev/pubsub"
 	_ "gocloud.dev/pubsub/gcppubsub"
 	_ "gocloud.dev/pubsub/kafkapubsub"
-
-	"github.com/ossf/package-feeds/pkg/feeds"
 
 	"github.com/ossf/package-analysis/cmd/scheduler/proxy"
 	"github.com/ossf/package-analysis/internal/log"
