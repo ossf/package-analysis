@@ -23,9 +23,9 @@ type pypiPackageInfoJSON struct {
 	Info struct {
 		Version string `json:"version"`
 	} `json:"info"`
-	Urls []struct {
+	URLs []struct {
 		PackageType string `json:"packagetype"`
-		Url         string `json:"url"`
+		URL         string `json:"url"`
 	} `json:"urls"`
 }
 
@@ -68,9 +68,9 @@ func getPyPIArchiveURL(pkgName, version string) (string, error) {
 	}
 
 	// Need to find the archive with PackageType == "sdist"
-	for _, url := range packageInfo.Urls {
+	for _, url := range packageInfo.URLs {
 		if url.PackageType == "sdist" {
-			return url.Url, nil
+			return url.URL, nil
 		}
 	}
 	// can't find source tarball
@@ -83,7 +83,7 @@ var pypiPkgManager = PkgManager{
 	image:          "gcr.io/ossf-malware-analysis/python",
 	command:        "/usr/local/bin/analyze.py",
 	latestVersion:  getPyPILatest,
-	archiveUrl:     getPyPIArchiveURL,
+	archiveURL:     getPyPIArchiveURL,
 	extractArchive: utils.ExtractTarGzFile,
 	runPhases: []api.RunPhase{
 		api.RunPhaseInstall,
@@ -96,7 +96,7 @@ var pypiPkgManagerCombinedSandbox = PkgManager{
 	image:          combinedDynamicAnalysisImage,
 	command:        "/usr/local/bin/analyze-python.py",
 	latestVersion:  getPyPILatest,
-	archiveUrl:     getPyPIArchiveURL,
+	archiveURL:     getPyPIArchiveURL,
 	extractArchive: utils.ExtractTarGzFile,
 	runPhases: []api.RunPhase{
 		api.RunPhaseInstall,

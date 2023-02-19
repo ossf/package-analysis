@@ -90,10 +90,10 @@ func main() {
 	}
 }
 
-func listenLoop(subUrl, topicURL string) error {
+func listenLoop(subURL, topicURL string) error {
 	ctx := context.Background()
 
-	sub, err := pubsub.OpenSubscription(ctx, subUrl)
+	sub, err := pubsub.OpenSubscription(ctx, subURL)
 	if err != nil {
 		return err
 	}

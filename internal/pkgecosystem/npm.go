@@ -75,7 +75,7 @@ var npmPkgManager = PkgManager{
 	image:          "gcr.io/ossf-malware-analysis/node",
 	command:        "/usr/local/bin/analyze.js",
 	latestVersion:  getNPMLatest,
-	archiveUrl:     getNPMArchiveURL,
+	archiveURL:     getNPMArchiveURL,
 	extractArchive: utils.ExtractTarGzFile,
 	runPhases: []api.RunPhase{
 		api.RunPhaseInstall,
@@ -88,7 +88,7 @@ var npmPkgManagerCombinedSandbox = PkgManager{
 	image:          combinedDynamicAnalysisImage,
 	command:        "/usr/local/bin/analyze-node.js",
 	latestVersion:  getNPMLatest,
-	archiveUrl:     getNPMArchiveURL,
+	archiveURL:     getNPMArchiveURL,
 	extractArchive: utils.ExtractTarGzFile,
 	runPhases: []api.RunPhase{
 		api.RunPhaseInstall,
