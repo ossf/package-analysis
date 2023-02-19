@@ -135,13 +135,13 @@ func parseCmdAndEnv(cmdAndEnv string) ([]string, []string, error) {
 	return cmd, env, nil
 }
 
-func (r *Result) recordFileAccess(file string, read, write, delete bool) {
+func (r *Result) recordFileAccess(file string, read, write, del bool) {
 	if _, exists := r.files[file]; !exists {
 		r.files[file] = &FileInfo{Path: file}
 	}
 	r.files[file].Read = r.files[file].Read || read
 	r.files[file].Write = r.files[file].Write || write
-	r.files[file].Delete = r.files[file].Delete || delete
+	r.files[file].Delete = r.files[file].Delete || del
 }
 
 func (r *Result) recordFileWrite(file string, bytesWritten int64) {
