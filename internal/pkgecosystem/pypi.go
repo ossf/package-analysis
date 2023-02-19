@@ -55,7 +55,7 @@ func getPyPIArchiveURL(pkgName, version string) (string, error) {
 
 	responseBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("error reading HTTP response: %v", err)
+		return "", fmt.Errorf("error reading HTTP response: %w", err)
 	}
 
 	responseString := string(responseBytes)
@@ -64,7 +64,7 @@ func getPyPIArchiveURL(pkgName, version string) (string, error) {
 	err = decoder.Decode(&packageInfo)
 	if err != nil {
 		// invalid version, non-existent package, etc. Details in responseString
-		return "", fmt.Errorf("%v. PyPI response: %s", err, responseString)
+		return "", fmt.Errorf("%w. PyPI response: %s", err, responseString)
 	}
 
 	// Need to find the archive with PackageType == "sdist"

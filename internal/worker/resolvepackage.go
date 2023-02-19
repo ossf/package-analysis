@@ -15,7 +15,7 @@ func ResolvePkg(manager *pkgecosystem.PkgManager, name, version, localPath strin
 	} else {
 		pkg, err = manager.Latest(name)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get latest version for package %s: %v", name, err)
+			return nil, fmt.Errorf("failed to get latest version for package %s: %w", name, err)
 		}
 	}
 	return pkg, nil

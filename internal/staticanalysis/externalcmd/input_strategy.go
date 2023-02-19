@@ -72,7 +72,7 @@ func (s stringInput) SendTo(cmd *exec.Cmd, argHandler InputArgHandler, tempDir s
 	// create a pipe to send the source code to the parser via stdin
 	pipe, err := cmd.StdinPipe()
 	if err != nil {
-		return fmt.Errorf("failed to create pipe: %v", err)
+		return fmt.Errorf("failed to create pipe: %w", err)
 	}
 
 	if _, err := pipe.Write([]byte(s.input)); err != nil {

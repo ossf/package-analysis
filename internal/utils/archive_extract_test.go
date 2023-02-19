@@ -40,7 +40,7 @@ func makeFileHeader(name string, size int) *tar.Header {
 func createTgzFile(path string, headers []*tar.Header) (err error) {
 	tgzFile, err := os.Create(path)
 	if err != nil {
-		return fmt.Errorf("failed to create temp archive file: %v", err)
+		return fmt.Errorf("failed to create temp archive file: %w", err)
 	}
 
 	path = tgzFile.Name()
@@ -48,7 +48,7 @@ func createTgzFile(path string, headers []*tar.Header) (err error) {
 	defer func() {
 		closeErr := tgzFile.Close()
 		if closeErr != nil && err == nil {
-			err = fmt.Errorf("failed to close temp archive file: %v", closeErr)
+			err = fmt.Errorf("failed to close temp archive file: %w", closeErr)
 		}
 	}()
 
@@ -57,7 +57,7 @@ func createTgzFile(path string, headers []*tar.Header) (err error) {
 	defer func() {
 		closeErr := gzWriter.Close()
 		if closeErr != nil && err == nil {
-			err = fmt.Errorf("failed to close gzip writer: %v", err)
+			err = fmt.Errorf("failed to close gzip writer: %w", err)
 		}
 	}()
 
@@ -102,13 +102,13 @@ func makePaths(t *testing.T, testName string) (workDir, archivePath, extractPath
 
 func doExtractionTest(archivePath, extractPath string, archiveHeaders []*tar.Header, runChecks func() error) (err error) {
 	if err = createTgzFile(archivePath, archiveHeaders); err != nil {
-		return fmt.Errorf("failed to create test tgz file: %v", err)
+		return fmt.Errorf("failed to create test tgz file: %w", err)
 	}
 
 	log.Initialize("")
 
 	if err = ExtractTarGzFile(archivePath, extractPath); err != nil {
-		return fmt.Errorf("extract failed: %v", err)
+		return fmt.Errorf("extract failed: %w", err)
 	}
 
 	return runChecks()
@@ -131,7 +131,7 @@ func TestExtractSimpleTarGzFile(t *testing.T) {
 	err = doExtractionTest(archivePath, extractPath, testHeaders, func() error {
 		dirInfo, err := os.Stat(path.Join(extractPath, "test"))
 		if err != nil {
-			return fmt.Errorf("stat extracted dir: %v", err)
+			return fmt.Errorf("stat extracted dir: %w", err)
 		}
 		if dirInfo.Name() != "test" {
 			return fmt.Errorf("expected extracted directory name 'test', got %s", dirInfo.Name())
@@ -142,7 +142,7 @@ func TestExtractSimpleTarGzFile(t *testing.T) {
 
 		fileInfo, err := os.Stat(path.Join(extractPath, "test", "1.txt"))
 		if err != nil {
-			return fmt.Errorf("stat extracted file: %v", err)
+			return fmt.Errorf("stat extracted file: %w", err)
 		}
 		if fileInfo.Name() != "1.txt" {
 			return fmt.Errorf("expected to extract file with name '1.txt' but it has name %s", fileInfo.Name())
@@ -177,7 +177,7 @@ func TestExtractMissingParentDir(t *testing.T) {
 	err = doExtractionTest(archivePath, extractPath, testHeaders, func() error {
 		dirInfo, err := os.Stat(path.Join(extractPath, "test"))
 		if err != nil {
-			return fmt.Errorf("stat extracted dir: %v", err)
+			return fmt.Errorf("stat extracted dir: %w", err)
 		}
 		if dirInfo.Name() != "test" {
 			return fmt.Errorf("expected extracted directory name 'test', got %s", dirInfo.Name())
@@ -188,7 +188,7 @@ func TestExtractMissingParentDir(t *testing.T) {
 
 		fileInfo, err := os.Stat(path.Join(extractPath, "test", "1.txt"))
 		if err != nil {
-			return fmt.Errorf("stat extracted file: %v", err)
+			return fmt.Errorf("stat extracted file: %w", err)
 		}
 		if fileInfo.Name() != "1.txt" {
 			return fmt.Errorf("expected to extract file with name '1.txt' but it has name %s", fileInfo.Name())
@@ -224,7 +224,7 @@ func TestExtractAbsolutePathTarGzFile(t *testing.T) {
 	err = doExtractionTest(archivePath, extractPath, testHeaders, func() error {
 		dirInfo, err := os.Stat(path.Join(extractPath, "test"))
 		if err != nil {
-			return fmt.Errorf("stat extracted dir: %v", err)
+			return fmt.Errorf("stat extracted dir: %w", err)
 		}
 		if dirInfo.Name() != "test" {
 			return fmt.Errorf("expected extracted directory name 'test', got %s", dirInfo.Name())
@@ -235,7 +235,7 @@ func TestExtractAbsolutePathTarGzFile(t *testing.T) {
 
 		fileInfo, err := os.Stat(path.Join(extractPath, "2.txt"))
 		if err != nil {
-			return fmt.Errorf("stat extracted file: %v", err)
+			return fmt.Errorf("stat extracted file: %w", err)
 		}
 		if fileInfo.Name() != "2.txt" {
 			return fmt.Errorf("expected to extract file with name '1.txt' but it has name %s", fileInfo.Name())

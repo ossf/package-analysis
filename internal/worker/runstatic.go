@@ -54,7 +54,7 @@ func RunStaticAnalysis(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option, tasks ...
 	// create the results JSON file as an empty file, so it can be mounted into the container
 	resultsFile, err := os.OpenFile(resultsJSONFile, os.O_RDONLY|os.O_CREATE, 0644)
 	if err != nil {
-		return nil, "", fmt.Errorf("could not create results JSON file: %v", err)
+		return nil, "", fmt.Errorf("could not create results JSON file: %w", err)
 	}
 	_ = resultsFile.Close()
 
@@ -75,7 +75,7 @@ func RunStaticAnalysis(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option, tasks ...
 
 	resultsJSON, err := os.ReadFile(resultsJSONFile)
 	if err != nil {
-		return nil, "", fmt.Errorf("could not read results JSON file: %v", err)
+		return nil, "", fmt.Errorf("could not read results JSON file: %w", err)
 	}
 
 	log.Info("Got results", "length", len(resultsJSON))
