@@ -96,7 +96,7 @@ type Sandbox interface {
 	Clean() error
 }
 
-// volume represents a volume mapping between a host src and a container dest
+// volume represents a volume mapping between a host src and a container dest.
 type volume struct {
 	src  string
 	dest string
@@ -156,44 +156,44 @@ func New(image string, options ...Option) Sandbox {
 	return sb
 }
 
-// EnableRawSockets allows use of raw sockets in the sandbox
+// EnableRawSockets allows use of raw sockets in the sandbox.
 func EnableRawSockets() Option {
 	return option(func(sb *podmanSandbox) { sb.rawSockets = true })
 }
 
-// EnableStrace enables strace functionality for the sandbox
+// EnableStrace enables strace functionality for the sandbox.
 func EnableStrace() Option {
 	return option(func(sb *podmanSandbox) { sb.strace = true })
 }
 
-// Offline disables network functionality for the sandbox
+// Offline disables network functionality for the sandbox.
 func Offline() Option {
 	return option(func(sb *podmanSandbox) { sb.offline = true })
 }
 
-// EnablePacketLogging enables packet logging for the sandbox
+// EnablePacketLogging enables packet logging for the sandbox.
 func EnablePacketLogging() Option {
 	return option(func(sb *podmanSandbox) { sb.logPackets = true })
 }
 
 // LogStdOut enables wrapping each line of stdout from sandboxed process
-// as a log.Info line in the main container
+// as a log.Info line in the main container.
 func LogStdOut() Option {
 	return option(func(sb *podmanSandbox) { sb.logStdOut = true })
 }
 
 // LogStdErr enables wrapping each line of stderr from the sandboxed process
-// as log.Warn line in the main container
+// as log.Warn line in the main container.
 func LogStdErr() Option {
 	return option(func(sb *podmanSandbox) { sb.logStdErr = true })
 }
 
-// EchoStdOut enables simple echoing of the sandboxed process stdout
+// EchoStdOut enables simple echoing of the sandboxed process stdout.
 func EchoStdOut() Option {
 	return option(func(sb *podmanSandbox) { sb.echoStdOut = true })
 }
 
-// EchoStdErr enables simple echoing of the sandboxed process stderr
+// EchoStdErr enables simple echoing of the sandboxed process stderr.
 func EchoStdErr() Option {
 	return option(func(sb *podmanSandbox) { sb.echoStdErr = true })
 }

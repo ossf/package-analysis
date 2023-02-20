@@ -6,7 +6,7 @@ import (
 	"github.com/ossf/package-analysis/internal/pkgecosystem"
 )
 
-// ResolvePkg creates a Pkg object with the arguments passed to the worker process
+// ResolvePkg creates a Pkg object with the arguments passed to the worker process.
 func ResolvePkg(manager *pkgecosystem.PkgManager, name, version, localPath string) (pkg *pkgecosystem.Pkg, err error) {
 	switch {
 	case localPath != "":

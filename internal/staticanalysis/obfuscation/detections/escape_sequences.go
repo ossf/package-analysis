@@ -12,7 +12,7 @@ import (
 Escape sequences are defined by the regexes below. While octal, hex and
 short/16-bit unicode escape sequences are mostly consistent across languages,
 32-bit unicode (code point) escape sequences are more variable.
-v1 appears in JS, PHP, Ruby while v2 appears in Python, C, Rust, Go
+v1 appears in JS, PHP, Ruby while v2 appears in Python, C, Rust, Go.
 */
 var (
 	octalEscape       = regexp.MustCompile(`\\[0-7]{1,3}`)        // e.g "\077", "\251"
@@ -30,10 +30,10 @@ threshold count or frequency (in range [0, 1]) of escape sequences.
 
 Supported escape sequences include:
 
-1. Octal escape: "\251"
-2. Hex escape: "\x3f"
-3. Unicode 16-bit escape: "\u103a",
-4. Unicode 32-bit escape: "\U00100FFF" or "\u{0100FF}"
+ 1. Octal escape: "\251",
+ 2. Hex escape: "\x3f",
+ 3. Unicode 16-bit escape: "\u103a",
+ 4. Unicode 32-bit escape: "\U00100FFF" or "\u{0100FF}".
 */
 func IsHighlyEscaped(s token.String, thresholdCount int, thresholdFrequency float64) bool {
 	escapeCount := 0

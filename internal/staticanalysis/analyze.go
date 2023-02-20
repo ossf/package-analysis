@@ -14,7 +14,7 @@ import (
 )
 
 // enumeratePackageFiles returns a list of absolute paths to all (regular) files
-// in a directory or any descendent directory
+// in a directory or any descendent directory.
 func enumeratePackageFiles(extractDir string) ([]string, error) {
 	var paths []string
 	err := filepath.WalkDir(extractDir, func(path string, f fs.DirEntry, err error) error {

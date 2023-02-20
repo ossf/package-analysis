@@ -40,7 +40,7 @@ const (
 	localPkgPathFmt = "/local/%s"
 )
 
-// resultBucketPaths holds bucket paths for the different types of results
+// resultBucketPaths holds bucket paths for the different types of results.
 type resultBucketPaths struct {
 	dynamicAnalysis string
 	staticAnalysis  string

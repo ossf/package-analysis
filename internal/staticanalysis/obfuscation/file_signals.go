@@ -13,7 +13,7 @@ import (
 	"github.com/ossf/package-analysis/internal/utils"
 )
 
-// FileSignals holds information related to the presence of obfuscated code in a single file
+// FileSignals holds information related to the presence of obfuscated code in a single file.
 type FileSignals struct {
 	// StringLengths is a map from length (in characters) to number of
 	// string literals in the file having that length. If a length key is
@@ -28,7 +28,7 @@ type FileSignals struct {
 
 	// CombinedStringEntropy is the entropy of the string obtained from
 	// concatenating all string literals in the file together. It may be used
-	// to normalise the values in StringEntropySummary
+	// to normalise the values in StringEntropySummary.
 	CombinedStringEntropy float64
 
 	// IdentifierLengths is a map from length (in characters) to number of
@@ -44,13 +44,12 @@ type FileSignals struct {
 
 	// CombinedIdentifierEntropy is the entropy of the string obtained from
 	// concatenating all identifiers in the file together. It may be used to
-	// normalise the values in IdentifierEntropySummary
+	// normalise the values in IdentifierEntropySummary.
 	CombinedIdentifierEntropy float64
 
 	// SuspiciousIdentifiers holds lists of identifiers that are deemed 'suspicious'
 	// (i.e. indicative of obfuscation) according to certain rules. The keys of the
 	// map are the rule names, and the values are the identifiers matching each rule.
-	// See
 	SuspiciousIdentifiers map[string][]string
 
 	// Base64Strings holds a list of (substrings of) string literals found in the
@@ -63,7 +62,7 @@ type FileSignals struct {
 	HexStrings []string
 
 	// EscapedStrings contain string literals that contain large amount of escape
-	// characters, which may indicate obfuscation
+	// characters, which may indicate obfuscation.
 	EscapedStrings []EscapedString
 }
 
@@ -91,10 +90,13 @@ type EscapedString struct {
 }
 
 /*
-characterAnalysis performs analysis on a collection of string symbols, returning:
-- Counts of symbol (string) lengths
-- Stats summary of symbol (string) entropies
-- Entropy of all symbols concatenated together
+characterAnalysis performs analysis on a collection of string symbols
+
+This function returns:
+
+  - Counts of symbol (string) lengths,
+  - Stats summary of symbol (string) entropies,
+  - Entropy of all symbols concatenated together.
 */
 func characterAnalysis(symbols []string) (
 	lengthCounts map[int]int,
@@ -158,7 +160,7 @@ func ComputeFileSignals(parseData parsing.SingleResult) FileSignals {
 	return signals
 }
 
-// RemoveNaNs replaces all NaN values in this object with zeros
+// RemoveNaNs replaces all NaN values in this object with zeros.
 func RemoveNaNs(s *FileSignals) {
 	s.StringEntropySummary = s.StringEntropySummary.ReplaceNaNs(0)
 	s.IdentifierEntropySummary = s.IdentifierEntropySummary.ReplaceNaNs(0)

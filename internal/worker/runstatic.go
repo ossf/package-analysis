@@ -15,22 +15,22 @@ import (
 	"github.com/ossf/package-analysis/pkg/result"
 )
 
-// staticAnalysisImage is the Docker image for the static analysis sandbox
+// staticAnalysisImage is the Docker image for the static analysis sandbox.
 const staticAnalysisImage = "gcr.io/ossf-malware-analysis/static-analysis"
 
 // staticAnalyzeBinary is the absolute path to the compiled staticanalyze.go binary
-// inside the static analysis sandbox (see sandboxes/staticanalysis/Dockerfile)
+// inside the static analysis sandbox (see sandboxes/staticanalysis/Dockerfile).
 const staticAnalyzeBinary = "/usr/local/bin/staticanalyze"
 
 // resultsJSONFile is the absolute path to the shared mount inside the static analysis sandbox
-// where the output results JSON data should be written
+// where the output results JSON data should be written.
 const resultsJSONFile = "/results.json"
 
-/*
-RunStaticAnalysis performs the given static analysis tasks on package code,
-in a sandboxed environment. To run all available static analyses, pass
-staticanalysis.All as tasks. Use sbOpts to customise sandbox behaviour.
-*/
+// RunStaticAnalysis performs the given static analysis tasks on package code,
+// in a sandboxed environment.
+//
+// To run all available static analyses, pass staticanalysis.All as tasks.
+// Use sbOpts to customise sandbox behaviour.
 func RunStaticAnalysis(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option, tasks ...staticanalysis.Task) (result.StaticAnalysisResults, analysis.Status, error) {
 	log.Info("Running static analysis", "tasks", tasks)
 

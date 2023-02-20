@@ -24,7 +24,8 @@ func makeDirHeader(name string) *tar.Header {
 }
 
 // makeFileHeader initialises a record for a file entry in a tar file.
-// size is constrained to fit in an int to allow easier writing of the file
+//
+// size is constrained to fit in an int to allow easier writing of the file.
 func makeFileHeader(name string, size int) *tar.Header {
 	return &tar.Header{
 		Typeflag: tar.TypeReg,

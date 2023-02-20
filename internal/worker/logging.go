@@ -11,7 +11,7 @@ import (
 NOTE: These strings are referenced externally by infrastructure for dashboard
 reporting / metrics purposes, and so should be changed with care.
 
-See file infra/terraform/metrics/log_metrics.tf
+See file infra/terraform/metrics/log_metrics.tf.
 */
 const (
 	analysisCompleteLogMsg = "Analysis completed sucessfully" // TODO sucessfully -> successfully

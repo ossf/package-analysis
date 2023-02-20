@@ -15,7 +15,7 @@ import (
 )
 
 // parseOutputJSON represents the output JSON format of the JS parser
-// it maps filenames to parse data
+// it maps filenames to parse data.
 type parseOutputJSON map[string]parseDataJSON
 
 type parseDataJSON struct {
@@ -42,7 +42,7 @@ type parserStatusJSON struct {
 // parse a file completely due to syntax errors that cannot be recovered from.
 const fatalSyntaxErrorMarker = "FATAL SYNTAX ERROR"
 
-// parserArgsHandler specifies how to pass CLI args for the parser to externalcmd.Input
+// parserArgsHandler specifies how to pass CLI args for the parser to externalcmd.Input.
 type parserArgsHandler struct{}
 
 func (h parserArgsHandler) SingleFileArg(filePath string) []string {
@@ -60,7 +60,8 @@ func (h parserArgsHandler) ReadStdinArg() []string {
 /*
 runParser handles calling the parser program and provide the specified Javascript source to it,
 either by filename (jsFilePath) or piping jsSource to the program's stdin.
-If sourcePath is empty, sourceString will be parsed as JS code
+
+If sourcePath is empty, sourceString will be parsed as JS code.
 */
 func runParser(parserPath string, input externalcmd.Input, extraArgs ...string) (string, error) {
 	workingDir, err := os.MkdirTemp("", "package-analysis-run-parser-*")

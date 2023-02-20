@@ -10,7 +10,7 @@ import (
 
 /*
 Input allows different ways of passing input to an external command, for example
-a list of files or a raw string. Each instance represents specific input data
+a list of files or a raw string. Each instance represents specific input data.
 */
 type Input interface {
 	/*
@@ -25,7 +25,7 @@ type Input interface {
 
 /*
 InputArgHandler abstracts command-specific behaviour for how to pass files
-as command line arguments, including which option strings to use
+as command line arguments, including which option strings to use.
 */
 type InputArgHandler interface {
 	// ReadStdinArg returns the command line arguments which

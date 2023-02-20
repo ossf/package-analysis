@@ -7,8 +7,7 @@ import (
 	"github.com/ossf/package-analysis/pkg/api"
 )
 
-// PkgManager
-// Represents how packages from a common ecosystem are accessed
+// PkgManager represents how packages from a common ecosystem are accessed.
 type PkgManager struct {
 	ecosystem      api.Ecosystem
 	image          string

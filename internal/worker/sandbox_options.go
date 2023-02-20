@@ -5,7 +5,7 @@ import (
 	"github.com/ossf/package-analysis/internal/sandbox"
 )
 
-// DefaultSandboxOptions initialises sandbox options necessary to run the given analysis mode
+// DefaultSandboxOptions initialises sandbox options necessary to run the given analysis mode.
 func DefaultSandboxOptions(mode analysis.Mode, imageTag string) []sandbox.Option {
 	switch mode {
 	case analysis.Dynamic:

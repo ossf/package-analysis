@@ -54,13 +54,13 @@ func printAnalysisModes() {
 	println()
 }
 
-/*
-makeSandboxOptions prepares options for the sandbox based on command line arguments.
-In particular:
-1. The image tag is always passed through. An empty tag is the same as "latest".
-2. A local package is mapped into the sandbox if applicable
-3. Image pulling is disabled if the "-nopull" command-line flag was used
-*/
+// makeSandboxOptions prepares options for the sandbox based on command line arguments.
+//
+// In particular:
+//
+//  1. The image tag is always passed through. An empty tag is the same as "latest".
+//  2. A local package is mapped into the sandbox if applicable.
+//  3. Image pulling is disabled if the "-nopull" command-line flag was used.
 func makeSandboxOptions(mode analysis.Mode) []sandbox.Option {
 	sbOpts := worker.DefaultSandboxOptions(mode, *imageTag)
 

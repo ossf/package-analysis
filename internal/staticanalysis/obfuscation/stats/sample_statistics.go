@@ -80,7 +80,7 @@ func (s SampleStatistics) Equals(other SampleStatistics, absTol float64) bool {
 }
 
 // ReplaceNaNs returns a copy of this SampleStatistics object with all NaN values
-// replaced by the given value r
+// replaced by the given value r.
 func (s SampleStatistics) ReplaceNaNs(r float64) SampleStatistics {
 	data := s.toFloatData()
 	for i, x := range data {
@@ -91,7 +91,7 @@ func (s SampleStatistics) ReplaceNaNs(r float64) SampleStatistics {
 	return fromFloatData(s.Size, data)
 }
 
-// mean computes the sample mean
+// mean computes the sample mean.
 func mean[T RealNumber](sample []T) float64 {
 	if len(sample) < 1 {
 		return math.NaN()
@@ -105,7 +105,7 @@ func mean[T RealNumber](sample []T) float64 {
 }
 
 // variance calculates sample variance with bias correction
-// mean is the value returned by the mean() function above
+// mean is the value returned by the mean() function.
 func variance[T RealNumber](sample []T, mean float64) float64 {
 	if len(sample) < 2 {
 		return math.NaN()
@@ -128,7 +128,7 @@ func squareRootCubed(x float64) float64 {
 // skewness calculates sample skewness using the G1 estimator from
 // https://en.wikipedia.org/wiki/Skewness#Sample_skewness
 // mean and variance respectively are the values returned by the
-// mean() and (bias-corrected) variance() functions above
+// mean() and (bias-corrected) variance() functions.
 func skewness[T RealNumber](sample []T, mean, variance float64) float64 {
 	if len(sample) < 3 {
 		return math.NaN()

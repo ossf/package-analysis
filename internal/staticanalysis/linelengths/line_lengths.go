@@ -20,7 +20,7 @@ at that path, otherwise lines in sourceString are counted.
 
 Note: there may not be much useful information to be gathered by distinguishing
 between line lengths when they get very long. It may be pragmatic to just report
-all lines above e.g. 64K as 64K long
+all lines above e.g. 64K as 64K long.
 */
 func GetLineLengths(filePath string, sourceString string) (map[int]int, error) {
 	var reader *bufio.Reader

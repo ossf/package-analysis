@@ -7,7 +7,8 @@ import (
 
 // CommaSeparatedFlags creates a struct which can be used with the Golang flag library,
 // to allow passing a comma-separated list of strings as a single command-line argument.
-// Make sure to call InitFlag() on the returned struct before calling flag.Parse()
+//
+// Make sure to call InitFlag() on the returned struct before calling flag.Parse().
 func CommaSeparatedFlags(name, value, usage string) CommaSeparatedFlagsData {
 	return CommaSeparatedFlagsData{
 		Name:   name,
