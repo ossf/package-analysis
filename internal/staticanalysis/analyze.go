@@ -114,5 +114,4 @@ func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig,
 	}
 
 	return &result, nil
-
 }

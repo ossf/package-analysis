@@ -138,7 +138,7 @@ func (d *DNSAnalyzer) Questions() map[string]map[string][]string {
 		classData := make(map[string][]string)
 		for name, dnsTypeMap := range nameMap {
 			types := make([]string, 0)
-			for dnsType, _ := range dnsTypeMap {
+			for dnsType := range dnsTypeMap {
 				types = append(types, dnsType.String())
 			}
 			classData[name] = types

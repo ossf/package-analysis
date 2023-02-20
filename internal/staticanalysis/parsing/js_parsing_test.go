@@ -432,7 +432,6 @@ func TestParseJS(t *testing.T) {
 						t.Errorf("Error missing: want %v", wantErr)
 					} else if got.Errors[i] != wantErr {
 						t.Errorf("Error mismatch (#%d):\ngot  %v\nwant %v", i+1, got.Errors[i], wantErr)
-
 					}
 				}
 			}
@@ -440,8 +439,6 @@ func TestParseJS(t *testing.T) {
 			if t.Failed() || printAllJSON {
 				println("Raw JSON:\n", rawOutput)
 			}
-
 		})
 	}
-
 }

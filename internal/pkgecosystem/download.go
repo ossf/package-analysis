@@ -18,7 +18,6 @@ func downloadToDirectory(dir string, url string) (string, error) {
 	fileName := path.Base(url)
 	filePath := filepath.Join(dir, fileName)
 	err := downloadToPath(filePath, url)
-
 	if err != nil {
 		return "", err
 	}

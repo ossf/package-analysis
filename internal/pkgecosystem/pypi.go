@@ -75,7 +75,6 @@ func getPyPIArchiveURL(pkgName, version string) (string, error) {
 	}
 	// can't find source tarball
 	return "", fmt.Errorf("source tarball not found for %s, version %s", pkgName, version)
-
 }
 
 var pypiPkgManager = PkgManager{

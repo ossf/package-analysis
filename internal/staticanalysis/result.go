@@ -29,7 +29,7 @@ func (ar Result) String() string {
 		parseDataStrings = append(parseDataStrings, fmt.Sprintf("== %s ==\n%s", filename, parseData))
 	}
 
-	var parts = []string{
+	parts := []string{
 		fmt.Sprintf("File basic data\n%v", ar.BasicData),
 		fmt.Sprintf("File parse data\n%s", strings.Join(parseDataStrings, "\n\n")),
 		fmt.Sprintf("File obfuscation data\n%s", ar.ObfuscationData),

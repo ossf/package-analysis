@@ -13,12 +13,14 @@ reporting / metrics purposes, and so should be changed with care.
 
 See file infra/terraform/metrics/log_metrics.tf
 */
-const analysisCompleteLogMsg = "Analysis completed sucessfully" // TODO sucessfully -> successfully
-const analysisErrorLogMsg = "Analysis error - analysis"
-const timeoutErrorLogMsg = "Analysis error - timeout"
-const otherErrorLogMsg = "Analysis error - other"
-const runErrorLogMsg = "Analysis run failed"
-const gotRequestLogMsg = "Got request"
+const (
+	analysisCompleteLogMsg = "Analysis completed sucessfully" // TODO sucessfully -> successfully
+	analysisErrorLogMsg    = "Analysis error - analysis"
+	timeoutErrorLogMsg     = "Analysis error - timeout"
+	otherErrorLogMsg       = "Analysis error - other"
+	runErrorLogMsg         = "Analysis run failed"
+	gotRequestLogMsg       = "Got request"
+)
 
 // LogDynamicAnalysisError indicates some error happened while attempting to run
 // the package code, which was not caused by the package itself. This means it was

@@ -125,12 +125,10 @@ func ComputeFileSignals(parseData parsing.SingleResult) FileSignals {
 	signals := FileSignals{}
 
 	literals := utils.Transform(parseData.StringLiterals, func(s token.String) string { return s.Value })
-	signals.StringLengths, signals.StringEntropySummary, signals.CombinedStringEntropy =
-		characterAnalysis(literals)
+	signals.StringLengths, signals.StringEntropySummary, signals.CombinedStringEntropy = characterAnalysis(literals)
 
 	identifierNames := utils.Transform(parseData.Identifiers, func(i token.Identifier) string { return i.Name })
-	signals.IdentifierLengths, signals.IdentifierEntropySummary, signals.CombinedIdentifierEntropy =
-		characterAnalysis(identifierNames)
+	signals.IdentifierLengths, signals.IdentifierEntropySummary, signals.CombinedIdentifierEntropy = characterAnalysis(identifierNames)
 
 	signals.SuspiciousIdentifiers = map[string][]string{}
 	for ruleName, pattern := range detections.SuspiciousIdentifierPatterns {

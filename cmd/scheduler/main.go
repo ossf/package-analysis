@@ -71,7 +71,6 @@ func main() {
 
 	for retryCount <= maxRetries {
 		err := listenLoop(subscriptionURL, topicURL)
-
 		if err != nil {
 			if retryCount++; retryCount >= maxRetries {
 				log.Error("Retries exceeded",

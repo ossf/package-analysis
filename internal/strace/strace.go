@@ -182,7 +182,7 @@ func (r *Result) parseEnterSyscall(syscall, args string) error {
 			return fmt.Errorf("strace of file write syscall has the bytes written argument in an unexpected format")
 		}
 		// Get the hex value after "0x" to convert to an integer.
-		bytesWritten, err := strconv.ParseInt(args[bytesWrittenHexIndex+len(hexPrefix):len(args)], 16, 64)
+		bytesWritten, err := strconv.ParseInt(args[bytesWrittenHexIndex+len(hexPrefix):], 16, 64)
 		if err != nil {
 			return err
 		}

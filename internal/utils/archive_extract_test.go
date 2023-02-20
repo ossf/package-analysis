@@ -34,7 +34,6 @@ func makeFileHeader(name string, size int) *tar.Header {
 		Uid:      os.Geteuid(),
 		Gid:      os.Getegid(),
 	}
-
 }
 
 func createTgzFile(path string, headers []*tar.Header) (err error) {

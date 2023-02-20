@@ -127,8 +127,11 @@ type podmanSandbox struct {
 	volumes    []volume
 }
 
-type Option interface{ set(*podmanSandbox) }
-type option func(*podmanSandbox)       // option implements Option.
+type (
+	Option interface{ set(*podmanSandbox) }
+	option func(*podmanSandbox) // option implements Option.
+)
+
 func (o option) set(sb *podmanSandbox) { o(sb) }
 
 func New(image string, options ...Option) Sandbox {
@@ -407,7 +410,7 @@ func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
 		"args", args)
 	defer logErr.Close()
 
-	var outWriters = []io.Writer{&stdout}
+	outWriters := []io.Writer{&stdout}
 	if s.logStdOut {
 		outWriters = append(outWriters, logOut)
 	}
@@ -416,7 +419,7 @@ func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
 	}
 	outWriter := io.MultiWriter(outWriters...)
 
-	var errWriters = []io.Writer{&stderr}
+	errWriters := []io.Writer{&stderr}
 	if s.logStdErr {
 		errWriters = append(errWriters, logErr)
 	}

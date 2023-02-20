@@ -27,9 +27,11 @@ var packageJSON []byte
 //go:embed package-lock.json
 var packageLockJSON []byte
 
-const parserFileName = "babel-parser.js"
-const packageJSONFileName = "package.json"
-const packageLockJSONFileName = "package-lock.json"
+const (
+	parserFileName          = "babel-parser.js"
+	packageJSONFileName     = "package.json"
+	packageLockJSONFileName = "package-lock.json"
+)
 
 // npmCacheDir is used to check for cached versions of NPM dependencies before
 // downloading them from a remote source. The directory is populated by the
