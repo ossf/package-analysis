@@ -18,7 +18,7 @@ func PublishAnalysisCompletion(ctx context.Context, notificationTopic *pubsub.To
 		return fmt.Errorf("failed to encode completion notification: %w", err)
 	}
 	err = notificationTopic.Send(ctx, &pubsub.Message{
-		Body:     []byte(notificationMsg),
+		Body:     notificationMsg,
 		Metadata: nil,
 	})
 	if err != nil {

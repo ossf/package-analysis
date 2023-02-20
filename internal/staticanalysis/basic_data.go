@@ -42,7 +42,7 @@ func (bd BasicFileData) String() string {
 	// print line length counts in ascending order
 	lineLengths := maps.Keys(bd.LineLengthCounts)
 	slices.Sort(lineLengths)
-	lineLengthStrings := make([]string, len(bd.LineLengthCounts))
+	lineLengthStrings := make([]string, 0, len(bd.LineLengthCounts))
 	for length := range lineLengths {
 		count := bd.LineLengthCounts[length]
 		lineLengthStrings = append(lineLengthStrings, fmt.Sprintf("length = %4d, count = %2d", length, count))
