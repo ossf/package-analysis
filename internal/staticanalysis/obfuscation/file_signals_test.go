@@ -67,18 +67,21 @@ func symbolLengthCounts(symbols []string) map[int]int {
 }
 
 func compareSummary(t *testing.T, name string, expected, actual stats.SampleStatistics) {
+	t.Helper()
 	if !expected.Equals(actual, 1e-4) {
 		t.Errorf("%s summary did not match.\nExpected: %v\nActual: %v\n", name, expected, actual)
 	}
 }
 
 func compareCounts(t *testing.T, name string, expected, actual map[int]int) {
+	t.Helper()
 	if !reflect.DeepEqual(expected, actual) {
 		t.Errorf("%s summary did not match.\nExpected: %v\nActual: %v\n", name, expected, actual)
 	}
 }
 
 func testSignals(t *testing.T, signals FileSignals, stringLiterals []token.String, identifiers []token.Identifier) {
+	t.Helper()
 	literals := utils.Transform(stringLiterals, func(s token.String) string { return s.Value })
 	identifierNames := utils.Transform(identifiers, func(i token.Identifier) string { return i.Name })
 	expectedStringEntropySummary := symbolEntropySummary(literals)

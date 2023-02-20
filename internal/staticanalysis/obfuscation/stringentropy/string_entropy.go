@@ -58,7 +58,7 @@ As a formula:
 	}
 */
 // TODO does this make sense when a general probability structure is used?
-// TODO calculate max string entropy for a given set of character counts
+// TODO calculate max string entropy for a given set of character counts.
 func CalculateNormalisedEntropy(s string, prob *map[rune]float64) float64 {
 	switch len(s) {
 	case 0:
@@ -95,7 +95,7 @@ func CharacterProbabilitiesFromCounts(counts *map[rune]int) *map[rune]float64 {
 }
 
 // CharacterProbabilities is just a convenience function that chains together CharacterCounts
-// and CharacterProbabilitiesFromCounts
+// and CharacterProbabilitiesFromCounts.
 func CharacterProbabilities(strs []string) *map[rune]float64 {
 	counts := CharacterCounts(strs)
 	return CharacterProbabilitiesFromCounts(counts)

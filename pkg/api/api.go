@@ -1,8 +1,7 @@
+// The api package defines types and some constants used in the external API for Package Analysis.
 package api
 
-// Defines types and some constants used in the external API for Package Analysis
-
-// Ecosystem represents an open source package ecosystem from which packages can be downloaded
+// Ecosystem represents an open source package ecosystem from which packages can be downloaded.
 type Ecosystem string
 
 // RunPhase represents a way to 'run' a package during its usage lifecycle.

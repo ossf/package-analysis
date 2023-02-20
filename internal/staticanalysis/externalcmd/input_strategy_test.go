@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// used to test option/value type argument passing
+// optionArgHandler is used to test option/value type argument passing.
 type optionArgHandler struct{}
 
 func (a optionArgHandler) ReadStdinArg() []string {
@@ -23,7 +23,7 @@ func (a optionArgHandler) FileListArg(fileListPath string) []string {
 	return []string{"--file-list", fileListPath}
 }
 
-// used to test positional (or no) arg passing
+// positionalArgHandler is used to test positional (or no) arg passing.
 type positionalArgHandler struct{}
 
 func (a positionalArgHandler) ReadStdinArg() []string {

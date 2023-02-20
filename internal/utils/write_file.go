@@ -16,7 +16,7 @@ func WriteFile(path string, contents []byte, executable bool) error {
 
 	if executable {
 		if err := os.Chmod(path, 0o777); err != nil {
-			return fmt.Errorf("could not set exec permissions on %s: %v", path, err)
+			return fmt.Errorf("could not set exec permissions on %s: %w", path, err)
 		}
 	}
 

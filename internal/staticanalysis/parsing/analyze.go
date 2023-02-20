@@ -43,15 +43,7 @@ func (p PackageResult) processAndAdd(language Language, result languageResult) {
 
 		for _, ident := range fileResult.Identifiers {
 			switch ident.Type {
-			case token.Function:
-				fallthrough
-			case token.Class:
-				fallthrough
-			case token.Parameter:
-				fallthrough
-			case token.Property:
-				fallthrough
-			case token.Variable:
+			case token.Function, token.Class, token.Parameter, token.Property, token.Variable:
 				data.Identifiers = append(data.Identifiers, token.Identifier{Name: ident.Name, Type: ident.Type})
 			}
 		}

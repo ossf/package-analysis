@@ -9,11 +9,10 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/ossf/package-feeds/pkg/feeds"
 	"gocloud.dev/pubsub"
 	_ "gocloud.dev/pubsub/gcppubsub"
 	_ "gocloud.dev/pubsub/kafkapubsub"
-
-	"github.com/ossf/package-feeds/pkg/feeds"
 
 	"github.com/ossf/package-analysis/cmd/scheduler/proxy"
 	"github.com/ossf/package-analysis/internal/log"
@@ -72,7 +71,6 @@ func main() {
 
 	for retryCount <= maxRetries {
 		err := listenLoop(subscriptionURL, topicURL)
-
 		if err != nil {
 			if retryCount++; retryCount >= maxRetries {
 				log.Error("Retries exceeded",
@@ -91,10 +89,10 @@ func main() {
 	}
 }
 
-func listenLoop(subUrl, topicURL string) error {
+func listenLoop(subURL, topicURL string) error {
 	ctx := context.Background()
 
-	sub, err := pubsub.OpenSubscription(ctx, subUrl)
+	sub, err := pubsub.OpenSubscription(ctx, subURL)
 	if err != nil {
 		return err
 	}
@@ -117,10 +115,9 @@ func listenLoop(subUrl, topicURL string) error {
 		config, ok := supportedPkgManagers[pkg.Type]
 		if !ok {
 			return nil, fmt.Errorf("package type is not supported: %v", pkg.Type)
-		} else {
-			if config.SkipVersion(pkg.Version) {
-				return nil, fmt.Errorf("package version '%v' is filtered for type: %v", pkg.Version, pkg.Type)
-			}
+		}
+		if config.SkipVersion(pkg.Version) {
+			return nil, fmt.Errorf("package version '%v' is filtered for type: %v", pkg.Version, pkg.Type)
 		}
 		return &pubsub.Message{
 			Body: []byte{},

@@ -15,6 +15,7 @@ type downloadTestSpec struct {
 }
 
 func testDownload(t *testing.T, tests []downloadTestSpec, manager *PkgManager) {
+	t.Helper()
 	tmpDir, err := os.MkdirTemp("", "package-analysis-test-npm-dl")
 	if err != nil {
 		t.Fatalf("Could not create temp dir for downloads: %v", err)

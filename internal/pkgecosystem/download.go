@@ -18,7 +18,6 @@ func downloadToDirectory(dir string, url string) (string, error) {
 	fileName := path.Base(url)
 	filePath := filepath.Join(dir, fileName)
 	err := downloadToPath(filePath, url)
-
 	if err != nil {
 		return "", err
 	}
@@ -42,7 +41,7 @@ func downloadToPath(path string, url string) (err error) {
 		if err == nil {
 			err = closeErr
 		} else if closeErr != nil {
-			err = fmt.Errorf("%v; error closing file %s: %v", err, path, closeErr)
+			err = fmt.Errorf("%w; error closing file %s: %v", err, path, closeErr)
 		}
 	}()
 

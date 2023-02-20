@@ -5,9 +5,9 @@ import (
 )
 
 type PkgIdentifier struct {
-	Name		string
-	Version 	string
-	Ecosystem	string
+	Name      string
+	Version   string
+	Ecosystem string
 }
 
 func (pkg PkgIdentifier) String() string {

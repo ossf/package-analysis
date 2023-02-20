@@ -15,22 +15,22 @@ import (
 	"github.com/ossf/package-analysis/pkg/result"
 )
 
-// staticAnalysisImage is the Docker image for the static analysis sandbox
+// staticAnalysisImage is the Docker image for the static analysis sandbox.
 const staticAnalysisImage = "gcr.io/ossf-malware-analysis/static-analysis"
 
 // staticAnalyzeBinary is the absolute path to the compiled staticanalyze.go binary
-// inside the static analysis sandbox (see sandboxes/staticanalysis/Dockerfile)
+// inside the static analysis sandbox (see sandboxes/staticanalysis/Dockerfile).
 const staticAnalyzeBinary = "/usr/local/bin/staticanalyze"
 
 // resultsJSONFile is the absolute path to the shared mount inside the static analysis sandbox
-// where the output results JSON data should be written
+// where the output results JSON data should be written.
 const resultsJSONFile = "/results.json"
 
-/*
-RunStaticAnalysis performs the given static analysis tasks on package code,
-in a sandboxed environment. To run all available static analyses, pass
-staticanalysis.All as tasks. Use sbOpts to customise sandbox behaviour.
-*/
+// RunStaticAnalysis performs the given static analysis tasks on package code,
+// in a sandboxed environment.
+//
+// To run all available static analyses, pass staticanalysis.All as tasks.
+// Use sbOpts to customise sandbox behaviour.
 func RunStaticAnalysis(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option, tasks ...staticanalysis.Task) (result.StaticAnalysisResults, analysis.Status, error) {
 	log.Info("Running static analysis", "tasks", tasks)
 
@@ -52,9 +52,9 @@ func RunStaticAnalysis(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option, tasks ...
 	}
 
 	// create the results JSON file as an empty file, so it can be mounted into the container
-	resultsFile, err := os.OpenFile(resultsJSONFile, os.O_RDONLY|os.O_CREATE, 0644)
+	resultsFile, err := os.OpenFile(resultsJSONFile, os.O_RDONLY|os.O_CREATE, 0o644)
 	if err != nil {
-		return nil, "", fmt.Errorf("could not create results JSON file: %v", err)
+		return nil, "", fmt.Errorf("could not create results JSON file: %w", err)
 	}
 	_ = resultsFile.Close()
 
@@ -75,7 +75,7 @@ func RunStaticAnalysis(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option, tasks ...
 
 	resultsJSON, err := os.ReadFile(resultsJSONFile)
 	if err != nil {
-		return nil, "", fmt.Errorf("could not read results JSON file: %v", err)
+		return nil, "", fmt.Errorf("could not read results JSON file: %w", err)
 	}
 
 	log.Info("Got results", "length", len(resultsJSON))

@@ -40,7 +40,7 @@ const (
 	localPkgPathFmt = "/local/%s"
 )
 
-// resultBucketPaths holds bucket paths for the different types of results
+// resultBucketPaths holds bucket paths for the different types of results.
 type resultBucketPaths struct {
 	dynamicAnalysis string
 	staticAnalysis  string
@@ -185,6 +185,9 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	}
 
 	err = saveResults(ctx, pkg, resultsBuckets, results, staticResults)
+	if err != nil {
+		return err
+	}
 
 	if notificationTopic != nil {
 		err := notification.PublishAnalysisCompletion(ctx, notificationTopic, name, version, ecosystem)

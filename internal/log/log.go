@@ -85,49 +85,49 @@ func checkInit() {
 }
 
 // Debug is a convenience wrapper for calling Debugw on the default
-// zap.SugaredLogger instance
+// zap.SugaredLogger instance.
 func Debug(msg string, keysAndValues ...interface{}) {
 	checkInit()
 	defaultLogger.Debugw(msg, keysAndValues...)
 }
 
 // Info is a convenience wrapper for calling Infow on the default
-// zap.SugaredLogger instance
+// zap.SugaredLogger instance.
 func Info(msg string, keysAndValues ...interface{}) {
 	checkInit()
 	defaultLogger.Infow(msg, keysAndValues...)
 }
 
 // Warn is a convenience wrapper for calling Warnw on the default
-// zap.SugaredLogger instance
+// zap.SugaredLogger instance.
 func Warn(msg string, keysAndValues ...interface{}) {
 	checkInit()
 	defaultLogger.Warnw(msg, keysAndValues...)
 }
 
 // Error is a convenience wrapper for calling Errorw on the default
-// zap.SugaredLogger instance
+// zap.SugaredLogger instance.
 func Error(msg string, keysAndValues ...interface{}) {
 	checkInit()
 	defaultLogger.Errorw(msg, keysAndValues...)
 }
 
 // Fatal is a convenience wrapper for calling Fatalw on the default
-// zap.SugaredLogger instance
+// zap.SugaredLogger instance.
 func Fatal(msg string, keysAndValues ...interface{}) {
 	checkInit()
 	defaultLogger.Fatalw(msg, keysAndValues...)
 }
 
 // Panic is a convenience wrapper for calling Panicw on the default
-// zap.SugaredLogger instance
+// zap.SugaredLogger instance.
 func Panic(msg string, keysAndValues ...interface{}) {
 	checkInit()
 	defaultLogger.Panicw(msg, keysAndValues...)
 }
 
 // DPanic is a convenience wrapper for calling DPanicw on the default
-// zap.SugaredLogger instance
+// zap.SugaredLogger instance.
 func DPanic(msg string, keysAndValues ...interface{}) {
 	checkInit()
 	defaultLogger.DPanicw(msg, keysAndValues...)

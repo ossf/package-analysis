@@ -12,15 +12,15 @@ import (
 
 type jsTestCase struct {
 	name      string
-	inputJs   string
+	inputJS   string
 	want      languageData
-	printJson bool // set to true to see raw parser output
+	printJSON bool // set to true to see raw parser output
 }
 
 var jsTestCases = []jsTestCase{
 	{
 		name: "test string declarations and templates",
-		inputJs: `
+		inputJS: `
 function test() {
     var mystring1 = "hello1";
     var mystring2 = 'hello2';
@@ -76,7 +76,7 @@ function test() {
 	},
 	{
 		name: "test function parameters",
-		inputJs: `
+		inputJS: `
 function test2(param1, param2, param3 = "ahd") {
 	return param1 + param2 + param3;
 }`,
@@ -94,7 +94,7 @@ function test2(param1, param2, param3 = "ahd") {
 	},
 	{
 		name: "test control flow",
-		inputJs: `
+		inputJS: `
 function test3(a, b, c) {
     for (var i = a; i < b; i++) {
 outer:
@@ -140,7 +140,7 @@ outer:
 	},
 	{
 		name: "test arrays and exceptions",
-		inputJs: `
+		inputJS: `
 function test4() {
     const a = [1, 2, 3];
     try {
@@ -199,7 +199,7 @@ function test4() {
 	},
 	{
 		name: "test class definition",
-		inputJs: `
+		inputJS: `
 // unnamed
 let Rectangle = class {
     constructor(height, width) {
@@ -230,7 +230,7 @@ console.log(Rectangle.name);
 				{token.Member, "width", token.Position{6, 13}},
 				{token.Member, "log", token.Position{9, 8}},
 				{token.Member, "name", token.Position{9, 22}},
-				//{Variable, "Rectangle", Position{4, 22}},
+				// {Variable, "Rectangle", Position{4, 22}},
 				{token.Class, "Rectangle2", token.Position{13, 18}},
 				{token.Property, "test", token.Position{14, 5}},
 				{token.Parameter, "height", token.Position{15, 16}},
@@ -245,7 +245,7 @@ console.log(Rectangle.name);
 	},
 	{
 		name: "test use strict",
-		inputJs: `
+		inputJS: `
 'use strict';
 console.log("Hello");
 `,
@@ -261,7 +261,7 @@ console.log("Hello");
 	},
 	{
 		name: "test exotic assignments",
-		inputJs: `
+		inputJS: `
 let [a, b] = [1, 2];
 let [_, c] = [3, 4];
 var index = 0,
@@ -294,7 +294,7 @@ var index = 0,
 	},
 	{
 		name: "test regex literal",
-		inputJs: `
+		inputJS: `
 function validateIPAddress(ipaddress) {
 	const regex = /(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/
     if (regex.test(ipaddress) || ipaddress.toLowerCase().includes('localhost')) {
@@ -326,11 +326,11 @@ function validateIPAddress(ipaddress) {
 				{"String", "string", "localhost", "'localhost'", false, token.Position{4, 66}},
 			},
 		},
-		printJson: true,
+		printJSON: true,
 	},
 	{
 		name: "test big integers",
-		inputJs: `
+		inputJS: `
 let a = 123456789123456789n;     // 123456789123456789
 let b = 0o777777777777n;         // 68719476735
 let c = 0x123456789ABCDEFn;      // 81985529216486895
@@ -351,11 +351,11 @@ let d = 0b11101001010101010101n; // 955733
 				{"Numeric", "big.Int", big.NewInt(955733), "0b11101001010101010101n", false, token.Position{5, 8}},
 			},
 		},
-		printJson: false,
+		printJSON: false,
 	},
 	{
 		name: "test syntax error",
-		inputJs: `
+		inputJS: `
 a = w w;
 `,
 		want: languageData{
@@ -370,7 +370,7 @@ a = w w;
 				},
 			},
 		},
-		printJson: false,
+		printJSON: false,
 	},
 }
 
@@ -379,7 +379,7 @@ func init() {
 }
 
 func TestParseJS(t *testing.T) {
-	const printAllJson = false
+	const printAllJSON = false
 
 	jsParserConfig, err := InitParser(t.TempDir())
 	if err != nil {
@@ -388,7 +388,7 @@ func TestParseJS(t *testing.T) {
 
 	for _, tt := range jsTestCases {
 		t.Run(tt.name, func(t *testing.T) {
-			result, rawOutput, err := parseJS(jsParserConfig, externalcmd.StringInput(tt.inputJs))
+			result, rawOutput, err := parseJS(jsParserConfig, externalcmd.StringInput(tt.inputJS))
 			got := result["stdin"]
 			if err != nil {
 				t.Errorf("parseJS() error = %v", err)
@@ -432,16 +432,13 @@ func TestParseJS(t *testing.T) {
 						t.Errorf("Error missing: want %v", wantErr)
 					} else if got.Errors[i] != wantErr {
 						t.Errorf("Error mismatch (#%d):\ngot  %v\nwant %v", i+1, got.Errors[i], wantErr)
-
 					}
 				}
 			}
 
-			if t.Failed() || printAllJson {
+			if t.Failed() || printAllJSON {
 				println("Raw JSON:\n", rawOutput)
 			}
-
 		})
 	}
-
 }

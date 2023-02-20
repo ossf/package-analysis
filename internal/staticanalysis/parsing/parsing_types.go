@@ -8,7 +8,7 @@ import (
 	"github.com/ossf/package-analysis/internal/utils"
 )
 
-// Language represents a programming language used for parsing
+// Language represents a programming language used for parsing.
 type Language string
 
 const (
@@ -21,10 +21,10 @@ func SupportedLanguages() []Language {
 	return allLanguages[:]
 }
 
-// tokenType denotes types of source code tokens collected during parsing (see token package)
+// tokenType denotes types of source code tokens collected during parsing (see token package).
 type tokenType string
 
-// statusType denotes a type of status reported by the parser about the parsing process
+// statusType denotes a type of status reported by the parser about the parsing process.
 type statusType string
 
 const (
@@ -83,10 +83,10 @@ func (s parserStatus) String() string {
 	return fmt.Sprintf("[%s] %s: %s pos %d:%d", s.Type, s.Name, s.Message, s.Pos.Row(), s.Pos.Col())
 }
 
-// languageResult maps filenames to languageData for that file (i.e. parsing results for a single language)
+// languageResult maps filenames to languageData for that file (i.e. parsing results for a single language).
 type languageResult map[string]languageData
 
-// languageData holds data for a single file processed by a single language parser
+// languageData holds data for a single file processed by a single language parser.
 type languageData struct {
 	ValidInput  bool
 	Identifiers []parsedIdentifier
