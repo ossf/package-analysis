@@ -3,11 +3,11 @@ package worker
 import (
 	"fmt"
 
-	"github.com/ossf/package-analysis/internal/pkgecosystem"
+	"github.com/ossf/package-analysis/internal/pkgmanager"
 )
 
 // ResolvePkg creates a Pkg object with the arguments passed to the worker process.
-func ResolvePkg(manager *pkgecosystem.PkgManager, name, version, localPath string) (pkg *pkgecosystem.Pkg, err error) {
+func ResolvePkg(manager *pkgmanager.PkgManager, name, version, localPath string) (pkg *pkgmanager.Pkg, err error) {
 	switch {
 	case localPath != "":
 		pkg = manager.Local(name, version, localPath)

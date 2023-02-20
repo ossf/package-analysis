@@ -3,8 +3,9 @@ package worker
 import (
 	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/log"
-	"github.com/ossf/package-analysis/internal/pkgecosystem"
-	"github.com/ossf/package-analysis/pkg/api"
+	"github.com/ossf/package-analysis/internal/pkgmanager"
+	"github.com/ossf/package-analysis/pkg/api/analysisrun"
+	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
 /*
@@ -25,7 +26,7 @@ const (
 // LogDynamicAnalysisError indicates some error happened while attempting to run
 // the package code, which was not caused by the package itself. This means it was
 // not possible to analyse the package properly, and the results are invalid.
-func LogDynamicAnalysisError(pkg *pkgecosystem.Pkg, errorPhase api.RunPhase, err error) {
+func LogDynamicAnalysisError(pkg *pkgmanager.Pkg, errorPhase analysisrun.DynamicPhase, err error) {
 	log.Error(runErrorLogMsg,
 		log.Label("ecosystem", pkg.EcosystemName()),
 		log.Label("phase", string(errorPhase)),
@@ -37,7 +38,7 @@ func LogDynamicAnalysisError(pkg *pkgecosystem.Pkg, errorPhase api.RunPhase, err
 // LogDynamicAnalysisResult indicates that the package code was run successfully,
 // and what happened when it was run. This may include errors in the analysis
 // of the package, but not errors in the running itself.
-func LogDynamicAnalysisResult(pkg *pkgecosystem.Pkg, finalPhase api.RunPhase, finalStatus analysis.Status) {
+func LogDynamicAnalysisResult(pkg *pkgmanager.Pkg, finalPhase analysisrun.DynamicPhase, finalStatus analysis.Status) {
 	labels := []interface{}{
 		log.Label("ecosystem", pkg.EcosystemName()),
 		log.Label("last_phase", string(finalPhase)),
@@ -58,9 +59,9 @@ func LogDynamicAnalysisResult(pkg *pkgecosystem.Pkg, finalPhase api.RunPhase, fi
 }
 
 // LogRequest records that a request for analysis was received by the worker.
-func LogRequest(ecosystem, name, version, localPath, resultsBucketOverride string) {
+func LogRequest(e pkgecosystem.Ecosystem, name, version, localPath, resultsBucketOverride string) {
 	log.Info(gotRequestLogMsg,
-		log.Label("ecosystem", ecosystem),
+		log.Label("ecosystem", e.String()),
 		"name", name,
 		"version", version,
 		"package_path", localPath,

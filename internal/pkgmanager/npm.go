@@ -1,4 +1,4 @@
-package pkgecosystem
+package pkgmanager
 
 import (
 	"encoding/json"
@@ -8,7 +8,8 @@ import (
 	"strings"
 
 	"github.com/ossf/package-analysis/internal/utils"
-	"github.com/ossf/package-analysis/pkg/api"
+	"github.com/ossf/package-analysis/pkg/api/analysisrun"
+	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
 // npmPackageJSON represents relevant JSON data from the NPM registry response
@@ -71,27 +72,21 @@ func getNPMArchiveURL(pkgName, version string) (string, error) {
 }
 
 var npmPkgManager = PkgManager{
-	ecosystem:      api.EcosystemNPM,
+	ecosystem:      pkgecosystem.NPM,
 	image:          "gcr.io/ossf-malware-analysis/node",
 	command:        "/usr/local/bin/analyze.js",
 	latestVersion:  getNPMLatest,
 	archiveURL:     getNPMArchiveURL,
 	extractArchive: utils.ExtractTarGzFile,
-	runPhases: []api.RunPhase{
-		api.RunPhaseInstall,
-		api.RunPhaseImport,
-	},
+	dynamicPhases:  analysisrun.DefaultDynamicPhases(),
 }
 
 var npmPkgManagerCombinedSandbox = PkgManager{
-	ecosystem:      api.EcosystemNPM,
+	ecosystem:      pkgecosystem.NPM,
 	image:          combinedDynamicAnalysisImage,
 	command:        "/usr/local/bin/analyze-node.js",
 	latestVersion:  getNPMLatest,
 	archiveURL:     getNPMArchiveURL,
 	extractArchive: utils.ExtractTarGzFile,
-	runPhases: []api.RunPhase{
-		api.RunPhaseInstall,
-		api.RunPhaseImport,
-	},
+	dynamicPhases:  analysisrun.DefaultDynamicPhases(),
 }

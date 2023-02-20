@@ -9,16 +9,16 @@ import (
 	"time"
 
 	"github.com/ossf/package-analysis/internal/log"
-	"github.com/ossf/package-analysis/internal/pkgecosystem"
+	"github.com/ossf/package-analysis/internal/pkgmanager"
 	"github.com/ossf/package-analysis/internal/staticanalysis"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"github.com/ossf/package-analysis/internal/utils"
 	"github.com/ossf/package-analysis/internal/worker"
-	"github.com/ossf/package-analysis/pkg/api"
+	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
 var (
-	ecosystem   = flag.String("ecosystem", "", "Package ecosystem (required)")
+	ecosystem   pkgecosystem.Ecosystem
 	packageName = flag.String("package", "", "Package name (required)")
 	version     = flag.String("version", "", "Package version (ignored if local file is specified)")
 	localFile   = flag.String("local", "", "Local package archive containing package to be analysed. Name must match -package argument")
@@ -99,6 +99,8 @@ func run() (err error) {
 	startTime := time.Now()
 
 	log.Initialize(os.Getenv("LOGGER_ENV"))
+
+	flag.TextVar(&ecosystem, "ecosystem", pkgecosystem.Ecosystem(""), "Package ecosystem (required)")
 	analyses.InitFlag()
 	flag.Parse()
 
@@ -109,14 +111,14 @@ func run() (err error) {
 		return
 	}
 
-	if *ecosystem == "" || *packageName == "" {
+	if ecosystem == "" || *packageName == "" {
 		flag.Usage()
 		return fmt.Errorf("ecosystem and package are required arguments")
 	}
 
-	manager := pkgecosystem.Manager(api.Ecosystem(*ecosystem), false)
+	manager := pkgmanager.Manager(ecosystem, false)
 	if manager == nil {
-		return fmt.Errorf("unsupported pkg manager for ecosystem %s", *ecosystem)
+		return fmt.Errorf("unsupported pkg manager for ecosystem %s", ecosystem)
 	}
 
 	pkg, err := worker.ResolvePkg(manager, *packageName, *version, *localFile)
@@ -131,7 +133,7 @@ func run() (err error) {
 	}
 
 	log.Info("Static analysis launched",
-		log.Label("ecosystem", *ecosystem),
+		log.Label("ecosystem", ecosystem.String()),
 		"package", *packageName,
 		"version", *version,
 		"local_path", *localFile,

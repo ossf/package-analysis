@@ -16,6 +16,7 @@ import (
 
 	"github.com/ossf/package-analysis/cmd/scheduler/proxy"
 	"github.com/ossf/package-analysis/internal/log"
+	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
 const (
@@ -31,7 +32,7 @@ type ManagerConfig struct {
 	ExcludeVersions []*regexp.Regexp
 
 	// Ecosystem is the internal name of the ecosystem.
-	Ecosystem string
+	Ecosystem pkgecosystem.Ecosystem
 }
 
 func (m *ManagerConfig) SkipVersion(version string) bool {
@@ -53,14 +54,14 @@ func (m *ManagerConfig) SkipVersion(version string) bool {
 // analyze. It is a map from ossf/package-feeds package types, to a
 // config for the package manager's feed.
 var supportedPkgManagers = map[string]*ManagerConfig{
-	"npm":      {Ecosystem: "npm"},
-	"pypi":     {Ecosystem: "pypi"},
-	"rubygems": {Ecosystem: "rubygems"},
+	"npm":      {Ecosystem: pkgecosystem.NPM},
+	"pypi":     {Ecosystem: pkgecosystem.PyPI},
+	"rubygems": {Ecosystem: pkgecosystem.RubyGems},
 	"packagist": {
-		Ecosystem:       "packagist",
+		Ecosystem:       pkgecosystem.Packagist,
 		ExcludeVersions: []*regexp.Regexp{regexp.MustCompile(`^dev-`), regexp.MustCompile(`\.x-dev$`)},
 	},
-	"crates": {Ecosystem: "crates.io"},
+	"crates": {Ecosystem: pkgecosystem.CratesIO},
 }
 
 func main() {
@@ -123,7 +124,7 @@ func listenLoop(subURL, topicURL string) error {
 			Body: []byte{},
 			Metadata: map[string]string{
 				"name":      pkg.Name,
-				"ecosystem": config.Ecosystem,
+				"ecosystem": config.Ecosystem.String(),
 				"version":   pkg.Version,
 			},
 		}, nil

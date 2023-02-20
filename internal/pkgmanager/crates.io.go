@@ -1,11 +1,12 @@
-package pkgecosystem
+package pkgmanager
 
 import (
 	"encoding/json"
 	"fmt"
 	"net/http"
 
-	"github.com/ossf/package-analysis/pkg/api"
+	"github.com/ossf/package-analysis/pkg/api/analysisrun"
+	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
 type cratesJSON struct {
@@ -32,21 +33,21 @@ func getCratesLatest(pkg string) (string, error) {
 }
 
 var cratesPkgManager = PkgManager{
-	ecosystem:     api.EcosystemCratesIO,
+	ecosystem:     pkgecosystem.CratesIO,
 	image:         "gcr.io/ossf-malware-analysis/crates.io",
 	command:       "/usr/local/bin/analyze.py",
 	latestVersion: getCratesLatest,
-	runPhases: []api.RunPhase{
-		api.RunPhaseInstall,
+	dynamicPhases: []analysisrun.DynamicPhase{
+		analysisrun.DynamicPhaseInstall,
 	},
 }
 
 var cratesPkgManagerCombinedSandbox = PkgManager{
-	ecosystem:     api.EcosystemCratesIO,
+	ecosystem:     pkgecosystem.CratesIO,
 	image:         combinedDynamicAnalysisImage,
 	command:       "/usr/local/bin/analyze-rust.py",
 	latestVersion: getCratesLatest,
-	runPhases: []api.RunPhase{
-		api.RunPhaseInstall,
+	dynamicPhases: []analysisrun.DynamicPhase{
+		analysisrun.DynamicPhaseInstall,
 	},
 }

@@ -9,19 +9,19 @@ import (
 
 	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/log"
-	"github.com/ossf/package-analysis/internal/pkgecosystem"
+	"github.com/ossf/package-analysis/internal/pkgmanager"
 	"github.com/ossf/package-analysis/internal/resultstore"
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/internal/staticanalysis"
 	"github.com/ossf/package-analysis/internal/utils"
 	"github.com/ossf/package-analysis/internal/worker"
-	"github.com/ossf/package-analysis/pkg/api"
+	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
 var (
 	pkgName             = flag.String("package", "", "package name")
 	localPkg            = flag.String("local", "", "local package path")
-	ecosystem           = flag.String("ecosystem", "", "ecosystem (npm, pypi, or rubygems)")
+	ecosystem           pkgecosystem.Ecosystem
 	version             = flag.String("version", "", "version")
 	noPull              = flag.Bool("nopull", false, "disables pulling down sandbox images")
 	imageTag            = flag.String("image-tag", "", "set image tag for analysis sandboxes")
@@ -77,7 +77,7 @@ func makeSandboxOptions(mode analysis.Mode) []sandbox.Option {
 	return sbOpts
 }
 
-func dynamicAnalysis(pkg *pkgecosystem.Pkg) {
+func dynamicAnalysis(pkg *pkgmanager.Pkg) {
 	if !*offline {
 		sandbox.InitNetwork()
 	}
@@ -115,7 +115,7 @@ func dynamicAnalysis(pkg *pkgecosystem.Pkg) {
 	}
 }
 
-func staticAnalysis(pkg *pkgecosystem.Pkg) {
+func staticAnalysis(pkg *pkgmanager.Pkg) {
 	if !*offline {
 		sandbox.InitNetwork()
 	}
@@ -142,6 +142,8 @@ func staticAnalysis(pkg *pkgecosystem.Pkg) {
 func main() {
 	log.Initialize(os.Getenv("LOGGER_ENV"))
 
+	flag.TextVar(&ecosystem, "ecosystem", pkgecosystem.Ecosystem(""), "ecosystem (npm, pypi, rubygems, packagist or crates.io)")
+
 	analysisMode.InitFlag()
 	flag.Parse()
 
@@ -155,15 +157,15 @@ func main() {
 		return
 	}
 
-	if *ecosystem == "" {
+	if ecosystem == "" {
 		flag.Usage()
 		return
 	}
 
-	manager := pkgecosystem.Manager(api.Ecosystem(*ecosystem), *combinedSandbox)
+	manager := pkgmanager.Manager(ecosystem, *combinedSandbox)
 	if manager == nil {
 		log.Panic("Unsupported pkg manager",
-			log.Label("ecosystem", *ecosystem))
+			log.Label("ecosystem", string(ecosystem)))
 	}
 
 	if *pkgName == "" {
@@ -182,12 +184,12 @@ func main() {
 		runMode[mode] = true
 	}
 
-	worker.LogRequest(*ecosystem, *pkgName, *version, *localPkg, "")
+	worker.LogRequest(ecosystem, *pkgName, *version, *localPkg, "")
 
 	pkg, err := worker.ResolvePkg(manager, *pkgName, *version, *localPkg)
 	if err != nil {
 		log.Panic("Error resolving package",
-			log.Label("ecosystem", *ecosystem),
+			log.Label("ecosystem", ecosystem.String()),
 			"name", *pkgName,
 			"error", err)
 	}
