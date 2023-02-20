@@ -289,7 +289,7 @@ func TestExtractZipSlip2(t *testing.T) {
 
 	// try and force writing into a similarly named directory
 	similarlyNamedDir := extractPath + "FOO"
-	err = os.Mkdir(similarlyNamedDir, 0700)
+	err = os.Mkdir(similarlyNamedDir, 0o700)
 
 	testHeaders := []*tar.Header{
 		makeFileHeader(path.Join("..", path.Base(similarlyNamedDir), "bad2.txt"), 1),

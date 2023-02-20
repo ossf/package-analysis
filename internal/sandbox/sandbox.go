@@ -456,14 +456,12 @@ func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
 	stopCmd.Stdout = logOut
 	stopCmd.Stderr = io.MultiWriter(&stopStderr, logErr)
 	if stopErr := stopCmd.Run(); stopErr != nil {
-		// Ignore the error if stderr contains "gofer is still running"
 		if strings.Contains(stopStderr.String(), "gofer is still running") {
+			// Ignore the error if stderr contains "gofer is still running"
 			log.Debug("ignoring 'stop' error - gofer still running")
-		} else {
+		} else if err == nil {
 			// Don't overwrite the earlier error
-			if err == nil {
-				err = fmt.Errorf("error stopping container: %w", stopErr)
-			}
+			err = fmt.Errorf("error stopping container: %w", stopErr)
 		}
 	}
 

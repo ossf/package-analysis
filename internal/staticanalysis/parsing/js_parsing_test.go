@@ -230,7 +230,7 @@ console.log(Rectangle.name);
 				{token.Member, "width", token.Position{6, 13}},
 				{token.Member, "log", token.Position{9, 8}},
 				{token.Member, "name", token.Position{9, 22}},
-				//{Variable, "Rectangle", Position{4, 22}},
+				// {Variable, "Rectangle", Position{4, 22}},
 				{token.Class, "Rectangle2", token.Position{13, 18}},
 				{token.Property, "test", token.Position{14, 5}},
 				{token.Parameter, "height", token.Position{15, 16}},

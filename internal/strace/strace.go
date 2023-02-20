@@ -20,9 +20,9 @@ var (
 	stracePattern = regexp.MustCompile(`.*strace.go:\d+\] \[.*?\] (.+) (E|X) (\S+)\((.*)\)`)
 	// 0x7f1c3a0a2620 /usr/bin/uname, 0x7f1c39e12930 ["uname", "-rs"], 0x55bbefc2d070 ["HOSTNAME=63d5c9dbacb6", "PYTHON_PIP_VERSION=21.0.1", "HOME=/root"]
 	execvePattern = regexp.MustCompile(`.*?(\[.*\])`)
-	//0x7f13f201a0a3 /path, 0x0
+	// 0x7f13f201a0a3 /path, 0x0
 	creatPattern = regexp.MustCompile(`\S+ ([^,]+)`)
-	//0x7f13f201a0a3 /proc/self/fd, O_RDONLY|O_CLOEXEC,
+	// 0x7f13f201a0a3 /proc/self/fd, O_RDONLY|O_CLOEXEC,
 	openPattern = regexp.MustCompile(`\S+ ([^,]+), ([^,]+)`)
 	// AT_FDCWD /app, 0x7f13f201a0a3 /proc/self/fd, O_RDONLY|O_CLOEXEC, 0o0
 	openatPattern = regexp.MustCompile(`\S+ ([^,]+), \S+ ([^,]+), ([^,]+)`)
@@ -240,9 +240,7 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 			return err
 		}
 		r.recordCommand(cmd, env)
-	case "bind":
-		fallthrough
-	case "connect":
+	case "bind", "connect":
 		match := socketPattern.FindStringSubmatch(args)
 		if match == nil {
 			return fmt.Errorf("Failed to parse socket args: %s", args)
@@ -263,11 +261,7 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 			"address", address,
 			"port", port)
 		r.recordSocket(address, port)
-	case "fstat":
-		fallthrough
-	case "lstat":
-		fallthrough
-	case "stat":
+	case "stat", "fstat", "lstat":
 		match := statPattern.FindStringSubmatch(args)
 		if match == nil {
 			return fmt.Errorf("Failed to parse stat args: %s", args)

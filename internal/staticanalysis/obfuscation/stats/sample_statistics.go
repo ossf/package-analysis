@@ -164,9 +164,11 @@ func quartile[T RealNumber](sortedSample []T, whichQuartile int) float64 {
 	n := len(sortedSample)
 	if n == 0 {
 		return math.NaN()
-	} else if whichQuartile == 0 {
+	}
+	if whichQuartile == 0 {
 		return float64(sortedSample[0])
-	} else if whichQuartile == 4 {
+	}
+	if whichQuartile == 4 {
 		return float64(sortedSample[n-1])
 	}
 	// here n >= 1; whichQuartile = 1, 2, 3
@@ -177,9 +179,8 @@ func quartile[T RealNumber](sortedSample []T, whichQuartile int) float64 {
 		// empirical CDF discontinuous at this point; average with prev. value if we can
 		// (though it may be the same sample value)
 		return float64(sortedSample[j-1]+sortedSample[j]) / 2.0
-	} else {
-		return float64(sortedSample[j])
 	}
+	return float64(sortedSample[j])
 }
 
 func quartiles[T RealNumber](sample []T) [5]float64 {

@@ -116,10 +116,9 @@ func listenLoop(subURL, topicURL string) error {
 		config, ok := supportedPkgManagers[pkg.Type]
 		if !ok {
 			return nil, fmt.Errorf("package type is not supported: %v", pkg.Type)
-		} else {
-			if config.SkipVersion(pkg.Version) {
-				return nil, fmt.Errorf("package version '%v' is filtered for type: %v", pkg.Version, pkg.Type)
-			}
+		}
+		if config.SkipVersion(pkg.Version) {
+			return nil, fmt.Errorf("package version '%v' is filtered for type: %v", pkg.Version, pkg.Type)
 		}
 		return &pubsub.Message{
 			Body: []byte{},
