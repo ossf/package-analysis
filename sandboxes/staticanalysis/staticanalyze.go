@@ -19,11 +19,11 @@ import (
 
 var (
 	ecosystem   pkgecosystem.Ecosystem
-	packageName = flag.String("package", "", "Package name (required)")
-	version     = flag.String("version", "", "Package version (ignored if local file is specified)")
-	localFile   = flag.String("local", "", "Local package archive containing package to be analysed. Name must match -package argument")
+	packageName = flag.String("package", "", "package name (required)")
+	version     = flag.String("version", "", "package version (ignored if local file is specified)")
+	localFile   = flag.String("local", "", "local package archive containing package to be analysed. Name must match -package argument")
 	output      = flag.String("output", "", "where to write output JSON results (default stdout)")
-	help        = flag.Bool("help", false, "Prints this help and list of available analyses")
+	help        = flag.Bool("help", false, "prints this help and list of available analyses")
 	analyses    = utils.CommaSeparatedFlags("analyses", "all", "comma-separated list of static analysis tasks to perform")
 )
 
@@ -100,7 +100,7 @@ func run() (err error) {
 
 	log.Initialize(os.Getenv("LOGGER_ENV"))
 
-	flag.TextVar(&ecosystem, "ecosystem", pkgecosystem.Ecosystem(""), "Package ecosystem (required)")
+	flag.TextVar(&ecosystem, "ecosystem", pkgecosystem.None, pkgecosystem.FlagUsage+"(required)")
 	analyses.InitFlag()
 	flag.Parse()
 
@@ -111,7 +111,7 @@ func run() (err error) {
 		return
 	}
 
-	if ecosystem == "" || *packageName == "" {
+	if ecosystem == pkgecosystem.None || *packageName == "" {
 		flag.Usage()
 		return fmt.Errorf("ecosystem and package are required arguments")
 	}

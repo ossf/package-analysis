@@ -13,6 +13,7 @@ import (
 type Ecosystem string
 
 const (
+	None      Ecosystem = ""
 	CratesIO  Ecosystem = "crates.io"
 	NPM       Ecosystem = "npm"
 	Packagist Ecosystem = "packagist"
@@ -20,6 +21,12 @@ const (
 	RubyGems  Ecosystem = "rubygems"
 )
 
+// FlagUsage is a pregenerated string for use as usage text in flag.TextVar for
+// an ecosystem flag.
+const FlagUsage = "package ecosystem. Can be npm, pypi, rubygems, packagist, or crates.io"
+
+// ErrUnsupported is returned by Ecosystem.UnmarshalText when bytes that do not
+// correspond to a defined ecosystem constant is passed in as a parameter.
 var ErrUnsupported = errors.New("ecosystem unsupported")
 
 // SupportedEcosystems is a list of all the ecosystems supported.
@@ -33,10 +40,11 @@ var SupportedEcosystems = []Ecosystem{
 
 // UnmarshalText implements the encoding.TextUnmarshaler interface.
 //
-// It will only succeed when unmarshaling ecosytems in SupportedEcosystems.
+// It will only succeed when unmarshaling ecosytems in SupportedEcosystems or
+// empty.
 func (e *Ecosystem) UnmarshalText(text []byte) error {
 	candidate := string(text)
-	for _, s := range SupportedEcosystems {
+	for _, s := range append(SupportedEcosystems, None) {
 		if string(s) == candidate {
 			*e = s
 			return nil

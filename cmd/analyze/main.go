@@ -142,7 +142,7 @@ func staticAnalysis(pkg *pkgmanager.Pkg) {
 func main() {
 	log.Initialize(os.Getenv("LOGGER_ENV"))
 
-	flag.TextVar(&ecosystem, "ecosystem", pkgecosystem.Ecosystem(""), "ecosystem (npm, pypi, rubygems, packagist or crates.io)")
+	flag.TextVar(&ecosystem, "ecosystem", pkgecosystem.None, pkgecosystem.FlagUsage)
 
 	analysisMode.InitFlag()
 	flag.Parse()
@@ -157,7 +157,7 @@ func main() {
 		return
 	}
 
-	if ecosystem == "" {
+	if ecosystem == pkgecosystem.None {
 		flag.Usage()
 		return
 	}

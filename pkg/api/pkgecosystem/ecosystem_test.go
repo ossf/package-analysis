@@ -25,7 +25,7 @@ func TestMarshalText(t *testing.T) {
 		},
 		{
 			name: "empty",
-			eco:  pkgecosystem.Ecosystem(""),
+			eco:  pkgecosystem.None,
 			want: []byte{},
 		},
 	}
@@ -62,9 +62,9 @@ func TestUnmarshalText(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "empty",
-			input:   []byte{},
-			wantErr: true,
+			name:  "empty",
+			input: []byte{},
+			want:  pkgecosystem.None,
 		},
 	}
 	for _, test := range tests {
