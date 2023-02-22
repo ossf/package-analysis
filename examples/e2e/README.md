@@ -83,12 +83,16 @@ $ systemctl restart docker.service
 
 Images are pulled automatically from the relevant repositories.
 
-To build the necessary images yourself for the docker-compose, you can do the following:
+To build the analysis and scheduler images yourself for the docker-compose, you can do the following:
 
 ```
 # In package-analysis
-make build_all_images
+
+make build_analysis_image build_scheduler_image
 
 # In package-feeds
 docker build . -t gcr.io/ossf-malware-analysis/scheduled-feeds:latest
 ```
+
+Note, however, this does not use locally built sandbox images for analysis. To use entirely locally
+built code for analysis, please see the `test/e2e` directory.
