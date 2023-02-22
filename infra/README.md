@@ -19,5 +19,5 @@ To update container images, run:
 
 ```shell
 $ cd build
-$ PUSH=true ./build_docker.sh
+$ make push_all_images
 ```

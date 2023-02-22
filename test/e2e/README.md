@@ -15,7 +15,7 @@ The test is orchestrated using docker-compose, using an adapted setup based on t
 In the top-level project directory, run
 
 ```shell
-$ make RELEASE_TAG=test build_all_images # rebuild images with 'test' tag
+$ make RELEASE_TAG=test build_all_images sync_all_sandboxes # rebuild images with 'test' tag
 $ make e2e_test_start
 
 ```
