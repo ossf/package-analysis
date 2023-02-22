@@ -2,6 +2,6 @@ steps:
 - name: 'gcr.io/cloud-builders/docker'
   env:
   - 'RELEASE_TAG=$TAG_NAME'
-  entrypoint: bash
-  args: ['-ex', 'make', 'cloudbuild']
+  entrypoint: make
+  args: ['cloudbuild']
 timeout: 1200s
