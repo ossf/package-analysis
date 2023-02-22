@@ -4,4 +4,4 @@ steps:
   - 'RELEASE_TAG=$TAG_NAME'
   entrypoint: make
   args: ['cloudbuild']
-timeout: 1200s
+timeout: 2400s
