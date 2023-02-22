@@ -100,7 +100,7 @@ func run() (err error) {
 
 	log.Initialize(os.Getenv("LOGGER_ENV"))
 
-	flag.TextVar(&ecosystem, "ecosystem", pkgecosystem.None, pkgecosystem.FlagUsage+"(required)")
+	flag.TextVar(&ecosystem, "ecosystem", pkgecosystem.None, pkgecosystem.FlagUsage+" (required)")
 	analyses.InitFlag()
 	flag.Parse()
 
