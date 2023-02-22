@@ -41,14 +41,11 @@ build_%_image:
 	docker build $(BUILD_ARG) -t ${REGISTRY}/$(IMAGE_NAME) -t ${REGISTRY}/$(IMAGE_NAME):$(TAG) -f $(DOCKERFILE) $(DIR)
 
 #
-# These build the sandbox images and also update (sync) them locally
-# from Docker to podman. This is needed for local analyses; in order
-# to use these updated images, pass 'nopull' to scripts/run_analysis.sh
+# These recipes build the sandbox images.
 #
 build_%_sandbox:
 	@# if TAG is 'latest', the two -t arguments are equivalent and do the same thing
 	docker build -t ${REGISTRY}/$(IMAGE_NAME) -t ${REGISTRY}/$(IMAGE_NAME):$(TAG) -f $(DOCKERFILE) $(DIR)
-	sudo buildah pull docker-daemon:${REGISTRY}/${IMAGE_NAME}:$(TAG)
 
 build_analysis_image: DIR=$(PREFIX)
 build_analysis_image: DOCKERFILE=$(PREFIX)/cmd/analyze/Dockerfile
@@ -72,7 +69,7 @@ build_ruby_sandbox: IMAGE_NAME=ruby
 
 build_packagist_sandbox: DIR=$(SANDBOX_DIR)/packagist
 build_packagist_sandbox: DOCKERFILE=$(SANDBOX_DIR)/packagist/Dockerfile
-build_packagist_sandbox:	IMAGE_NAME=packagist
+build_packagist_sandbox: IMAGE_NAME=packagist
 
 build_crates_sandbox: DIR=$(SANDBOX_DIR)/crates.io
 build_crates_sandbox: DOCKERFILE=$(SANDBOX_DIR)/crates.io/Dockerfile
@@ -108,20 +105,20 @@ push_scheduler_image: build_scheduler_image
 push_node_sandbox: IMAGE_NAME=node
 push_node_sandbox: build_node_sandbox
 
-push_python_sandbox: build_python_sandbox
 push_python_sandbox: IMAGE_NAME=python
+push_python_sandbox: build_python_sandbox
 
 push_ruby_sandbox: IMAGE_NAME=ruby
 push_ruby_sandbox: build_ruby_sandbox
 
-push_packagist_sandbox:	IMAGE_NAME=packagist
+push_packagist_sandbox: IMAGE_NAME=packagist
 push_packagist_sandbox: build_packagist_sandbox
 
 push_crates_sandbox: IMAGE_NAME=crates.io
 push_crates_sandbox: build_crates_sandbox
 
 push_dynamic_analysis_sandbox: IMAGE_NAME=dynamic-analysis
-push_dynamic_analysis_sandbox: build_static_analysis_sandbox
+push_dynamic_analysis_sandbox: build_dynamic_analysis_sandbox
 
 push_static_analysis_sandbox: IMAGE_NAME=static-analysis
 push_static_analysis_sandbox: build_static_analysis_sandbox
@@ -131,6 +128,39 @@ push_all_sandboxes: push_node_sandbox push_python_sandbox push_ruby_sandbox push
 
 .PHONY: push_all_images
 push_all_images: push_all_sandboxes push_analysis_image push_scheduler_image
+
+
+#
+# These update (sync) locally build sandbox images from Docker to podman.
+# This is needed for local analyses; in order to use these updated images,
+# pass '-nopull' to scripts/run_analysis.sh
+#
+sync_%_sandbox:
+	sudo buildah pull docker-daemon:${REGISTRY}/${IMAGE_NAME}:$(TAG)
+
+sync_node_sandbox: IMAGE_NAME=node
+sync_node_sandbox: build_node_sandbox
+
+sync_python_sandbox: IMAGE_NAME=python
+sync_python_sandbox: build_python_sandbox
+
+sync_ruby_sandbox: IMAGE_NAME=ruby
+sync_ruby_sandbox: build_ruby_sandbox
+
+sync_packagist_sandbox: IMAGE_NAME=packagist
+sync_packagist_sandbox: build_packagist_sandbox
+
+sync_crates_sandbox: IMAGE_NAME=crates.io
+sync_crates_sandbox: build_crates_sandbox
+
+sync_dynamic_analysis_sandbox: IMAGE_NAME=dynamic-analysis
+sync_dynamic_analysis_sandbox: build_dynamic_analysis_sandbox
+
+sync_static_analysis_sandbox: IMAGE_NAME=static-analysis
+sync_static_analysis_sandbox: build_static_analysis_sandbox
+
+.PHONY: sync_all_sandboxes
+sync_all_sandboxes: sync_node_sandbox sync_python_sandbox sync_ruby_sandbox sync_packagist_sandbox sync_crates_sandbox sync_dynamic_analysis_sandbox sync_static_analysis_sandbox
 
 
 #
