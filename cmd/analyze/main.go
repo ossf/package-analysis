@@ -29,7 +29,7 @@ var (
 	staticUpload        = flag.String("upload-static", "", "bucket path for uploading static analysis results")
 	uploadFileWriteInfo = flag.String("upload-file-write-info", "", "bucket path for uploading information from file writes")
 	offline             = flag.Bool("offline", false, "disables sandbox network access")
-	combinedSandbox     = flag.Bool("combined-sandbox", false, "use combined dynamic analysis sandbox")
+	noCombinedSandbox   = flag.Bool("no-combined-sandbox", false, "don't use new combined dynamic analysis sandbox image")
 	listModes           = flag.Bool("list-modes", false, "prints out a list of available analysis modes")
 	help                = flag.Bool("help", false, "print help on available options")
 	analysisMode        = utils.CommaSeparatedFlags("mode", "dynamic",
@@ -160,7 +160,7 @@ func main() {
 		return
 	}
 
-	manager := pkgecosystem.Manager(api.Ecosystem(*ecosystem), *combinedSandbox)
+	manager := pkgecosystem.Manager(api.Ecosystem(*ecosystem), !*noCombinedSandbox)
 	if manager == nil {
 		log.Panic("Unsupported pkg manager",
 			log.Label("ecosystem", *ecosystem))

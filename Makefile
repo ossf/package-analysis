@@ -190,19 +190,19 @@ test_go:
 .PHONY: test_dynamic_analysis
 test_dynamic_analysis:
 	@echo -e "\n##\n## Test NPM \n##\n"
-	scripts/run_analysis.sh -mode dynamic -combined-sandbox -nopull -ecosystem npm -package async
+	scripts/run_analysis.sh -mode dynamic -nopull -ecosystem npm -package async
 	@echo -e "\n##\n## Test PyPI \n##\n"
-	scripts/run_analysis.sh -mode dynamic -combined-sandbox -nopull -ecosystem pypi -package requests
+	scripts/run_analysis.sh -mode dynamic -nopull -ecosystem pypi -package requests
 	@echo -e "\n##\n## Test Packagist \n##\n"
-	scripts/run_analysis.sh -mode dynamic -combined-sandbox -nopull -ecosystem packagist -package symfony/deprecation-contracts
+	scripts/run_analysis.sh -mode dynamic -nopull -ecosystem packagist -package symfony/deprecation-contracts
 	@echo -e "\n##\n## Test Crates.io \n##\n"
-	scripts/run_analysis.sh -mode dynamic -combined-sandbox -nopull -ecosystem crates.io -package itoa
+	scripts/run_analysis.sh -mode dynamic -nopull -ecosystem crates.io -package itoa
 	@echo -e "\n##\n## Test RubyGems \n##\n"
-	scripts/run_analysis.sh -mode dynamic -combined-sandbox -nopull -ecosystem rubygems -package guwor_palindrome
+	scripts/run_analysis.sh -mode dynamic -nopull -ecosystem rubygems -package guwor_palindrome
 	@echo "Dynamic analysis test passed"
 
 .PHONY: test_static_analysis
 test_static_analysis:
 	@echo -e "\n##\n## Test NPM \n##\n"
-	scripts/run_analysis.sh -mode static -combined-sandbox -nopull -ecosystem npm -package async
+	scripts/run_analysis.sh -mode static -nopull -ecosystem npm -package async
 	@echo "Static analysis test passed"
