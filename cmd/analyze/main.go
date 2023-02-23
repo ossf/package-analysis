@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"net/url"
 	"os"
 	"strings"
@@ -142,7 +143,7 @@ func staticAnalysis(pkg *pkgmanager.Pkg) {
 func main() {
 	log.Initialize(os.Getenv("LOGGER_ENV"))
 
-	flag.TextVar(&ecosystem, "ecosystem", pkgecosystem.None, pkgecosystem.FlagUsage)
+	flag.TextVar(&ecosystem, "ecosystem", pkgecosystem.None, fmt.Sprintf("package ecosystem. Can be %s", pkgecosystem.SupportedEcosystems))
 
 	analysisMode.InitFlag()
 	flag.Parse()

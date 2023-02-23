@@ -4,6 +4,7 @@ package pkgecosystem
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
 // Ecosystem represents an open source package ecosystem from which packages can be downloaded.
@@ -29,8 +30,32 @@ const FlagUsage = "package ecosystem. Can be npm, pypi, rubygems, packagist, or 
 // correspond to a defined ecosystem constant is passed in as a parameter.
 var ErrUnsupported = errors.New("ecosystem unsupported")
 
+// EcosystemSet is a convenience type to interact with a collection of ecosystems.
+type EcosystemSet []Ecosystem
+
+// Lookup returns the Ecosystem in s that matches to text or None if there is no
+// match. The bool returned will be true if there is a match, or false if there
+// is no match.
+func (s EcosystemSet) Lookup(text string) (Ecosystem, bool) {
+	for _, e := range s {
+		if text == string(e) {
+			return e, true
+		}
+	}
+	return None, false
+}
+
+// String implements the fmt.Stringer interface.
+func (s EcosystemSet) String() string {
+	var parts []string
+	for _, e := range s {
+		parts = append(parts, string(e))
+	}
+	return strings.Join(parts, ", ")
+}
+
 // SupportedEcosystems is a list of all the ecosystems supported.
-var SupportedEcosystems = []Ecosystem{
+var SupportedEcosystems = EcosystemSet{
 	CratesIO,
 	NPM,
 	Packagist,
@@ -43,12 +68,9 @@ var SupportedEcosystems = []Ecosystem{
 // It will only succeed when unmarshaling ecosytems in SupportedEcosystems or
 // empty.
 func (e *Ecosystem) UnmarshalText(text []byte) error {
-	candidate := string(text)
-	for _, s := range append(SupportedEcosystems, None) {
-		if string(s) == candidate {
-			*e = s
-			return nil
-		}
+	if s, ok := append(SupportedEcosystems, None).Lookup(string(text)); ok {
+		*e = s
+		return nil
 	}
 	return fmt.Errorf("%w: %s", ErrUnsupported, text)
 }
