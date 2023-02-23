@@ -6,12 +6,11 @@ import (
 )
 
 var (
-	// RFC4648 standard base 64 chars, padding optional, min length 16
+	// RFC4648 standard base 64 chars, padding optional, min length 16.
 	standardBase64 = regexp.MustCompile("[[:alnum:]+/]{16,}(?:={0,2})?")
-	// RFC4648 url/file-safe base 64 chars, padding optional, min length 16
+	// RFC4648 url/file-safe base 64 chars, padding optional, min length 16.
 	urlSafeBase64 = regexp.MustCompile("[[:alnum:]-_]{16,}(?:={0,2})?")
-
-	// Combines RFC4648 standard ('+', '/') + file-safe ('-', '_') base 64 variants
+	// Combines RFC4648 standard ('+', '/') + file-safe ('-', '_') base 64 variants.
 	base64Regex = regexp.MustCompile(standardBase64.String() + "|" + urlSafeBase64.String())
 
 	filterRegexes = []*regexp.Regexp{

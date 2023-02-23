@@ -8,9 +8,11 @@ import (
 	"github.com/ossf/package-analysis/pkg/api"
 )
 
-type DynamicAnalysisStraceSummary map[api.RunPhase]*StraceSummary
-type DynamicAnalysisFileWritesSummary map[api.RunPhase]*FileWritesSummary
-type DynamicAnalysisFileWriteBufferPaths map[api.RunPhase][]string
+type (
+	DynamicAnalysisStraceSummary        map[api.RunPhase]*StraceSummary
+	DynamicAnalysisFileWritesSummary    map[api.RunPhase]*FileWritesSummary
+	DynamicAnalysisFileWriteBufferPaths map[api.RunPhase][]string
+)
 
 type DynamicAnalysisResults struct {
 	StraceSummary     DynamicAnalysisStraceSummary

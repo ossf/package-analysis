@@ -7,11 +7,11 @@ import (
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
 
-// PackageResult maps file paths (e.g. in a package) to the FileResult for that file
+// PackageResult maps file paths (e.g. in a package) to the FileResult for that file.
 type PackageResult map[string]FileResult
 
 // FileResult holds the full set of parsing data for a single file, which may
-// contain valid parsing results for multiple languages
+// contain valid parsing results for multiple languages.
 type FileResult map[Language]*SingleResult
 
 // SingleResult holds information about source code tokens found in a file,

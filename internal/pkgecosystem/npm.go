@@ -55,7 +55,7 @@ func getNPMArchiveURL(pkgName, version string) (string, error) {
 
 	responseBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("error reading HTTP response: %v", err)
+		return "", fmt.Errorf("error reading HTTP response: %w", err)
 	}
 
 	responseString := string(responseBytes)
@@ -64,7 +64,7 @@ func getNPMArchiveURL(pkgName, version string) (string, error) {
 	err = decoder.Decode(&packageInfo)
 	if err != nil {
 		// invalid version, non-existent package, etc. Details in responseString
-		return "", fmt.Errorf("%v. NPM response: %s", err, responseString)
+		return "", fmt.Errorf("%w. NPM response: %s", err, responseString)
 	}
 
 	return packageInfo.Dist.Tarball, nil
@@ -75,7 +75,7 @@ var npmPkgManager = PkgManager{
 	image:          "gcr.io/ossf-malware-analysis/node",
 	command:        "/usr/local/bin/analyze.js",
 	latestVersion:  getNPMLatest,
-	archiveUrl:     getNPMArchiveURL,
+	archiveURL:     getNPMArchiveURL,
 	extractArchive: utils.ExtractTarGzFile,
 	runPhases: []api.RunPhase{
 		api.RunPhaseInstall,
@@ -88,7 +88,7 @@ var npmPkgManagerCombinedSandbox = PkgManager{
 	image:          combinedDynamicAnalysisImage,
 	command:        "/usr/local/bin/analyze-node.js",
 	latestVersion:  getNPMLatest,
-	archiveUrl:     getNPMArchiveURL,
+	archiveURL:     getNPMArchiveURL,
 	extractArchive: utils.ExtractTarGzFile,
 	runPhases: []api.RunPhase{
 		api.RunPhaseInstall,

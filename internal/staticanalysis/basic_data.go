@@ -16,7 +16,7 @@ import (
 )
 
 // BasicPackageData records basic information about files in a package,
-// mapping file path within the archive to BasicFileData about that file
+// mapping file path within the archive to BasicFileData about that file.
 type BasicPackageData struct {
 	Files map[string]BasicFileData `json:"files"`
 }
@@ -24,13 +24,13 @@ type BasicPackageData struct {
 // BasicFileData records various information about a file that can be determined
 // without parsing it using a programming language parser.
 type BasicFileData struct {
-	// FileType records the output of the `file` command run on that file
+	// FileType records the output of the `file` command run on that file.
 	FileType string
 
-	// Size records the size of the file (as reported by the filesystem)
+	// Size records the size of the file (as reported by the filesystem).
 	Size int64
 
-	// Hash records the SHA256sum hash of the file
+	// Hash records the SHA256sum hash of the file.
 	Hash string
 
 	// LineLengthCounts records the count of lines of each length in the file,
@@ -42,7 +42,7 @@ func (bd BasicFileData) String() string {
 	// print line length counts in ascending order
 	lineLengths := maps.Keys(bd.LineLengthCounts)
 	slices.Sort(lineLengths)
-	lineLengthStrings := make([]string, len(bd.LineLengthCounts))
+	lineLengthStrings := make([]string, 0, len(bd.LineLengthCounts))
 	for length := range lineLengths {
 		count := bd.LineLengthCounts[length]
 		lineLengthStrings = append(lineLengthStrings, fmt.Sprintf("length = %4d, count = %2d", length, count))
@@ -57,7 +57,7 @@ func (bd BasicFileData) String() string {
 	return strings.Join(parts, "\n")
 }
 
-// fileCmdInputArgs describes how to pass file arguments to the `file` command
+// fileCmdInputArgs describes how to pass file arguments to the `file` command.
 type fileCmdArgsHandler struct{}
 
 func (h fileCmdArgsHandler) SingleFileArg(filePath string) []string {

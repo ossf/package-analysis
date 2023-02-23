@@ -22,8 +22,11 @@ type ResultStore struct {
 	constructPath bool
 }
 
-type Option interface{ set(*ResultStore) }
-type option func(*ResultStore)       // option implements Option.
+type (
+	Option interface{ set(*ResultStore) }
+	option func(*ResultStore) // option implements Option.
+)
+
 func (o option) set(sb *ResultStore) { o(sb) }
 
 // ConstructPath will cause Save() to generate the path based on Pkg.EcosystemName()

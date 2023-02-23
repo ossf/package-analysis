@@ -80,7 +80,7 @@ func (s SampleStatistics) Equals(other SampleStatistics, absTol float64) bool {
 }
 
 // ReplaceNaNs returns a copy of this SampleStatistics object with all NaN values
-// replaced by the given value r
+// replaced by the given value r.
 func (s SampleStatistics) ReplaceNaNs(r float64) SampleStatistics {
 	data := s.toFloatData()
 	for i, x := range data {
@@ -91,7 +91,7 @@ func (s SampleStatistics) ReplaceNaNs(r float64) SampleStatistics {
 	return fromFloatData(s.Size, data)
 }
 
-// mean computes the sample mean
+// mean computes the sample mean.
 func mean[T RealNumber](sample []T) float64 {
 	if len(sample) < 1 {
 		return math.NaN()
@@ -105,7 +105,7 @@ func mean[T RealNumber](sample []T) float64 {
 }
 
 // variance calculates sample variance with bias correction
-// mean is the value returned by the mean() function above
+// mean is the value returned by the mean() function.
 func variance[T RealNumber](sample []T, mean float64) float64 {
 	if len(sample) < 2 {
 		return math.NaN()
@@ -128,7 +128,7 @@ func squareRootCubed(x float64) float64 {
 // skewness calculates sample skewness using the G1 estimator from
 // https://en.wikipedia.org/wiki/Skewness#Sample_skewness
 // mean and variance respectively are the values returned by the
-// mean() and (bias-corrected) variance() functions above
+// mean() and (bias-corrected) variance() functions.
 func skewness[T RealNumber](sample []T, mean, variance float64) float64 {
 	if len(sample) < 3 {
 		return math.NaN()
@@ -164,9 +164,11 @@ func quartile[T RealNumber](sortedSample []T, whichQuartile int) float64 {
 	n := len(sortedSample)
 	if n == 0 {
 		return math.NaN()
-	} else if whichQuartile == 0 {
+	}
+	if whichQuartile == 0 {
 		return float64(sortedSample[0])
-	} else if whichQuartile == 4 {
+	}
+	if whichQuartile == 4 {
 		return float64(sortedSample[n-1])
 	}
 	// here n >= 1; whichQuartile = 1, 2, 3
@@ -177,9 +179,8 @@ func quartile[T RealNumber](sortedSample []T, whichQuartile int) float64 {
 		// empirical CDF discontinuous at this point; average with prev. value if we can
 		// (though it may be the same sample value)
 		return float64(sortedSample[j-1]+sortedSample[j]) / 2.0
-	} else {
-		return float64(sortedSample[j])
 	}
+	return float64(sortedSample[j])
 }
 
 func quartiles[T RealNumber](sample []T) [5]float64 {

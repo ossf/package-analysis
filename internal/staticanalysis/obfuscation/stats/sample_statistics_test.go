@@ -19,7 +19,6 @@ func TestSummary(t *testing.T) {
 	if !actual.Equals(expected, 1e-4) {
 		t.Errorf("Expected summary: %v\nactual summary %v\n", expected, actual)
 	}
-
 }
 
 func TestSummary2(t *testing.T) {

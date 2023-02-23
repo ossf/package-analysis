@@ -41,14 +41,11 @@ build_%_image:
 	docker build $(BUILD_ARG) -t ${REGISTRY}/$(IMAGE_NAME) -t ${REGISTRY}/$(IMAGE_NAME):$(TAG) -f $(DOCKERFILE) $(DIR)
 
 #
-# These build the sandbox images and also update (sync) them locally
-# from Docker to podman. This is needed for local analyses; in order
-# to use these updated images, pass 'nopull' to scripts/run_analysis.sh
+# These recipes build the sandbox images.
 #
 build_%_sandbox:
 	@# if TAG is 'latest', the two -t arguments are equivalent and do the same thing
 	docker build -t ${REGISTRY}/$(IMAGE_NAME) -t ${REGISTRY}/$(IMAGE_NAME):$(TAG) -f $(DOCKERFILE) $(DIR)
-	sudo buildah pull docker-daemon:${REGISTRY}/${IMAGE_NAME}:$(TAG)
 
 build_analysis_image: DIR=$(PREFIX)
 build_analysis_image: DOCKERFILE=$(PREFIX)/cmd/analyze/Dockerfile
@@ -72,7 +69,7 @@ build_ruby_sandbox: IMAGE_NAME=ruby
 
 build_packagist_sandbox: DIR=$(SANDBOX_DIR)/packagist
 build_packagist_sandbox: DOCKERFILE=$(SANDBOX_DIR)/packagist/Dockerfile
-build_packagist_sandbox:	IMAGE_NAME=packagist
+build_packagist_sandbox: IMAGE_NAME=packagist
 
 build_crates_sandbox: DIR=$(SANDBOX_DIR)/crates.io
 build_crates_sandbox: DOCKERFILE=$(SANDBOX_DIR)/crates.io/Dockerfile
@@ -108,20 +105,20 @@ push_scheduler_image: build_scheduler_image
 push_node_sandbox: IMAGE_NAME=node
 push_node_sandbox: build_node_sandbox
 
-push_python_sandbox: build_python_sandbox
 push_python_sandbox: IMAGE_NAME=python
+push_python_sandbox: build_python_sandbox
 
 push_ruby_sandbox: IMAGE_NAME=ruby
 push_ruby_sandbox: build_ruby_sandbox
 
-push_packagist_sandbox:	IMAGE_NAME=packagist
+push_packagist_sandbox: IMAGE_NAME=packagist
 push_packagist_sandbox: build_packagist_sandbox
 
 push_crates_sandbox: IMAGE_NAME=crates.io
 push_crates_sandbox: build_crates_sandbox
 
 push_dynamic_analysis_sandbox: IMAGE_NAME=dynamic-analysis
-push_dynamic_analysis_sandbox: build_static_analysis_sandbox
+push_dynamic_analysis_sandbox: build_dynamic_analysis_sandbox
 
 push_static_analysis_sandbox: IMAGE_NAME=static-analysis
 push_static_analysis_sandbox: build_static_analysis_sandbox
@@ -131,6 +128,39 @@ push_all_sandboxes: push_node_sandbox push_python_sandbox push_ruby_sandbox push
 
 .PHONY: push_all_images
 push_all_images: push_all_sandboxes push_analysis_image push_scheduler_image
+
+
+#
+# These update (sync) locally build sandbox images from Docker to podman.
+# This is needed for local analyses; in order to use these updated images,
+# pass '-nopull' to scripts/run_analysis.sh
+#
+sync_%_sandbox:
+	sudo buildah pull docker-daemon:${REGISTRY}/${IMAGE_NAME}:$(TAG)
+
+sync_node_sandbox: IMAGE_NAME=node
+sync_node_sandbox: build_node_sandbox
+
+sync_python_sandbox: IMAGE_NAME=python
+sync_python_sandbox: build_python_sandbox
+
+sync_ruby_sandbox: IMAGE_NAME=ruby
+sync_ruby_sandbox: build_ruby_sandbox
+
+sync_packagist_sandbox: IMAGE_NAME=packagist
+sync_packagist_sandbox: build_packagist_sandbox
+
+sync_crates_sandbox: IMAGE_NAME=crates.io
+sync_crates_sandbox: build_crates_sandbox
+
+sync_dynamic_analysis_sandbox: IMAGE_NAME=dynamic-analysis
+sync_dynamic_analysis_sandbox: build_dynamic_analysis_sandbox
+
+sync_static_analysis_sandbox: IMAGE_NAME=static-analysis
+sync_static_analysis_sandbox: build_static_analysis_sandbox
+
+.PHONY: sync_all_sandboxes
+sync_all_sandboxes: sync_node_sandbox sync_python_sandbox sync_ruby_sandbox sync_packagist_sandbox sync_crates_sandbox sync_dynamic_analysis_sandbox sync_static_analysis_sandbox
 
 
 #
@@ -190,19 +220,19 @@ test_go:
 .PHONY: test_dynamic_analysis
 test_dynamic_analysis:
 	@echo -e "\n##\n## Test NPM \n##\n"
-	scripts/run_analysis.sh -mode dynamic -combined-sandbox -nopull -ecosystem npm -package async
+	scripts/run_analysis.sh -mode dynamic -nopull -ecosystem npm -package async
 	@echo -e "\n##\n## Test PyPI \n##\n"
-	scripts/run_analysis.sh -mode dynamic -combined-sandbox -nopull -ecosystem pypi -package requests
+	scripts/run_analysis.sh -mode dynamic -nopull -ecosystem pypi -package requests
 	@echo -e "\n##\n## Test Packagist \n##\n"
-	scripts/run_analysis.sh -mode dynamic -combined-sandbox -nopull -ecosystem packagist -package symfony/deprecation-contracts
+	scripts/run_analysis.sh -mode dynamic -nopull -ecosystem packagist -package symfony/deprecation-contracts
 	@echo -e "\n##\n## Test Crates.io \n##\n"
-	scripts/run_analysis.sh -mode dynamic -combined-sandbox -nopull -ecosystem crates.io -package itoa
+	scripts/run_analysis.sh -mode dynamic -nopull -ecosystem crates.io -package itoa
 	@echo -e "\n##\n## Test RubyGems \n##\n"
-	scripts/run_analysis.sh -mode dynamic -combined-sandbox -nopull -ecosystem rubygems -package guwor_palindrome
+	scripts/run_analysis.sh -mode dynamic -nopull -ecosystem rubygems -package guwor_palindrome
 	@echo "Dynamic analysis test passed"
 
 .PHONY: test_static_analysis
 test_static_analysis:
 	@echo -e "\n##\n## Test NPM \n##\n"
-	scripts/run_analysis.sh -mode static -combined-sandbox -nopull -ecosystem npm -package async
+	scripts/run_analysis.sh -mode static -nopull -ecosystem npm -package async
 	@echo "Static analysis test passed"

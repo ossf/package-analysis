@@ -27,9 +27,11 @@ var packageJSON []byte
 //go:embed package-lock.json
 var packageLockJSON []byte
 
-const parserFileName = "babel-parser.js"
-const packageJSONFileName = "package.json"
-const packageLockJSONFileName = "package-lock.json"
+const (
+	parserFileName          = "babel-parser.js"
+	packageJSONFileName     = "package.json"
+	packageLockJSONFileName = "package-lock.json"
+)
 
 // npmCacheDir is used to check for cached versions of NPM dependencies before
 // downloading them from a remote source. The directory is populated by the
@@ -55,13 +57,13 @@ var parserFiles = []parserFile{
 
 func InitParser(installDir string) (ParserConfig, error) {
 	if err := os.MkdirAll(installDir, 0o777); err != nil {
-		return ParserConfig{}, fmt.Errorf("error creating JS parser directory: %v", err)
+		return ParserConfig{}, fmt.Errorf("error creating JS parser directory: %w", err)
 	}
 
 	for _, file := range parserFiles {
 		filePath := path.Join(installDir, file.name)
 		if err := utils.WriteFile(filePath, file.contents, file.isExecutable); err != nil {
-			return ParserConfig{}, fmt.Errorf("error writing %s to %s: %v", file.name, installDir, err)
+			return ParserConfig{}, fmt.Errorf("error writing %s to %s: %w", file.name, installDir, err)
 		}
 	}
 
@@ -76,7 +78,7 @@ func InitParser(installDir string) (ParserConfig, error) {
 
 	cmd := exec.Command("npm", npmArgs...)
 	if err := cmd.Run(); err != nil {
-		return ParserConfig{}, fmt.Errorf("npm install error: %v", err)
+		return ParserConfig{}, fmt.Errorf("npm install error: %w", err)
 	}
 
 	return ParserConfig{

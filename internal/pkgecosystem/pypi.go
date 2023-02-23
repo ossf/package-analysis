@@ -23,9 +23,9 @@ type pypiPackageInfoJSON struct {
 	Info struct {
 		Version string `json:"version"`
 	} `json:"info"`
-	Urls []struct {
+	URLs []struct {
 		PackageType string `json:"packagetype"`
-		Url         string `json:"url"`
+		URL         string `json:"url"`
 	} `json:"urls"`
 }
 
@@ -55,7 +55,7 @@ func getPyPIArchiveURL(pkgName, version string) (string, error) {
 
 	responseBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("error reading HTTP response: %v", err)
+		return "", fmt.Errorf("error reading HTTP response: %w", err)
 	}
 
 	responseString := string(responseBytes)
@@ -64,18 +64,17 @@ func getPyPIArchiveURL(pkgName, version string) (string, error) {
 	err = decoder.Decode(&packageInfo)
 	if err != nil {
 		// invalid version, non-existent package, etc. Details in responseString
-		return "", fmt.Errorf("%v. PyPI response: %s", err, responseString)
+		return "", fmt.Errorf("%w. PyPI response: %s", err, responseString)
 	}
 
 	// Need to find the archive with PackageType == "sdist"
-	for _, url := range packageInfo.Urls {
+	for _, url := range packageInfo.URLs {
 		if url.PackageType == "sdist" {
-			return url.Url, nil
+			return url.URL, nil
 		}
 	}
 	// can't find source tarball
 	return "", fmt.Errorf("source tarball not found for %s, version %s", pkgName, version)
-
 }
 
 var pypiPkgManager = PkgManager{
@@ -83,7 +82,7 @@ var pypiPkgManager = PkgManager{
 	image:          "gcr.io/ossf-malware-analysis/python",
 	command:        "/usr/local/bin/analyze.py",
 	latestVersion:  getPyPILatest,
-	archiveUrl:     getPyPIArchiveURL,
+	archiveURL:     getPyPIArchiveURL,
 	extractArchive: utils.ExtractTarGzFile,
 	runPhases: []api.RunPhase{
 		api.RunPhaseInstall,
@@ -96,7 +95,7 @@ var pypiPkgManagerCombinedSandbox = PkgManager{
 	image:          combinedDynamicAnalysisImage,
 	command:        "/usr/local/bin/analyze-python.py",
 	latestVersion:  getPyPILatest,
-	archiveUrl:     getPyPIArchiveURL,
+	archiveURL:     getPyPIArchiveURL,
 	extractArchive: utils.ExtractTarGzFile,
 	runPhases: []api.RunPhase{
 		api.RunPhaseInstall,

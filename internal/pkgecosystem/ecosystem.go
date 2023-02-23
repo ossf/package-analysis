@@ -7,14 +7,13 @@ import (
 	"github.com/ossf/package-analysis/pkg/api"
 )
 
-// PkgManager
-// Represents how packages from a common ecosystem are accessed
+// PkgManager represents how packages from a common ecosystem are accessed.
 type PkgManager struct {
 	ecosystem      api.Ecosystem
 	image          string
 	command        string
 	latestVersion  func(string) (string, error)
-	archiveUrl     func(string, string) (string, error)
+	archiveURL     func(string, string) (string, error)
 	extractArchive func(string, string) error
 	runPhases      []api.RunPhase
 }
@@ -95,7 +94,7 @@ func (p *PkgManager) DownloadArchive(name, version, directory string) (string, e
 		return "", fmt.Errorf("no directory specified")
 	}
 
-	downloadURL, err := p.archiveUrl(name, version)
+	downloadURL, err := p.archiveURL(name, version)
 	if err != nil {
 		return "", err
 	}

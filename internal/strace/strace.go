@@ -21,9 +21,9 @@ var (
 	stracePattern = regexp.MustCompile(`.*strace.go:\d+\] \[.*?\] (.+) (E|X) (\S+)\((.*)\)`)
 	// 0x7f1c3a0a2620 /usr/bin/uname, 0x7f1c39e12930 ["uname", "-rs"], 0x55bbefc2d070 ["HOSTNAME=63d5c9dbacb6", "PYTHON_PIP_VERSION=21.0.1", "HOME=/root"]
 	execvePattern = regexp.MustCompile(`.*?(\[.*\])`)
-	//0x7f13f201a0a3 /path, 0x0
+	// 0x7f13f201a0a3 /path, 0x0
 	creatPattern = regexp.MustCompile(`\S+ ([^,]+)`)
-	//0x7f13f201a0a3 /proc/self/fd, O_RDONLY|O_CLOEXEC,
+	// 0x7f13f201a0a3 /proc/self/fd, O_RDONLY|O_CLOEXEC,
 	openPattern = regexp.MustCompile(`\S+ ([^,]+), ([^,]+)`)
 	// AT_FDCWD /app, 0x7f13f201a0a3 /proc/self/fd, O_RDONLY|O_CLOEXEC, 0o0
 	openatPattern = regexp.MustCompile(`\S+ ([^,]+), \S+ ([^,]+), ([^,]+)`)
@@ -138,13 +138,13 @@ func parseCmdAndEnv(cmdAndEnv string) ([]string, []string, error) {
 	return cmd, env, nil
 }
 
-func (r *Result) recordFileAccess(file string, read, write, delete bool) {
+func (r *Result) recordFileAccess(file string, read, write, del bool) {
 	if _, exists := r.files[file]; !exists {
 		r.files[file] = &FileInfo{Path: file}
 	}
 	r.files[file].Read = r.files[file].Read || read
 	r.files[file].Write = r.files[file].Write || write
-	r.files[file].Delete = r.files[file].Delete || delete
+	r.files[file].Delete = r.files[file].Delete || del
 }
 
 func (r *Result) recordFileWrite(file string, writeBuffer []byte, bytesWritten int64) {
@@ -191,7 +191,7 @@ func (r *Result) parseEnterSyscall(syscall, args string) error {
 			return fmt.Errorf("strace of file write syscall has the bytes written argument in an unexpected format")
 		}
 		// Get the hex value after "0x" to convert to an integer.
-		bytesWritten, err := strconv.ParseInt(args[bytesWrittenHexIndex+len(hexPrefix):len(args)], 16, 64)
+		bytesWritten, err := strconv.ParseInt(args[bytesWrittenHexIndex+len(hexPrefix):], 16, 64)
 		if err != nil {
 			return err
 		}
@@ -213,7 +213,7 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 	case "creat":
 		match := creatPattern.FindStringSubmatch(args)
 		if match == nil {
-			return fmt.Errorf("Failed to parse create args: %s", args)
+			return fmt.Errorf("failed to parse create args: %s", args)
 		}
 
 		log.Debug("creat",
@@ -222,7 +222,7 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 	case "open":
 		match := openPattern.FindStringSubmatch(args)
 		if match == nil {
-			return fmt.Errorf("Failed to parse open args: %s", args)
+			return fmt.Errorf("failed to parse open args: %s", args)
 		}
 
 		read, write := parseOpenFlags(match[2])
@@ -234,7 +234,7 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 	case "openat":
 		match := openatPattern.FindStringSubmatch(args)
 		if match == nil {
-			return fmt.Errorf("Failed to parse openat args: %s", args)
+			return fmt.Errorf("failed to parse openat args: %s", args)
 		}
 
 		path := joinPaths(match[1], match[2])
@@ -247,7 +247,7 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 	case "execve":
 		match := execvePattern.FindStringSubmatch(args)
 		if match == nil {
-			return fmt.Errorf("Failed to parse execve args: %s", args)
+			return fmt.Errorf("failed to parse execve args: %s", args)
 		}
 		log.Debug("execve",
 			"cmdAndEnv", match[1])
@@ -256,12 +256,10 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 			return err
 		}
 		r.recordCommand(cmd, env)
-	case "bind":
-		fallthrough
-	case "connect":
+	case "bind", "connect":
 		match := socketPattern.FindStringSubmatch(args)
 		if match == nil {
-			return fmt.Errorf("Failed to parse socket args: %s", args)
+			return fmt.Errorf("failed to parse socket args: %s", args)
 		}
 		family := match[1]
 		if family != "AF_INET" && family != "AF_INET6" {
@@ -279,14 +277,10 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 			"address", address,
 			"port", port)
 		r.recordSocket(address, port)
-	case "fstat":
-		fallthrough
-	case "lstat":
-		fallthrough
-	case "stat":
+	case "stat", "fstat", "lstat":
 		match := statPattern.FindStringSubmatch(args)
 		if match == nil {
-			return fmt.Errorf("Failed to parse stat args: %s", args)
+			return fmt.Errorf("failed to parse stat args: %s", args)
 		}
 		log.Debug("stat",
 			"path", match[1])
@@ -294,7 +288,7 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 	case "newfstatat":
 		match := newfstatatPattern.FindStringSubmatch(args)
 		if match == nil {
-			return fmt.Errorf("Failed to parse newfstatat args: %s", args)
+			return fmt.Errorf("failed to parse newfstatat args: %s", args)
 		}
 		path := joinPaths(match[1], match[2])
 		log.Debug("newfstatat",
@@ -303,7 +297,7 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 	case "unlink":
 		match := unlinkPatten.FindStringSubmatch(args)
 		if match == nil {
-			return fmt.Errorf("Failed to parse unlink args: %s", args)
+			return fmt.Errorf("failed to parse unlink args: %s", args)
 		}
 		path := match[1]
 		log.Debug("unlink",
@@ -312,7 +306,7 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 	case "unlinkat":
 		match := unlinkatPattern.FindStringSubmatch(args)
 		if match == nil {
-			return fmt.Errorf("Failed to parse unlinkat args: %s", args)
+			return fmt.Errorf("failed to parse unlinkat args: %s", args)
 		}
 		path := joinPaths(match[1], match[2])
 		log.Debug("unlinkat",

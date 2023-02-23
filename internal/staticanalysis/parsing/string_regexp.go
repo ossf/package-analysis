@@ -12,14 +12,18 @@ import (
 // https://blog.stevenlevithan.com/archives/match-quoted-string
 
 // https://stackoverflow.com/a/10786066
-var singleQuotedString = regexp.MustCompile(`'[^'\\]*(\\.[^'\\]*)*'`)
-var doubleQuotedString = regexp.MustCompile(`"[^"\\]*(\\.[^"\\]*)*"`)
-var backTickQuotedString = regexp.MustCompile("`[^`\\\\]*(\\\\.[^`\\\\]*)*`")
+var (
+	singleQuotedString   = regexp.MustCompile(`'[^'\\]*(\\.[^'\\]*)*'`)
+	doubleQuotedString   = regexp.MustCompile(`"[^"\\]*(\\.[^"\\]*)*"`)
+	backTickQuotedString = regexp.MustCompile("`[^`\\\\]*(\\\\.[^`\\\\]*)*`")
+)
 
 // https://stackoverflow.com/a/30737232
-var singleQuotedString2 = regexp.MustCompile(`'(?:[^'\\]*(?:\\.)?)*'`)
-var doubleQuotedString2 = regexp.MustCompile(`"(?:[^"\\]*(?:\\.)?)*"`)
-var backTickQuotedString2 = regexp.MustCompile("`(?:[^`\\\\]*(?:\\\\.)?)*`")
+var (
+	singleQuotedString2   = regexp.MustCompile(`'(?:[^'\\]*(?:\\.)?)*'`)
+	doubleQuotedString2   = regexp.MustCompile(`"(?:[^"\\]*(?:\\.)?)*"`)
+	backTickQuotedString2 = regexp.MustCompile("`(?:[^`\\\\]*(?:\\\\.)?)*`")
+)
 
 func combineRegexp(regexps ...*regexp.Regexp) *regexp.Regexp {
 	patterns := utils.Transform(regexps, func(r *regexp.Regexp) string { return r.String() })

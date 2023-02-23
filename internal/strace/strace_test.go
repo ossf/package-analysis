@@ -362,7 +362,6 @@ func TestParseIgnoredSockets(t *testing.T) {
 	if got := len(sockets); got != 0 {
 		t.Errorf(`len(Sockets()) = %d, want 0`, got)
 	}
-
 }
 
 func TestParseSocketsOneEntry(t *testing.T) {

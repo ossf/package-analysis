@@ -29,7 +29,7 @@ var (
 	staticUpload        = flag.String("upload-static", "", "bucket path for uploading static analysis results")
 	uploadFileWriteInfo = flag.String("upload-file-write-info", "", "bucket path for uploading information from file writes")
 	offline             = flag.Bool("offline", false, "disables sandbox network access")
-	combinedSandbox     = flag.Bool("combined-sandbox", false, "use combined dynamic analysis sandbox")
+	combinedSandbox     = flag.Bool("combined-sandbox", true, "use combined sandbox image for dynamic analysis (default true)")
 	listModes           = flag.Bool("list-modes", false, "prints out a list of available analysis modes")
 	help                = flag.Bool("help", false, "print help on available options")
 	analysisMode        = utils.CommaSeparatedFlags("mode", "dynamic",
@@ -54,13 +54,13 @@ func printAnalysisModes() {
 	println()
 }
 
-/*
-makeSandboxOptions prepares options for the sandbox based on command line arguments.
-In particular:
-1. The image tag is always passed through. An empty tag is the same as "latest".
-2. A local package is mapped into the sandbox if applicable
-3. Image pulling is disabled if the "-nopull" command-line flag was used
-*/
+// makeSandboxOptions prepares options for the sandbox based on command line arguments.
+//
+// In particular:
+//
+//  1. The image tag is always passed through. An empty tag is the same as "latest".
+//  2. A local package is mapped into the sandbox if applicable.
+//  3. Image pulling is disabled if the "-nopull" command-line flag was used.
 func makeSandboxOptions(mode analysis.Mode) []sandbox.Option {
 	sbOpts := worker.DefaultSandboxOptions(mode, *imageTag)
 

@@ -80,7 +80,7 @@ func extractTar(tarStream io.Reader, outputDir string) error {
 			// ensure containing directories exist; some archives don't include an explicit entry
 			// for parent directories
 			parentDir := path.Dir(outputPath)
-			if err = os.MkdirAll(parentDir, 0755); err != nil {
+			if err = os.MkdirAll(parentDir, 0o755); err != nil {
 				return fmt.Errorf("create parent dirs for %s failed: %w", header.Name, err)
 			}
 
