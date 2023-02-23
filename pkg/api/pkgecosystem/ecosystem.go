@@ -22,10 +22,6 @@ const (
 	RubyGems  Ecosystem = "rubygems"
 )
 
-// FlagUsage is a pregenerated string for use as usage text in flag.TextVar for
-// an ecosystem flag.
-const FlagUsage = "package ecosystem. Can be npm, pypi, rubygems, packagist, or crates.io"
-
 // ErrUnsupported is returned by Ecosystem.UnmarshalText when bytes that do not
 // correspond to a defined ecosystem constant is passed in as a parameter.
 var ErrUnsupported = errors.New("ecosystem unsupported")
