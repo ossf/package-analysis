@@ -1,6 +1,7 @@
 package parsing
 
 import (
+	"fmt"
 	"math/big"
 	"reflect"
 	"testing"
@@ -392,7 +393,7 @@ func TestParseJS(t *testing.T) {
 			got := result["stdin"]
 			if err != nil {
 				t.Errorf("parseJS() error = %v", err)
-				println("Parser output:\n", rawOutput)
+				fmt.Println("Parser output:\n", rawOutput)
 				return
 			}
 			if len(tt.want.Literals) != len(got.Literals) {
@@ -437,7 +438,7 @@ func TestParseJS(t *testing.T) {
 			}
 
 			if t.Failed() || printAllJSON {
-				println("Raw JSON:\n", rawOutput)
+				fmt.Println("Raw JSON:\n", rawOutput)
 			}
 		})
 	}

@@ -30,7 +30,7 @@ var (
 	staticUpload        = flag.String("upload-static", "", "bucket path for uploading static analysis results")
 	uploadFileWriteInfo = flag.String("upload-file-write-info", "", "bucket path for uploading information from file writes")
 	offline             = flag.Bool("offline", false, "disables sandbox network access")
-	combinedSandbox     = flag.Bool("combined-sandbox", false, "use combined dynamic analysis sandbox")
+	combinedSandbox     = flag.Bool("combined-sandbox", true, "use combined sandbox image for dynamic analysis (default true)")
 	listModes           = flag.Bool("list-modes", false, "prints out a list of available analysis modes")
 	help                = flag.Bool("help", false, "print help on available options")
 	analysisMode        = utils.CommaSeparatedFlags("mode", "dynamic",
@@ -48,11 +48,11 @@ func parseBucketPath(path string) (string, string) {
 }
 
 func printAnalysisModes() {
-	println("Available analysis modes:")
+	fmt.Println("Available analysis modes:")
 	for _, mode := range analysis.AllModes() {
-		println(mode)
+		fmt.Println(mode)
 	}
-	println()
+	fmt.Println()
 }
 
 // makeSandboxOptions prepares options for the sandbox based on command line arguments.
