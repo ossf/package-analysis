@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"net/url"
 	"os"
 	"strings"
@@ -47,11 +48,11 @@ func parseBucketPath(path string) (string, string) {
 }
 
 func printAnalysisModes() {
-	println("Available analysis modes:")
+	fmt.Println("Available analysis modes:")
 	for _, mode := range analysis.AllModes() {
-		println(mode)
+		fmt.Println(mode)
 	}
-	println()
+	fmt.Println()
 }
 
 // makeSandboxOptions prepares options for the sandbox based on command line arguments.
