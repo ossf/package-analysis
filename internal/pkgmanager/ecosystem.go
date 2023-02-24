@@ -1,27 +1,28 @@
-package pkgecosystem
+package pkgmanager
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/ossf/package-analysis/pkg/api"
+	"github.com/ossf/package-analysis/pkg/api/analysisrun"
+	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
 // PkgManager represents how packages from a common ecosystem are accessed.
 type PkgManager struct {
-	ecosystem      api.Ecosystem
+	ecosystem      pkgecosystem.Ecosystem
 	image          string
 	command        string
 	latestVersion  func(string) (string, error)
 	archiveURL     func(string, string) (string, error)
 	extractArchive func(string, string) error
-	runPhases      []api.RunPhase
+	dynamicPhases  []analysisrun.DynamicPhase
 }
 
 const combinedDynamicAnalysisImage = "gcr.io/ossf-malware-analysis/dynamic-analysis"
 
 var (
-	supportedPkgManagers = map[api.Ecosystem]*PkgManager{
+	supportedPkgManagers = map[pkgecosystem.Ecosystem]*PkgManager{
 		npmPkgManager.ecosystem:       &npmPkgManager,
 		pypiPkgManager.ecosystem:      &pypiPkgManager,
 		rubygemsPkgManager.ecosystem:  &rubygemsPkgManager,
@@ -29,7 +30,7 @@ var (
 		cratesPkgManager.ecosystem:    &cratesPkgManager,
 	}
 
-	supportedPkgManagersCombinedSandbox = map[api.Ecosystem]*PkgManager{
+	supportedPkgManagersCombinedSandbox = map[pkgecosystem.Ecosystem]*PkgManager{
 		npmPkgManagerCombinedSandbox.ecosystem:       &npmPkgManagerCombinedSandbox,
 		pypiPkgManagerCombinedSandbox.ecosystem:      &pypiPkgManagerCombinedSandbox,
 		rubygemsPkgManagerCombinedSandbox.ecosystem:  &rubygemsPkgManagerCombinedSandbox,
@@ -38,12 +39,12 @@ var (
 	}
 )
 
-func Manager(ecosystem api.Ecosystem, combinedSandbox bool) *PkgManager {
+func Manager(e pkgecosystem.Ecosystem, combinedSandbox bool) *PkgManager {
 	if combinedSandbox {
-		return supportedPkgManagersCombinedSandbox[ecosystem]
+		return supportedPkgManagersCombinedSandbox[e]
 	}
 
-	return supportedPkgManagers[ecosystem]
+	return supportedPkgManagers[e]
 }
 
 // String implements the Stringer interface to support pretty printing.
@@ -55,8 +56,8 @@ func (p *PkgManager) DynamicAnalysisImage() string {
 	return p.image
 }
 
-func (p *PkgManager) RunPhases() []api.RunPhase {
-	return p.runPhases
+func (p *PkgManager) DynamicPhases() []analysisrun.DynamicPhase {
+	return p.dynamicPhases
 }
 
 func (p *PkgManager) Latest(name string) (*Pkg, error) {

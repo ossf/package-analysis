@@ -1,4 +1,4 @@
-package pkgecosystem
+package pkgmanager
 
 import (
 	"encoding/json"
@@ -8,7 +8,8 @@ import (
 	"strings"
 
 	"github.com/ossf/package-analysis/internal/utils"
-	"github.com/ossf/package-analysis/pkg/api"
+	"github.com/ossf/package-analysis/pkg/api/analysisrun"
+	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
 // pypiPackageInfoJSON represents relevant JSON data from the PyPI web API response
@@ -78,27 +79,21 @@ func getPyPIArchiveURL(pkgName, version string) (string, error) {
 }
 
 var pypiPkgManager = PkgManager{
-	ecosystem:      api.EcosystemPyPI,
+	ecosystem:      pkgecosystem.PyPI,
 	image:          "gcr.io/ossf-malware-analysis/python",
 	command:        "/usr/local/bin/analyze.py",
 	latestVersion:  getPyPILatest,
 	archiveURL:     getPyPIArchiveURL,
 	extractArchive: utils.ExtractTarGzFile,
-	runPhases: []api.RunPhase{
-		api.RunPhaseInstall,
-		api.RunPhaseImport,
-	},
+	dynamicPhases:  analysisrun.DefaultDynamicPhases(),
 }
 
 var pypiPkgManagerCombinedSandbox = PkgManager{
-	ecosystem:      api.EcosystemPyPI,
+	ecosystem:      pkgecosystem.PyPI,
 	image:          combinedDynamicAnalysisImage,
 	command:        "/usr/local/bin/analyze-python.py",
 	latestVersion:  getPyPILatest,
 	archiveURL:     getPyPIArchiveURL,
 	extractArchive: utils.ExtractTarGzFile,
-	runPhases: []api.RunPhase{
-		api.RunPhaseInstall,
-		api.RunPhaseImport,
-	},
+	dynamicPhases:  analysisrun.DefaultDynamicPhases(),
 }

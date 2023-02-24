@@ -23,13 +23,13 @@ import (
 	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/notification"
-	"github.com/ossf/package-analysis/internal/pkgecosystem"
+	"github.com/ossf/package-analysis/internal/pkgmanager"
 	"github.com/ossf/package-analysis/internal/resultstore"
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/internal/staticanalysis"
 	"github.com/ossf/package-analysis/internal/worker"
-	"github.com/ossf/package-analysis/pkg/api"
-	"github.com/ossf/package-analysis/pkg/result"
+	"github.com/ossf/package-analysis/pkg/api/analysisrun"
+	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
 const (
@@ -80,7 +80,7 @@ func copyPackageToLocalFile(ctx context.Context, packagesBucket *blob.Bucket, bu
 	return fmt.Sprintf(localPkgPathFmt, path.Base(bucketPath)), f, nil
 }
 
-func saveResults(ctx context.Context, pkg *pkgecosystem.Pkg, dest resultBucketPaths, dynamicResults result.DynamicAnalysisResults, staticResults result.StaticAnalysisResults) error {
+func saveResults(ctx context.Context, pkg *pkgmanager.Pkg, dest resultBucketPaths, dynamicResults analysisrun.DynamicAnalysisResults, staticResults analysisrun.StaticAnalysisResults) error {
 	if dest.dynamicAnalysis != "" {
 		err := resultstore.New(dest.dynamicAnalysis, resultstore.ConstructPath()).Save(ctx, pkg, dynamicResults.StraceSummary)
 		if err != nil {
@@ -111,7 +111,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		return nil
 	}
 
-	ecosystem := msg.Metadata["ecosystem"]
+	ecosystem := pkgecosystem.Ecosystem(msg.Metadata["ecosystem"])
 	if ecosystem == "" {
 		log.Warn("ecosystem is empty",
 			"name", name)
@@ -119,10 +119,10 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		return nil
 	}
 
-	manager := pkgecosystem.Manager(api.Ecosystem(ecosystem), false)
+	manager := pkgmanager.Manager(ecosystem, false)
 	if manager == nil {
 		log.Warn("Unsupported pkg manager",
-			log.Label("ecosystem", ecosystem),
+			log.Label("ecosystem", ecosystem.String()),
 			"name", name)
 		msg.Ack()
 		return nil
@@ -165,7 +165,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	pkg, err := worker.ResolvePkg(manager, name, version, localPkgPath)
 	if err != nil {
 		log.Error("Error resolving package",
-			log.Label("ecosystem", ecosystem),
+			log.Label("ecosystem", ecosystem.String()),
 			log.Label("name", name),
 			"error", err)
 		return err
@@ -176,7 +176,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		return err
 	}
 
-	var staticResults result.StaticAnalysisResults
+	var staticResults analysisrun.StaticAnalysisResults
 	if resultsBuckets.staticAnalysis != "" {
 		staticResults, _, err = worker.RunStaticAnalysis(pkg, staticSandboxOpts, staticanalysis.All)
 		if err != nil {

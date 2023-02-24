@@ -1,4 +1,4 @@
-package pkgecosystem
+package pkgmanager
 
 import (
 	"fmt"

@@ -1,24 +1,27 @@
-package pkgidentifier
+package analysisrun_test
 
 import (
 	"testing"
+
+	"github.com/ossf/package-analysis/pkg/api/analysisrun"
+	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
 func TestStringify(t *testing.T) {
 	tests := map[string]struct {
-		input    PkgIdentifier
+		input    analysisrun.Key
 		expected string
 	}{
 		"simple stringify": {
-			input:    PkgIdentifier{Name: "genericpackage", Version: "2.05.0", Ecosystem: "npm"},
+			input:    analysisrun.Key{Name: "genericpackage", Version: "2.05.0", Ecosystem: pkgecosystem.NPM},
 			expected: "npm-genericpackage-2.05.0",
 		},
 		"pkg name with space": {
-			input:    PkgIdentifier{Name: "cool package", Version: "1.0.0", Ecosystem: "pypi"},
+			input:    analysisrun.Key{Name: "cool package", Version: "1.0.0", Ecosystem: pkgecosystem.PyPI},
 			expected: "pypi-cool package-1.0.0",
 		},
 		"pkg name with forward slash": {
-			input:    PkgIdentifier{Name: "@ada/evilpackage", Version: "99.0.0", Ecosystem: "npm"},
+			input:    analysisrun.Key{Name: "@ada/evilpackage", Version: "99.0.0", Ecosystem: pkgecosystem.NPM},
 			expected: "npm-@ada/evilpackage-99.0.0",
 		},
 	}

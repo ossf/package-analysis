@@ -9,7 +9,7 @@ import (
 	"github.com/ossf/package-analysis/internal/packetcapture"
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/internal/strace"
-	"github.com/ossf/package-analysis/pkg/result"
+	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 )
 
 const (
@@ -18,12 +18,12 @@ const (
 )
 
 type Result struct {
-	StraceSummary result.StraceSummary
-	FileWrites    result.FileWrites
+	StraceSummary analysisrun.StraceSummary
+	FileWrites    analysisrun.FileWrites
 }
 
 var resultError = &Result{
-	StraceSummary: result.StraceSummary{
+	StraceSummary: analysisrun.StraceSummary{
 		Status: analysis.StatusErrorOther,
 	},
 }
@@ -67,7 +67,7 @@ func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
 	}
 
 	analysisResult := Result{
-		StraceSummary: result.StraceSummary{
+		StraceSummary: analysisrun.StraceSummary{
 			Status: analysis.StatusForRunResult(r),
 			Stdout: lastLines(r.Stdout(), maxOutputLines, maxOutputBytes),
 			Stderr: lastLines(r.Stderr(), maxOutputLines, maxOutputBytes),
@@ -79,19 +79,25 @@ func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
 
 func (d *Result) setData(straceResult *strace.Result, dns *dnsanalyzer.DNSAnalyzer) {
 	for _, f := range straceResult.Files() {
-		d.StraceSummary.Files = append(d.StraceSummary.Files, result.FileResult{
+		d.StraceSummary.Files = append(d.StraceSummary.Files, analysisrun.FileResult{
 			Path:   f.Path,
 			Read:   f.Read,
 			Write:  f.Write,
 			Delete: f.Delete,
 		})
 		if len(f.WriteInfo) > 0 {
-			d.FileWrites = append(d.FileWrites, result.FileWriteResult{f.Path, f.WriteInfo})
+			w := analysisrun.FileWriteResult{Path: f.Path}
+			for _, wi := range f.WriteInfo {
+				w.WriteInfo = append(w.WriteInfo, analysisrun.WriteInfo{
+					BytesWritten: wi.BytesWritten,
+				})
+			}
+			d.FileWrites = append(d.FileWrites, w)
 		}
 	}
 
 	for _, s := range straceResult.Sockets() {
-		d.StraceSummary.Sockets = append(d.StraceSummary.Sockets, result.SocketResult{
+		d.StraceSummary.Sockets = append(d.StraceSummary.Sockets, analysisrun.SocketResult{
 			Address:   s.Address,
 			Port:      s.Port,
 			Hostnames: dns.Hostnames(s.Address),
@@ -99,16 +105,16 @@ func (d *Result) setData(straceResult *strace.Result, dns *dnsanalyzer.DNSAnalyz
 	}
 
 	for _, c := range straceResult.Commands() {
-		d.StraceSummary.Commands = append(d.StraceSummary.Commands, result.CommandResult{
+		d.StraceSummary.Commands = append(d.StraceSummary.Commands, analysisrun.CommandResult{
 			Command:     c.Command,
 			Environment: c.Env,
 		})
 	}
 
 	for dnsClass, queries := range dns.Questions() {
-		c := result.DnsResult{Class: dnsClass}
+		c := analysisrun.DNSResult{Class: dnsClass}
 		for host, types := range queries {
-			c.Queries = append(c.Queries, result.DnsQueries{
+			c.Queries = append(c.Queries, analysisrun.DNSQueries{
 				Hostname: host,
 				Types:    types,
 			})
