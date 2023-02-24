@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
+	"golang.org/x/exp/slices"
 )
 
 func TestEcosystemMarshalText(t *testing.T) {
@@ -116,95 +117,14 @@ func TestEcosystemString(t *testing.T) {
 	}
 }
 
-func TestEcosystemSetLookup(t *testing.T) {
-	tests := []struct {
-		name   string
-		set    pkgecosystem.EcosystemSet
-		input  string
-		want   pkgecosystem.Ecosystem
-		wantOk bool
-	}{
-		{
-			name:   "empty set",
-			set:    pkgecosystem.EcosystemSet{},
-			input:  "npm",
-			want:   pkgecosystem.None,
-			wantOk: false,
-		},
-		{
-			name:   "one entry",
-			set:    pkgecosystem.EcosystemSet{pkgecosystem.NPM},
-			input:  "npm",
-			want:   pkgecosystem.NPM,
-			wantOk: true,
-		},
-		{
-			name: "not found",
-			set: pkgecosystem.EcosystemSet{
-				pkgecosystem.CratesIO,
-				pkgecosystem.PyPI,
-			},
-			input:  "npm",
-			want:   pkgecosystem.None,
-			wantOk: false,
-		},
-		{
-			name: "found",
-			set: pkgecosystem.EcosystemSet{
-				pkgecosystem.CratesIO,
-				pkgecosystem.PyPI,
-				pkgecosystem.NPM,
-			},
-			input:  "pypi",
-			want:   pkgecosystem.PyPI,
-			wantOk: true,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got, gotOk := test.set.Lookup(test.input)
-			if gotOk != test.wantOk {
-				t.Errorf("Lookup() = %v; want %v", gotOk, test.wantOk)
-			}
-			if got != test.want {
-				t.Errorf("Lookup() = %v; want %v", got, test.want)
-			}
-		})
-	}
-}
-
-func TestEcosystemSetString(t *testing.T) {
-	tests := []struct {
-		name string
-		set  pkgecosystem.EcosystemSet
-		want string
-	}{
-		{
-			name: "empty set",
-			set:  pkgecosystem.EcosystemSet{},
-			want: "",
-		},
-		{
-			name: "one entry",
-			set:  pkgecosystem.EcosystemSet{pkgecosystem.Ecosystem("one")},
-			want: "one",
-		},
-		{
-			name: "multiple entries",
-			set: pkgecosystem.EcosystemSet{
-				pkgecosystem.Ecosystem("one"),
-				pkgecosystem.Ecosystem("two"),
-				pkgecosystem.Ecosystem("three"),
-			},
-			want: "one, two, three",
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := test.set.String()
-			if got != test.want {
-				t.Errorf("String() = %v; want %v", got, test.want)
-			}
-		})
+func TestEcosystemsAsStrings(t *testing.T) {
+	want := []string{"npm", "pypi", "rubygems"}
+	got := pkgecosystem.EcosystemsAsStrings([]pkgecosystem.Ecosystem{
+		pkgecosystem.NPM,
+		pkgecosystem.PyPI,
+		pkgecosystem.RubyGems,
+	})
+	if !slices.Equal(got, want) {
+		t.Errorf("EcosystemsAsStrings() = %v; want %v", got, want)
 	}
 }

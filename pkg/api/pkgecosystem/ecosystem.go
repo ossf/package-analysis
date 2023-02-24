@@ -4,7 +4,6 @@ package pkgecosystem
 import (
 	"errors"
 	"fmt"
-	"strings"
 )
 
 // Ecosystem represents an open source package ecosystem from which packages can be downloaded.
@@ -26,32 +25,8 @@ const (
 // correspond to a defined ecosystem constant is passed in as a parameter.
 var ErrUnsupported = errors.New("ecosystem unsupported")
 
-// EcosystemSet is a convenience type to interact with a collection of ecosystems.
-type EcosystemSet []Ecosystem
-
-// Lookup returns the Ecosystem in s that matches to text or None if there is no
-// match. The bool returned will be true if there is a match, or false if there
-// is no match.
-func (s EcosystemSet) Lookup(text string) (Ecosystem, bool) {
-	for _, e := range s {
-		if text == string(e) {
-			return e, true
-		}
-	}
-	return None, false
-}
-
-// String implements the fmt.Stringer interface.
-func (s EcosystemSet) String() string {
-	var parts []string
-	for _, e := range s {
-		parts = append(parts, string(e))
-	}
-	return strings.Join(parts, ", ")
-}
-
 // SupportedEcosystems is a list of all the ecosystems supported.
-var SupportedEcosystems = EcosystemSet{
+var SupportedEcosystems = []Ecosystem{
 	CratesIO,
 	NPM,
 	Packagist,
@@ -59,14 +34,21 @@ var SupportedEcosystems = EcosystemSet{
 	RubyGems,
 }
 
+// SupportedEcosystemsStrings is the list of supported ecosystems represented as
+// strings.
+var SupportedEcosystemsStrings = EcosystemsAsStrings(SupportedEcosystems)
+
 // UnmarshalText implements the encoding.TextUnmarshaler interface.
 //
 // It will only succeed when unmarshaling ecosytems in SupportedEcosystems or
 // empty.
 func (e *Ecosystem) UnmarshalText(text []byte) error {
-	if s, ok := append(SupportedEcosystems, None).Lookup(string(text)); ok {
-		*e = s
-		return nil
+	search := string(text)
+	for _, s := range append(SupportedEcosystems, None) {
+		if string(s) == search {
+			*e = s
+			return nil
+		}
 	}
 	return fmt.Errorf("%w: %s", ErrUnsupported, text)
 }
@@ -79,4 +61,13 @@ func (e Ecosystem) MarshalText() ([]byte, error) {
 // String implements the fmt.Stringer interface.
 func (e Ecosystem) String() string {
 	return string(e)
+}
+
+// EcosystemsAsStrings converts a slice of Ecosystems to a string slice.
+func EcosystemsAsStrings(es []Ecosystem) []string {
+	var s []string
+	for _, e := range es {
+		s = append(s, e.String())
+	}
+	return s
 }

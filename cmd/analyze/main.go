@@ -143,7 +143,7 @@ func staticAnalysis(pkg *pkgmanager.Pkg) {
 func main() {
 	log.Initialize(os.Getenv("LOGGER_ENV"))
 
-	flag.TextVar(&ecosystem, "ecosystem", pkgecosystem.None, fmt.Sprintf("package ecosystem. Can be %s", pkgecosystem.SupportedEcosystems))
+	flag.TextVar(&ecosystem, "ecosystem", pkgecosystem.None, fmt.Sprintf("package ecosystem. Can be %s", pkgecosystem.SupportedEcosystemsStrings))
 
 	analysisMode.InitFlag()
 	flag.Parse()
