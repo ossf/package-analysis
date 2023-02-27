@@ -15,7 +15,7 @@ corresponds to an individual static analysis task (see Task). Note that this dat
 is sent across a sandbox boundary, so all nested structs must be JSON serialisable.
 */
 type Result struct {
-	// Note: the JSON names below should match the values in task.go
+	// NOTE: the JSON names below should match the values in task.go
 	BasicData *BasicPackageData `json:"basic,omitempty"`
 
 	ParsingData parsing.PackageResult `json:"parsing,omitempty"`
