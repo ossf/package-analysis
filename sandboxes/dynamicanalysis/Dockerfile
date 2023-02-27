@@ -8,6 +8,7 @@
 FROM buildpack-deps@sha256:d76488a56e1e85930e053b794daa9f990636565bf0de54903d65d93c43c3cad5 AS image
 
 # All intermediate files during first-stage build are stored under /setup
+# This directory is removed before second-stage build (i.e. copying runtime files to an empty image)
 WORKDIR /setup
 
 # Suppress questions relating to package installs
@@ -18,12 +19,14 @@ ENV DEBCONF_NOWARNINGS="yes"
 
 # setup repo for kubectl
 RUN mkdir -m 0700 -p /etc/apt/keyrings
+# Keyring for kubernetes package predownloaded from https://packages.cloud.google.com/apt/doc/apt-key.gpg
+# Key does not need rotation so local copy should not go stale.
 COPY kubernetes.gpg /etc/apt/keyrings/kubernetes.gpg
 RUN echo "deb [signed-by=/etc/apt/keyrings/kubernetes.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list
 
 # install keys for powershell
-RUN curl -fsSL "https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb" -o ./packages-microsoft-prod.deb && \
-	dpkg -i packages-microsoft-prod.deb
+RUN curl -fsSL "https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb" -o /setup/packages-microsoft-prod.deb && \
+	dpkg -i /setup/packages-microsoft-prod.deb
 
 # Extra packages for realistic runtime
 RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
