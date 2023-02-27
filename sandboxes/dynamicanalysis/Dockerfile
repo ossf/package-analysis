@@ -7,16 +7,19 @@
 # buildpack-deps 22.04 [ubuntu]
 FROM buildpack-deps@sha256:d76488a56e1e85930e053b794daa9f990636565bf0de54903d65d93c43c3cad5 AS image
 
+# All intermediate files during first-stage build are stored under /setup
+WORKDIR /setup
+
 # Suppress questions relating to package installs
 ENV DEBIAN_FRONTEND noninteractive
 # Silence 'debconf: delaying package configuation, since apt-utils is not installed' warning
 # as it related to interactive configuration anyway
 ENV DEBCONF_NOWARNINGS="yes"
 
-# set repo for kubectl
-RUN mkdir -m 0700 -p /etc/apt/keyrings && \
- 	curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg -o /etc/apt/keyrings/kubernetes.gpg && \
- 	echo "deb [signed-by=/etc/apt/keyrings/kubernetes.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list
+# setup repo for kubectl
+RUN mkdir -m 0700 -p /etc/apt/keyrings
+COPY kubernetes.gpg /etc/apt/keyrings/kubernetes.gpg
+RUN echo "deb [signed-by=/etc/apt/keyrings/kubernetes.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list
 
 # install keys for powershell
 RUN curl -fsSL "https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb" -o ./packages-microsoft-prod.deb && \
@@ -121,6 +124,9 @@ RUN chmod 755 /usr/local/bin/analyze-rust.py
 
 WORKDIR /app
 RUN cargo init
+
+# Remove setup files
+RUN rm -rf /setup
 
 #
 # Second stage build
