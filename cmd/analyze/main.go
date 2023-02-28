@@ -5,7 +5,10 @@ import (
 	"flag"
 	"net/url"
 	"os"
+	"runtime"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/log"
@@ -99,25 +102,57 @@ func dynamicAnalysis(pkg *pkgecosystem.Pkg) {
 		}
 	}
 
+	var rtm runtime.MemStats
+	runtime.ReadMemStats(&rtm)
+	log.Debug("mem stats before file writer")
+	log.Debug(strconv.FormatUint(rtm.Alloc, 10))
+
+	startTime := time.Now()
+
 	if *uploadFileWriteInfo != "" {
 		bucket, path := parseBucketPath(*uploadFileWriteInfo)
 		err := resultstore.New(bucket, resultstore.BasePath(path)).Save(ctx, pkg, results.FileWritesSummary)
 		if err != nil {
 			log.Fatal("Failed to upload file write analysis results to blobstore", "error", err)
 		}
+		var allPhasesWriteBufferPathsArray []string
 		for _, writeBufferPathsArray := range results.FileWriteBufferPaths {
-			for _, writeBufferPath := range writeBufferPathsArray {
-				writeBuffer, err := utils.ReadAndRemoveTempFile(writeBufferPath)
-				if err != nil {
-					log.Error("Could not read file", err)
-				}
-				writeBufferErr := resultstore.New(bucket, resultstore.BasePath(path)).SaveWriteBuffer(ctx, pkg, utils.GetSHA256Hash(writeBuffer), writeBuffer)
-				if writeBufferErr != nil {
-					log.Fatal(" Failed to upload file write buffer results to blobstore", writeBufferErr)
-				}
-			}
+			allPhasesWriteBufferPathsArray = append(allPhasesWriteBufferPathsArray, writeBufferPathsArray...)
 		}
+		zipFile, err := os.CreateTemp("", "write_buffers_temp.*.zip")
+		if err != nil {
+			log.Error("Could not create zip file")
+		}
+		utils.WriteFilesToZip(allPhasesWriteBufferPathsArray, zipFile)
+		writeError := resultstore.New(bucket, resultstore.BasePath(path)).SaveWriteBufferZip(ctx, pkg, "write_buffers", zipFile)
+		if writeError != nil {
+			log.Fatal(" Failed to upload file write buffer results to blobstore", writeError)
+		}
+		//for _, writeBufferPath := range writeBufferPathsArray {
+		//	writeBuffer, err := utils.ReadAndRemoveTempFile(writeBufferPath)
+		//	if err != nil {
+		//		log.Error("Could not read file", err)
+		//	}
+		//	writeBufferErr := resultstore.New(bucket, resultstore.BasePath(path)).SaveWriteBuffer(ctx, pkg, utils.GetSHA256Hash(writeBuffer), writeBuffer)
+		//	if writeBufferErr != nil {
+		//		log.Fatal(" Failed to upload file write buffer results to blobstore", writeBufferErr)
+		//	}
+		//}
 	}
+
+	runDuration := time.Since(startTime)
+	log.Info("Writes duration finished",
+		log.Label("ecosystem", pkg.EcosystemName()),
+		"name", pkg.Name(),
+		"version", pkg.Version(),
+		"error", err,
+		"dynamic_analysis_phase_duration", runDuration,
+	)
+
+	var rtm2 runtime.MemStats
+	runtime.ReadMemStats(&rtm2)
+	log.Debug("mem stats after file writer")
+	log.Debug(strconv.FormatUint(rtm2.Alloc, 10))
 
 	// this is only valid if RunDynamicAnalysis() returns nil err
 	if lastStatus != analysis.StatusCompleted {

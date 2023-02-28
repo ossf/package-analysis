@@ -152,7 +152,7 @@ func (r *Result) recordFileWrite(file string, writeBuffer []byte, bytesWritten i
 	SHA256WriteId := utils.GetSHA256Hash(writeBuffer)
 	writeContentsAndBytes := WriteContentInfo{BytesWritten: bytesWritten, WriteBufferId: SHA256WriteId}
 	r.files[file].WriteInfo = append(r.files[file].WriteInfo, writeContentsAndBytes)
-	fileName, error := utils.CreateAndWriteTempFile("temp_"+SHA256WriteId, writeBuffer)
+	fileName, error := utils.CreateAndWriteTempFile(SHA256WriteId, writeBuffer)
 	r.files[file].WriteBufferPaths = append(r.files[file].WriteBufferPaths, fileName)
 	if error != nil {
 		log.Error("Could not create and write file", error)

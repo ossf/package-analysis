@@ -1,8 +1,14 @@
 package utils
 
 import (
+	"archive/zip"
 	"fmt"
+	"io"
 	"os"
+	"runtime"
+	"strconv"
+
+	"github.com/ossf/package-analysis/internal/log"
 )
 
 const tempFolder = "temp_writes_folder"
@@ -48,9 +54,42 @@ func ReadAndRemoveTempFile(fileName string) ([]byte, error) {
 		return []byte{}, err
 	}
 	// Seek to the beginning of the file
-	f.Seek(0, 0)
+	//f.Seek(0, 0)
 	fileContents, err := os.ReadFile(fileName)
 	f.Close()
 	os.Remove(fileName)
 	return fileContents, err
+}
+
+func WriteFilesToZip(writeBufferPaths []string, zipFile *os.File) {
+	var rtm runtime.MemStats
+	runtime.ReadMemStats(&rtm)
+	log.Debug("mem stats before write files to zip")
+	log.Debug(strconv.FormatUint(rtm.Alloc, 10))
+	zipWriter := zip.NewWriter(zipFile)
+	defer zipWriter.Close()
+	for _, path := range writeBufferPaths {
+		file, err := os.Open(path)
+		if err != nil {
+			return
+		}
+		fileContents, err := os.ReadFile(path)
+		writeBufferId := GetSHA256Hash(fileContents)
+		w, err := zipWriter.Create(writeBufferId)
+		if err != nil {
+			return
+		}
+		if _, err := io.Copy(w, file); err != nil {
+			return
+		}
+		// do we need to flush the writer?
+		// figure out how to defer this close in the for loop
+		os.Remove(path)
+		file.Close()
+	}
+	var rtm2 runtime.MemStats
+	runtime.ReadMemStats(&rtm2)
+	log.Debug("mem stats after  write files to zip")
+	log.Debug(strconv.FormatUint(rtm2.Alloc, 10))
+
 }

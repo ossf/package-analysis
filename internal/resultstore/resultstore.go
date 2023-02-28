@@ -3,6 +3,8 @@ package resultstore
 import (
 	"context"
 	"encoding/json"
+	"io"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -87,6 +89,48 @@ func (rs *ResultStore) OpenAndWriteToBucket(ctx context.Context, contents []byte
 func (rs *ResultStore) SaveWriteBuffer(ctx context.Context, p Pkg, fileName string, writeBuffer []byte) error {
 	path := filepath.Join(rs.generatePath(p), writeBufferFolder)
 	return rs.OpenAndWriteToBucket(ctx, writeBuffer, path, fileName+".json")
+}
+
+func (rs *ResultStore) SaveWriteBufferZip(ctx context.Context, p Pkg, fileName string, writeBufferZip *os.File) error {
+	path := filepath.Join(rs.generatePath(p), writeBufferFolder)
+	bkt, err := blob.OpenBucket(ctx, rs.bucket)
+	if err != nil {
+		return err
+	}
+	defer bkt.Close()
+
+	uploadPath := filepath.Join(path, fileName+".zip")
+	log.Info("Uploading results",
+		"bucket", rs.bucket,
+		"path", uploadPath)
+
+	w, err := bkt.NewWriter(ctx, uploadPath, nil)
+	if err != nil {
+		return err
+	}
+	//zipWriter := zip.NewWriter(w)
+	//archive, err := zip.OpenReader(writeBufferZip.Name())
+	if err != nil {
+		return err
+	}
+	//defer archive.Close()
+	zipFile, err := os.Open(writeBufferZip.Name())
+	io.Copy(w, zipFile)
+	//for _, f := range archive.File {
+	//	fileInArchive, err := f.Open()
+	//	if err != nil {
+	//		return err
+	//	}
+	//	if _, err := io.Copy(w, fileInArchive); err != nil {
+	//		return err
+	//	}
+	//}
+	//// Only 1 file, but should fix this. mabe pass in the zip reader with multiple files read in.
+	//zipWriter.Copy(archive.File[0])
+	//if err := zipWriter.Close(); err != nil {
+	//	return err
+	//}
+	return nil
 }
 
 func (rs *ResultStore) Save(ctx context.Context, p Pkg, analysis interface{}) error {
