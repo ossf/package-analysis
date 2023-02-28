@@ -18,11 +18,9 @@ ENV DEBIAN_FRONTEND noninteractive
 ENV DEBCONF_NOWARNINGS="yes"
 
 # setup repo for kubectl
-RUN mkdir -m 0700 -p /etc/apt/keyrings
-# Keyring for kubernetes package predownloaded from https://packages.cloud.google.com/apt/doc/apt-key.gpg
-# Key does not need rotation so local copy should not go stale.
-COPY kubernetes.gpg /etc/apt/keyrings/kubernetes.gpg
-RUN echo "deb [signed-by=/etc/apt/keyrings/kubernetes.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list
+RUN mkdir -m 0700 -p /etc/apt/keyrings && \
+ 	curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg -o /etc/apt/keyrings/kubernetes.gpg && \
+ 	echo "deb [signed-by=/etc/apt/keyrings/kubernetes.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list
 
 # install keys for powershell
 RUN curl -fsSL "https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb" -o /setup/packages-microsoft-prod.deb && \
