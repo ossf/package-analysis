@@ -85,9 +85,10 @@ func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig,
 		log.Info("run basic analysis")
 		basicData, err := GetBasicData(fileList, archivePath)
 		if err != nil {
-			return nil, fmt.Errorf("error when collecting basic data: %w", err)
+			log.Error("static analysis error", log.Label("task", string(Basic)), "error", err)
+		} else {
+			result.BasicData = basicData
 		}
-		result.BasicData = basicData
 	}
 
 	if runTask[Parsing] {
@@ -95,22 +96,28 @@ func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig,
 
 		input := externalcmd.MultipleFileInput(fileList)
 		parsingResults, err := parsing.Analyze(jsParserConfig, input, false)
-
 		result.ParsingData = parsing.PackageResult{}
+
 		if err != nil {
-			return nil, fmt.Errorf("error while parsing package files: %w", err)
-		}
-		for path, parseResult := range parsingResults {
-			pathInArchive := archivePath[path]
-			result.ParsingData[pathInArchive] = parseResult
+			log.Error("static analysis error", log.Label("task", string(Parsing)), "error", err)
+		} else {
+			// change absolute path in parsingResults to package-relative path
+			for path, parseResult := range parsingResults {
+				pathInArchive := archivePath[path]
+				result.ParsingData[pathInArchive] = parseResult
+			}
 		}
 	}
 
 	if runTask[Obfuscation] {
-		log.Info("run obfuscation analysis")
+		if len(result.ParsingData) > 0 {
+			log.Info("run obfuscation analysis")
 
-		obfuscationData := obfuscation.Analyze(result.ParsingData)
-		result.ObfuscationData = &obfuscationData
+			obfuscationData := obfuscation.Analyze(result.ParsingData)
+			result.ObfuscationData = &obfuscationData
+		} else {
+			log.Warn("skipped obfuscation analysis due to no parsing data")
+		}
 	}
 
 	return &result, nil
