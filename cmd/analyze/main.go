@@ -33,7 +33,7 @@ var (
 	combinedSandbox     = flag.Bool("combined-sandbox", true, "use combined sandbox image for dynamic analysis")
 	listModes           = flag.Bool("list-modes", false, "prints out a list of available analysis modes")
 	help                = flag.Bool("help", false, "print help on available options")
-	analysisMode        = utils.CommaSeparatedFlags("mode", "dynamic",
+	analysisMode        = utils.CommaSeparatedFlags("mode", "static,dynamic",
 		"list of analysis modes to run, separated by commas. Use -list-modes to see available options")
 )
 
