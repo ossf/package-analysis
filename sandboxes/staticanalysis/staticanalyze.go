@@ -24,7 +24,7 @@ var (
 	localFile   = flag.String("local", "", "local package archive containing package to be analysed. Name must match -package argument")
 	output      = flag.String("output", "", "where to write output JSON results (default stdout)")
 	help        = flag.Bool("help", false, "prints this help and list of available analyses")
-	analyses    = utils.CommaSeparatedFlags("analyses", "all", "comma-separated list of static analysis tasks to perform")
+	analyses    = utils.CommaSeparatedFlags("analyses", []string{"all"}, "comma-separated list of static analysis tasks to perform")
 )
 
 type workDirs struct {
