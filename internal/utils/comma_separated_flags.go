@@ -9,10 +9,10 @@ import (
 // to allow passing a comma-separated list of strings as a single command-line argument.
 //
 // Make sure to call InitFlag() on the returned struct before calling flag.Parse().
-func CommaSeparatedFlags(name, value, usage string) CommaSeparatedFlagsData {
+func CommaSeparatedFlags(name string, values []string, usage string) CommaSeparatedFlagsData {
 	return CommaSeparatedFlagsData{
 		Name:   name,
-		Values: []string{value},
+		Values: values,
 		Info:   usage,
 	}
 }
