@@ -29,6 +29,7 @@ func (proxy *PubSubProxy) Listen(ctx context.Context, logger *zap.Logger, prepro
 			return err
 		}
 		go func(m *pubsub.Message) {
+			logger := logger.With(zap.String("message_id", m.LoggableID))
 			outMsg, err := preprocess(msg)
 			if err != nil {
 				// Failure to parse and process messages should result in an acknowledgement
