@@ -5,12 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"path"
-	"time"
 
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/fileblob"
@@ -33,10 +31,6 @@ import (
 )
 
 const (
-	maxRetries    = 10
-	retryInterval = 1
-	retryExpRate  = 1.5
-
 	localPkgPathFmt = "/local/%s"
 )
 
@@ -245,7 +239,6 @@ func messageLoop(ctx context.Context, subURL, packagesBucket, notificationTopicU
 }
 
 func main() {
-	retryCount := 0
 	ctx := context.Background()
 	subURL := os.Getenv("OSSMALWARE_WORKER_SUBSCRIPTION")
 	packagesBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_PACKAGES")
@@ -286,26 +279,8 @@ func main() {
 		"image_nopull", fmt.Sprintf("%v", imageSpec.noPull),
 		"topic_notification", notificationTopicURL)
 
-	for {
-		err := messageLoop(ctx, subURL, packagesBucket, notificationTopicURL, imageSpec, resultsBuckets)
-		if err != nil {
-			if retryCount++; retryCount >= maxRetries {
-				log.Error("Retries exceeded",
-					"error", err,
-					"retryCount", retryCount)
-				break
-			}
-
-			retryDuration := time.Second * time.Duration(retryDelay(retryCount))
-			log.Error("Error encountered, retrying",
-				"error", err,
-				"retryCount", retryCount,
-				"waitSeconds", retryDuration.Seconds())
-			time.Sleep(retryDuration)
-		}
+	err := messageLoop(ctx, subURL, packagesBucket, notificationTopicURL, imageSpec, resultsBuckets)
+	if err != nil {
+		log.Error("Error encountered", "error", err)
 	}
-}
-
-func retryDelay(retryCount int) int {
-	return int(math.Floor(retryInterval * math.Pow(retryExpRate, float64(retryCount))))
 }
