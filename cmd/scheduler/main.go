@@ -4,10 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math"
 	"os"
 	"regexp"
-	"time"
 
 	"github.com/ossf/package-feeds/pkg/feeds"
 	"go.uber.org/zap"
@@ -18,12 +16,6 @@ import (
 	"github.com/ossf/package-analysis/cmd/scheduler/proxy"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
-)
-
-const (
-	maxRetries    = 10
-	retryInterval = 1
-	retryExpRate  = 1.5
 )
 
 type ManagerConfig struct {
@@ -66,27 +58,13 @@ var supportedPkgManagers = map[string]*ManagerConfig{
 }
 
 func main() {
-	retryCount := 0
 	subscriptionURL := os.Getenv("OSSMALWARE_SUBSCRIPTION_URL")
 	topicURL := os.Getenv("OSSMALWARE_WORKER_TOPIC")
 	logger := log.Initialize(os.Getenv("LOGGER_ENV"))
 
-	for retryCount <= maxRetries {
-		logger = logger.With(zap.Int("retryCount", retryCount))
-		err := listenLoop(logger, subscriptionURL, topicURL)
-		if err != nil {
-			if retryCount++; retryCount >= maxRetries {
-				logger.With(zap.Error(err)).Error("Retries exceeded")
-				break
-			}
-
-			retryDuration := time.Second * time.Duration(retryDelay(retryCount))
-			logger.With(
-				zap.Error(err),
-				zap.Duration("wait", retryDuration),
-			).Error("Retries exceeded")
-			time.Sleep(retryDuration)
-		}
+	err := listenLoop(logger, subscriptionURL, topicURL)
+	if err != nil {
+		logger.With(zap.Error(err)).Error("Error encountered")
 	}
 }
 
@@ -132,8 +110,4 @@ func listenLoop(logger *zap.Logger, subURL, topicURL string) error {
 	})
 
 	return err
-}
-
-func retryDelay(retryCount int) int {
-	return int(math.Floor(retryInterval * math.Pow(retryExpRate, float64(retryCount))))
 }
