@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ossf/package-feeds/pkg/feeds"
+	"go.uber.org/zap"
 	"gocloud.dev/pubsub"
 	_ "gocloud.dev/pubsub/gcppubsub"
 	_ "gocloud.dev/pubsub/kafkapubsub"
@@ -68,29 +69,28 @@ func main() {
 	retryCount := 0
 	subscriptionURL := os.Getenv("OSSMALWARE_SUBSCRIPTION_URL")
 	topicURL := os.Getenv("OSSMALWARE_WORKER_TOPIC")
-	log.Initialize(os.Getenv("LOGGER_ENV"))
+	logger := log.Initialize(os.Getenv("LOGGER_ENV"))
 
 	for retryCount <= maxRetries {
-		err := listenLoop(subscriptionURL, topicURL)
+		logger = logger.With(zap.Int("retryCount", retryCount))
+		err := listenLoop(logger, subscriptionURL, topicURL)
 		if err != nil {
 			if retryCount++; retryCount >= maxRetries {
-				log.Error("Retries exceeded",
-					"error", err,
-					"retryCount", retryCount)
+				logger.With(zap.Error(err)).Error("Retries exceeded")
 				break
 			}
 
 			retryDuration := time.Second * time.Duration(retryDelay(retryCount))
-			log.Error("Error encountered, retrying",
-				"error", err,
-				"retryCount", retryCount,
-				"waitSeconds", retryDuration.Seconds())
+			logger.With(
+				zap.Error(err),
+				zap.Duration("wait", retryDuration),
+			).Error("Retries exceeded")
 			time.Sleep(retryDuration)
 		}
 	}
 }
 
-func listenLoop(subURL, topicURL string) error {
+func listenLoop(logger *zap.Logger, subURL, topicURL string) error {
 	ctx := context.Background()
 
 	sub, err := pubsub.OpenSubscription(ctx, subURL)
@@ -104,11 +104,12 @@ func listenLoop(subURL, topicURL string) error {
 	}
 
 	srv := proxy.New(topic, sub)
-	log.Info("Listening for messages to proxy...")
+	logger.Info("Listening for messages to proxy...")
 
-	err = srv.Listen(ctx, func(m *pubsub.Message) (*pubsub.Message, error) {
-		log.Info("Handling message",
-			"body", string(m.Body))
+	err = srv.Listen(ctx, logger, func(m *pubsub.Message) (*pubsub.Message, error) {
+		logger.With(
+			zap.ByteString("body", m.Body),
+		).Info("Handling message")
 		pkg := feeds.Package{}
 		if err := json.Unmarshal(m.Body, &pkg); err != nil {
 			return nil, fmt.Errorf("error unmarshalling json: %w", err)
