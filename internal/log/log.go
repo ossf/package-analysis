@@ -17,6 +17,8 @@ import (
 )
 
 // Level represents a specific logging level. It wraps zapcore.Level.
+//
+// Deprecated: use zapcore.Level directly.
 type Level zapcore.Level
 
 const (
@@ -54,7 +56,7 @@ var (
 // "false" will use the default development configuration.
 //
 // Note: this method MUST be called before any other method in this package.
-func Initialize(env string) {
+func Initialize(env string) *zap.Logger {
 	var err error
 	var logger *zap.Logger
 	switch strings.ToLower(env) {
@@ -75,7 +77,9 @@ func Initialize(env string) {
 		golog.Panic(err)
 	}
 	zap.RedirectStdLog(logger)
-	defaultLogger = logger.WithOptions(zap.AddCallerSkip(1)).Sugar()
+	logger = logger.WithOptions(zap.AddCallerSkip(1))
+	defaultLogger = logger.Sugar() // Set defaultLogger to provide legacy support
+	return logger
 }
 
 func checkInit() {
@@ -86,6 +90,8 @@ func checkInit() {
 
 // Debug is a convenience wrapper for calling Debugw on the default
 // zap.SugaredLogger instance.
+//
+// Deprecated: Use a *zap.Logger instance and call Debug directly.
 func Debug(msg string, keysAndValues ...interface{}) {
 	checkInit()
 	defaultLogger.Debugw(msg, keysAndValues...)
@@ -93,6 +99,8 @@ func Debug(msg string, keysAndValues ...interface{}) {
 
 // Info is a convenience wrapper for calling Infow on the default
 // zap.SugaredLogger instance.
+//
+// Deprecated: Use a *zap.Logger instance and call Info directly.
 func Info(msg string, keysAndValues ...interface{}) {
 	checkInit()
 	defaultLogger.Infow(msg, keysAndValues...)
@@ -100,6 +108,8 @@ func Info(msg string, keysAndValues ...interface{}) {
 
 // Warn is a convenience wrapper for calling Warnw on the default
 // zap.SugaredLogger instance.
+//
+// Deprecated: Use a *zap.Logger instance and call Warn directly.
 func Warn(msg string, keysAndValues ...interface{}) {
 	checkInit()
 	defaultLogger.Warnw(msg, keysAndValues...)
@@ -107,6 +117,8 @@ func Warn(msg string, keysAndValues ...interface{}) {
 
 // Error is a convenience wrapper for calling Errorw on the default
 // zap.SugaredLogger instance.
+//
+// Deprecated: Use a *zap.Logger instance and call Error directly.
 func Error(msg string, keysAndValues ...interface{}) {
 	checkInit()
 	defaultLogger.Errorw(msg, keysAndValues...)
@@ -114,6 +126,8 @@ func Error(msg string, keysAndValues ...interface{}) {
 
 // Fatal is a convenience wrapper for calling Fatalw on the default
 // zap.SugaredLogger instance.
+//
+// Deprecated: Use a *zap.Logger instance and call Fatal directly.
 func Fatal(msg string, keysAndValues ...interface{}) {
 	checkInit()
 	defaultLogger.Fatalw(msg, keysAndValues...)
@@ -121,6 +135,8 @@ func Fatal(msg string, keysAndValues ...interface{}) {
 
 // Panic is a convenience wrapper for calling Panicw on the default
 // zap.SugaredLogger instance.
+//
+// Deprecated: Use a *zap.Logger instance and call Panic directly.
 func Panic(msg string, keysAndValues ...interface{}) {
 	checkInit()
 	defaultLogger.Panicw(msg, keysAndValues...)
@@ -128,6 +144,8 @@ func Panic(msg string, keysAndValues ...interface{}) {
 
 // DPanic is a convenience wrapper for calling DPanicw on the default
 // zap.SugaredLogger instance.
+//
+// Deprecated: Use a *zap.Logger instance and call DPanic directly.
 func DPanic(msg string, keysAndValues ...interface{}) {
 	checkInit()
 	defaultLogger.DPanicw(msg, keysAndValues...)
