@@ -4,24 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math"
 	"os"
 	"regexp"
-	"time"
 
 	"github.com/ossf/package-feeds/pkg/feeds"
+	"go.uber.org/zap"
 	"gocloud.dev/pubsub"
 	_ "gocloud.dev/pubsub/gcppubsub"
 	_ "gocloud.dev/pubsub/kafkapubsub"
 
 	"github.com/ossf/package-analysis/cmd/scheduler/proxy"
 	"github.com/ossf/package-analysis/internal/log"
-)
-
-const (
-	maxRetries    = 10
-	retryInterval = 1
-	retryExpRate  = 1.5
+	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
 type ManagerConfig struct {
@@ -31,7 +25,7 @@ type ManagerConfig struct {
 	ExcludeVersions []*regexp.Regexp
 
 	// Ecosystem is the internal name of the ecosystem.
-	Ecosystem string
+	Ecosystem pkgecosystem.Ecosystem
 }
 
 func (m *ManagerConfig) SkipVersion(version string) bool {
@@ -53,43 +47,28 @@ func (m *ManagerConfig) SkipVersion(version string) bool {
 // analyze. It is a map from ossf/package-feeds package types, to a
 // config for the package manager's feed.
 var supportedPkgManagers = map[string]*ManagerConfig{
-	"npm":      {Ecosystem: "npm"},
-	"pypi":     {Ecosystem: "pypi"},
-	"rubygems": {Ecosystem: "rubygems"},
+	"npm":      {Ecosystem: pkgecosystem.NPM},
+	"pypi":     {Ecosystem: pkgecosystem.PyPI},
+	"rubygems": {Ecosystem: pkgecosystem.RubyGems},
 	"packagist": {
-		Ecosystem:       "packagist",
+		Ecosystem:       pkgecosystem.Packagist,
 		ExcludeVersions: []*regexp.Regexp{regexp.MustCompile(`^dev-`), regexp.MustCompile(`\.x-dev$`)},
 	},
-	"crates": {Ecosystem: "crates.io"},
+	"crates": {Ecosystem: pkgecosystem.CratesIO},
 }
 
 func main() {
-	retryCount := 0
 	subscriptionURL := os.Getenv("OSSMALWARE_SUBSCRIPTION_URL")
 	topicURL := os.Getenv("OSSMALWARE_WORKER_TOPIC")
-	log.Initialize(os.Getenv("LOGGER_ENV"))
+	logger := log.Initialize(os.Getenv("LOGGER_ENV"))
 
-	for retryCount <= maxRetries {
-		err := listenLoop(subscriptionURL, topicURL)
-		if err != nil {
-			if retryCount++; retryCount >= maxRetries {
-				log.Error("Retries exceeded",
-					"error", err,
-					"retryCount", retryCount)
-				break
-			}
-
-			retryDuration := time.Second * time.Duration(retryDelay(retryCount))
-			log.Error("Error encountered, retrying",
-				"error", err,
-				"retryCount", retryCount,
-				"waitSeconds", retryDuration.Seconds())
-			time.Sleep(retryDuration)
-		}
+	err := listenLoop(logger, subscriptionURL, topicURL)
+	if err != nil {
+		logger.With(zap.Error(err)).Error("Error encountered")
 	}
 }
 
-func listenLoop(subURL, topicURL string) error {
+func listenLoop(logger *zap.Logger, subURL, topicURL string) error {
 	ctx := context.Background()
 
 	sub, err := pubsub.OpenSubscription(ctx, subURL)
@@ -103,11 +82,12 @@ func listenLoop(subURL, topicURL string) error {
 	}
 
 	srv := proxy.New(topic, sub)
-	log.Info("Listening for messages to proxy...")
+	logger.Info("Listening for messages to proxy...")
 
-	err = srv.Listen(ctx, func(m *pubsub.Message) (*pubsub.Message, error) {
-		log.Info("Handling message",
-			"body", string(m.Body))
+	err = srv.Listen(ctx, logger, func(m *pubsub.Message) (*pubsub.Message, error) {
+		logger.With(
+			zap.ByteString("body", m.Body),
+		).Info("Handling message")
 		pkg := feeds.Package{}
 		if err := json.Unmarshal(m.Body, &pkg); err != nil {
 			return nil, fmt.Errorf("error unmarshalling json: %w", err)
@@ -123,15 +103,11 @@ func listenLoop(subURL, topicURL string) error {
 			Body: []byte{},
 			Metadata: map[string]string{
 				"name":      pkg.Name,
-				"ecosystem": config.Ecosystem,
+				"ecosystem": config.Ecosystem.String(),
 				"version":   pkg.Version,
 			},
 		}, nil
 	})
 
 	return err
-}
-
-func retryDelay(retryCount int) int {
-	return int(math.Floor(retryInterval * math.Pow(retryExpRate, float64(retryCount))))
 }

@@ -1,6 +1,9 @@
-package pkgecosystem
+package pkgmanager
 
-import "github.com/ossf/package-analysis/pkg/api"
+import (
+	"github.com/ossf/package-analysis/pkg/api/analysisrun"
+	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
+)
 
 type Pkg struct {
 	name    string
@@ -17,7 +20,7 @@ func (p *Pkg) Version() string {
 	return p.version
 }
 
-func (p *Pkg) Ecosystem() api.Ecosystem {
+func (p *Pkg) Ecosystem() pkgecosystem.Ecosystem {
 	return p.manager.ecosystem
 }
 
@@ -38,7 +41,7 @@ func (p *Pkg) LocalPath() string {
 }
 
 // Command returns the analysis command for the package.
-func (p *Pkg) Command(phase api.RunPhase) []string {
+func (p *Pkg) Command(phase analysisrun.DynamicPhase) []string {
 	args := make([]string, 0)
 	args = append(args, p.manager.command)
 

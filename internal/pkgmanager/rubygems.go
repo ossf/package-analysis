@@ -1,11 +1,12 @@
-package pkgecosystem
+package pkgmanager
 
 import (
 	"encoding/json"
 	"fmt"
 	"net/http"
 
-	"github.com/ossf/package-analysis/pkg/api"
+	"github.com/ossf/package-analysis/pkg/api/analysisrun"
+	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
 type rubygemsJSON struct {
@@ -30,23 +31,17 @@ func getRubyGemsLatest(pkg string) (string, error) {
 }
 
 var rubygemsPkgManager = PkgManager{
-	ecosystem:     api.EcosystemRubyGems,
+	ecosystem:     pkgecosystem.RubyGems,
 	image:         "gcr.io/ossf-malware-analysis/ruby",
 	command:       "/usr/local/bin/analyze.rb",
 	latestVersion: getRubyGemsLatest,
-	runPhases: []api.RunPhase{
-		api.RunPhaseInstall,
-		api.RunPhaseImport,
-	},
+	dynamicPhases: analysisrun.DefaultDynamicPhases(),
 }
 
 var rubygemsPkgManagerCombinedSandbox = PkgManager{
-	ecosystem:     api.EcosystemRubyGems,
+	ecosystem:     pkgecosystem.RubyGems,
 	image:         combinedDynamicAnalysisImage,
 	command:       "/usr/local/bin/analyze-ruby.rb",
 	latestVersion: getRubyGemsLatest,
-	runPhases: []api.RunPhase{
-		api.RunPhaseInstall,
-		api.RunPhaseImport,
-	},
+	dynamicPhases: analysisrun.DefaultDynamicPhases(),
 }

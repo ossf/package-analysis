@@ -1,4 +1,4 @@
-package pkgecosystem
+package pkgmanager
 
 import (
 	"encoding/json"
@@ -6,7 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ossf/package-analysis/pkg/api"
+	"github.com/ossf/package-analysis/pkg/api/analysisrun"
+	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
 type packagistJSON struct {
@@ -49,23 +50,17 @@ func getPackagistLatest(pkg string) (string, error) {
 }
 
 var packagistPkgManager = PkgManager{
-	ecosystem:     api.EcosystemPackagist,
+	ecosystem:     pkgecosystem.Packagist,
 	image:         "gcr.io/ossf-malware-analysis/packagist",
 	command:       "/usr/local/bin/analyze.php",
 	latestVersion: getPackagistLatest,
-	runPhases: []api.RunPhase{
-		api.RunPhaseInstall,
-		api.RunPhaseImport,
-	},
+	dynamicPhases: analysisrun.DefaultDynamicPhases(),
 }
 
 var packagistPkgManagerCombinedSandbox = PkgManager{
-	ecosystem:     api.EcosystemPackagist,
+	ecosystem:     pkgecosystem.Packagist,
 	image:         combinedDynamicAnalysisImage,
 	command:       "/usr/local/bin/analyze-php.php",
 	latestVersion: getPackagistLatest,
-	runPhases: []api.RunPhase{
-		api.RunPhaseInstall,
-		api.RunPhaseImport,
-	},
+	dynamicPhases: analysisrun.DefaultDynamicPhases(),
 }

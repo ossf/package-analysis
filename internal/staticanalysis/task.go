@@ -4,7 +4,7 @@ package staticanalysis
 // Some tasks may depend on other tasks, for example Obfuscation depends on Parsing.
 type Task string
 
-// Note: these names match the JSON field names in result.go.
+// NOTE: the string values below should match the JSON field names in result.go.
 const (
 	// Basic analysis consists of information about a file that can be determined
 	// without parsing, for example file size, file type and hash.

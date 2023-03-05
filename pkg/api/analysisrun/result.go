@@ -1,17 +1,15 @@
-package result
+package analysisrun
 
 import (
 	"encoding/json"
 
 	"github.com/ossf/package-analysis/internal/analysis"
-	"github.com/ossf/package-analysis/internal/strace"
-	"github.com/ossf/package-analysis/pkg/api"
 )
 
 type (
-	DynamicAnalysisStraceSummary        map[api.RunPhase]*StraceSummary
-	DynamicAnalysisFileWritesSummary    map[api.RunPhase]*FileWritesSummary
-	DynamicAnalysisFileWriteBufferPaths map[api.RunPhase][]string
+	DynamicAnalysisStraceSummary        map[DynamicPhase]*StraceSummary
+	DynamicAnalysisFileWritesSummary    map[DynamicPhase]*FileWritesSummary
+	DynamicAnalysisFileWriteBufferPaths map[DynamicPhase][]string
 )
 
 type DynamicAnalysisResults struct {
@@ -30,14 +28,18 @@ type StraceSummary struct {
 	Files    []FileResult
 	Sockets  []SocketResult
 	Commands []CommandResult
-	DNS      []DnsResult
+	DNS      []DNSResult
 }
 
 type FileWritesSummary []FileWriteResult
 
 type FileWriteResult struct {
 	Path      string
-	WriteInfo strace.WriteInfo
+	WriteInfo []WriteInfo
+}
+
+type WriteInfo struct {
+	BytesWritten int64
 }
 
 type FileResult struct {
@@ -58,12 +60,12 @@ type CommandResult struct {
 	Environment []string
 }
 
-type DnsQueries struct {
+type DNSQueries struct {
 	Hostname string
 	Types    []string
 }
 
-type DnsResult struct {
+type DNSResult struct {
 	Class   string
-	Queries []DnsQueries
+	Queries []DNSQueries
 }

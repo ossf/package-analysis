@@ -206,7 +206,7 @@ func parseJS(parserConfig ParserConfig, input externalcmd.Input) (languageResult
 func RunExampleParsing(config ParserConfig, input externalcmd.Input) {
 	parseResult, rawOutput, err := parseJS(config, input)
 
-	println("\nRaw JSON:\n", rawOutput)
+	fmt.Println("\nRaw JSON:\n", rawOutput)
 
 	if err != nil {
 		fmt.Printf("Error: %s\n", err)

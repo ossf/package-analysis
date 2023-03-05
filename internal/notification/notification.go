@@ -7,13 +7,14 @@ import (
 
 	"gocloud.dev/pubsub"
 
-	"github.com/ossf/package-analysis/pkg/notification"
-	"github.com/ossf/package-analysis/pkg/pkgidentifier"
+	"github.com/ossf/package-analysis/pkg/api/analysisrun"
+	"github.com/ossf/package-analysis/pkg/api/notification"
+	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
-func PublishAnalysisCompletion(ctx context.Context, notificationTopic *pubsub.Topic, name, version, ecosystem string) error {
-	pkgDetails := pkgidentifier.PkgIdentifier{Name: name, Version: version, Ecosystem: ecosystem}
-	notificationMsg, err := json.Marshal(notification.AnalysisCompletion{Package: pkgDetails})
+func PublishAnalysisCompletion(ctx context.Context, notificationTopic *pubsub.Topic, name, version string, ecosystem pkgecosystem.Ecosystem) error {
+	k := analysisrun.Key{Name: name, Version: version, Ecosystem: ecosystem}
+	notificationMsg, err := json.Marshal(notification.AnalysisRunComplete{Key: k})
 	if err != nil {
 		return fmt.Errorf("failed to encode completion notification: %w", err)
 	}

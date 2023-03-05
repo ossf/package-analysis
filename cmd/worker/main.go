@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -23,21 +22,17 @@ import (
 	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/notification"
-	"github.com/ossf/package-analysis/internal/pkgecosystem"
+	"github.com/ossf/package-analysis/internal/pkgmanager"
 	"github.com/ossf/package-analysis/internal/resultstore"
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/internal/staticanalysis"
 	"github.com/ossf/package-analysis/internal/utils"
 	"github.com/ossf/package-analysis/internal/worker"
-	"github.com/ossf/package-analysis/pkg/api"
-	"github.com/ossf/package-analysis/pkg/result"
+	"github.com/ossf/package-analysis/pkg/api/analysisrun"
+	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
 const (
-	maxRetries    = 10
-	retryInterval = 1
-	retryExpRate  = 1.5
-
 	localPkgPathFmt = "/local/%s"
 )
 
@@ -81,7 +76,7 @@ func copyPackageToLocalFile(ctx context.Context, packagesBucket *blob.Bucket, bu
 	return fmt.Sprintf(localPkgPathFmt, path.Base(bucketPath)), f, nil
 }
 
-func saveResults(ctx context.Context, pkg *pkgecosystem.Pkg, dest resultBucketPaths, dynamicResults result.DynamicAnalysisResults, staticResults result.StaticAnalysisResults) error {
+func saveResults(ctx context.Context, pkg *pkgmanager.Pkg, dest resultBucketPaths, dynamicResults analysisrun.DynamicAnalysisResults, staticResults analysisrun.StaticAnalysisResults) error {
 	if dest.dynamicAnalysis != "" {
 		err := resultstore.New(dest.dynamicAnalysis, resultstore.ConstructPath()).Save(ctx, pkg, dynamicResults.StraceSummary)
 		if err != nil {
@@ -157,7 +152,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		return nil
 	}
 
-	ecosystem := msg.Metadata["ecosystem"]
+	ecosystem := pkgecosystem.Ecosystem(msg.Metadata["ecosystem"])
 	if ecosystem == "" {
 		log.Warn("ecosystem is empty",
 			"name", name)
@@ -165,10 +160,10 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		return nil
 	}
 
-	manager := pkgecosystem.Manager(api.Ecosystem(ecosystem), false)
+	manager := pkgmanager.Manager(ecosystem, false)
 	if manager == nil {
 		log.Warn("Unsupported pkg manager",
-			log.Label("ecosystem", ecosystem),
+			log.Label("ecosystem", ecosystem.String()),
 			"name", name)
 		msg.Ack()
 		return nil
@@ -211,7 +206,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	pkg, err := worker.ResolvePkg(manager, name, version, localPkgPath)
 	if err != nil {
 		log.Error("Error resolving package",
-			log.Label("ecosystem", ecosystem),
+			log.Label("ecosystem", ecosystem.String()),
 			log.Label("name", name),
 			"error", err)
 		return err
@@ -222,7 +217,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		return err
 	}
 
-	var staticResults result.StaticAnalysisResults
+	var staticResults analysisrun.StaticAnalysisResults
 	if resultsBuckets.staticAnalysis != "" {
 		staticResults, _, err = worker.RunStaticAnalysis(pkg, staticSandboxOpts, staticanalysis.All)
 		if err != nil {
@@ -291,7 +286,6 @@ func messageLoop(ctx context.Context, subURL, packagesBucket, notificationTopicU
 }
 
 func main() {
-	retryCount := 0
 	ctx := context.Background()
 	subURL := os.Getenv("OSSMALWARE_WORKER_SUBSCRIPTION")
 	packagesBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_PACKAGES")
@@ -332,26 +326,8 @@ func main() {
 		"image_nopull", fmt.Sprintf("%v", imageSpec.noPull),
 		"topic_notification", notificationTopicURL)
 
-	for {
-		err := messageLoop(ctx, subURL, packagesBucket, notificationTopicURL, imageSpec, resultsBuckets)
-		if err != nil {
-			if retryCount++; retryCount >= maxRetries {
-				log.Error("Retries exceeded",
-					"error", err,
-					"retryCount", retryCount)
-				break
-			}
-
-			retryDuration := time.Second * time.Duration(retryDelay(retryCount))
-			log.Error("Error encountered, retrying",
-				"error", err,
-				"retryCount", retryCount,
-				"waitSeconds", retryDuration.Seconds())
-			time.Sleep(retryDuration)
-		}
+	err := messageLoop(ctx, subURL, packagesBucket, notificationTopicURL, imageSpec, resultsBuckets)
+	if err != nil {
+		log.Error("Error encountered", "error", err)
 	}
-}
-
-func retryDelay(retryCount int) int {
-	return int(math.Floor(retryInterval * math.Pow(retryExpRate, float64(retryCount))))
 }

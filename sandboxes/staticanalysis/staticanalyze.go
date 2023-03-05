@@ -9,22 +9,22 @@ import (
 	"time"
 
 	"github.com/ossf/package-analysis/internal/log"
-	"github.com/ossf/package-analysis/internal/pkgecosystem"
+	"github.com/ossf/package-analysis/internal/pkgmanager"
 	"github.com/ossf/package-analysis/internal/staticanalysis"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"github.com/ossf/package-analysis/internal/utils"
 	"github.com/ossf/package-analysis/internal/worker"
-	"github.com/ossf/package-analysis/pkg/api"
+	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
 var (
-	ecosystem   = flag.String("ecosystem", "", "Package ecosystem (required)")
-	packageName = flag.String("package", "", "Package name (required)")
-	version     = flag.String("version", "", "Package version (ignored if local file is specified)")
-	localFile   = flag.String("local", "", "Local package archive containing package to be analysed. Name must match -package argument")
+	ecosystem   pkgecosystem.Ecosystem
+	packageName = flag.String("package", "", "package name (required)")
+	version     = flag.String("version", "", "package version (ignored if local file is specified)")
+	localFile   = flag.String("local", "", "local package archive containing package to be analysed. Name must match -package argument")
 	output      = flag.String("output", "", "where to write output JSON results (default stdout)")
-	help        = flag.Bool("help", false, "Prints this help and list of available analyses")
-	analyses    = utils.CommaSeparatedFlags("analyses", "all", "comma-separated list of static analysis tasks to perform")
+	help        = flag.Bool("help", false, "prints this help and list of available analyses")
+	analyses    = utils.CommaSeparatedFlags("analyses", []string{"all"}, "comma-separated list of static analysis tasks to perform")
 )
 
 type workDirs struct {
@@ -99,6 +99,8 @@ func run() (err error) {
 	startTime := time.Now()
 
 	log.Initialize(os.Getenv("LOGGER_ENV"))
+
+	flag.TextVar(&ecosystem, "ecosystem", pkgecosystem.None, fmt.Sprintf("package ecosystem. Can be %s (required)", pkgecosystem.SupportedEcosystemsStrings))
 	analyses.InitFlag()
 	flag.Parse()
 
@@ -109,14 +111,14 @@ func run() (err error) {
 		return
 	}
 
-	if *ecosystem == "" || *packageName == "" {
+	if ecosystem == pkgecosystem.None || *packageName == "" {
 		flag.Usage()
 		return fmt.Errorf("ecosystem and package are required arguments")
 	}
 
-	manager := pkgecosystem.Manager(api.Ecosystem(*ecosystem), false)
+	manager := pkgmanager.Manager(ecosystem, false)
 	if manager == nil {
-		return fmt.Errorf("unsupported pkg manager for ecosystem %s", *ecosystem)
+		return fmt.Errorf("unsupported pkg manager for ecosystem %s", ecosystem)
 	}
 
 	pkg, err := worker.ResolvePkg(manager, *packageName, *version, *localFile)
@@ -131,7 +133,7 @@ func run() (err error) {
 	}
 
 	log.Info("Static analysis launched",
-		log.Label("ecosystem", *ecosystem),
+		log.Label("ecosystem", ecosystem.String()),
 		"package", *packageName,
 		"version", *version,
 		"local_path", *localFile,

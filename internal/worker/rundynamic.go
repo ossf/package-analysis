@@ -6,10 +6,9 @@ import (
 	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/dynamicanalysis"
 	"github.com/ossf/package-analysis/internal/log"
-	"github.com/ossf/package-analysis/internal/pkgecosystem"
+	"github.com/ossf/package-analysis/internal/pkgmanager"
 	"github.com/ossf/package-analysis/internal/sandbox"
-	"github.com/ossf/package-analysis/pkg/api"
-	"github.com/ossf/package-analysis/pkg/result"
+	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 )
 
 /*
@@ -35,11 +34,11 @@ error: Any error that occurred in the runtime/sandbox infrastructure.
 This does not include errors caused by the package under analysis.
 */
 
-func RunDynamicAnalysis(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option) (result.DynamicAnalysisResults, api.RunPhase, analysis.Status, error) {
-	results := result.DynamicAnalysisResults{
-		StraceSummary:        make(result.DynamicAnalysisStraceSummary),
-		FileWritesSummary:    make(result.DynamicAnalysisFileWritesSummary),
-		FileWriteBufferPaths: make(result.DynamicAnalysisFileWriteBufferPaths),
+func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option) (analysisrun.DynamicAnalysisResults, analysisrun.DynamicPhase, analysis.Status, error) {
+	results := analysisrun.DynamicAnalysisResults{
+		StraceSummary:        make(analysisrun.DynamicAnalysisStraceSummary),
+		FileWrites:           make(analysisrun.DynamicAnalysisFileWritesSummary),
+		FileWriteBufferPaths: make(analysisrun.DynamicAnalysisFileWriteBufferPaths),
 	}
 
 	sb := sandbox.New(pkg.Manager().DynamicAnalysisImage(), sbOpts...)
@@ -50,10 +49,10 @@ func RunDynamicAnalysis(pkg *pkgecosystem.Pkg, sbOpts []sandbox.Option) (result.
 		}
 	}()
 
-	var lastRunPhase api.RunPhase
+	var lastRunPhase analysisrun.DynamicPhase
 	var lastStatus analysis.Status
 	var lastError error
-	for _, phase := range pkg.Manager().RunPhases() {
+	for _, phase := range pkg.Manager().DynamicPhases() {
 		startTime := time.Now()
 		phaseResult, err := dynamicanalysis.Run(sb, pkg.Command(phase))
 		lastRunPhase = phase
