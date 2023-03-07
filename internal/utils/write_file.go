@@ -61,7 +61,7 @@ func ReadAndRemoveTempFile(fileName string) ([]byte, error) {
 	return fileContents, err
 }
 
-func WriteFilesToZip(writeBufferPaths []string, zipFile *os.File) {
+func WriteFilesToZip(writeBufferPaths []string, zipFile *os.File) error {
 	var rtm runtime.MemStats
 	runtime.ReadMemStats(&rtm)
 	log.Debug("mem stats before write files to zip")
@@ -69,27 +69,36 @@ func WriteFilesToZip(writeBufferPaths []string, zipFile *os.File) {
 	zipWriter := zip.NewWriter(zipFile)
 	defer zipWriter.Close()
 	for _, path := range writeBufferPaths {
-		file, err := os.Open(path)
+		file, err := os.OpenFile(path, os.O_RDWR, 0666)
 		if err != nil {
-			return
+			return err
 		}
 		fileContents, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
 		writeBufferId := GetSHA256Hash(fileContents)
 		w, err := zipWriter.Create(writeBufferId)
 		if err != nil {
-			return
+			return err
 		}
 		if _, err := io.Copy(w, file); err != nil {
-			return
+			return err
 		}
-		// do we need to flush the writer?
-		// figure out how to defer this close in the for loop
-		os.Remove(path)
-		file.Close()
+		closeError := file.Close()
+
+		if closeError != nil {
+			return closeError
+		}
+		error := os.Remove(path)
+		if error != nil {
+			return error
+		}
+
 	}
 	var rtm2 runtime.MemStats
 	runtime.ReadMemStats(&rtm2)
 	log.Debug("mem stats after  write files to zip")
 	log.Debug(strconv.FormatUint(rtm2.Alloc, 10))
-
+	return nil
 }

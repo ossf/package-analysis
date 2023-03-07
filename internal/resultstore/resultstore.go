@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"gocloud.dev/blob"
@@ -60,37 +61,6 @@ func (rs *ResultStore) generatePath(p Pkg) string {
 	return path
 }
 
-func (rs *ResultStore) OpenAndWriteToBucket(ctx context.Context, contents []byte, path, filename string) error {
-	bkt, err := blob.OpenBucket(ctx, rs.bucket)
-	if err != nil {
-		return err
-	}
-	defer bkt.Close()
-
-	uploadPath := filepath.Join(path, filename)
-	log.Info("Uploading results",
-		"bucket", rs.bucket,
-		"path", uploadPath)
-
-	w, err := bkt.NewWriter(ctx, uploadPath, nil)
-	if err != nil {
-		return err
-	}
-	if _, err := w.Write(contents); err != nil {
-		return err
-	}
-	if err := w.Close(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (rs *ResultStore) SaveWriteBuffer(ctx context.Context, p Pkg, fileName string, writeBuffer []byte) error {
-	path := filepath.Join(rs.generatePath(p), writeBufferFolder)
-	return rs.OpenAndWriteToBucket(ctx, writeBuffer, path, fileName+".json")
-}
-
 func (rs *ResultStore) SaveWriteBufferZip(ctx context.Context, p Pkg, fileName string, writeBufferZip *os.File) error {
 	path := filepath.Join(rs.generatePath(p), writeBufferFolder)
 	bkt, err := blob.OpenBucket(ctx, rs.bucket)
@@ -108,28 +78,20 @@ func (rs *ResultStore) SaveWriteBufferZip(ctx context.Context, p Pkg, fileName s
 	if err != nil {
 		return err
 	}
-	//zipWriter := zip.NewWriter(w)
-	//archive, err := zip.OpenReader(writeBufferZip.Name())
+	zipFile, err := os.OpenFile(writeBufferZip.Name(), os.O_RDWR, 0666)
+	defer zipFile.Close()
 	if err != nil {
 		return err
 	}
-	//defer archive.Close()
-	zipFile, err := os.Open(writeBufferZip.Name())
-	io.Copy(w, zipFile)
-	//for _, f := range archive.File {
-	//	fileInArchive, err := f.Open()
-	//	if err != nil {
-	//		return err
-	//	}
-	//	if _, err := io.Copy(w, fileInArchive); err != nil {
-	//		return err
-	//	}
-	//}
-	//// Only 1 file, but should fix this. mabe pass in the zip reader with multiple files read in.
-	//zipWriter.Copy(archive.File[0])
-	//if err := zipWriter.Close(); err != nil {
-	//	return err
-	//}
+	log.Error("write buffer zip name ")
+	log.Error(writeBufferZip.Name())
+	bytes, copyErr := io.Copy(w, zipFile)
+	if copyErr != nil {
+		log.Fatal("Could not copy zip to bucket")
+	}
+	log.Error("bytes copied ")
+	log.Error(strconv.FormatInt(int64(bytes), 10))
+
 	return nil
 }
 
@@ -145,15 +107,38 @@ func (rs *ResultStore) Save(ctx context.Context, p Pkg, analysis interface{}) er
 		Analysis:         analysis,
 	}
 
-	filename := "results.json"
-	if version != "" {
-		filename = version + ".json"
-	}
-
 	b, err := json.Marshal(result)
 	if err != nil {
 		return err
 	}
 
-	return rs.OpenAndWriteToBucket(ctx, b, rs.generatePath(p), filename)
+	bkt, err := blob.OpenBucket(ctx, rs.bucket)
+	if err != nil {
+		return err
+	}
+	defer bkt.Close()
+
+	filename := "results.json"
+	if version != "" {
+		filename = version + ".json"
+	}
+
+	path := rs.generatePath(p)
+	uploadPath := filepath.Join(path, filename)
+	log.Info("Uploading results",
+		"bucket", rs.bucket,
+		"path", uploadPath)
+
+	w, err := bkt.NewWriter(ctx, uploadPath, nil)
+	if err != nil {
+		return err
+	}
+	if _, err := w.Write(b); err != nil {
+		return err
+	}
+	if err := w.Close(); err != nil {
+		return err
+	}
+
+	return nil
 }

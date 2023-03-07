@@ -124,21 +124,23 @@ func dynamicAnalysis(pkg *pkgmanager.Pkg) {
 		if err != nil {
 			log.Error("Could not create zip file")
 		}
-		utils.WriteFilesToZip(allPhasesWriteBufferPathsArray, zipFile)
+		zipError := utils.WriteFilesToZip(allPhasesWriteBufferPathsArray, zipFile)
+		if err != nil {
+			log.Fatal("Failes to write files to zip", zipError)
+		}
+
+		filesToZipDuration := time.Since(startTime)
+		log.Info("files to zip duration",
+			log.Label("ecosystem", pkg.EcosystemName()),
+			"name", pkg.Name(),
+			"version", pkg.Version(),
+			"dynamic_analysis_phase_duration", filesToZipDuration,
+		)
+
 		writeError := resultstore.New(bucket, resultstore.BasePath(path)).SaveWriteBufferZip(ctx, pkg, "write_buffers", zipFile)
 		if writeError != nil {
 			log.Fatal(" Failed to upload file write buffer results to blobstore", writeError)
 		}
-		//for _, writeBufferPath := range writeBufferPathsArray {
-		//	writeBuffer, err := utils.ReadAndRemoveTempFile(writeBufferPath)
-		//	if err != nil {
-		//		log.Error("Could not read file", err)
-		//	}
-		//	writeBufferErr := resultstore.New(bucket, resultstore.BasePath(path)).SaveWriteBuffer(ctx, pkg, utils.GetSHA256Hash(writeBuffer), writeBuffer)
-		//	if writeBufferErr != nil {
-		//		log.Fatal(" Failed to upload file write buffer results to blobstore", writeBufferErr)
-		//	}
-		//}
 	}
 
 	runDuration := time.Since(startTime)

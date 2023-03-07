@@ -37,7 +37,7 @@ This does not include errors caused by the package under analysis.
 func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option) (analysisrun.DynamicAnalysisResults, analysisrun.DynamicPhase, analysis.Status, error) {
 	results := analysisrun.DynamicAnalysisResults{
 		StraceSummary:        make(analysisrun.DynamicAnalysisStraceSummary),
-		FileWrites:           make(analysisrun.DynamicAnalysisFileWritesSummary),
+		FileWritesSummary:    make(analysisrun.DynamicAnalysisFileWritesSummary),
 		FileWriteBufferPaths: make(analysisrun.DynamicAnalysisFileWriteBufferPaths),
 	}
 

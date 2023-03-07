@@ -9,6 +9,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"path"
+	"strconv"
 	"time"
 
 	"gocloud.dev/blob"
@@ -101,43 +102,26 @@ func saveResults(ctx context.Context, pkg *pkgmanager.Pkg, dest resultBucketPath
 		for _, writeBufferPathsArray := range dynamicResults.FileWriteBufferPaths {
 			allPhasesWriteBufferPathsArray = append(allPhasesWriteBufferPathsArray, writeBufferPathsArray...)
 		}
+		log.Error(strconv.FormatInt(int64(len(allPhasesWriteBufferPathsArray)), 10))
 		zipFile, err := os.CreateTemp("", "write_buffers_temp.*.zip")
 		if err != nil {
 			log.Error("Could not create zip file")
 		}
-		utils.WriteFilesToZip(allPhasesWriteBufferPathsArray, zipFile)
+		zipError := utils.WriteFilesToZip(allPhasesWriteBufferPathsArray, zipFile)
+		if zipError != nil {
+			log.Fatal("Could not write files to zip", zipError)
+		}
 		writeError := resultstore.New(dest.fileWrites, resultstore.ConstructPath()).SaveWriteBufferZip(ctx, pkg, "write_buffers", zipFile)
 		if writeError != nil {
 			log.Fatal(" Failed to upload file write buffer results to blobstore", writeError)
 		}
-		//for phase, writeBufferPathsArray := range dynamicResults.FileWriteBufferPaths {
-		//	//for _, writeBufferPath := range writeBufferPathsArray {
-		//	//	writeBuffer, err := utils.ReadAndRemoveTempFile(writeBufferPath)
-		//	//	if err != nil {
-		//	//		log.Error("Could not read file", err)
-		//	//	}
-		//	//	writeBufferErr := resultstore.New(dest.fileWrites, resultstore.ConstructPath()).SaveWriteBuffer(ctx, pkg, utils.GetSHA256Hash(writeBuffer), writeBuffer)
-		//	//	if writeBufferErr != nil {
-		//	//		log.Fatal(" Failed to upload file write buffer results to blobstore", writeBufferErr)
-		//	//	}
-		//	//}
-		//	zipFile, err := os.CreateTemp("", "write_buffer_zip.*.zip")
-		//	if err != nil {
-		//		log.Error("Could not create zip file")
-		//	}
-		//	utils.WriteFilesToZip(writeBufferPathsArray, zipFile)
-		//	writeError := resultstore.New(dest.fileWrites, resultstore.ConstructPath()).SaveWriteBufferZip(ctx, pkg, "write_buffers "+string(phase), zipFile)
-		//	if writeError != nil {
-		//		log.Fatal(" Failed to upload file write buffer results to blobstore", writeError)
-		//	}
-		//}
+		os.Remove(zipFile.Name())
 	}
 	runDuration := time.Since(startTime)
 	log.Info("Writes duration finished",
 		log.Label("ecosystem", pkg.EcosystemName()),
 		"name", pkg.Name(),
 		"version", pkg.Version(),
-		"error", err,
 		"dynamic_analysis_phase_duration", runDuration,
 	)
 

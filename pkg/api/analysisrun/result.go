@@ -39,7 +39,8 @@ type FileWriteResult struct {
 }
 
 type WriteInfo struct {
-	BytesWritten int64
+	WriteBufferId string
+	BytesWritten  int64
 }
 
 type FileResult struct {

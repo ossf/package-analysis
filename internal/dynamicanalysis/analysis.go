@@ -18,8 +18,8 @@ const (
 )
 
 type Result struct {
-	StraceSummary analysisrun.StraceSummary
-	FileWrites    analysisrun.FileWritesSummary
+	StraceSummary     analysisrun.StraceSummary
+	FileWritesSummary analysisrun.FileWritesSummary
 	// Paths to files on disk that contain write buffer data from write syscalls
 	FileWriteBufferPaths []string
 }
@@ -88,7 +88,7 @@ func (d *Result) setData(straceResult *strace.Result, dns *dnsanalyzer.DNSAnalyz
 			Delete: f.Delete,
 		})
 		if len(f.WriteInfo) > 0 {
-			w := analysisrun.FileWritesSummary{Path: f.Path}
+			w := analysisrun.FileWriteResult{Path: f.Path}
 			for _, wi := range f.WriteInfo {
 				w.WriteInfo = append(w.WriteInfo, analysisrun.WriteInfo{
 					WriteBufferId: wi.WriteBufferId,
