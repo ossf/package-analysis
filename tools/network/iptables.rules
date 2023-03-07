@@ -5,6 +5,17 @@
 *filter
 :INPUT ACCEPT [0:0]
 :CNI-ADMIN - [0:0]
+
+# SSLSplit Routing
+-A INPUT -p tcp --dport 80 -j ACCEPT
+-A OUTPUT -p tcp --dport 80 -j ACCEPT
+-A INPUT -p tcp --dport 443 -j ACCEPT
+-A OUTPUT -p tcp --dport 443 -j ACCEPT
+-A INPUT -p tcp --dport 8081 -j ACCEPT
+-A OUTPUT -p tcp --dport 8081 -j ACCEPT
+-A INPUT -p tcp --dport 8080 -j ACCEPT
+-A OUTPUT -p tcp --dport 8080 -j ACCEPT
+
 # Block access to this host from the container network.
 -A INPUT -s 172.16.16.0/24 -j DROP
 # Block access to metadata.google.internal/AWS metadata.
