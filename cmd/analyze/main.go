@@ -110,7 +110,7 @@ func dynamicAnalysis(pkg *pkgmanager.Pkg) {
 
 	// this is only valid if RunDynamicAnalysis() returns nil err
 	if lastStatus != analysis.StatusCompleted {
-		log.Fatal("Dynamic analysis phase did not complete successfully",
+		log.Warn("Dynamic analysis phase did not complete successfully",
 			"lastRunPhase", lastRunPhase,
 			"status", lastStatus)
 	}
