@@ -1,12 +1,12 @@
 package resultstore
 
 import (
+	"archive/zip"
 	"context"
 	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
-	"strconv"
 	"time"
 
 	"gocloud.dev/blob"
@@ -15,9 +15,8 @@ import (
 	_ "gocloud.dev/blob/s3blob"
 
 	"github.com/ossf/package-analysis/internal/log"
+	"github.com/ossf/package-analysis/internal/utils"
 )
-
-const writeBufferFolder = "file-write-contents"
 
 type ResultStore struct {
 	bucket        string
@@ -61,15 +60,14 @@ func (rs *ResultStore) generatePath(p Pkg) string {
 	return path
 }
 
-func (rs *ResultStore) SaveWriteBufferZip(ctx context.Context, p Pkg, fileName string, writeBufferZip *os.File) error {
-	path := filepath.Join(rs.generatePath(p), writeBufferFolder)
+func (rs *ResultStore) SaveWriteBufferZip(ctx context.Context, p Pkg, fileName string, writeBufferPaths []string) error {
 	bkt, err := blob.OpenBucket(ctx, rs.bucket)
 	if err != nil {
 		return err
 	}
 	defer bkt.Close()
 
-	uploadPath := filepath.Join(path, fileName+".zip")
+	uploadPath := filepath.Join(rs.generatePath(p), fileName+".zip")
 	log.Info("Uploading results",
 		"bucket", rs.bucket,
 		"path", uploadPath)
@@ -78,20 +76,39 @@ func (rs *ResultStore) SaveWriteBufferZip(ctx context.Context, p Pkg, fileName s
 	if err != nil {
 		return err
 	}
-	zipFile, err := os.OpenFile(writeBufferZip.Name(), os.O_RDWR, 0666)
-	defer zipFile.Close()
-	if err != nil {
-		return err
-	}
-	log.Error("write buffer zip name ")
-	log.Error(writeBufferZip.Name())
-	bytes, copyErr := io.Copy(w, zipFile)
-	if copyErr != nil {
-		log.Fatal("Could not copy zip to bucket")
-	}
-	log.Error("bytes copied ")
-	log.Error(strconv.FormatInt(int64(bytes), 10))
+	defer w.Close()
 
+	zipWriter := zip.NewWriter(w)
+	defer zipWriter.Close()
+
+	for _, filePath := range writeBufferPaths {
+		file, err := os.OpenFile(filePath, os.O_RDWR, 0666)
+		if err != nil {
+			return err
+		}
+		fileContents, err := os.ReadFile(filePath)
+		if err != nil {
+			return err
+		}
+		writeBufferId := utils.GetSHA256Hash(fileContents)
+		w, err := zipWriter.Create(writeBufferId)
+		if err != nil {
+			return err
+		}
+
+		if _, err := io.Copy(w, file); err != nil {
+			return err
+		}
+
+		if err = file.Close(); err != nil {
+			return err
+		}
+
+		// Remove the temporary file now that we've copied it into the zip file.
+		if err = os.Remove(filePath); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

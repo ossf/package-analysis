@@ -9,7 +9,6 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"path"
-	"strconv"
 	"time"
 
 	"gocloud.dev/blob"
@@ -91,7 +90,7 @@ func saveResults(ctx context.Context, pkg *pkgmanager.Pkg, dest resultBucketPath
 		}
 	}
 
-	startTime := time.Now()
+	fileWriteDataUploadStart := time.Now()
 	if dest.fileWrites != "" {
 		err := resultstore.New(dest.fileWrites, resultstore.ConstructPath()).Save(ctx, pkg, dynamicResults.FileWritesSummary)
 		if err != nil {
@@ -102,27 +101,19 @@ func saveResults(ctx context.Context, pkg *pkgmanager.Pkg, dest resultBucketPath
 		for _, writeBufferPathsArray := range dynamicResults.FileWriteBufferPaths {
 			allPhasesWriteBufferPathsArray = append(allPhasesWriteBufferPathsArray, writeBufferPathsArray...)
 		}
-		log.Error(strconv.FormatInt(int64(len(allPhasesWriteBufferPathsArray)), 10))
-		zipFile, err := os.CreateTemp("", "write_buffers_temp.*.zip")
+		allPhasesWriteBufferPathsArray = utils.RemoveDuplicates(allPhasesWriteBufferPathsArray)
+
+		err = resultstore.New(dest.fileWrites, resultstore.ConstructPath()).SaveWriteBufferZip(ctx, pkg, "write_buffers", allPhasesWriteBufferPathsArray)
 		if err != nil {
-			log.Error("Could not create zip file")
+			log.Fatal(" Failed to upload file write buffer results to blobstore", err)
 		}
-		zipError := utils.WriteFilesToZip(allPhasesWriteBufferPathsArray, zipFile)
-		if zipError != nil {
-			log.Fatal("Could not write files to zip", zipError)
-		}
-		writeError := resultstore.New(dest.fileWrites, resultstore.ConstructPath()).SaveWriteBufferZip(ctx, pkg, "write_buffers", zipFile)
-		if writeError != nil {
-			log.Fatal(" Failed to upload file write buffer results to blobstore", writeError)
-		}
-		os.Remove(zipFile.Name())
 	}
-	runDuration := time.Since(startTime)
-	log.Info("Writes duration finished",
+	fileWriteDataDuration := time.Since(fileWriteDataUploadStart)
+	log.Info("Write data upload duration",
 		log.Label("ecosystem", pkg.EcosystemName()),
 		"name", pkg.Name(),
 		"version", pkg.Version(),
-		"dynamic_analysis_phase_duration", runDuration,
+		"write_data_upload_duration", fileWriteDataDuration,
 	)
 
 	return nil

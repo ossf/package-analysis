@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"runtime"
-	"strconv"
 	"strings"
 	"time"
 
@@ -103,12 +101,7 @@ func dynamicAnalysis(pkg *pkgmanager.Pkg) {
 		}
 	}
 
-	var rtm runtime.MemStats
-	runtime.ReadMemStats(&rtm)
-	log.Debug("mem stats before file writer")
-	log.Debug(strconv.FormatUint(rtm.Alloc, 10))
-
-	startTime := time.Now()
+	fileWriteDataUploadStart := time.Now()
 
 	if *uploadFileWriteInfo != "" {
 		bucket, path := parseBucketPath(*uploadFileWriteInfo)
@@ -120,42 +113,21 @@ func dynamicAnalysis(pkg *pkgmanager.Pkg) {
 		for _, writeBufferPathsArray := range results.FileWriteBufferPaths {
 			allPhasesWriteBufferPathsArray = append(allPhasesWriteBufferPathsArray, writeBufferPathsArray...)
 		}
-		zipFile, err := os.CreateTemp("", "write_buffers_temp.*.zip")
-		if err != nil {
-			log.Error("Could not create zip file")
-		}
-		zipError := utils.WriteFilesToZip(allPhasesWriteBufferPathsArray, zipFile)
-		if err != nil {
-			log.Fatal("Failes to write files to zip", zipError)
-		}
+		allPhasesWriteBufferPathsArray = utils.RemoveDuplicates(allPhasesWriteBufferPathsArray)
 
-		filesToZipDuration := time.Since(startTime)
-		log.Info("files to zip duration",
-			log.Label("ecosystem", pkg.EcosystemName()),
-			"name", pkg.Name(),
-			"version", pkg.Version(),
-			"dynamic_analysis_phase_duration", filesToZipDuration,
-		)
-
-		writeError := resultstore.New(bucket, resultstore.BasePath(path)).SaveWriteBufferZip(ctx, pkg, "write_buffers", zipFile)
-		if writeError != nil {
-			log.Fatal(" Failed to upload file write buffer results to blobstore", writeError)
+		err = resultstore.New(bucket, resultstore.BasePath(path)).SaveWriteBufferZip(ctx, pkg, "write_buffers", allPhasesWriteBufferPathsArray)
+		if err != nil {
+			log.Fatal(" Failed to upload file write buffer results to blobstore", err)
 		}
 	}
 
-	runDuration := time.Since(startTime)
-	log.Info("Writes duration finished",
+	fileWriteDataDuration := time.Since(fileWriteDataUploadStart)
+	log.Info("Write data upload duration",
 		log.Label("ecosystem", pkg.EcosystemName()),
 		"name", pkg.Name(),
 		"version", pkg.Version(),
-		"error", err,
-		"dynamic_analysis_phase_duration", runDuration,
+		"write_data_upload_duration", fileWriteDataDuration,
 	)
-
-	var rtm2 runtime.MemStats
-	runtime.ReadMemStats(&rtm2)
-	log.Debug("mem stats after file writer")
-	log.Debug(strconv.FormatUint(rtm2.Alloc, 10))
 
 	// this is only valid if RunDynamicAnalysis() returns nil err
 	if lastStatus != analysis.StatusCompleted {

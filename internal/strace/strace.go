@@ -216,8 +216,8 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 			return fmt.Errorf("failed to parse create args: %s", args)
 		}
 
-		//log.Debug("creat",
-		//	"path", match[1])
+		log.Debug("creat",
+			"path", match[1])
 		r.recordFileAccess(match[1], false, true, false)
 	case "open":
 		match := openPattern.FindStringSubmatch(args)
