@@ -5,8 +5,6 @@ import (
 	"os"
 )
 
-const tempFolder = "temp_writes_folder"
-
 /*
 WriteFile writes the given file contents to the given path.
 The file may optionally be marked as executable.

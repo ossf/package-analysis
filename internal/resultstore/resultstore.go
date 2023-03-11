@@ -73,10 +73,10 @@ func (rs *ResultStore) SaveWriteBufferZip(ctx context.Context, p Pkg, fileName s
 		"path", uploadPath)
 
 	w, err := bkt.NewWriter(ctx, uploadPath, nil)
+	defer w.Close()
 	if err != nil {
 		return err
 	}
-	defer w.Close()
 
 	zipWriter := zip.NewWriter(w)
 	defer zipWriter.Close()
