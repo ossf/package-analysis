@@ -62,8 +62,8 @@ func printAnalysisModes() {
 //  1. The image tag is always passed through. An empty tag is the same as "latest".
 //  2. A local package is mapped into the sandbox if applicable.
 //  3. Image pulling is disabled if the "-nopull" command-line flag was used.
-func makeSandboxOptions(mode analysis.Mode) []sandbox.Option {
-	sbOpts := worker.DefaultSandboxOptions(mode, *imageTag)
+func makeSandboxOptions() []sandbox.Option {
+	sbOpts := []sandbox.Option{sandbox.Tag(*imageTag)}
 
 	if *localPkg != "" {
 		sbOpts = append(sbOpts, sandbox.Volume(*localPkg, *localPkg))
@@ -83,7 +83,7 @@ func dynamicAnalysis(pkg *pkgmanager.Pkg) {
 		sandbox.InitNetwork()
 	}
 
-	sbOpts := makeSandboxOptions(analysis.Dynamic)
+	sbOpts := append(worker.DynamicSandboxOptions(), makeSandboxOptions()...)
 
 	results, lastRunPhase, lastStatus, err := worker.RunDynamicAnalysis(pkg, sbOpts)
 	if err != nil {
@@ -121,7 +121,7 @@ func staticAnalysis(pkg *pkgmanager.Pkg) {
 		sandbox.InitNetwork()
 	}
 
-	sbOpts := makeSandboxOptions(analysis.Static)
+	sbOpts := append(worker.DynamicSandboxOptions(), makeSandboxOptions()...)
 
 	results, status, err := worker.RunStaticAnalysis(pkg, sbOpts, staticanalysis.All)
 	if err != nil {
