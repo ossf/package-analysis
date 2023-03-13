@@ -13,3 +13,7 @@ web
 # the top-level project directory, so needs to copy
 # from this subdirectory during the build
 !sandboxes/staticanalysis
+
+# Don't ignore any go mod or sum files; go build needs them
+!**/go.mod
+!**/go.sum
