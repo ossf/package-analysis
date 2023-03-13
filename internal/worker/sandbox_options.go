@@ -4,8 +4,6 @@ import (
 	"github.com/ossf/package-analysis/internal/sandbox"
 )
 
-// 		sandbox.Tag(imageTag),
-
 // StaticSandboxOptions provides a set of sandbox options necessary to run the
 // static analysis sandboxes.
 func StaticSandboxOptions() []sandbox.Option {
