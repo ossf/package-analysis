@@ -3,7 +3,7 @@
 build
 infra
 examples
-function
+function/loader/**
 sandboxes
 internal/staticanalysis/parsing/js/node_modules
 node_modules
@@ -15,5 +15,7 @@ web
 !sandboxes/staticanalysis
 
 # Don't ignore any go mod or sum files; go build needs them
+# Note: this rule won't work if the parent directory of a
+# go.mod or go.sum file is excluded
 !**/go.mod
 !**/go.sum
