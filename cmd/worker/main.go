@@ -18,7 +18,6 @@ import (
 	_ "gocloud.dev/pubsub/gcppubsub"
 	_ "gocloud.dev/pubsub/kafkapubsub"
 
-	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/notification"
 	"github.com/ossf/package-analysis/internal/pkgmanager"
@@ -133,8 +132,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	worker.LogRequest(ecosystem, name, version, remotePkgPath, resultsBucketOverride)
 
 	localPkgPath := ""
-	dynamicSandboxOpts := worker.DefaultSandboxOptions(analysis.Dynamic, imageSpec.tag)
-	staticSandboxOpts := worker.DefaultSandboxOptions(analysis.Static, imageSpec.tag)
+	sandboxOpts := []sandbox.Option{sandbox.Tag(imageSpec.tag)}
 
 	if remotePkgPath != "" {
 		tmpPkgPath, pkgFile, err := copyPackageToLocalFile(ctx, packagesBucket, remotePkgPath)
@@ -145,15 +143,11 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		defer os.Remove(pkgFile.Name())
 
 		localPkgPath = tmpPkgPath
-		mountOption := sandbox.Volume(pkgFile.Name(), localPkgPath)
-		// mount temp file into the sandboxes
-		dynamicSandboxOpts = append(dynamicSandboxOpts, mountOption)
-		staticSandboxOpts = append(staticSandboxOpts, mountOption)
+		sandboxOpts = append(sandboxOpts, sandbox.Volume(pkgFile.Name(), localPkgPath))
 	}
 
 	if imageSpec.noPull {
-		dynamicSandboxOpts = append(dynamicSandboxOpts, sandbox.NoPull())
-		staticSandboxOpts = append(staticSandboxOpts, sandbox.NoPull())
+		sandboxOpts = append(sandboxOpts, sandbox.NoPull())
 	}
 
 	pkg, err := worker.ResolvePkg(manager, name, version, localPkgPath)
@@ -165,11 +159,13 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		return err
 	}
 
+	dynamicSandboxOpts := append(worker.DynamicSandboxOptions(), sandboxOpts...)
 	results, _, _, err := worker.RunDynamicAnalysis(pkg, dynamicSandboxOpts)
 	if err != nil {
 		return err
 	}
 
+	staticSandboxOpts := append(worker.StaticSandboxOptions(), sandboxOpts...)
 	var staticResults analysisrun.StaticAnalysisResults
 	if resultsBuckets.staticAnalysis != "" {
 		staticResults, _, err = worker.RunStaticAnalysis(pkg, staticSandboxOpts, staticanalysis.All)
