@@ -121,7 +121,7 @@ func staticAnalysis(pkg *pkgmanager.Pkg) {
 		sandbox.InitNetwork()
 	}
 
-	sbOpts := append(worker.DynamicSandboxOptions(), makeSandboxOptions()...)
+	sbOpts := append(worker.StaticSandboxOptions(), makeSandboxOptions()...)
 
 	results, status, err := worker.RunStaticAnalysis(pkg, sbOpts, staticanalysis.All)
 	if err != nil {
