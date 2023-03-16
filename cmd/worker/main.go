@@ -92,20 +92,19 @@ func saveResults(ctx context.Context, pkg *pkgmanager.Pkg, dest resultBucketPath
 
 	fileWriteDataUploadStart := time.Now()
 	if dest.fileWrites != "" {
-		err := resultstore.New(dest.fileWrites, resultstore.ConstructPath()).Save(ctx, pkg, dynamicResults.FileWritesSummary)
-		if err != nil {
+		rs := resultstore.New(dest.fileWrites, resultstore.ConstructPath())
+		if err := rs.Save(ctx, pkg, dynamicResults.FileWritesSummary); err != nil {
 			return fmt.Errorf("failed to upload file write analysis to blobstore = %w", err)
 		}
-
-		var allPhasesWriteBufferPathsArray []string
-		for _, writeBufferPathsArray := range dynamicResults.FileWriteBufferPaths {
-			allPhasesWriteBufferPathsArray = append(allPhasesWriteBufferPathsArray, writeBufferPathsArray...)
+		var allPhasesWriteBufferIdsArray []string
+		for _, writeBufferIds := range dynamicResults.FileWriteBufferIds {
+			allPhasesWriteBufferIdsArray = append(allPhasesWriteBufferIdsArray, writeBufferIds...)
 		}
-		allPhasesWriteBufferPathsArray = utils.RemoveDuplicates(allPhasesWriteBufferPathsArray)
-
-		err = resultstore.New(dest.fileWrites, resultstore.ConstructPath()).SaveWriteBufferZip(ctx, pkg, "write_buffers", allPhasesWriteBufferPathsArray)
-		if err != nil {
-			log.Fatal(" Failed to upload file write buffer results to blobstore", err)
+		if err := rs.SaveTempFilesToZip(ctx, pkg, "write_buffers", allPhasesWriteBufferIdsArray); err != nil {
+			return fmt.Errorf("failed to upload file write buffer results to blobstore = #{err}")
+		}
+		if err := utils.RemoveTempFilesDirectory(); err != nil {
+			return fmt.Errorf("failed to remove temp files = #{err}")
 		}
 	}
 	fileWriteDataDuration := time.Since(fileWriteDataUploadStart)

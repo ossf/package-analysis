@@ -48,9 +48,9 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option) (analysisr
 	)
 
 	results := analysisrun.DynamicAnalysisResults{
-		StraceSummary:        make(analysisrun.DynamicAnalysisStraceSummary),
-		FileWritesSummary:    make(analysisrun.DynamicAnalysisFileWritesSummary),
-		FileWriteBufferPaths: make(analysisrun.DynamicAnalysisFileWriteBufferPaths),
+		StraceSummary:      make(analysisrun.DynamicAnalysisStraceSummary),
+		FileWritesSummary:  make(analysisrun.DynamicAnalysisFileWritesSummary),
+		FileWriteBufferIds: make(analysisrun.DynamicAnalysisFileWriteBufferIds),
 	}
 
 	sb := sandbox.New(pkg.Manager().DynamicAnalysisImage(), sbOpts...)
@@ -90,7 +90,7 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option) (analysisr
 		results.StraceSummary[phase] = &phaseResult.StraceSummary
 		results.FileWritesSummary[phase] = &phaseResult.FileWritesSummary
 		lastStatus = phaseResult.StraceSummary.Status
-		results.FileWriteBufferPaths[phase] = phaseResult.FileWriteBufferPaths
+		results.FileWriteBufferIds[phase] = phaseResult.FileWriteBufferIds
 
 		if lastStatus != analysis.StatusCompleted {
 			// Error caused by an issue with the package (probably).

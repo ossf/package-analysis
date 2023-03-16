@@ -7,16 +7,16 @@ import (
 )
 
 type (
-	DynamicAnalysisStraceSummary        map[DynamicPhase]*StraceSummary
-	DynamicAnalysisFileWritesSummary    map[DynamicPhase]*FileWritesSummary
-	DynamicAnalysisFileWriteBufferPaths map[DynamicPhase][]string
+	DynamicAnalysisStraceSummary      map[DynamicPhase]*StraceSummary
+	DynamicAnalysisFileWritesSummary  map[DynamicPhase]*FileWritesSummary
+	DynamicAnalysisFileWriteBufferIds map[DynamicPhase][]string
 )
 
 type DynamicAnalysisResults struct {
 	StraceSummary     DynamicAnalysisStraceSummary
 	FileWritesSummary DynamicAnalysisFileWritesSummary
-	// Paths to files on disk that contain write buffer data from write syscalls
-	FileWriteBufferPaths DynamicAnalysisFileWriteBufferPaths
+	// // Ids that correlate to the name of the file that saves the actual write buffer contents.
+	FileWriteBufferIds DynamicAnalysisFileWriteBufferIds
 }
 
 type StaticAnalysisResults = json.RawMessage

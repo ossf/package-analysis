@@ -22,18 +22,3 @@ func WriteFile(path string, contents []byte, executable bool) error {
 
 	return nil
 }
-
-/* Writes a temp file and flushes the buffer */
-func CreateAndWriteTempFile(fileName string, data []byte) (string, error) {
-	f, err := os.CreateTemp("", fileName)
-	defer f.Close()
-	if err != nil {
-		return "", err
-	}
-	_, err = f.Write(data)
-	if err != nil {
-		return "", err
-	}
-	f.Sync()
-	return f.Name(), nil
-}

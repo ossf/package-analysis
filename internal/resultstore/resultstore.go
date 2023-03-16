@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -60,7 +59,10 @@ func (rs *ResultStore) generatePath(p Pkg) string {
 	return path
 }
 
-func (rs *ResultStore) SaveWriteBufferZip(ctx context.Context, p Pkg, fileName string, writeBufferPaths []string) error {
+func (rs *ResultStore) SaveTempFilesToZip(ctx context.Context, p Pkg, fileName string, tempFileNames []string) error {
+
+	tempFileNames = utils.RemoveDuplicates(tempFileNames)
+
 	bkt, err := blob.OpenBucket(ctx, rs.bucket)
 	if err != nil {
 		return err
@@ -81,18 +83,18 @@ func (rs *ResultStore) SaveWriteBufferZip(ctx context.Context, p Pkg, fileName s
 	zipWriter := zip.NewWriter(w)
 	defer zipWriter.Close()
 
-	for _, filePath := range writeBufferPaths {
-		file, err := os.OpenFile(filePath, os.O_RDWR, 0666)
+	for _, fileName := range tempFileNames {
+		file, err := utils.OpenTempFile(fileName)
 		if err != nil {
 			return err
 		}
-		fileContents, err := os.ReadFile(filePath)
+
+		w, err := zipWriter.Create(fileName + ".json")
 		if err != nil {
 			return err
 		}
-		writeBufferId := utils.GetSHA256Hash(fileContents)
-		w, err := zipWriter.Create(writeBufferId)
-		if err != nil {
+
+		if _, err := file.Seek(0, 0); err != nil {
 			return err
 		}
 
@@ -101,11 +103,6 @@ func (rs *ResultStore) SaveWriteBufferZip(ctx context.Context, p Pkg, fileName s
 		}
 
 		if err = file.Close(); err != nil {
-			return err
-		}
-
-		// Remove the temporary file now that we've copied it into the zip file.
-		if err = os.Remove(filePath); err != nil {
 			return err
 		}
 	}

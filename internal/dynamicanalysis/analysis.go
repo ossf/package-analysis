@@ -20,8 +20,8 @@ const (
 type Result struct {
 	StraceSummary     analysisrun.StraceSummary
 	FileWritesSummary analysisrun.FileWritesSummary
-	// Paths to files on disk that contain write buffer data from write syscalls
-	FileWriteBufferPaths []string
+	// Ids that correlate to the name of the file that saves the actual write buffer contents. We save this separately so we don't need to dig through the FileWritesSummary later on.
+	FileWriteBufferIds []string
 }
 
 var resultError = &Result{
@@ -94,11 +94,9 @@ func (d *Result) setData(straceResult *strace.Result, dns *dnsanalyzer.DNSAnalyz
 					WriteBufferId: wi.WriteBufferId,
 					BytesWritten:  wi.BytesWritten,
 				})
+				d.FileWriteBufferIds = append(d.FileWriteBufferIds, wi.WriteBufferId)
 			}
 			d.FileWritesSummary = append(d.FileWritesSummary, w)
-			for _, writeBufferPath := range f.WriteBufferPaths {
-				d.FileWriteBufferPaths = append(d.FileWriteBufferPaths, writeBufferPath)
-			}
 		}
 	}
 
