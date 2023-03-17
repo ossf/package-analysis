@@ -6,15 +6,17 @@ import (
 )
 
 /*
-Directory where write buffer data will be saved to disk before uploaded to a cloud bucket.
-This directory needs to be shared across files so all functions that access it will be defined here.
+Subfolder where write buffer data will be saved to disk before uploaded to a cloud bucket.
+This subfolder needs to be shared across files so all functions that access it will be defined here.
 */
-const temp_write_buf_dir = "tmp/temp_write_buffers"
+
+const write_buffer_folder = "temp_write_buffers"
 
 /* Writes a file in the directory specified by temp_write_buf_dir and flushes the buffer */
 func CreateAndWriteTempFile(fileName string, data []byte) error {
-	err := os.Mkdir(temp_write_buf_dir, 0666)
-	f, err := os.Create(filepath.Join(temp_write_buf_dir, fileName))
+	tempWriteBufDir := filepath.Join(os.TempDir(), write_buffer_folder)
+	err := os.Mkdir(tempWriteBufDir, 0777)
+	f, err := os.Create(filepath.Join(tempWriteBufDir, fileName))
 	if err != nil {
 		return err
 	}
@@ -28,9 +30,9 @@ func CreateAndWriteTempFile(fileName string, data []byte) error {
 }
 
 func OpenTempFile(fileName string) (*os.File, error) {
-	return os.Open(filepath.Join(temp_write_buf_dir, fileName))
+	return os.Open(filepath.Join(os.TempDir(), write_buffer_folder, fileName))
 }
 
 func RemoveTempFilesDirectory() error {
-	return os.RemoveAll(temp_write_buf_dir)
+	return os.RemoveAll(filepath.Join(os.TempDir(), write_buffer_folder))
 }

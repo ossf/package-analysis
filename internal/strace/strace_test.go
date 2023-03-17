@@ -2,23 +2,17 @@ package strace_test
 
 import (
 	"fmt"
-	"os"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/strace"
+	"github.com/ossf/package-analysis/internal/utils"
 )
 
 func init() {
 	log.Initialize("")
-}
-
-func CleanUpWriteBuffers(file strace.FileInfo) {
-	for _, writeBufferPath := range file.WriteBufferPaths {
-		os.Remove(writeBufferPath)
-	}
 }
 
 func TestIgnoreEntryLogs(t *testing.T) {
@@ -78,15 +72,11 @@ func TestParseFileWriteMultipleWritesToSameFile(t *testing.T) {
 	}
 
 	files := res.Files()
-	if len(files) != 1 {
-		t.Errorf(`Length of files %v, Expected %v`, len(files), 1)
-	}
-	file := files[0]
-	if file.Path != want.Path || file.Write != want.Write || !reflect.DeepEqual(file.WriteInfo, want.WriteInfo) {
-		t.Errorf(`Actual file path = %v, Expected file path %v, Actual write boolean %v, Expected write boolean %v, Actual WriteInfo %v, Expected WriteInfo %v`, file.Path, want.Path, file.Write, want.Write, file.WriteInfo, want.WriteInfo)
+	if len(files) != 1 || !reflect.DeepEqual(files[0], want) {
+		t.Errorf(`Files() = %v, want %v`, files[0], want)
 	}
 
-	CleanUpWriteBuffers(file)
+	utils.RemoveTempFilesDirectory()
 }
 
 func TestParseFileWritesToDifferentFiles(t *testing.T) {
@@ -114,26 +104,18 @@ func TestParseFileWritesToDifferentFiles(t *testing.T) {
 		},
 	}
 
+	want := []strace.FileInfo{firstFileWant, secondFileWant}
+
 	r := strings.NewReader(input)
 	res, err := strace.Parse(r)
 	if err != nil || res == nil {
 		t.Errorf(`Parse(r) = %v, %v, want _, nil`, res, err)
 	}
 	files := res.Files()
-	if len(files) != 2 {
-		t.Errorf(`Length of files %v, Expected %v`, len(files), 2)
+	if !reflect.DeepEqual(files, want) {
+		t.Errorf(`Files() = %v, want  = %v`, files, want)
 	}
-	file1 := files[0]
-	file2 := files[1]
-	if file1.Path != firstFileWant.Path || file1.Write != firstFileWant.Write || !reflect.DeepEqual(file1.WriteInfo, firstFileWant.WriteInfo) {
-		t.Errorf(`First file: Actual file path = %v, Expected file path %v, Actual write boolean %v, Expected write boolean %v, Actual WriteInfo %v, Expected WriteInfo %v`, file1.Path, firstFileWant.Path, file1.Write, firstFileWant.Write, file1.WriteInfo, firstFileWant.WriteInfo)
-	}
-	if file2.Path != secondFileWant.Path || file2.Write != secondFileWant.Write || !reflect.DeepEqual(file2.WriteInfo, secondFileWant.WriteInfo) {
-		t.Errorf(`Second file: Actual file path = %v, Expected file path %v, Actual write boolean %v, Expected write boolean %v, Actual WriteInfo %v, Expected WriteInfo %v`, file2.Path, secondFileWant.Path, file2.Write, secondFileWant.Write, file2.WriteInfo, secondFileWant.WriteInfo)
-	}
-
-	CleanUpWriteBuffers(file1)
-	CleanUpWriteBuffers(file2)
+	utils.RemoveTempFilesDirectory()
 }
 
 func TestParseFileWriteWithZeroBytesWritten(t *testing.T) {
@@ -158,14 +140,10 @@ func TestParseFileWriteWithZeroBytesWritten(t *testing.T) {
 		t.Errorf(`Parse(r) = %v, %v, want _, nil`, res, err)
 	}
 	files := res.Files()
-	if len(files) != 1 {
-		t.Errorf(`Length of files %v, Expected %v`, len(files), 1)
+	if len(files) != 1 || !reflect.DeepEqual(files[0], want) {
+		t.Errorf(`Files() = %v, want [%v]`, files, want)
 	}
-	file := files[0]
-	if file.Path != want.Path || file.Write != want.Write || !reflect.DeepEqual(file.WriteInfo, want.WriteInfo) {
-		t.Errorf(`Actual file path = %v, Expected file path %v, Actual write boolean %v, Expected write boolean %v, Actual WriteInfo %v, Expected WriteInfo %v`, file.Path, want.Path, file.Write, want.Write, file.WriteInfo, want.WriteInfo)
-	}
-	CleanUpWriteBuffers(file)
+	utils.RemoveTempFilesDirectory()
 }
 
 func TestParseFilesOneEntry(t *testing.T) {

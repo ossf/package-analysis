@@ -155,9 +155,8 @@ func (r *Result) recordFileWrite(file string, writeBuffer []byte, bytesWritten i
 	writeID := hex.EncodeToString(hash.Sum(nil))
 	writeContentsAndBytes := WriteContentInfo{BytesWritten: bytesWritten, WriteBufferId: writeID}
 	r.files[file].WriteInfo = append(r.files[file].WriteInfo, writeContentsAndBytes)
-	error := utils.CreateAndWriteTempFile(writeID, writeBuffer)
-	if error != nil {
-		log.Error("Could not create and write file", error)
+	if err := utils.CreateAndWriteTempFile(writeID, writeBuffer); err != nil {
+		log.Fatal("Could not create and write temp file", err)
 	}
 }
 
