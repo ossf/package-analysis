@@ -1,270 +1,271 @@
 [
   {
+    "name": "Package",
+    "mode": "NULLABLE",
+    "type": "RECORD",
     "fields": [
       {
-        "fields": [
-          {
-            "fields": [
-              {
-                "fields": [
-                  {
-                    "mode": "NULLABLE",
-                    "name": "Hostname",
-                    "type": "STRING"
-                  },
-                  {
-                    "mode": "REPEATED",
-                    "name": "Types",
-                    "type": "STRING"
-                  }
-                ],
-                "mode": "REPEATED",
-                "name": "Queries",
-                "type": "RECORD"
-              },
-              {
-                "mode": "NULLABLE",
-                "name": "Class",
-                "type": "STRING"
-              }
-            ],
-            "mode": "REPEATED",
-            "name": "DNS",
-            "type": "RECORD"
-          },
-          {
-            "fields": [
-              {
-                "mode": "REPEATED",
-                "name": "Environment",
-                "type": "STRING"
-              },
-              {
-                "mode": "REPEATED",
-                "name": "Command",
-                "type": "STRING"
-              }
-            ],
-            "mode": "REPEATED",
-            "name": "Commands",
-            "type": "RECORD"
-          },
-          {
-            "fields": [
-              {
-                "mode": "REPEATED",
-                "name": "Hostnames",
-                "type": "STRING"
-              },
-              {
-                "mode": "NULLABLE",
-                "name": "Port",
-                "type": "INTEGER"
-              },
-              {
-                "mode": "NULLABLE",
-                "name": "Address",
-                "type": "STRING"
-              }
-            ],
-            "mode": "REPEATED",
-            "name": "Sockets",
-            "type": "RECORD"
-          },
-          {
-            "mode": "NULLABLE",
-            "name": "Stderr",
-            "type": "STRING"
-          },
-          {
-            "fields": [
-              {
-                "mode": "NULLABLE",
-                "name": "Delete",
-                "type": "BOOLEAN"
-              },
-              {
-                "mode": "NULLABLE",
-                "name": "Write",
-                "type": "BOOLEAN"
-              },
-              {
-                "mode": "NULLABLE",
-                "name": "Read",
-                "type": "BOOLEAN"
-              },
-              {
-                "mode": "NULLABLE",
-                "name": "Path",
-                "type": "STRING"
-              }
-            ],
-            "mode": "REPEATED",
-            "name": "Files",
-            "type": "RECORD"
-          },
-          {
-            "mode": "NULLABLE",
-            "name": "Stdout",
-            "type": "BYTES"
-          },
-          {
-            "mode": "NULLABLE",
-            "name": "Status",
-            "type": "STRING"
-          }
-        ],
+        "name": "Ecosystem",
         "mode": "NULLABLE",
-        "name": "install",
-        "type": "RECORD"
+        "type": "STRING"
       },
       {
-        "fields": [
-          {
-            "fields": [
-              {
-                "fields": [
-                  {
-                    "mode": "NULLABLE",
-                    "name": "Hostname",
-                    "type": "STRING"
-                  },
-                  {
-                    "mode": "REPEATED",
-                    "name": "Types",
-                    "type": "STRING"
-                  }
-                ],
-                "mode": "REPEATED",
-                "name": "Queries",
-                "type": "RECORD"
-              },
-              {
-                "mode": "NULLABLE",
-                "name": "Class",
-                "type": "STRING"
-              }
-            ],
-            "mode": "REPEATED",
-            "name": "DNS",
-            "type": "RECORD"
-          },
-          {
-            "fields": [
-              {
-                "mode": "REPEATED",
-                "name": "Environment",
-                "type": "STRING"
-              },
-              {
-                "mode": "REPEATED",
-                "name": "Command",
-                "type": "STRING"
-              }
-            ],
-            "mode": "REPEATED",
-            "name": "Commands",
-            "type": "RECORD"
-          },
-          {
-            "fields": [
-              {
-                "mode": "REPEATED",
-                "name": "Hostnames",
-                "type": "STRING"
-              },
-              {
-                "mode": "NULLABLE",
-                "name": "Port",
-                "type": "INTEGER"
-              },
-              {
-                "mode": "NULLABLE",
-                "name": "Address",
-                "type": "STRING"
-              }
-            ],
-            "mode": "REPEATED",
-            "name": "Sockets",
-            "type": "RECORD"
-          },
-          {
-            "mode": "NULLABLE",
-            "name": "Stderr",
-            "type": "STRING"
-          },
-          {
-            "fields": [
-              {
-                "mode": "NULLABLE",
-                "name": "Delete",
-                "type": "BOOLEAN"
-              },
-              {
-                "mode": "NULLABLE",
-                "name": "Write",
-                "type": "BOOLEAN"
-              },
-              {
-                "mode": "NULLABLE",
-                "name": "Read",
-                "type": "BOOLEAN"
-              },
-              {
-                "mode": "NULLABLE",
-                "name": "Path",
-                "type": "STRING"
-              }
-            ],
-            "mode": "REPEATED",
-            "name": "Files",
-            "type": "RECORD"
-          },
-          {
-            "mode": "NULLABLE",
-            "name": "Stdout",
-            "type": "BYTES"
-          },
-          {
-            "mode": "NULLABLE",
-            "name": "Status",
-            "type": "STRING"
-          }
-        ],
+        "name": "Version",
         "mode": "NULLABLE",
-        "name": "import",
-        "type": "RECORD"
+        "type": "STRING"
+      },
+      {
+        "name": "Name",
+        "mode": "NULLABLE",
+        "type": "STRING"
       }
-    ],
-    "mode": "NULLABLE",
-    "name": "Analysis",
-    "type": "RECORD"
+    ]
   },
   {
-    "mode": "NULLABLE",
     "name": "CreatedTimestamp",
+    "mode": "NULLABLE",
     "type": "TIMESTAMP"
   },
   {
+    "name": "Analysis",
+    "mode": "NULLABLE",
+    "type": "RECORD",
     "fields": [
       {
+        "name": "install",
         "mode": "NULLABLE",
-        "name": "Ecosystem",
-        "type": "STRING"
+        "type": "RECORD",
+        "fields": [
+          {
+            "name": "Status",
+            "mode": "NULLABLE",
+            "type": "STRING"
+          },
+          {
+            "name": "Stdout",
+            "mode": "NULLABLE",
+            "type": "BYTES"
+          },
+          {
+            "name": "Stderr",
+            "mode": "NULLABLE",
+            "type": "STRING"
+          },
+          {
+            "name": "DNS",
+            "mode": "REPEATED",
+            "type": "RECORD",
+            "fields": [
+              {
+                "name": "Class",
+                "mode": "NULLABLE",
+                "type": "STRING"
+              },
+              {
+                "name": "Queries",
+                "mode": "REPEATED",
+                "type": "RECORD",
+                "fields": [
+                  {
+                    "name": "Hostname",
+                    "mode": "NULLABLE",
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "Types",
+                    "mode": "REPEATED",
+                    "type": "STRING"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Commands",
+            "mode": "REPEATED",
+            "type": "RECORD",
+            "fields": [
+              {
+                "name": "Command",
+                "mode": "REPEATED",
+                "type": "STRING"
+              },
+              {
+                "name": "Environment",
+                "mode": "REPEATED",
+                "type": "STRING"
+              }
+            ]
+          },
+          {
+            "name": "Sockets",
+            "mode": "REPEATED",
+            "type": "RECORD",
+            "fields": [
+              {
+                "name": "Hostnames",
+                "mode": "REPEATED",
+                "type": "STRING"
+              },
+              {
+                "name": "Port",
+                "mode": "NULLABLE",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Address",
+                "mode": "NULLABLE",
+                "type": "STRING"
+              }
+            ]
+          },
+          {
+            "name": "Files",
+            "mode": "REPEATED",
+            "type": "RECORD",
+            "fields": [
+              {
+                "name": "Delete",
+                "mode": "NULLABLE",
+                "type": "BOOLEAN"
+              },
+              {
+                "name": "Write",
+                "mode": "NULLABLE",
+                "type": "BOOLEAN"
+              },
+              {
+                "name": "Read",
+                "mode": "NULLABLE",
+                "type": "BOOLEAN"
+              },
+              {
+                "name": "Path",
+                "mode": "NULLABLE",
+                "type": "STRING"
+              }
+            ]
+          }
+        ]
       },
       {
+        "name": "import",
         "mode": "NULLABLE",
-        "name": "Version",
-        "type": "STRING"
-      },
-      {
-        "mode": "NULLABLE",
-        "name": "Name",
-        "type": "STRING"
+        "type": "RECORD",
+
+        "fields": [
+          {
+            "name": "Status",
+            "mode": "NULLABLE",
+            "type": "STRING"
+          },
+          {
+            "name": "Stdout",
+            "mode": "NULLABLE",
+            "type": "BYTES"
+          },
+          {
+            "name": "Stderr",
+            "mode": "NULLABLE",
+            "type": "STRING"
+          },
+          {
+            "name": "DNS",
+            "mode": "REPEATED",
+            "type": "RECORD",
+            "fields": [
+              {
+                "name": "Class",
+                "mode": "NULLABLE",
+                "type": "STRING"
+              },
+              {
+                "name": "Queries",
+                "mode": "REPEATED",
+                "type": "RECORD",
+                "fields": [
+                  {
+                    "name": "Hostname",
+                    "mode": "NULLABLE",
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "Types",
+                    "mode": "REPEATED",
+                    "type": "STRING"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Commands",
+            "mode": "REPEATED",
+            "type": "RECORD",
+            "fields": [
+              {
+                "name": "Command",
+                "mode": "REPEATED",
+                "type": "STRING"
+              },
+              {
+                "name": "Environment",
+                "mode": "REPEATED",
+                "type": "STRING"
+              }
+            ]
+          },
+          {
+            "name": "Sockets",
+            "mode": "REPEATED",
+            "type": "RECORD",
+            "fields": [
+              {
+                "name": "Hostnames",
+                "mode": "REPEATED",
+                "type": "STRING"
+              },
+              {
+                "name": "Port",
+                "mode": "NULLABLE",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Address",
+                "mode": "NULLABLE",
+                "type": "STRING"
+              }
+            ]
+          },
+          {
+            "name": "Files",
+            "mode": "REPEATED",
+            "type": "RECORD",
+            "fields": [
+              {
+                "name": "Delete",
+                "mode": "NULLABLE",
+                "type": "BOOLEAN"
+              },
+              {
+                "name": "Write",
+                "mode": "NULLABLE",
+                "type": "BOOLEAN"
+              },
+              {
+                "name": "Read",
+                "mode": "NULLABLE",
+                "type": "BOOLEAN"
+              },
+              {
+                "name": "Path",
+                "mode": "NULLABLE",
+                "type": "STRING"
+              }
+            ]
+          }
+        ]
       }
-    ],
-    "mode": "NULLABLE",
-    "name": "Package",
-    "type": "RECORD"
+    ]
   }
 ]
