@@ -115,7 +115,39 @@ fi
 
 DOCKER_OPTS=("run" "--cgroupns=host" "--privileged" "--rm")
 
-DOCKER_MOUNTS=("-v" "/var/lib/containers:/var/lib/containers" "-v" "$RESULTS_DIR:/results" "-v" "$STATIC_RESULTS_DIR:/staticResults" "-v" "$FILE_WRITE_RESULTS_DIR:/writeResults" "-v" "$LOGS_DIR:/tmp")
+# On development systems, we mount /var/lib/containers so that sandbox images can be
+# shared between the host system and the analysis image. However, this requires the
+# directory to be backed by a non-overlay filesystem.
+# In some environments, e.g. GitHub Codespaces, this is not the case, and we need to
+# specify a different mount dir which is backed by a non-overlay filesystem.
+
+function is_overlay_mount() {
+	if [[ $(findmnt -T "$1" -n -o FSTYPE) == "overlay" ]]; then
+		echo "true"
+	else
+		echo "false"
+	fi
+}
+
+CONTAINER_MOUNT_DIR="/var/lib/containers"
+
+if [[ -n "$CONTAINER_DIR_OVERRIDE" ]]; then
+	CONTAINER_MOUNT_DIR="$CONTAINER_DIR_OVERRIDE"
+elif [[ $CODESPACES == "true" ]]; then
+	CONTAINER_MOUNT_DIR=$(mktemp -d)
+	echo "GitHub Codespaces environment detected, using $CONTAINER_MOUNT_DIR for container mount"
+elif [[ $(is_overlay_mount /var/lib) == true ]]; then
+	if [[ $(is_overlay_mount /tmp) == false ]]; then
+		CONTAINER_MOUNT_DIR=$(mktemp -d)
+		echo "Warning: /var/lib is an overlay mount using $CONTAINER_MOUNT_DIR for container mount"
+	else
+		echo "Environment error: /var/lib is an overlay mount, please set CONTAINER_DIR_OVERRIDE to a directory that is backed by a non-overlay filesystem"
+		exit 1
+	fi
+fi
+
+
+DOCKER_MOUNTS=("-v" "$CONTAINER_MOUNT_DIR:/var/lib/containers" "-v" "$RESULTS_DIR:/results" "-v" "$STATIC_RESULTS_DIR:/staticResults" "-v" "$FILE_WRITE_RESULTS_DIR:/writeResults" "-v" "$LOGS_DIR:/tmp")
 
 ANALYSIS_IMAGE=gcr.io/ossf-malware-analysis/analysis
 
