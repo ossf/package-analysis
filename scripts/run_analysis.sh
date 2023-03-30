@@ -121,11 +121,12 @@ DOCKER_OPTS=("run" "--cgroupns=host" "--privileged" "--rm")
 # In some environments, e.g. GitHub Codespaces, this is not the case, and we need to
 # specify a different mount dir which is backed by a non-overlay filesystem.
 
-function is_overlay_mount() {
-	if [[ $(findmnt -T "$1" -n -o FSTYPE) == "overlay" ]]; then
-		echo "true"
+# Checks that the given mountpoint has the given filesystem mount type
+function is_mount_type() {
+	if [[ $(findmnt -T "$2" -n -o FSTYPE) == "$1" ]]; then
+		return 0
 	else
-		echo "false"
+		return 1
 	fi
 }
 
@@ -136,10 +137,10 @@ if [[ -n "$CONTAINER_DIR_OVERRIDE" ]]; then
 elif [[ $CODESPACES == "true" ]]; then
 	CONTAINER_MOUNT_DIR=$(mktemp -d)
 	echo "GitHub Codespaces environment detected, using $CONTAINER_MOUNT_DIR for container mount"
-elif [[ $(is_overlay_mount /var/lib) == true ]]; then
-	if [[ $(is_overlay_mount /tmp) == false ]]; then
+elif is_mount_type overlay /var/lib; then
+	if is_mount_type overlay /tmp && ! is_mount_type tmpfs /tmp; then
 		CONTAINER_MOUNT_DIR=$(mktemp -d)
-		echo "Warning: /var/lib is an overlay mount using $CONTAINER_MOUNT_DIR for container mount"
+		echo "Warning: /var/lib is an overlay mount, using $CONTAINER_MOUNT_DIR for container mount"
 	else
 		echo "Environment error: /var/lib is an overlay mount, please set CONTAINER_DIR_OVERRIDE to a directory that is backed by a non-overlay filesystem"
 		exit 1
