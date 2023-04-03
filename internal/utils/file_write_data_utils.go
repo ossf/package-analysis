@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 )
@@ -12,11 +13,19 @@ This subfolder needs to be shared across files so all functions that access it w
 
 const write_buffer_folder = "temp_write_buffers"
 
-/* Writes a file in the directory specified by temp_write_buf_dir and flushes the buffer */
+/*
+Writes a file in the directory specified by write_buffer_folder and flushes the buffer.
+This directory is meant to be cleaned up through the RemoveTempFilesDirectory() method.
+*/
 func CreateAndWriteTempFile(fileName string, data []byte) error {
-	tempWriteBufDir := filepath.Join(os.TempDir(), write_buffer_folder)
-	err := os.Mkdir(tempWriteBufDir, 0777)
-	f, err := os.Create(filepath.Join(tempWriteBufDir, fileName))
+	if _, err := os.Stat(write_buffer_folder); errors.Is(err, os.ErrNotExist) {
+		err := os.Mkdir(write_buffer_folder, 0777)
+		if err != nil {
+			return err
+		}
+	}
+
+	f, err := os.Create(filepath.Join(write_buffer_folder, fileName))
 	if err != nil {
 		return err
 	}
@@ -30,9 +39,9 @@ func CreateAndWriteTempFile(fileName string, data []byte) error {
 }
 
 func OpenTempFile(fileName string) (*os.File, error) {
-	return os.Open(filepath.Join(os.TempDir(), write_buffer_folder, fileName))
+	return os.Open(filepath.Join(write_buffer_folder, fileName))
 }
 
 func RemoveTempFilesDirectory() error {
-	return os.RemoveAll(filepath.Join(os.TempDir(), write_buffer_folder))
+	return os.RemoveAll(write_buffer_folder)
 }

@@ -60,7 +60,7 @@ func (rs *ResultStore) generatePath(p Pkg) string {
 }
 
 func (rs *ResultStore) SaveTempFilesToZip(ctx context.Context, p Pkg, fileName string, tempFileNames []string) error {
-
+	// Remove potential duplicates across phases.
 	tempFileNames = utils.RemoveDuplicates(tempFileNames)
 
 	bkt, err := blob.OpenBucket(ctx, rs.bucket)
@@ -91,10 +91,6 @@ func (rs *ResultStore) SaveTempFilesToZip(ctx context.Context, p Pkg, fileName s
 
 		w, err := zipWriter.Create(fileName + ".json")
 		if err != nil {
-			return err
-		}
-
-		if _, err := file.Seek(0, 0); err != nil {
 			return err
 		}
 

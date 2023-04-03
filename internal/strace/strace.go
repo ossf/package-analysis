@@ -84,6 +84,8 @@ type Result struct {
 	files    map[string]*FileInfo
 	sockets  map[string]*SocketInfo
 	commands map[string]*CommandInfo
+	// Map to track all seen write buffers so that we don't duplicate writing files to disk.
+	allWriteBufferId map[string]int
 }
 
 func parseOpenFlags(openFlags string) (read, write bool) {
@@ -155,9 +157,14 @@ func (r *Result) recordFileWrite(file string, writeBuffer []byte, bytesWritten i
 	writeID := hex.EncodeToString(hash.Sum(nil))
 	writeContentsAndBytes := WriteContentInfo{BytesWritten: bytesWritten, WriteBufferId: writeID}
 	r.files[file].WriteInfo = append(r.files[file].WriteInfo, writeContentsAndBytes)
-	if err := utils.CreateAndWriteTempFile(writeID, writeBuffer); err != nil {
-		log.Fatal("Could not create and write temp file", err)
+	_, exists := r.allWriteBufferId[writeID]
+	if !exists {
+		if err := utils.CreateAndWriteTempFile(writeID, writeBuffer); err != nil {
+			log.Fatal("Could not create and write temp file", "error", err)
+		}
+		r.allWriteBufferId[writeID] = 1
 	}
+
 }
 
 func (r *Result) recordSocket(address string, port int) {
@@ -217,8 +224,8 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 			return fmt.Errorf("failed to parse create args: %s", args)
 		}
 
-		//log.Debug("creat",
-		//	"path", match[1])
+		log.Debug("creat",
+			"path", match[1])
 		r.recordFileAccess(match[1], false, true, false)
 	case "open":
 		match := openPattern.FindStringSubmatch(args)
@@ -227,10 +234,10 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 		}
 
 		read, write := parseOpenFlags(match[2])
-		//log.Debug("open",
-		//	"path", match[1],
-		//	"read", read,
-		//	"write", write)
+		log.Debug("open",
+			"path", match[1],
+			"read", read,
+			"write", write)
 		r.recordFileAccess(match[1], read, write, false)
 	case "openat":
 		match := openatPattern.FindStringSubmatch(args)
@@ -240,18 +247,18 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 
 		path := joinPaths(match[1], match[2])
 		read, write := parseOpenFlags(match[3])
-		//log.Debug("openat",
-		//	"path", path,
-		//	"read", read,
-		//	"write", write)
+		log.Debug("openat",
+			"path", path,
+			"read", read,
+			"write", write)
 		r.recordFileAccess(path, read, write, false)
 	case "execve":
 		match := execvePattern.FindStringSubmatch(args)
 		if match == nil {
 			return fmt.Errorf("failed to parse execve args: %s", args)
 		}
-		//log.Debug("execve",
-		//	"cmdAndEnv", match[1])
+		log.Debug("execve",
+			"cmdAndEnv", match[1])
 		cmd, env, err := parseCmdAndEnv(match[1])
 		if err != nil {
 			return err
@@ -274,17 +281,17 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 		if err != nil {
 			return err
 		}
-		//log.Debug("socket",
-		//	"address", address,
-		//	"port", port)
+		log.Debug("socket",
+			"address", address,
+			"port", port)
 		r.recordSocket(address, port)
 	case "stat", "fstat", "lstat":
 		match := statPattern.FindStringSubmatch(args)
 		if match == nil {
 			return fmt.Errorf("failed to parse stat args: %s", args)
 		}
-		//log.Debug("stat",
-		//	"path", match[1])
+		log.Debug("stat",
+			"path", match[1])
 		r.recordFileAccess(match[1], true, false, false)
 	case "newfstatat":
 		match := newfstatatPattern.FindStringSubmatch(args)
@@ -292,8 +299,8 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 			return fmt.Errorf("failed to parse newfstatat args: %s", args)
 		}
 		path := joinPaths(match[1], match[2])
-		//log.Debug("newfstatat",
-		//	"path", path)
+		log.Debug("newfstatat",
+			"path", path)
 		r.recordFileAccess(path, true, false, false)
 	case "unlink":
 		match := unlinkPatten.FindStringSubmatch(args)
@@ -301,8 +308,8 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 			return fmt.Errorf("failed to parse unlink args: %s", args)
 		}
 		path := match[1]
-		//log.Debug("unlink",
-		//	"path", path)
+		log.Debug("unlink",
+			"path", path)
 		r.recordFileAccess(path, false, false, true)
 	case "unlinkat":
 		match := unlinkatPattern.FindStringSubmatch(args)
@@ -310,8 +317,8 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 			return fmt.Errorf("failed to parse unlinkat args: %s", args)
 		}
 		path := joinPaths(match[1], match[2])
-		//log.Debug("unlinkat",
-		//	"path", path)
+		log.Debug("unlinkat",
+			"path", path)
 		r.recordFileAccess(path, false, false, true)
 	}
 	return nil
@@ -321,9 +328,10 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 // accessed.
 func Parse(r io.Reader) (*Result, error) {
 	result := &Result{
-		files:    make(map[string]*FileInfo),
-		sockets:  make(map[string]*SocketInfo),
-		commands: make(map[string]*CommandInfo),
+		files:            make(map[string]*FileInfo),
+		sockets:          make(map[string]*SocketInfo),
+		commands:         make(map[string]*CommandInfo),
+		allWriteBufferId: make(map[string]int),
 	}
 
 	// Use a buffered reader, rather than scanner, to allow for lines with
