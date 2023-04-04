@@ -26,7 +26,6 @@ import (
 	"github.com/ossf/package-analysis/internal/resultstore"
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/internal/staticanalysis"
-	"github.com/ossf/package-analysis/internal/utils"
 	"github.com/ossf/package-analysis/internal/worker"
 	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
@@ -92,19 +91,8 @@ func saveResults(ctx context.Context, pkg *pkgmanager.Pkg, dest resultBucketPath
 
 	fileWriteDataUploadStart := time.Now()
 	if dest.fileWrites != "" {
-		rs := resultstore.New(dest.fileWrites, resultstore.ConstructPath())
-		if err := rs.Save(ctx, pkg, dynamicResults.FileWritesSummary); err != nil {
-			return fmt.Errorf("failed to upload file write analysis to blobstore = %w", err)
-		}
-		var allPhasesWriteBufferIdsArray []string
-		for _, writeBufferIds := range dynamicResults.FileWriteBufferIds {
-			allPhasesWriteBufferIdsArray = append(allPhasesWriteBufferIdsArray, writeBufferIds...)
-		}
-		if err := rs.SaveTempFilesToZip(ctx, pkg, "write_buffers", allPhasesWriteBufferIdsArray); err != nil {
-			return fmt.Errorf("failed to upload file write buffer results to blobstore = #{err}")
-		}
-		if err := utils.RemoveTempFilesDirectory(); err != nil {
-			return fmt.Errorf("failed to remove temp files = #{err}")
+		if err := worker.SaveFileWriteResults(dest.fileWrites, resultstore.ConstructPath(), ctx, pkg, dynamicResults); err != nil {
+			log.Fatal("Failed to save write results", "error", err)
 		}
 	}
 	fileWriteDataDuration := time.Since(fileWriteDataUploadStart)

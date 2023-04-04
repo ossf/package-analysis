@@ -105,19 +105,8 @@ func dynamicAnalysis(pkg *pkgmanager.Pkg) {
 
 	if *uploadFileWriteInfo != "" {
 		bucket, path := parseBucketPath(*uploadFileWriteInfo)
-		rs := resultstore.New(bucket, resultstore.BasePath(path))
-		if err := rs.Save(ctx, pkg, results.FileWritesSummary); err != nil {
-			log.Fatal("Failed to upload file write analysis results to blobstore", "error", err)
-		}
-		var allPhasesWriteBufferIdsArray []string
-		for _, writeBufferIds := range results.FileWriteBufferIds {
-			allPhasesWriteBufferIdsArray = append(allPhasesWriteBufferIdsArray, writeBufferIds...)
-		}
-		if err := rs.SaveTempFilesToZip(ctx, pkg, "write_buffers", allPhasesWriteBufferIdsArray); err != nil {
-			log.Fatal("Failed to upload file write buffer results to blobstore", err)
-		}
-		if err := utils.RemoveTempFilesDirectory(); err != nil {
-			log.Fatal("Failed to remove temp files", err)
+		if err := worker.SaveFileWriteResults(bucket, resultstore.BasePath(path), ctx, pkg, results); err != nil {
+			log.Fatal("Failed to save write results", "error", err)
 		}
 	}
 
