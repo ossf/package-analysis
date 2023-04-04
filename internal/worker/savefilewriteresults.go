@@ -19,6 +19,10 @@ func SaveFileWriteResults(bucket string, resultStoreOptions resultstore.Option, 
 	for _, writeBufferIds := range dynamicResults.FileWriteBufferIds {
 		allPhasesWriteBufferIdsArray = append(allPhasesWriteBufferIdsArray, writeBufferIds...)
 	}
+
+	// Remove potential duplicates across phases.
+	allPhasesWriteBufferIdsArray = utils.RemoveDuplicates(allPhasesWriteBufferIdsArray)
+
 	if err := rs.SaveTempFilesToZip(ctx, pkg, "write_buffers", allPhasesWriteBufferIdsArray); err != nil {
 		return fmt.Errorf("failed to upload file write buffer results to blobstore = #{err}")
 	}

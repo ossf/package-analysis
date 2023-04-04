@@ -60,9 +60,6 @@ func (rs *ResultStore) generatePath(p Pkg) string {
 }
 
 func (rs *ResultStore) SaveTempFilesToZip(ctx context.Context, p Pkg, fileName string, tempFileNames []string) error {
-	// Remove potential duplicates across phases.
-	tempFileNames = utils.RemoveDuplicates(tempFileNames)
-
 	bkt, err := blob.OpenBucket(ctx, rs.bucket)
 	if err != nil {
 		return err
