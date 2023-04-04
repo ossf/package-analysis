@@ -85,7 +85,7 @@ type Result struct {
 	sockets  map[string]*SocketInfo
 	commands map[string]*CommandInfo
 	// Map to track all seen write buffers so that we don't duplicate writing files to disk.
-	allWriteBufferId map[string]int
+	allWriteBufferId map[string]struct{}
 }
 
 func parseOpenFlags(openFlags string) (read, write bool) {
@@ -157,14 +157,12 @@ func (r *Result) recordFileWrite(file string, writeBuffer []byte, bytesWritten i
 	writeID := hex.EncodeToString(hash.Sum(nil))
 	writeContentsAndBytes := WriteContentInfo{BytesWritten: bytesWritten, WriteBufferId: writeID}
 	r.files[file].WriteInfo = append(r.files[file].WriteInfo, writeContentsAndBytes)
-	_, exists := r.allWriteBufferId[writeID]
-	if !exists {
+	if _, exists := r.allWriteBufferId[writeID]; !exists {
 		if err := utils.CreateAndWriteTempFile(writeID, writeBuffer); err != nil {
 			log.Fatal("Could not create and write temp file", "error", err)
 		}
-		r.allWriteBufferId[writeID] = 1
+		r.allWriteBufferId[writeID] = struct{}{}
 	}
-
 }
 
 func (r *Result) recordSocket(address string, port int) {
@@ -271,9 +269,9 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 		}
 		family := match[1]
 		if family != "AF_INET" && family != "AF_INET6" {
-			//log.Debug("Ignoring socket",
-			//	"family", family,
-			//	"socket", match[2])
+			log.Debug("Ignoring socket",
+				"family", family,
+				"socket", match[2])
 			return nil
 		}
 		address := match[3]
@@ -331,7 +329,7 @@ func Parse(r io.Reader) (*Result, error) {
 		files:            make(map[string]*FileInfo),
 		sockets:          make(map[string]*SocketInfo),
 		commands:         make(map[string]*CommandInfo),
-		allWriteBufferId: make(map[string]int),
+		allWriteBufferId: make(map[string]struct{}),
 	}
 
 	// Use a buffered reader, rather than scanner, to allow for lines with

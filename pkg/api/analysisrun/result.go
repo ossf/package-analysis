@@ -15,7 +15,7 @@ type (
 type DynamicAnalysisResults struct {
 	StraceSummary     DynamicAnalysisStraceSummary
 	FileWritesSummary DynamicAnalysisFileWritesSummary
-	// // Ids that correlate to the name of the file that saves the actual write buffer contents.
+	// Ids that correlate to the name of the file that saves the actual write buffer contents.
 	FileWriteBufferIds DynamicAnalysisFileWriteBufferIds
 }
 

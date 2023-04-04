@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 )
@@ -18,12 +17,7 @@ Writes a file in the directory specified by write_buffer_folder and flushes the 
 This directory is meant to be cleaned up through the RemoveTempFilesDirectory() method.
 */
 func CreateAndWriteTempFile(fileName string, data []byte) error {
-	if _, err := os.Stat(write_buffer_folder); errors.Is(err, os.ErrNotExist) {
-		err := os.Mkdir(write_buffer_folder, 0777)
-		if err != nil {
-			return err
-		}
-	}
+	os.MkdirAll(write_buffer_folder, 0777)
 
 	f, err := os.Create(filepath.Join(write_buffer_folder, fileName))
 	if err != nil {
