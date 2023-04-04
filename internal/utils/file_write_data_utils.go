@@ -17,7 +17,10 @@ Writes a file in the directory specified by write_buffer_folder and flushes the 
 This directory is meant to be cleaned up through the RemoveTempFilesDirectory() method.
 */
 func CreateAndWriteTempFile(fileName string, data []byte) error {
-	os.MkdirAll(write_buffer_folder, 0777)
+	err := os.MkdirAll(write_buffer_folder, 0777)
+	if err != nil {
+		return err
+	}
 
 	f, err := os.Create(filepath.Join(write_buffer_folder, fileName))
 	if err != nil {
