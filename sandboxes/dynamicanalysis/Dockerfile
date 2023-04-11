@@ -147,6 +147,9 @@ ENV NODE_PATH="/app/node_modules"
 # Test stuff
 RUN ruby --version && php --version && python3 --version && pip --version && node --version && npm --version && rustc --version && cargo --version
 
+ENV REQUESTS_CA_BUNDLE=/usr/local/share/ca-certificates/ca.crt
+ENV SSL_CERT_FILE=/usr/local/share/ca-certificates/ca.crt
+
 ENTRYPOINT [ "sleep" ]
 
 CMD [ "30m" ]

@@ -77,7 +77,7 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option) (analysisr
 		results.StraceSummary[phase] = &phaseResult.StraceSummary
 		results.FileWrites[phase] = &phaseResult.FileWrites
 		lastStatus = phaseResult.StraceSummary.Status
-
+		results.URLs = phaseResult.URLs
 		if lastStatus != analysis.StatusCompleted {
 			// Error caused by an issue with the package (probably).
 			// Don't continue with phases if this one did not complete successfully.

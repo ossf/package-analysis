@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/ossf/package-analysis/internal/analysis"
@@ -195,6 +196,11 @@ func main() {
 			"error", err)
 	}
 
+	err = generateSSLCerts()
+	if err != nil {
+		log.Panic("Error creating certificates")
+	}
+
 	if runMode[analysis.Static] {
 		log.Info("Starting static analysis")
 		staticAnalysis(pkg)
@@ -205,4 +211,32 @@ func main() {
 		log.Info("Starting dynamic analysis")
 		dynamicAnalysis(pkg)
 	}
+}
+
+func generateSSLCerts() error {
+	log.Debug("Generating SSLSplit CA certificates")
+	createSslCerts := exec.Command("openssl", "genrsa", "-out", "/proxy/certs/ca.pem", "2048")
+	createSslCerts.Dir = "/proxy/certs"
+	err := createSslCerts.Start()
+
+	if err != nil {
+		return err
+	}
+	err = createSslCerts.Wait()
+	if err != nil {
+		return err
+	}
+
+	createSslCerts = exec.Command("openssl", "req", "-new", "-nodes", "-x509", "-sha256", "-out", "ca.crt", "-key", "ca.pem", "-addext", "authorityKeyIdentifier=keyid:always,issuer:always", "-subj", "/O=Package Analysis CA/CN=Package Analysis CA/", "-set_serial", "0", "-days", "3650")
+	createSslCerts.Dir = "/proxy/certs"
+	err = createSslCerts.Start()
+
+	if err != nil {
+		return err
+	}
+	err = createSslCerts.Wait()
+	if err != nil {
+		return err
+	}
+	return nil
 }

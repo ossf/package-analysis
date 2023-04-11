@@ -2,7 +2,6 @@ package dynamicanalysis
 
 import (
 	"fmt"
-
 	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/dnsanalyzer"
 	"github.com/ossf/package-analysis/internal/log"
@@ -10,6 +9,10 @@ import (
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/internal/strace"
 	"github.com/ossf/package-analysis/pkg/api/analysisrun"
+	"io/ioutil"
+	"os/exec"
+	"strings"
+	"syscall"
 )
 
 const (
@@ -20,12 +23,31 @@ const (
 type Result struct {
 	StraceSummary analysisrun.StraceSummary
 	FileWrites    analysisrun.FileWrites
+	URLs          []string
 }
 
 var resultError = &Result{
 	StraceSummary: analysisrun.StraceSummary{
 		Status: analysis.StatusErrorOther,
 	},
+}
+
+func ParseURLsFromSSlStripOutput(content []byte) []string {
+	var result []string
+	ret := strings.Split(string(content), "\n")
+
+	for _, value := range ret {
+		lineParts := strings.Split(value, " ")
+		if len(lineParts) < 11 {
+			continue
+		}
+
+		schema := lineParts[3]
+		host := lineParts[8]
+		path := lineParts[10]
+		result = append(result, schema+"://"+host+path)
+	}
+	return result
 }
 
 func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
@@ -45,10 +67,57 @@ func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
 	// Run the command
 	log.Debug("Running dynamic analysis command",
 		"args", args)
+
+	log.Debug("Reroute all http traffic through sslsplit")
+	iptables := exec.Command("iptables", "-t", "nat", "-A", "PREROUTING", "-i", "cni-analysis", "-p", "tcp", "--dport", "80", "-j", "REDIRECT", "--to-port", "8081")
+	err := iptables.Start()
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+	err = iptables.Wait()
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	log.Debug("Reroute all https traffic through sslsplit")
+	iptables = exec.Command("iptables", "-t", "nat", "-A", "PREROUTING", "-i", "cni-analysis", "-p", "tcp", "--dport", "443", "-j", "REDIRECT", "--to-port", "8080")
+	err = iptables.Start()
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+	err = iptables.Wait()
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	log.Debug("starting sslsplit")
+	sslsplit := exec.Command("sslsplit", "-d", "-L", "/tmp/ssl.flow", "-l", "/tmp/sslLinks.flow", "-k", "/proxy/certs/ca.pem", "-c", "/proxy/certs/ca.crt", "http", "0.0.0.0", "8081", "https", "0.0.0.0", "8080")
+	err = sslsplit.Start()
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
 	r, err := sb.Run(args...)
 	if err != nil {
 		return resultError, fmt.Errorf("sandbox failed (%w)", err)
 	}
+
+	log.Debug("stopping sslsplit")
+	err = sslsplit.Process.Signal(syscall.SIGINT)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Debug("reading sslsplit results")
+	body, err1 := ioutil.ReadFile("/tmp/sslLinks.flow")
+	if err1 != nil {
+		log.Fatal("unable to read file: %v", err1)
+	}
+
+	urls := ParseURLsFromSSlStripOutput(body)
 
 	log.Debug("Stop the packet capture")
 	pcap.Close()
@@ -73,11 +142,11 @@ func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
 			Stderr: lastLines(r.Stderr(), maxOutputLines, maxOutputBytes),
 		},
 	}
-	analysisResult.setData(straceResult, dns)
+	analysisResult.setData(straceResult, dns, urls)
 	return &analysisResult, nil
 }
 
-func (d *Result) setData(straceResult *strace.Result, dns *dnsanalyzer.DNSAnalyzer) {
+func (d *Result) setData(straceResult *strace.Result, dns *dnsanalyzer.DNSAnalyzer, sslSplitResult []string) {
 	for _, f := range straceResult.Files() {
 		d.StraceSummary.Files = append(d.StraceSummary.Files, analysisrun.FileResult{
 			Path:   f.Path,
@@ -121,4 +190,5 @@ func (d *Result) setData(straceResult *strace.Result, dns *dnsanalyzer.DNSAnalyz
 		}
 		d.StraceSummary.DNS = append(d.StraceSummary.DNS, c)
 	}
+	d.URLs = sslSplitResult
 }

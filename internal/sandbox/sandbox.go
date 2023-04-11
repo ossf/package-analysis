@@ -89,7 +89,7 @@ type Sandbox interface {
 	// The result of the supplied command will be returned in an instance of
 	// RunResult.
 	Run(...string) (*RunResult, error)
-
+	UploadFileToContainer(srcFile string, destFile string) *exec.Cmd
 	// Clean cleans up a Sandbox.
 	//
 	// Once called the Sandbox cannot be used again.
@@ -125,6 +125,16 @@ type podmanSandbox struct {
 	echoStdOut bool
 	echoStdErr bool
 	volumes    []volume
+}
+
+func (s *podmanSandbox) UploadFileToContainer(srcFile string, destFile string) *exec.Cmd {
+	destParam := fmt.Sprintf("%s:%s", s.container, destFile)
+	args := []string{
+		"cp",
+		srcFile,
+		destParam,
+	}
+	return podman(args...)
 }
 
 type (
@@ -427,6 +437,14 @@ func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
 		errWriters = append(errWriters, os.Stdout)
 	}
 	errWriter := io.MultiWriter(errWriters...)
+
+	log.Debug("upload certs to container")
+	uploadCmd := s.UploadFileToContainer("/proxy/certs/ca.crt", "/usr/local/share/ca-certificates/ca.crt") //upload certs to container
+	uploadCmd.Stdout = logOut
+	uploadCmd.Stderr = logErr
+	if err := uploadCmd.Run(); err != nil {
+		return result, fmt.Errorf("error uploading file to container: %w", err)
+	}
 
 	// Start the container
 	startCmd := s.startContainerCmd(logDir)
