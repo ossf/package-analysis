@@ -7,7 +7,6 @@ PACKAGE_ANALYSIS_ROOT=~/package-analysis
 # creates a new directory with all the static analysis results for each package.
 # Currently, it only supports NPM packages (as static analysis does).
 
-
 RUN_ANALYSIS="$PACKAGE_ANALYSIS_ROOT/scripts/run_analysis.sh"
 FORMAT_JSON="$PACKAGE_ANALYSIS_ROOT/scripts/format-static-analysis-json.py"
 
@@ -48,7 +47,6 @@ function process_archive {
 		return 1
 	fi
 
-	rm -rf /tmp/staticResults
 	PACKAGE_VERSION_EXT=${ARCHIVE_PATH##"$ARCHIVES_DIR/"}
 	PACKAGE_VERSION=${PACKAGE_VERSION_EXT%%.tgz}
 	PACKAGE_FIRST_LETTER=${PACKAGE_VERSION:0:1}
@@ -64,10 +62,17 @@ function process_archive {
 	echo "Version: $VERSION"
 
 	OUTPUT_RESULTS_DIR=$(mktemp -d)
-	STATIC_RESULTS_DIR=$OUTPUT_RESULTS_DIR "$RUN_ANALYSIS" -ecosystem npm -package "$PACKAGE" -local "$ARCHIVE_PATH" -nopull -mode static -offline -fully-offline -nointeractive
+
+	# Notes on options:
+	# 1. To run local sandbox images, add -nopull
+	# 2. If running static analysis only from local images (i.e. -nopull), network access is not required.
+	#    In this case, the -offline -fully-offline options can be added to disable network access totally.
+	RESULTS_DIR="$OUTPUT_RESULTS_DIR/dynamic" STATIC_RESULTS_DIR="$OUTPUT_RESULTS_DIR/static" "$RUN_ANALYSIS" \
+		-ecosystem npm -package "$PACKAGE" -local "$ARCHIVE_PATH" -nointeractive
 
 	# pretty print while keeping some of the small JSON structs on a single line
-	"$FORMAT_JSON" "$OUTPUT_RESULTS_DIR/results.json" "$RESULTS_DIR/$PACKAGE_VERSION-results.json"
+	"$FORMAT_JSON" "$OUTPUT_RESULTS_DIR/dynamic/results.json" "$RESULTS_DIR/$PACKAGE_VERSION-results-dynamic.json"
+	"$FORMAT_JSON" "$OUTPUT_RESULTS_DIR/static/results.json" "$RESULTS_DIR/$PACKAGE_VERSION-results-static.json"
 
 	rm -rf "$OUTPUT_RESULTS_DIR"
 }
@@ -75,9 +80,3 @@ function process_archive {
 for ARCHIVE_PATH in "$ARCHIVES_DIR"/*.tgz; do
 	process_archive "$ARCHIVE_PATH" "$RESULTS_DIR" "$START_LETTER"
 done
-
-# TODO parallelise loop
-# export -f process_archive
-# shopt -s nullglob
-# ARCHIVES=("$ARCHIVES_DIR"/*.tgz)
-# parallel -i process_archive "{}" "$RESULTS_DIR" "$START_LETTER" ::: ${ARCHIVES[@]}
