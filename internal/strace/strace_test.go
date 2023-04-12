@@ -8,6 +8,7 @@ import (
 
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/strace"
+	"github.com/ossf/package-analysis/internal/utils"
 )
 
 func init() {
@@ -49,54 +50,61 @@ func TestParseFileReadThenCreate(t *testing.T) {
 func TestParseFileWriteMultipleWritesToSameFile(t *testing.T) {
 	input := "I0928 00:18:54.794008     365 strace.go:593] [   6:   6] uname E write(0x1 host:[5], 0x555695ceaab0 \"Linux 4.4.0\\n\", 0xc)\n" +
 		"I1109 06:53:19.688807     950 strace.go:593] [   3:   3] python3 E write(0x1 host:[5], 0x560d2708e7c0 \"django.template.base\\nImporting django.template.context\\nImporting django.template.context_processors\\nImporting django.template.defaultfilters\\nImporting django.template.defaulttags\\nImporting django.template.engine\\nImporting django.template.exceptions\\nImporting django.template.library\\nImporting django.template.loader\\nImporting django.template.loader_tags\\nImporting django.template.loaders\\nImporting django.template.loaders.app_directories\\nImporting django.template.loaders.base\\nImporting django.template.loaders.cached\\nImporting django.template.loaders.filesystem\\nImporting django.template.loaders.locmem\\nImporting django.template.response\\nImporting django.template.smartif\\nImporting django.template.utils\\nImporting django.templatetags\\nImporting django.templatetags.cache\\nImporting django.templatetags.i18n\\nImporting django.templatetags.l10n\\nImporting django.templatetags.static\\nImporting django.templatetags.tz\\nImporting django.test\\nImporting django.test.client\\nImporting django.test.html\\nImporting django.test.runner\\nImport\"..., 0xe64)"
-	firstFileInfoWant := strace.WriteContentInfo{
-		BytesWritten: 12,
+	firstWriteInfoWant := strace.WriteContentInfo{
+		BytesWritten:  12,
+		WriteBufferId: "181080a0b2dce592f16ab55aacb18c7a4cb849c9a7f644c5c76edf56e4870ebd",
 	}
-	secondFileInfoWant := strace.WriteContentInfo{
-		BytesWritten: 3684,
+	secondWriteInfoWant := strace.WriteContentInfo{
+		BytesWritten:  3684,
+		WriteBufferId: "7b2c403bc9eee677758c2a575b2f8602b37f880f4fdb98ee98c30a74a5b9a52b",
 	}
-	fileInfoWantArray := strace.WriteInfo{firstFileInfoWant, secondFileInfoWant}
+	writeInfoWantArray := strace.WriteInfo{firstWriteInfoWant, secondWriteInfoWant}
 
 	want := strace.FileInfo{
 		Path:      "host:[5]",
 		Write:     true,
-		WriteInfo: fileInfoWantArray,
-	}
+		WriteInfo: writeInfoWantArray}
 
 	r := strings.NewReader(input)
 	res, err := strace.Parse(r)
 	if err != nil || res == nil {
 		t.Errorf(`Parse(r) = %v, %v, want _, nil`, res, err)
 	}
+
 	files := res.Files()
 	if len(files) != 1 || !reflect.DeepEqual(files[0], want) {
 		t.Errorf(`Files() = %v, want %v`, files[0], want)
 	}
+
+	utils.RemoveTempFilesDirectory()
 }
 
 func TestParseFileWritesToDifferentFiles(t *testing.T) {
 	input := "I0928 00:18:54.794008     365 strace.go:593] [   6:   6] uname E write(0x1 host:[5], 0x555695ceaab0 \"Linux 4.4.0\\n\", 0xc)\n" +
 		"I1109 06:53:19.688807     950 strace.go:593] [   3:   3] python3 E write(0x1 pipe:[5], 0x560d2708e7c0 \"django.template.base\\nImporting django.template.context\\nImporting django.template.context_processors\\nImporting django.template.defaultfilters\\nImporting django.template.defaulttags\\nImporting django.template.engine\\nImporting django.template.exceptions\\nImporting django.template.library\\nImporting django.template.loader\\nImporting django.template.loader_tags\\nImporting django.template.loaders\\nImporting django.template.loaders.app_directories\\nImporting django.template.loaders.base\\nImporting django.template.loaders.cached\\nImporting django.template.loaders.filesystem\\nImporting django.template.loaders.locmem\\nImporting django.template.response\\nImporting django.template.smartif\\nImporting django.template.utils\\nImporting django.templatetags\\nImporting django.templatetags.cache\\nImporting django.templatetags.i18n\\nImporting django.templatetags.l10n\\nImporting django.templatetags.static\\nImporting django.templatetags.tz\\nImporting django.test\\nImporting django.test.client\\nImporting django.test.html\\nImporting django.test.runner\\nImport\"..., 0xe64)"
-	firstFileInfo := strace.FileInfo{
+	firstFileWant := strace.FileInfo{
 		Path:  "host:[5]",
 		Write: true,
 		WriteInfo: strace.WriteInfo{
 			{
-				BytesWritten: 12,
+				BytesWritten:  12,
+				WriteBufferId: "181080a0b2dce592f16ab55aacb18c7a4cb849c9a7f644c5c76edf56e4870ebd",
 			},
 		},
 	}
 
-	secondFileInfo := strace.FileInfo{
+	secondFileWant := strace.FileInfo{
 		Path:  "pipe:[5]",
 		Write: true,
 		WriteInfo: strace.WriteInfo{
 			{
-				BytesWritten: 3684,
+				BytesWritten:  3684,
+				WriteBufferId: "7b2c403bc9eee677758c2a575b2f8602b37f880f4fdb98ee98c30a74a5b9a52b",
 			},
 		},
 	}
-	want := []strace.FileInfo{firstFileInfo, secondFileInfo}
+
+	want := []strace.FileInfo{firstFileWant, secondFileWant}
 
 	r := strings.NewReader(input)
 	res, err := strace.Parse(r)
@@ -107,6 +115,7 @@ func TestParseFileWritesToDifferentFiles(t *testing.T) {
 	if !reflect.DeepEqual(files, want) {
 		t.Errorf(`Files() = %v, want  = %v`, files, want)
 	}
+	utils.RemoveTempFilesDirectory()
 }
 
 func TestParseFileWriteWithZeroBytesWritten(t *testing.T) {
@@ -119,6 +128,8 @@ func TestParseFileWriteWithZeroBytesWritten(t *testing.T) {
 		WriteInfo: strace.WriteInfo{
 			{
 				BytesWritten: 0,
+				// sha256 of empty string.
+				WriteBufferId: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 			},
 		},
 	}
@@ -132,6 +143,7 @@ func TestParseFileWriteWithZeroBytesWritten(t *testing.T) {
 	if len(files) != 1 || !reflect.DeepEqual(files[0], want) {
 		t.Errorf(`Files() = %v, want [%v]`, files, want)
 	}
+	utils.RemoveTempFilesDirectory()
 }
 
 func TestParseFilesOneEntry(t *testing.T) {

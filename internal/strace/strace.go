@@ -2,6 +2,8 @@ package strace
 
 import (
 	"bufio"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,6 +15,7 @@ import (
 	"unicode"
 
 	"github.com/ossf/package-analysis/internal/log"
+	"github.com/ossf/package-analysis/internal/utils"
 )
 
 var (
@@ -45,6 +48,7 @@ var (
 
 	// This regex parses just the file path. Bytes written is parsed further below as the nature of the write buffer makes it unideal to parse through regex.
 	// TODO: We can see how we can potentially reuse regex patterns.
+	// I0928 00:18:54.794008     365 strace.go:593] [   6:   6] uname E write(0x1 pipe:[5], 0x555695ceaab0 "Linux 4.4.0\n", 0xc)
 	writePattern = regexp.MustCompile(`\S+ ([^,]+),.*`)
 )
 
@@ -62,8 +66,8 @@ type FileInfo struct {
 type WriteInfo []WriteContentInfo
 
 type WriteContentInfo struct {
-	// TODO: A future PR will add to the WriteContentInfo struct a reference to a file. That file referenced will save the contents of the write buffer.
-	BytesWritten int64
+	WriteBufferId string
+	BytesWritten  int64
 }
 
 type SocketInfo struct {
@@ -80,6 +84,8 @@ type Result struct {
 	files    map[string]*FileInfo
 	sockets  map[string]*SocketInfo
 	commands map[string]*CommandInfo
+	// Map to track all seen write buffers so that we don't duplicate writing files to disk.
+	allWriteBufferId map[string]struct{}
 }
 
 func parseOpenFlags(openFlags string) (read, write bool) {
@@ -144,10 +150,19 @@ func (r *Result) recordFileAccess(file string, read, write, del bool) {
 	r.files[file].Delete = r.files[file].Delete || del
 }
 
-func (r *Result) recordFileWrite(file string, bytesWritten int64) {
+func (r *Result) recordFileWrite(file string, writeBuffer []byte, bytesWritten int64) {
 	r.recordFileAccess(file, false, true, false)
-	writeContentsAndBytes := WriteContentInfo{BytesWritten: bytesWritten}
+	hash := sha256.New()
+	hash.Write(writeBuffer)
+	writeID := hex.EncodeToString(hash.Sum(nil))
+	writeContentsAndBytes := WriteContentInfo{BytesWritten: bytesWritten, WriteBufferId: writeID}
 	r.files[file].WriteInfo = append(r.files[file].WriteInfo, writeContentsAndBytes)
+	if _, exists := r.allWriteBufferId[writeID]; !exists {
+		if err := utils.CreateAndWriteTempFile(writeID, writeBuffer); err != nil {
+			log.Fatal("Could not create and write temp file", "error", err)
+		}
+		r.allWriteBufferId[writeID] = struct{}{}
+	}
 }
 
 func (r *Result) recordSocket(address string, port int) {
@@ -186,8 +201,15 @@ func (r *Result) parseEnterSyscall(syscall, args string) error {
 		if err != nil {
 			return err
 		}
+		writeBuffer := ""
 		match := writePattern.FindStringSubmatch(args)
-		r.recordFileWrite(match[1], bytesWritten)
+		firstQuoteIndex := strings.Index(args, "\"")
+		lastQuoteIndex := strings.LastIndex(args, "\"")
+		if firstQuoteIndex != -1 && lastQuoteIndex != -1 && lastQuoteIndex > firstQuoteIndex {
+			// Save the contents between the first and last quote.
+			writeBuffer = args[firstQuoteIndex+1 : lastQuoteIndex]
+		}
+		r.recordFileWrite(match[1], []byte(writeBuffer), bytesWritten)
 	}
 	return nil
 }
@@ -304,9 +326,10 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 // accessed.
 func Parse(r io.Reader) (*Result, error) {
 	result := &Result{
-		files:    make(map[string]*FileInfo),
-		sockets:  make(map[string]*SocketInfo),
-		commands: make(map[string]*CommandInfo),
+		files:            make(map[string]*FileInfo),
+		sockets:          make(map[string]*SocketInfo),
+		commands:         make(map[string]*CommandInfo),
+		allWriteBufferId: make(map[string]struct{}),
 	}
 
 	// Use a buffered reader, rather than scanner, to allow for lines with

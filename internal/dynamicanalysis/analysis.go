@@ -18,8 +18,10 @@ const (
 )
 
 type Result struct {
-	StraceSummary analysisrun.StraceSummary
-	FileWrites    analysisrun.FileWrites
+	StraceSummary     analysisrun.StraceSummary
+	FileWritesSummary analysisrun.FileWritesSummary
+	// Ids that correlate to the name of the file that saves the actual write buffer contents. We save this separately so we don't need to dig through the FileWritesSummary later on.
+	FileWriteBufferIds []string
 }
 
 var resultError = &Result{
@@ -89,10 +91,12 @@ func (d *Result) setData(straceResult *strace.Result, dns *dnsanalyzer.DNSAnalyz
 			w := analysisrun.FileWriteResult{Path: f.Path}
 			for _, wi := range f.WriteInfo {
 				w.WriteInfo = append(w.WriteInfo, analysisrun.WriteInfo{
-					BytesWritten: wi.BytesWritten,
+					WriteBufferId: wi.WriteBufferId,
+					BytesWritten:  wi.BytesWritten,
 				})
+				d.FileWriteBufferIds = append(d.FileWriteBufferIds, wi.WriteBufferId)
 			}
-			d.FileWrites = append(d.FileWrites, w)
+			d.FileWritesSummary = append(d.FileWritesSummary, w)
 		}
 	}
 

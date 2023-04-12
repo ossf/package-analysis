@@ -1,6 +1,8 @@
 package worker
 
 import (
+	"runtime"
+	"strconv"
 	"time"
 
 	"github.com/ossf/package-analysis/internal/analysis"
@@ -35,9 +37,20 @@ This does not include errors caused by the package under analysis.
 */
 
 func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option) (analysisrun.DynamicAnalysisResults, analysisrun.DynamicPhase, analysis.Status, error) {
+
+	var beforeDynamic runtime.MemStats
+	runtime.ReadMemStats(&beforeDynamic)
+	log.Info("Memory Stats, heap usage before dynamic analysis",
+		log.Label("ecosystem", pkg.EcosystemName()),
+		"name", pkg.Name(),
+		"version", pkg.Version(),
+		"heap_usage_before_dynamic_analysis", strconv.FormatUint(beforeDynamic.Alloc, 10),
+	)
+
 	results := analysisrun.DynamicAnalysisResults{
-		StraceSummary: make(analysisrun.DynamicAnalysisStraceSummary),
-		FileWrites:    make(analysisrun.DynamicAnalysisFileWrites),
+		StraceSummary:      make(analysisrun.DynamicAnalysisStraceSummary),
+		FileWritesSummary:  make(analysisrun.DynamicAnalysisFileWritesSummary),
+		FileWriteBufferIds: make(analysisrun.DynamicAnalysisFileWriteBufferIds),
 	}
 
 	sb := sandbox.New(pkg.Manager().DynamicAnalysisImage(), sbOpts...)
@@ -75,8 +88,9 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option) (analysisr
 		}
 
 		results.StraceSummary[phase] = &phaseResult.StraceSummary
-		results.FileWrites[phase] = &phaseResult.FileWrites
+		results.FileWritesSummary[phase] = &phaseResult.FileWritesSummary
 		lastStatus = phaseResult.StraceSummary.Status
+		results.FileWriteBufferIds[phase] = phaseResult.FileWriteBufferIds
 
 		if lastStatus != analysis.StatusCompleted {
 			// Error caused by an issue with the package (probably).
@@ -84,6 +98,14 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option) (analysisr
 			break
 		}
 	}
+
+	var afterDynamic runtime.MemStats
+	runtime.ReadMemStats(&afterDynamic)
+	log.Info("Memory Stats, heap usage after dynamic analysis",
+		log.Label("ecosystem", pkg.EcosystemName()),
+		"name", pkg.Name(),
+		"version", pkg.Version(),
+		"heap_usage_after_dynamic_analysis", strconv.FormatUint(afterDynamic.Alloc, 10))
 
 	if lastError != nil {
 		LogDynamicAnalysisError(pkg, lastRunPhase, lastError)

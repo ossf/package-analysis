@@ -7,13 +7,16 @@ import (
 )
 
 type (
-	DynamicAnalysisStraceSummary map[DynamicPhase]*StraceSummary
-	DynamicAnalysisFileWrites    map[DynamicPhase]*FileWrites
+	DynamicAnalysisStraceSummary      map[DynamicPhase]*StraceSummary
+	DynamicAnalysisFileWritesSummary  map[DynamicPhase]*FileWritesSummary
+	DynamicAnalysisFileWriteBufferIds map[DynamicPhase][]string
 )
 
 type DynamicAnalysisResults struct {
-	StraceSummary DynamicAnalysisStraceSummary
-	FileWrites    DynamicAnalysisFileWrites
+	StraceSummary     DynamicAnalysisStraceSummary
+	FileWritesSummary DynamicAnalysisFileWritesSummary
+	// Ids that correlate to the name of the file that saves the actual write buffer contents.
+	FileWriteBufferIds DynamicAnalysisFileWriteBufferIds
 }
 
 type StaticAnalysisResults = json.RawMessage
@@ -28,7 +31,7 @@ type StraceSummary struct {
 	DNS      []DNSResult
 }
 
-type FileWrites []FileWriteResult
+type FileWritesSummary []FileWriteResult
 
 type FileWriteResult struct {
 	Path      string
@@ -36,7 +39,8 @@ type FileWriteResult struct {
 }
 
 type WriteInfo struct {
-	BytesWritten int64
+	WriteBufferId string
+	BytesWritten  int64
 }
 
 type FileResult struct {

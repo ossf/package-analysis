@@ -9,6 +9,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"path"
+	"time"
 
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/fileblob"
@@ -86,12 +87,20 @@ func saveResults(ctx context.Context, pkg *pkgmanager.Pkg, dest resultBucketPath
 			return fmt.Errorf("failed to upload static analysis results to blobstore = %w", err)
 		}
 	}
+
+	fileWriteDataUploadStart := time.Now()
 	if dest.fileWrites != "" {
-		err := resultstore.New(dest.fileWrites, resultstore.ConstructPath()).Save(ctx, pkg, dynamicResults.FileWrites)
-		if err != nil {
-			return fmt.Errorf("failed to upload file write analysis to blobstore = %w", err)
+		if err := worker.SaveFileWriteResults(dest.fileWrites, resultstore.ConstructPath(), ctx, pkg, dynamicResults); err != nil {
+			log.Fatal("Failed to save write results", "error", err)
 		}
 	}
+	fileWriteDataDuration := time.Since(fileWriteDataUploadStart)
+	log.Info("Write data upload duration",
+		log.Label("ecosystem", pkg.EcosystemName()),
+		"name", pkg.Name(),
+		"version", pkg.Version(),
+		"write_data_upload_duration", fileWriteDataDuration,
+	)
 
 	return nil
 }

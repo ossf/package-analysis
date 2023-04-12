@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/log"
@@ -100,13 +101,22 @@ func dynamicAnalysis(pkg *pkgmanager.Pkg) {
 		}
 	}
 
+	fileWriteDataUploadStart := time.Now()
+
 	if *uploadFileWriteInfo != "" {
 		bucket, path := parseBucketPath(*uploadFileWriteInfo)
-		err := resultstore.New(bucket, resultstore.BasePath(path)).Save(ctx, pkg, results.FileWrites)
-		if err != nil {
-			log.Fatal("Failed to upload file write analysis results to blobstore", "error", err)
+		if err := worker.SaveFileWriteResults(bucket, resultstore.BasePath(path), ctx, pkg, results); err != nil {
+			log.Fatal("Failed to save write results", "error", err)
 		}
 	}
+
+	fileWriteDataDuration := time.Since(fileWriteDataUploadStart)
+	log.Info("Write data upload duration",
+		log.Label("ecosystem", pkg.EcosystemName()),
+		"name", pkg.Name(),
+		"version", pkg.Version(),
+		"write_data_upload_duration", fileWriteDataDuration,
+	)
 
 	// this is only valid if RunDynamicAnalysis() returns nil err
 	if lastStatus != analysis.StatusCompleted {

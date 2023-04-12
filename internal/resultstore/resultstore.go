@@ -1,8 +1,10 @@
 package resultstore
 
 import (
+	"archive/zip"
 	"context"
 	"encoding/json"
+	"io"
 	"path/filepath"
 	"time"
 
@@ -12,6 +14,7 @@ import (
 	_ "gocloud.dev/blob/s3blob"
 
 	"github.com/ossf/package-analysis/internal/log"
+	"github.com/ossf/package-analysis/internal/utils"
 )
 
 type ResultStore struct {
@@ -54,6 +57,49 @@ func (rs *ResultStore) generatePath(p Pkg) string {
 		path = filepath.Join(path, p.EcosystemName(), p.Name())
 	}
 	return path
+}
+
+func (rs *ResultStore) SaveTempFilesToZip(ctx context.Context, p Pkg, fileName string, tempFileNames []string) error {
+	bkt, err := blob.OpenBucket(ctx, rs.bucket)
+	if err != nil {
+		return err
+	}
+	defer bkt.Close()
+
+	uploadPath := filepath.Join(rs.generatePath(p), fileName+".zip")
+	log.Info("Uploading results",
+		"bucket", rs.bucket,
+		"path", uploadPath)
+
+	w, err := bkt.NewWriter(ctx, uploadPath, nil)
+	if err != nil {
+		return err
+	}
+	defer w.Close()
+
+	zipWriter := zip.NewWriter(w)
+	defer zipWriter.Close()
+
+	for _, fileName := range tempFileNames {
+		file, err := utils.OpenTempFile(fileName)
+		if err != nil {
+			return err
+		}
+
+		w, err := zipWriter.Create(fileName + ".json")
+		if err != nil {
+			return err
+		}
+
+		if _, err := io.Copy(w, file); err != nil {
+			return err
+		}
+
+		if err = file.Close(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (rs *ResultStore) Save(ctx context.Context, p Pkg, analysis interface{}) error {
