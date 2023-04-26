@@ -77,6 +77,6 @@ function process_archive {
 	rm -rf "$OUTPUT_RESULTS_DIR"
 }
 
-for ARCHIVE_PATH in "$ARCHIVES_DIR"/*.tgz; do
+for ARCHIVE_PATH in "$ARCHIVES_DIR"/*.tgz "$ARCHIVES_DIR"/*.tar.gz; do
 	process_archive "$ARCHIVE_PATH" "$RESULTS_DIR" "$START_LETTER"
 done
