@@ -22,8 +22,8 @@ func SaveFileWriteResults(bucket string, resultStoreOptions resultstore.Option, 
 
 	// Remove potential duplicates across phases.
 	allPhasesWriteBufferIdsArray = utils.RemoveDuplicates(allPhasesWriteBufferIdsArray)
-
-	if err := rs.SaveTempFilesToZip(ctx, pkg, "write_buffers", allPhasesWriteBufferIdsArray); err != nil {
+	version := pkg.Version()
+	if err := rs.SaveTempFilesToZip(ctx, pkg, "write_buffers_"+version, allPhasesWriteBufferIdsArray); err != nil {
 		return fmt.Errorf("failed to upload file write buffer results to blobstore = #{err}")
 	}
 	if err := utils.RemoveTempFilesDirectory(); err != nil {
