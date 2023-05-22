@@ -109,7 +109,7 @@ func (v volume) args() []string {
 	}
 }
 
-// copy represents a host source and a destination within the sandbox container.
+// copy represents a host source and a destination that will be used within the sandbox container.
 type copy struct {
 	src  string
 	dest string
@@ -402,8 +402,9 @@ func (s *podmanSandbox) init() error {
 	} else {
 		return fmt.Errorf("error creating container: %w", err)
 	}
-	if len(s.copyArgs()) > 0 {
-		if err := podmanRun(s.copyArgs()...); err != nil {
+
+	if args := s.copyArgs(); len(args) > 0 {
+		if err := podmanRun(args...); err != nil {
 			return fmt.Errorf("failed copying arguments into sandbox: %w", err)
 		}
 	}
