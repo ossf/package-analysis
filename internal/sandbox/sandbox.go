@@ -109,6 +109,21 @@ func (v volume) args() []string {
 	}
 }
 
+// copy represents a host source and a destination that will be used within the sandbox container.
+type copy struct {
+	src  string
+	dest string
+}
+
+func (c copy) args(s *podmanSandbox) []string {
+	copyDest := fmt.Sprintf("%s:%s", s.container, c.dest)
+	return []string{
+		"cp",
+		c.src,
+		copyDest,
+	}
+}
+
 // Implements the Sandbox interface using "podman".
 type podmanSandbox struct {
 	image      string
@@ -125,6 +140,7 @@ type podmanSandbox struct {
 	echoStdOut bool
 	echoStdErr bool
 	volumes    []volume
+	copies     []copy
 }
 
 type (
@@ -209,6 +225,15 @@ func NoPull() Option {
 func Volume(src, dest string) Option {
 	return option(func(sb *podmanSandbox) {
 		sb.volumes = append(sb.volumes, volume{
+			src:  src,
+			dest: dest,
+		})
+	})
+}
+
+func Copy(src, dest string) Option {
+	return option(func(sb *podmanSandbox) {
+		sb.copies = append(sb.copies, copy{
 			src:  src,
 			dest: dest,
 		})
@@ -339,6 +364,14 @@ func (s *podmanSandbox) extraArgs() []string {
 	return args
 }
 
+func (s *podmanSandbox) copyArgs() []string {
+	args := make([]string, 0)
+	for _, c := range s.copies {
+		args = append(args, c.args(s)...)
+	}
+	return args
+}
+
 func (s *podmanSandbox) imageWithTag() string {
 	tag := "latest"
 	if s.tag != "" {
@@ -368,6 +401,12 @@ func (s *podmanSandbox) init() error {
 		s.container = id
 	} else {
 		return fmt.Errorf("error creating container: %w", err)
+	}
+
+	if args := s.copyArgs(); len(args) > 0 {
+		if err := podmanRun(args...); err != nil {
+			return fmt.Errorf("failed copying arguments into sandbox: %w", err)
+		}
 	}
 	return nil
 }

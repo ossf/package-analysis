@@ -67,7 +67,7 @@ func makeSandboxOptions() []sandbox.Option {
 	sbOpts := []sandbox.Option{sandbox.Tag(*imageTag)}
 
 	if *localPkg != "" {
-		sbOpts = append(sbOpts, sandbox.Volume(*localPkg, *localPkg))
+		sbOpts = append(sbOpts, sandbox.Copy(*localPkg, *localPkg))
 	}
 	if *noPull {
 		sbOpts = append(sbOpts, sandbox.NoPull())
