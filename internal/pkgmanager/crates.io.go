@@ -37,9 +37,7 @@ var cratesPkgManager = PkgManager{
 	image:         "gcr.io/ossf-malware-analysis/crates.io",
 	command:       "/usr/local/bin/analyze.py",
 	latestVersion: getCratesLatest,
-	dynamicPhases: []analysisrun.DynamicPhase{
-		analysisrun.DynamicPhaseInstall,
-	},
+	dynamicPhases: analysisrun.DefaultDynamicPhases(),
 }
 
 var cratesPkgManagerCombinedSandbox = PkgManager{
@@ -47,7 +45,5 @@ var cratesPkgManagerCombinedSandbox = PkgManager{
 	image:         combinedDynamicAnalysisImage,
 	command:       "/usr/local/bin/analyze-rust.py",
 	latestVersion: getCratesLatest,
-	dynamicPhases: []analysisrun.DynamicPhase{
-		analysisrun.DynamicPhaseInstall,
-	},
+	dynamicPhases: analysisrun.DefaultDynamicPhases(),
 }
