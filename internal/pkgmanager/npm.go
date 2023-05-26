@@ -73,16 +73,6 @@ func getNPMArchiveURL(pkgName, version string) (string, error) {
 
 var npmPkgManager = PkgManager{
 	ecosystem:      pkgecosystem.NPM,
-	image:          "gcr.io/ossf-malware-analysis/node",
-	command:        "/usr/local/bin/analyze.js",
-	latestVersion:  getNPMLatest,
-	archiveURL:     getNPMArchiveURL,
-	extractArchive: utils.ExtractTarGzFile,
-	dynamicPhases:  analysisrun.DefaultDynamicPhases(),
-}
-
-var npmPkgManagerCombinedSandbox = PkgManager{
-	ecosystem:      pkgecosystem.NPM,
 	image:          combinedDynamicAnalysisImage,
 	command:        "/usr/local/bin/analyze-node.js",
 	latestVersion:  getNPMLatest,

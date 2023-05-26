@@ -32,14 +32,6 @@ func getRubyGemsLatest(pkg string) (string, error) {
 
 var rubygemsPkgManager = PkgManager{
 	ecosystem:     pkgecosystem.RubyGems,
-	image:         "gcr.io/ossf-malware-analysis/ruby",
-	command:       "/usr/local/bin/analyze.rb",
-	latestVersion: getRubyGemsLatest,
-	dynamicPhases: analysisrun.DefaultDynamicPhases(),
-}
-
-var rubygemsPkgManagerCombinedSandbox = PkgManager{
-	ecosystem:     pkgecosystem.RubyGems,
 	image:         combinedDynamicAnalysisImage,
 	command:       "/usr/local/bin/analyze-ruby.rb",
 	latestVersion: getRubyGemsLatest,
