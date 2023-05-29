@@ -32,7 +32,7 @@ function install(pkg) {
 function importPkg(pkg) {
   try {
     const mod = require(pkg.name);
-    useModule(mod);
+    useModule(pkg.name, mod);
   } catch (e) {
     console.log(`Failed to import ${pkg.name}: ${e}`);
   }
@@ -51,8 +51,9 @@ function isES6Class(obj) {
 }
 
 // best-effort execution of code in the module
-function useModule(modulePath) {
-  console.log("[module] " + modulePath);
+function useModule(name, mod) {
+  console.log("[module] " + name);
+  console.log(mod);
 
   // How to tell if something is a function vs class:
   // - node uses complex internal logic in util.inspect() function [1]
@@ -62,9 +63,8 @@ function useModule(modulePath) {
 
   // [1] https://github.com/nodejs/node/blob/main/lib/internal/util/inspect.js
   // [2] https://stackoverflow.com/questions/30758961/how-to-check-if-a-variable-is-an-es6-class-declaration/72326559
-  const callableNames = Object.keys(module).filter(
-    (key) => typeof module[key] === "function"
-  );
+  const callableNames = Object.keys(mod).filter((key) => typeof mod[key] === "function");
+  console.log("[keys] " + callableNames);
 
   // Call all the exported names. If there is a TypeError, it's
   // probably because it is a class, so we'll try again using new.
@@ -72,12 +72,13 @@ function useModule(modulePath) {
   // it can fail. In particular, function arguments are not yet supported
   for (const name of callableNames) {
     try {
-      if (isES6Class(module[name])) {
+      // TODO call each function or class in a separate thread or sandbox
+      if (isES6Class(mod[name])) {
         console.log("[class] " + name);
-        const instance = new module[name]();
+        const instance = new mod[name]();
       } else {
         console.log("[function] " + name);
-        module[name]();
+        mod[name]();
       }
     } catch (err) {
       console.log(err);
