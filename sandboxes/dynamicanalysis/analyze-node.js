@@ -54,8 +54,6 @@ function isES6Class(obj) {
 function useModule(modulePath) {
   console.log("[module] " + modulePath);
 
-  //console.log(module);
-
   // How to tell if something is a function vs class:
   // - node uses complex internal logic in util.inspect() function [1]
   // - StackOverflow thread discussing how complex this problem is [2]
@@ -68,9 +66,10 @@ function useModule(modulePath) {
     (key) => typeof module[key] === "function"
   );
 
-  // Call all the exported names. If there is a
-  // TypeError, it's probably because it is a class,
-  // so we'll try again using new
+  // Call all the exported names. If there is a TypeError, it's
+  // probably because it is a class, so we'll try again using new.
+  // NOTE: this is a best-effort approach and there are lots of ways
+  // it can fail. In particular, function arguments are not yet supported
   for (const name of callableNames) {
     try {
       if (isES6Class(module[name])) {

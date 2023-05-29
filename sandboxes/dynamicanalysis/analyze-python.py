@@ -105,8 +105,9 @@ def try_invoke_function(name, obj, is_method=False):
 
     try:
         ret = invoke_function(obj)
-        print("[return value]", ret)
-    except Exception as e:
+        print("[return value]", repr(ret))
+    except BaseException as e:
+		# catch ALL exceptions, including KeyboardInterrupt and system exit
         print(type(e), e, sep=": ")
 
 
@@ -122,6 +123,7 @@ def try_instantiate_class(name, obj):
         for name, method in methods:
             try_invoke_function(name, method, is_method=True)
     except Exception as e:
+		# catch ALL exceptions, including KeyboardInterrupt and system exit
         print(type(e), e, sep=": ")
 
 
