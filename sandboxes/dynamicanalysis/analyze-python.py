@@ -122,7 +122,7 @@ def try_instantiate_class(name, obj):
         methods = inspect.getmembers(instance, is_non_init_method)
         for name, method in methods:
             try_invoke_function(name, method, is_method=True)
-    except Exception as e:
+    except BaseException as e:
 		# catch ALL exceptions, including KeyboardInterrupt and system exit
         print(type(e), e, sep=": ")
 
