@@ -3,6 +3,8 @@ import inspect
 from dataclasses import dataclass
 import importlib
 from importlib.metadata import files
+import os.path
+import signal
 import sys
 import subprocess
 import traceback
@@ -11,6 +13,7 @@ from unittest.mock import MagicMock
 
 PY_EXTENSION = '.py'
 
+EXECUTION_TIMEOUT_SECONDS = 10
 
 @dataclass
 class Package:
@@ -51,28 +54,55 @@ def path_to_import(path):
     if path.name == '__init__.py':
         import_path = str(path.parent)
     else:
-        import_path = str(path)[:-len(PY_EXTENSION)]
+        import_path = str(path).rstrip(PY_EXTENSION)
 
     return import_path.replace('/', '.')
 
 
 def importPkg(package):
     """Import phase for analyzing the package."""
+
     for path in files(package.name):
         # TODO: pyc, C extensions?
         if path.suffix != PY_EXTENSION:
             continue
 
         import_path = path_to_import(path)
-        print('Importing', import_path)
-        try:
-            module = importlib.import_module(import_path)
-            execute_module(module)
-        except:
-            print('Failed to import', import_path)
-            traceback.print_exc()
+        import_module(import_path)
+
+def import_single_module(import_path):
+    module_dir = os.path.dirname(import_path)
+    sys.path.append(module_dir)
+
+    module_name = os.path.basename(import_path).rstrip(PY_EXTENSION)
+
+    print(f"Import single module at {import_path}")
+    import_module(module_name)
 
 
+def import_module(import_path):
+    # set handler for function execution timeout alarms
+    signal.signal(signal.SIGALRM, handler=alarm_handler)
+
+    print('Importing', import_path)
+    try:
+        module = importlib.import_module(import_path)
+        execute_module(module)
+    except:
+        print('Failed to import', import_path)
+        traceback.print_exc()
+
+    # restore default signal handler for alarms
+    signal.signal(signal.SIGALRM, signal.SIG_DFL)
+
+
+def alarm_handler(sig_num, frame):
+    raise TimeoutError("Timeout exceeded for function execution")
+
+# Call a function with mock arguments based on its declared signature.
+# The arguments are of type MagicMock, whose instances will return
+# dummy values for any method called on them.
+# Exceptions must be handled by the caller.
 def invoke_function(obj):
     signature = inspect.signature(obj)
     args = []
@@ -96,13 +126,18 @@ def invoke_function(obj):
     # bind args and invoke the function
     # any exceptions will be propagated to the caller
     bound = signature.bind(*args, **kwargs)
-    return obj(*bound.args, **bound.kwargs)
+
+    # run with timeout to prevent hangs
+    signal.alarm(EXECUTION_TIMEOUT_SECONDS)
+    ret = obj(*bound.args, **bound.kwargs)
+    signal.alarm(0)
+    return ret
 
 
-# execute a callable and catch any exception, logging to stdout
-def try_execution(c: callable):
+# Execute a callable and catch any exception, logging to stdout
+def run_and_catch_all(c: callable):
     try:
-        c()
+        return c()
     except BaseException as e:
         # catch ALL exceptions, including KeyboardInterrupt and system exit
         print(type(e), e, sep=": ")
@@ -113,37 +148,73 @@ def try_invoke_function(f, name, is_method=False):
     print(tag, name)
 
     def invoke():
-        ret = invoke_function(f)
+        return invoke_function(f)
+
+    ret = run_and_catch_all(invoke)
+
+    if ret is not None:
         print("[return value]", repr(ret))
+        return ret
 
-    try_execution(invoke)
-
-
-def try_instantiate_class_and_call_methods(c, name):
+def try_instantiate_class(c, name):
     print("[class]", name)
+
+    def instantiate():
+        return invoke_function(c)
+
+    return run_and_catch_all(instantiate)
+
+
+def try_call_methods(instance, class_name, should_investigate, mark_seen):
+    print("[instance methods]", class_name)
 
     def is_non_init_method(m):
         return inspect.ismethod(m) and m.__name__ != "__init__"
 
-    def invoke_methods():
-        instance = invoke_function(c)
-        methods = inspect.getmembers(instance, is_non_init_method)
-        for method_name, method in methods:
-            try_invoke_function(method, method_name, is_method=True)
-
-    try_execution(invoke_methods)
+    for method_name, method in inspect.getmembers(instance, is_non_init_method):
+        return_value = try_invoke_function(method, method_name, is_method=True)
+        return_type = return_value.__class__
+        # TODO should it be DFS or BFS?
+        if should_investigate(return_type):
+            print("[investigate type]", return_type)
+            mark_seen(return_type)
+            try_call_methods(return_value, return_type, should_investigate, mark_seen)
 
 
 def execute_module(module):
     """Best-effort execution of code in a module"""
     print("[module]", module)
 
+    # keep track of all types belonging to the module we've seen so far in return values,
+    # so that we can recursively explore each one's methods without going in infinite loops
+    # using instances returned by module code is likely to be a more useful than ones
+    # instantiated with mocked constructor args
+    seen_types = set()
+
+    def should_investigate(t):
+        return t.__module__ == module.__name__ and t not in seen_types
+
+    def mark_seen(t):
+        seen_types.add(t)
+
+    instantiated_types = set()
+
     skipped_names = []
     for (name, member) in inspect.getmembers(module):
         if inspect.isfunction(member):
-            try_invoke_function(member, name)
+            return_value = try_invoke_function(member, name)
+            return_type = return_value.__class__
+            # TODO should it be DFS or BFS?
+            if should_investigate(return_type):
+                print("[investigate type]", return_type)
+                mark_seen(return_type)
+                try_call_methods(return_value, return_type, should_investigate, mark_seen)
         elif inspect.isclass(member):
-            try_instantiate_class_and_call_methods(member, name)
+            instance = try_instantiate_class(member, name)
+            assert instance.__class__ == member
+            if instance is not None and member not in instantiated_types:
+                instantiated_types.add(member)
+                try_call_methods(instance, name, should_investigate, mark_seen)
         else:
             skipped_names.append(name)
 
@@ -168,6 +239,9 @@ def main():
     # and side effects that add noise to the strace output.
     local_path = None
     version = None
+    package_name = None
+    package = None
+
     if args[0] == '--local':
         args.pop(0)
         local_path = args.pop(0)
@@ -176,13 +250,24 @@ def main():
         version = args.pop(0)
 
     phase = args.pop(0)
-    package_name = args.pop(0)
+
+
+    if len(args) > 0:
+        package_name = args.pop(0)
 
     if not phase in PHASES:
         print(f'Unknown phase {phase} specified.')
         exit(1)
 
-    package = Package(name=package_name, version=version, local_path=local_path)
+    if package_name is not None:
+        package = Package(name=package_name, version=version, local_path=local_path)
+
+    if package is None and phase == "import" and local_path is not None:
+        import_single_module(local_path)
+        return
+    else:
+        print("'install' requested but no package name given, or local file missing for single module import")
+        exit(1)
 
     # Execute for the specified phase.
     for phase in PHASES[phase]:
