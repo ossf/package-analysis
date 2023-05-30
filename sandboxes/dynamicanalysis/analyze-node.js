@@ -6,7 +6,7 @@
 "use strict";
 
 const {spawnSync} = require('child_process');
-const {argv} = require('process');
+const process = require('process');
 
 function install(pkg) {
   // Specify the package to install.
@@ -32,7 +32,7 @@ function install(pkg) {
 function importPkg(pkg) {
   try {
     const mod = require(pkg.name);
-    useModule(pkg.name, mod);
+    executeModuleCode(pkg.name, mod);
   } catch (e) {
     console.log(`Failed to import ${pkg.name}: ${e}`);
   }
@@ -46,13 +46,12 @@ function isES6Class(obj) {
   }
 
   const descriptor = Object.getOwnPropertyDescriptor(obj, "prototype");
-
   return descriptor && !descriptor.writable;
 }
 
-// best-effort execution of code in the module
-function useModule(name, mod) {
-  console.log("[module] " + name);
+// Best-effort execution of as much code (functions, classes) of the module code as possible
+function executeModuleCode(name, mod) {
+  console.log(`[module] ${name}`);
   console.log(mod);
 
   // How to tell if something is a function vs class:
@@ -64,24 +63,42 @@ function useModule(name, mod) {
   // [1] https://github.com/nodejs/node/blob/main/lib/internal/util/inspect.js
   // [2] https://stackoverflow.com/questions/30758961/how-to-check-if-a-variable-is-an-es6-class-declaration/72326559
   const callableNames = Object.keys(mod).filter((key) => typeof mod[key] === "function");
-  console.log("[keys] " + callableNames);
+  console.log(`[keys] ${callableNames}`);
 
   // Call all the exported names. If there is a TypeError, it's
   // probably because it is a class, so we'll try again using new.
   // NOTE: this is a best-effort approach and there are lots of ways
   // it can fail. In particular, function arguments are not yet supported
+  // TODO basic support for function arguments
+
+  // https://nodejs.org/api/process.html#event-uncaughtexception
+  // tl;dr this may cause things to break but we're in a sandbox so we'll do it anyway
+  process.on('uncaughtException', (err, origin) => {
+	  console.log("[uncaught exception]");
+	  console.log(err);
+	  console.log(origin);
+  });
+
+  // https://nodejs.org/api/process.html#event-unhandledrejection
+  process.on('unhandledRejection', (reason, promise) => {
+	  console.log("[unhandled rejection]");
+	  console.log(reason);
+	  console.log(promise);
+  });
+
   for (const name of callableNames) {
     try {
       // TODO call each function or class in a separate thread or sandbox
       if (isES6Class(mod[name])) {
-        console.log("[class] " + name);
+        console.log(`[class] ${name}`);
         const instance = new mod[name]();
+		// TODO call instance methods
       } else {
-        console.log("[function] " + name);
+        console.log(`[function] ${name}`);
         mod[name]();
       }
     } catch (err) {
-      console.log(err);
+      console.log(`[error]: ${err}`);
     }
   }
 }
@@ -92,6 +109,7 @@ const phases = new Map([
   ['import', [importPkg]]
 ]);
 
+const argv = process.argv;
 const nodeBin = argv.shift();
 const scriptPath = argv.shift();
 

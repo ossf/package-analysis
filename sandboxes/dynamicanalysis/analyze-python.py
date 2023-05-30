@@ -99,32 +99,39 @@ def invoke_function(obj):
     return obj(*bound.args, **bound.kwargs)
 
 
-def try_invoke_function(name, obj, is_method=False):
-    tag = "[method]" if is_method else "[function]"
-    print(tag, name)
-
+# execute a callable and catch any exception, logging to stdout
+def try_execution(c: callable):
     try:
-        ret = invoke_function(obj)
-        print("[return value]", repr(ret))
+        c()
     except BaseException as e:
-		# catch ALL exceptions, including KeyboardInterrupt and system exit
+        # catch ALL exceptions, including KeyboardInterrupt and system exit
         print(type(e), e, sep=": ")
 
 
-def try_instantiate_class(name, obj):
+def try_invoke_function(f, name, is_method=False):
+    tag = "[method]" if is_method else "[function]"
+    print(tag, name)
+
+    def invoke():
+        ret = invoke_function(f)
+        print("[return value]", repr(ret))
+
+    try_execution(invoke)
+
+
+def try_instantiate_class_and_call_methods(c, name):
     print("[class]", name)
 
     def is_non_init_method(m):
         return inspect.ismethod(m) and m.__name__ != "__init__"
 
-    try:
-        instance = invoke_function(obj)
+    def invoke_methods():
+        instance = invoke_function(c)
         methods = inspect.getmembers(instance, is_non_init_method)
-        for name, method in methods:
-            try_invoke_function(name, method, is_method=True)
-    except BaseException as e:
-		# catch ALL exceptions, including KeyboardInterrupt and system exit
-        print(type(e), e, sep=": ")
+        for method_name, method in methods:
+            try_invoke_function(method, method_name, is_method=True)
+
+    try_execution(invoke_methods)
 
 
 def execute_module(module):
@@ -132,11 +139,11 @@ def execute_module(module):
     print("[module]", module)
 
     skipped_names = []
-    for (name, module_member) in inspect.getmembers(module):
-        if inspect.isfunction(module_member):
-            try_invoke_function(name, module_member)
-        elif inspect.isclass(module_member):
-            try_instantiate_class(name, module_member)
+    for (name, member) in inspect.getmembers(module):
+        if inspect.isfunction(member):
+            try_invoke_function(member, name)
+        elif inspect.isclass(member):
+            try_instantiate_class_and_call_methods(member, name)
         else:
             skipped_names.append(name)
 
@@ -148,6 +155,7 @@ PHASES = {
     "install": [install],
     "import": [importPkg]
 }
+
 
 def main():
     args = list(sys.argv)
