@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
-import inspect
-from dataclasses import dataclass
 import importlib
-from importlib.metadata import files
+import inspect
 import os.path
 import signal
-import sys
 import subprocess
+import sys
 import traceback
+import contextlib
+from dataclasses import dataclass
+from importlib.metadata import files
 from typing import Optional
 from unittest.mock import MagicMock
 
 PY_EXTENSION = '.py'
 
+EXECUTION_LOG_PATH = "/execution.log"
 EXECUTION_TIMEOUT_SECONDS = 10
 
 @dataclass
@@ -70,6 +72,7 @@ def importPkg(package):
         import_path = path_to_import(path)
         import_module(import_path)
 
+
 def import_single_module(import_path):
     module_dir = os.path.dirname(import_path)
     sys.path.append(module_dir)
@@ -81,23 +84,34 @@ def import_single_module(import_path):
 
 
 def import_module(import_path):
-    # set handler for function execution timeout alarms
-    signal.signal(signal.SIGALRM, handler=alarm_handler)
-
     print('Importing', import_path)
     try:
         module = importlib.import_module(import_path)
-        execute_module(module)
     except:
         print('Failed to import', import_path)
         traceback.print_exc()
+        module = None
 
-    # restore default signal handler for alarms
-    signal.signal(signal.SIGALRM, signal.SIG_DFL)
+    # execute code
+    if module is not None:
+        # set handler for function execution timeout alarms
+        signal.signal(signal.SIGALRM, handler=alarm_handler)
+        try:
+            with open(EXECUTION_LOG_PATH, "at") as execution_log:
+                with contextlib.redirect_stdout(execution_log):
+                    with contextlib.redirect_stderr(execution_log):
+                        execute_module(module)
+        except:
+            print('Failed to execute code for module', import_path)
+            traceback.print_exc()
+        finally:
+            # restore default signal handler for alarms
+            signal.signal(signal.SIGALRM, signal.SIG_DFL)
 
 
 def alarm_handler(sig_num, frame):
     raise TimeoutError("Timeout exceeded for function execution")
+
 
 # Call a function with mock arguments based on its declared signature.
 # The arguments are of type MagicMock, whose instances will return
@@ -144,8 +158,7 @@ def run_and_catch_all(c: callable):
 
 
 def try_invoke_function(f, name, is_method=False):
-    tag = "[method]" if is_method else "[function]"
-    print(tag, name)
+    print("[method]" if is_method else "[function]", name)
 
     def invoke():
         return invoke_function(f)
@@ -155,6 +168,7 @@ def try_invoke_function(f, name, is_method=False):
     if ret is not None:
         print("[return value]", repr(ret))
         return ret
+
 
 def try_instantiate_class(c, name):
     print("[class]", name)
@@ -183,11 +197,12 @@ def try_call_methods(instance, class_name, should_investigate, mark_seen):
 
 def execute_module(module):
     """Best-effort execution of code in a module"""
+
     print("[module]", module)
 
-    # keep track of all types belonging to the module we've seen so far in return values,
-    # so that we can recursively explore each one's methods without going in infinite loops
-    # using instances returned by module code is likely to be a more useful than ones
+    # Keep track of all types belonging to the module we've seen so far in return values,
+    # so that we can recursively explore each one's methods without going in infinite loops.
+    # Using instances returned by module code is likely to be a more useful than ones
     # instantiated with mocked constructor args
     seen_types = set()
 
@@ -240,7 +255,6 @@ def main():
     local_path = None
     version = None
     package_name = None
-    package = None
 
     if args[0] == '--local':
         args.pop(0)
@@ -251,23 +265,23 @@ def main():
 
     phase = args.pop(0)
 
-
     if len(args) > 0:
         package_name = args.pop(0)
 
-    if not phase in PHASES:
+    if phase not in PHASES:
         print(f'Unknown phase {phase} specified.')
         exit(1)
 
-    if package_name is not None:
-        package = Package(name=package_name, version=version, local_path=local_path)
+    if package_name is None:
+        # single module mode
+        if phase == "import" and local_path is not None:
+            import_single_module(local_path)
+            return
+        else:
+            print("'install' requested but no package name given, or local file missing for single module import")
+            exit(1)
 
-    if package is None and phase == "import" and local_path is not None:
-        import_single_module(local_path)
-        return
-    else:
-        print("'install' requested but no package name given, or local file missing for single module import")
-        exit(1)
+    package = Package(name=package_name, version=version, local_path=local_path)
 
     # Execute for the specified phase.
     for phase in PHASES[phase]:
