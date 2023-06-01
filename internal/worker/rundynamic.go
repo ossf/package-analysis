@@ -1,6 +1,8 @@
 package worker
 
 import (
+	"os"
+	"path"
 	"runtime"
 	"strconv"
 	"time"
@@ -96,6 +98,26 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option) (analysisr
 			// Error caused by an issue with the package (probably).
 			// Don't continue with phases if this one did not complete successfully.
 			break
+		}
+	}
+
+	// retrieve execution log back to host
+	executionLogDir, err := os.MkdirTemp("", "")
+	if err != nil {
+		log.Error("Error creating temp dir for execution log", "error", err)
+	}
+	defer os.RemoveAll(executionLogDir)
+	executionLogPath := path.Join(executionLogDir, "execution.log")
+
+	if err := sb.CopyToHost("/execution.log", executionLogPath); err != nil {
+		log.Error("Error retrieving execution log from sandbox", "error", err)
+	} else {
+		logContents, err := os.ReadFile(executionLogPath)
+		if err != nil {
+			log.Error("Error reading execution log", "error", err)
+		} else {
+			log.Info("Read execution log", "length", len(logContents))
+			results.ExecutionLog = analysisrun.DynamicAnalysisExecutionLog(logContents)
 		}
 	}
 

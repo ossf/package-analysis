@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"path/filepath"
 	"time"
@@ -102,13 +103,17 @@ func (rs *ResultStore) SaveTempFilesToZip(ctx context.Context, p Pkg, fileName s
 	return nil
 }
 
-func (rs *ResultStore) Save(ctx context.Context, p Pkg, analysis interface{}) error {
-	version := p.Version()
+// SaveWithFilename saves results to the bucket with the given filename
+func (rs *ResultStore) SaveWithFilename(ctx context.Context, p Pkg, filename string, analysis any) error {
+	if filename == "" {
+		return errors.New("filename cannot be empty")
+	}
+
 	result := &result{
 		Package: pkg{
 			Name:      p.Name(),
 			Ecosystem: p.EcosystemName(),
-			Version:   version,
+			Version:   p.Version(),
 		},
 		CreatedTimestamp: time.Now().UTC().Unix(),
 		Analysis:         analysis,
@@ -124,11 +129,6 @@ func (rs *ResultStore) Save(ctx context.Context, p Pkg, analysis interface{}) er
 		return err
 	}
 	defer bkt.Close()
-
-	filename := "results.json"
-	if version != "" {
-		filename = version + ".json"
-	}
 
 	path := rs.generatePath(p)
 	uploadPath := filepath.Join(path, filename)
@@ -148,4 +148,32 @@ func (rs *ResultStore) Save(ctx context.Context, p Pkg, analysis interface{}) er
 	}
 
 	return nil
+}
+
+// MakeFilename returns the default filename to use for saving analysis results,
+// using an optional label.
+// If the package has a version, the default filename is
+// "<label>-<version>.json" if label is nonempty, or <version>.json otherwise.
+// If the package does not have a version specified, the default filename is
+// "<label>.json" if label is nonempty, or "results.json" if not.
+func MakeFilename(p Pkg, label string) string {
+	prefix := "results"
+
+	version := p.Version()
+	if version != "" && label != "" {
+		prefix = label + "-" + version
+	} else if version != "" && label == "" {
+		prefix = version
+	} else if version == "" && label != "" {
+		prefix = label
+	}
+
+	return prefix + ".json"
+
+}
+
+// Save saves the results with the default filename
+func (rs *ResultStore) Save(ctx context.Context, p Pkg, analysis interface{}) error {
+	filename := MakeFilename(p, "")
+	return rs.SaveWithFilename(ctx, p, filename, analysis)
 }
