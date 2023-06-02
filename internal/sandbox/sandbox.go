@@ -99,7 +99,9 @@ type Sandbox interface {
 	// CopyToHost copies a path in the sandbox (src) to a path in the host (dest).
 	// It will fail if the src path does not exist in the sandbox.
 	// See https://docs.podman.io/en/latest/markdown/podman-cp.1.html for
-	// semantics of src and dest paths
+	// semantics of src and dest paths.
+	// Caution: files coming out of the sandbox are untrusted and proper validation
+	// should be performed on the file before use.
 	CopyToHost(src, dest string) error
 }
 
@@ -426,8 +428,6 @@ func (s *podmanSandbox) init() error {
 		copyArgs := copyOp.args(s.container)
 		log.Info("podman copy: " + copyOp.String())
 		if err := podmanRun(copyArgs...); err != nil {
-			exitErr := err.(*exec.ExitError)
-			log.Debug("copy into sandbox failed", "args", copyArgs, "stderr", exitErr.Stderr)
 			return fmt.Errorf("copy into sandbox [%s]  failed: %w", copyOp, err)
 		}
 	}
