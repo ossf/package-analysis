@@ -3,6 +3,7 @@ package worker
 import (
 	"os"
 	"path"
+	"regexp"
 	"runtime"
 	"strconv"
 	"time"
@@ -14,6 +15,8 @@ import (
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 )
+
+var nonSpaceControlChars = regexp.MustCompile("[\x00-\x08\x0b-\x1f\x7f]")
 
 /*
 RunDynamicAnalysis runs dynamic analysis on the given package in the sandbox
@@ -112,12 +115,14 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option) (analysisr
 	if err := sb.CopyToHost("/execution.log", executionLogPath); err != nil {
 		log.Error("Error retrieving execution log from sandbox", "error", err)
 	} else {
-		logContents, err := os.ReadFile(executionLogPath)
+		logData, err := os.ReadFile(executionLogPath)
 		if err != nil {
 			log.Error("Error reading execution log", "error", err)
 		} else {
-			log.Info("Read execution log", "length", len(logContents))
-			results.ExecutionLog = analysisrun.DynamicAnalysisExecutionLog(logContents)
+			// remove control characters except tab (\x09) and newline (\x0A)
+			processedLog := nonSpaceControlChars.ReplaceAllLiteral(logData, []byte{})
+			log.Info("Read execution log", "rawLength", len(logData), "processedLength", len(processedLog))
+			results.ExecutionLog = analysisrun.DynamicAnalysisExecutionLog(processedLog)
 		}
 	}
 
