@@ -1,6 +1,9 @@
 package worker
 
 import (
+	"os"
+	"path"
+	"regexp"
 	"runtime"
 	"strconv"
 	"time"
@@ -12,6 +15,8 @@ import (
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 )
+
+var nonSpaceControlChars = regexp.MustCompile("[\x00-\x08\x0b-\x1f\x7f]")
 
 /*
 RunDynamicAnalysis runs dynamic analysis on the given package in the sandbox
@@ -96,6 +101,28 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option) (analysisr
 			// Error caused by an issue with the package (probably).
 			// Don't continue with phases if this one did not complete successfully.
 			break
+		}
+	}
+
+	// retrieve execution log back to host
+	executionLogDir, err := os.MkdirTemp("", "")
+	if err != nil {
+		log.Error("Error creating temp dir for execution log", "error", err)
+	}
+	defer os.RemoveAll(executionLogDir)
+	executionLogPath := path.Join(executionLogDir, "execution.log")
+
+	if err := sb.CopyToHost("/execution.log", executionLogPath); err != nil {
+		log.Error("Error retrieving execution log from sandbox", "error", err)
+	} else {
+		logData, err := os.ReadFile(executionLogPath)
+		if err != nil {
+			log.Error("Error reading execution log", "error", err)
+		} else {
+			// remove control characters except tab (\x09) and newline (\x0A)
+			processedLog := nonSpaceControlChars.ReplaceAllLiteral(logData, []byte{})
+			log.Info("Read execution log", "rawLength", len(logData), "processedLength", len(processedLog))
+			results.ExecutionLog = analysisrun.DynamicAnalysisExecutionLog(processedLog)
 		}
 	}
 
