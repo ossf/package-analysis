@@ -3,7 +3,7 @@
 RESULTS_DIR=${RESULTS_DIR:-"/tmp/results"}
 STATIC_RESULTS_DIR=${STATIC_RESULTS_DIR:-"/tmp/staticResults"}
 FILE_WRITE_RESULTS_DIR=${FILE_WRITE_RESULTS_DIR:-"/tmp/writeResults"}
-ANALYZED_PACKAGE_DIR=${ANALYZED_PACKAGE_DIR:-"/tmp/analyzedPackage"}
+ANALYZED_PACKAGES_DIR=${ANALYZED_PACKAGES_DIR:-"/tmp/analyzedPackages"}
 LOGS_DIR=${LOGS_DIR:-"/tmp/dockertmp"}
 
 # for pretty printing
@@ -43,7 +43,7 @@ function print_results_dirs {
 	echo "Dynamic analysis results: $RESULTS_DIR"
 	echo "Static analysis results:  $STATIC_RESULTS_DIR"
 	echo "File write results:       $FILE_WRITE_RESULTS_DIR"
-	echo "Analyzed package saved:   $ANALYZED_PACKAGE_DIR"
+	echo "Analyzed package saved:   $ANALYZED_PACKAGES_DIR"
 	echo "Debug logs:               $LOGS_DIR"
 }
 
@@ -150,11 +150,11 @@ elif is_mount_type overlay /var/lib; then
 fi
 
 
-DOCKER_MOUNTS=("-v" "$CONTAINER_MOUNT_DIR:/var/lib/containers" "-v" "$RESULTS_DIR:/results" "-v" "$STATIC_RESULTS_DIR:/staticResults" "-v" "$FILE_WRITE_RESULTS_DIR:/writeResults" "-v" "$LOGS_DIR:/tmp" "-v" "$ANALYZED_PACKAGE_DIR:/analyzedPackage")
+DOCKER_MOUNTS=("-v" "$CONTAINER_MOUNT_DIR:/var/lib/containers" "-v" "$RESULTS_DIR:/results" "-v" "$STATIC_RESULTS_DIR:/staticResults" "-v" "$FILE_WRITE_RESULTS_DIR:/writeResults" "-v" "$LOGS_DIR:/tmp" "-v" "$ANALYZED_PACKAGES_DIR:/analyzedPackages")
 
 ANALYSIS_IMAGE=gcr.io/ossf-malware-analysis/analysis
 
-ANALYSIS_ARGS=("analyze" "-upload" "file:///results/" "-upload-file-write-info" "file:///writeResults/" "-upload-static" "file:///staticResults/" "-upload-analyzed-pkg" "file:///analyzedPackage/")
+ANALYSIS_ARGS=("analyze" "-upload" "file:///results/" "-upload-file-write-info" "file:///writeResults/" "-upload-static" "file:///staticResults/" "-upload-analyzed-pkg" "file:///analyzedPackages/")
 
 # Add the remaining command line arguments
 ANALYSIS_ARGS=("${ANALYSIS_ARGS[@]}" "${args[@]}")
@@ -220,7 +220,7 @@ sleep 1 # Allow time to read info above before executing
 mkdir -p "$RESULTS_DIR"
 mkdir -p "$STATIC_RESULTS_DIR"
 mkdir -p "$FILE_WRITE_RESULTS_DIR"
-mkdir -p "$ANALYZED_PACKAGE_DIR"
+mkdir -p "$ANALYZED_PACKAGES_DIR"
 mkdir -p "$LOGS_DIR"
 
 docker "${DOCKER_OPTS[@]}" "${DOCKER_MOUNTS[@]}" "$ANALYSIS_IMAGE" "${ANALYSIS_ARGS[@]}"
@@ -244,7 +244,7 @@ echo $LINE
 		rmdir --ignore-fail-on-non-empty "$RESULTS_DIR"
 		rmdir --ignore-fail-on-non-empty "$STATIC_RESULTS_DIR"
 		rmdir --ignore-fail-on-non-empty "$FILE_WRITE_RESULTS_DIR"
-		rmdir --ignore-fail-on-non-empty "$ANALYZED_PACKAGE_DIR"
+		rmdir --ignore-fail-on-non-empty "$ANALYZED_PACKAGES_DIR"
 		rmdir --ignore-fail-on-non-empty "$LOGS_DIR"
 	fi
 

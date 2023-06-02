@@ -255,7 +255,7 @@ func main() {
 		dynamicAnalysis: os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS"),
 		staticAnalysis:  os.Getenv("OSSF_MALWARE_STATIC_ANALYSIS_RESULTS"),
 		fileWrites:      os.Getenv("OSSF_MALWARE_ANALYSIS_FILE_WRITE_RESULTS"),
-		analyzedPkg:     os.Getenv("OSSF_MALWARE_ANALYZED_PACKAGE"),
+		analyzedPkg:     os.Getenv("OSSF_MALWARE_ANALYZED_PACKAGES"),
 	}
 
 	imageSpec := sandboxImageSpec{

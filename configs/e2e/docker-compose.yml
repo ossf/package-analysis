@@ -67,7 +67,7 @@ services:
       OSSF_MALWARE_ANALYSIS_RESULTS: s3://package-analysis?endpoint=minio:9000&disableSSL=true&s3ForcePathStyle=true
       OSSF_MALWARE_STATIC_ANALYSIS_RESULTS: s3://package-analysis-static?endpoint=minio:9000&disableSSL=true&s3ForcePathStyle=true
       OSSF_MALWARE_ANALYSIS_FILE_WRITE_RESULTS: s3://package-analysis-file-writes?endpoint=minio:9000&disableSSL=true&s3ForcePathStyle=true
-      OSSF_MALWARE_ANALYZED_PACKAGE: s3://package-analysis-analyzed-package?endpoint=minio:9000&disableSSL=true&s3ForcePathStyle=true
+      OSSF_MALWARE_ANALYZED_PACKAGES: s3://package-analysis-analyzed-package?endpoint=minio:9000&disableSSL=true&s3ForcePathStyle=true
       OSSF_MALWARE_ANALYSIS_ENABLE_PROFILER: "true"
       KAFKA_BROKERS: kafka:9092
       AWS_ACCESS_KEY_ID: minio
