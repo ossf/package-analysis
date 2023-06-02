@@ -30,10 +30,22 @@ func getRubyGemsLatest(pkg string) (string, error) {
 	return details.Version, nil
 }
 
+func getRubyGemsArchiveURL(pkgName, version string) (string, error) {
+	pkgURL := fmt.Sprintf("https://rubygems.org/gems/%v-%v.gem", pkgName, version)
+	resp, err := http.Get(pkgURL)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	return pkgURL, nil
+}
+
 var rubygemsPkgManager = PkgManager{
 	ecosystem:     pkgecosystem.RubyGems,
 	image:         combinedDynamicAnalysisImage,
 	command:       "/usr/local/bin/analyze-ruby.rb",
 	latestVersion: getRubyGemsLatest,
+	archiveURL:    getRubyGemsArchiveURL,
 	dynamicPhases: analysisrun.DefaultDynamicPhases(),
 }

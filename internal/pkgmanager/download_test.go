@@ -23,7 +23,7 @@ func testDownload(t *testing.T, tests []downloadTestSpec, manager *PkgManager) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			downloadPath, err := manager.DownloadArchive(tt.pkgName, tt.pkgVersion, tmpDir)
+			downloadPath, err := manager.DownloadArchive(tt.pkgName, tt.pkgVersion, tmpDir, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Want error: %v; got error: %v", tt.wantErr, err)
 				return
@@ -94,7 +94,7 @@ func TestDownloadToDirectory(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			downloadedFile, err := downloadToDirectory(tt.dir, tt.url)
+			downloadedFile, err := downloadToDirectory(tt.dir, tt.url, "", false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Want error: %v; got error: %v", tt.wantErr, err)
 				return

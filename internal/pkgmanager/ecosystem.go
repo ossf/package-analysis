@@ -2,6 +2,7 @@ package pkgmanager
 
 import (
 	"fmt"
+	"path"
 	"strings"
 
 	"github.com/ossf/package-analysis/pkg/api/analysisrun"
@@ -78,7 +79,7 @@ func (p *PkgManager) Package(name, version string) *Pkg {
 	}
 }
 
-func (p *PkgManager) DownloadArchive(name, version, directory string) (string, error) {
+func (p *PkgManager) DownloadArchive(name, version, directory string, append_hash bool) (string, error) {
 	if directory == "" {
 		return "", fmt.Errorf("no directory specified")
 	}
@@ -88,7 +89,17 @@ func (p *PkgManager) DownloadArchive(name, version, directory string) (string, e
 		return "", err
 	}
 
-	archivePath, err := downloadToDirectory(directory, downloadURL)
+	fileName := ""
+	// Rename for crates (The name of downloaded archive is download)
+	if p.ecosystem == "crates.io" && path.Base(downloadURL) == "download" {
+		fileName = strings.Join([]string{name, "-", version, ".tar.gz"}, "")
+	} else if p.ecosystem == "packagist" {
+		pkg := strings.Split(name, "/")
+		fileName = strings.Join([]string{pkg[0], "-", pkg[1], "-", version, ".zip"}, "")
+	}
+
+	archivePath, err := downloadToDirectory(directory, downloadURL, fileName, append_hash)
+
 	if err != nil {
 		return "", err
 	}

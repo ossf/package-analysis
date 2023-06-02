@@ -32,10 +32,22 @@ func getCratesLatest(pkg string) (string, error) {
 	return details.Versions[0].Num, nil
 }
 
+func getCratesArchiveURL(pkgName, version string) (string, error) {
+	pkgURL := fmt.Sprintf("https://crates.io/api/v1/crates/%s/%s/download", pkgName, version)
+	resp, err := http.Get(pkgURL)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	return pkgURL, nil
+}
+
 var cratesPkgManager = PkgManager{
 	ecosystem:     pkgecosystem.CratesIO,
 	image:         combinedDynamicAnalysisImage,
 	command:       "/usr/local/bin/analyze-rust.py",
 	latestVersion: getCratesLatest,
+	archiveURL:    getCratesArchiveURL,
 	dynamicPhases: analysisrun.DefaultDynamicPhases(),
 }

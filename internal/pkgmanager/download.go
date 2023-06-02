@@ -7,19 +7,34 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
+
+	"github.com/ossf/package-analysis/internal/utils"
 )
 
 /*
-downloadToDirectory downloads a file from the given URL to the given directory. The name of the
-local file is obtained from the last element of the URL path when split on the '/' character.
+downloadToDirectory downloads a file from the given URL to the given directory.
 On successful download, the full path to the downloaded file is returned.
 */
-func downloadToDirectory(dir string, url string) (string, error) {
-	fileName := path.Base(url)
+func downloadToDirectory(dir string, url string, fileName string, append_hash bool) (string, error) {
+	if fileName == "" {
+		fileName = path.Base(url)
+	}
 	filePath := filepath.Join(dir, fileName)
 	err := downloadToPath(filePath, url)
 	if err != nil {
 		return "", err
+	}
+
+	if append_hash {
+		hash, err := utils.HashFile(filePath)
+		if err != nil {
+			return "", err
+		}
+		err = os.Rename(filePath, strings.Join([]string{filePath, hash[7:]}, "-"))
+		if err != nil {
+			return "", err
+		}
 	}
 
 	return filePath, nil

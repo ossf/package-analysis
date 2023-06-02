@@ -17,6 +17,12 @@ type packagistJSON struct {
 		License           []string  `json:"license,omitempty"`
 		Time              time.Time `json:"time"`
 		Name              string    `json:"name,omitempty"`
+		Dist struct {
+			URL       string `json:"url"`
+			Type      string `json:"type"`
+			Shasum    string `json:"shasum,omitempty"`
+			Reference string `json:"reference"`
+		} `json:"dist"`
 	} `json:"packages"`
 }
 
@@ -49,10 +55,36 @@ func getPackagistLatest(pkg string) (string, error) {
 	return latestVersion, nil
 }
 
+func getPackagistArchiveURL(pkgName, version string) (string, error) {
+	resp, err := http.Get(fmt.Sprintf("https://repo.packagist.org/p2/%s.json", pkgName))
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	decoder := json.NewDecoder(resp.Body)
+	var details packagistJSON
+	err = decoder.Decode(&details)
+	if err != nil {
+		return "", err
+	}
+
+	for _, versions := range details.Packages {
+		for _, v := range versions {
+			if v.Version == version {
+				return v.Dist.URL, nil
+			}
+		}
+	}
+
+	return "", nil
+}
+
 var packagistPkgManager = PkgManager{
 	ecosystem:     pkgecosystem.Packagist,
 	image:         combinedDynamicAnalysisImage,
 	command:       "/usr/local/bin/analyze-php.php",
 	latestVersion: getPackagistLatest,
+	archiveURL:    getPackagistArchiveURL,
 	dynamicPhases: analysisrun.DefaultDynamicPhases(),
 }

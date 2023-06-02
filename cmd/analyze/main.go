@@ -30,6 +30,7 @@ var (
 	dynamicUpload       = flag.String("upload", "", "bucket path for uploading dynamic analysis results")
 	staticUpload        = flag.String("upload-static", "", "bucket path for uploading static analysis results")
 	uploadFileWriteInfo = flag.String("upload-file-write-info", "", "bucket path for uploading information from file writes")
+	uploadAnalyzedPkg   = flag.String("upload-analyzed-pkg", "", "bucket path for uploading analyzed package")
 	offline             = flag.Bool("offline", false, "disables sandbox network access")
 	listModes           = flag.Bool("list-modes", false, "prints out a list of available analysis modes")
 	help                = flag.Bool("help", false, "print help on available options")
@@ -111,6 +112,15 @@ func dynamicAnalysis(pkg *pkgmanager.Pkg) {
 		bucket, path := parseBucketPath(*uploadFileWriteInfo)
 		if err := worker.SaveFileWriteResults(bucket, resultstore.BasePath(path), ctx, pkg, results); err != nil {
 			log.Fatal("Failed to save write results", "error", err)
+		}
+	}
+
+	if *uploadAnalyzedPkg != "" {
+		bucket, path := parseBucketPath(*uploadAnalyzedPkg)
+		err := resultstore.New(bucket, resultstore.BasePath(path)).SaveAnalyzedPackage(ctx, pkg.Manager(), pkg)
+		if err != nil {
+			log.Fatal("Failed to upload analyzed package to blobstore",
+				"error", err)
 		}
 	}
 
