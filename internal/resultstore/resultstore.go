@@ -158,16 +158,15 @@ func (rs *ResultStore) SaveWithFilename(ctx context.Context, p Pkg, filename str
 // "<label>.json" if label is nonempty, or "results.json" if not.
 func MakeFilename(p Pkg, label string) string {
 	prefix := "results"
-
 	version := p.Version()
+
 	if version != "" && label != "" {
 		prefix = label + "-" + version
-	} else if version != "" && label == "" {
+	} else if version != "" {
 		prefix = version
-	} else if version == "" && label != "" {
+	} else if label != "" {
 		prefix = label
 	}
-
 	return prefix + ".json"
 
 }
