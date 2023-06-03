@@ -115,7 +115,7 @@ func dynamicAnalysis(pkg *pkgmanager.Pkg) {
 		}
 	}
 
-	if *uploadAnalyzedPkg != "" {
+	if *uploadAnalyzedPkg != "" && *localPkg == "" {
 		bucket, path := parseBucketPath(*uploadAnalyzedPkg)
 		err := resultstore.New(bucket, resultstore.BasePath(path)).SaveAnalyzedPackage(ctx, pkg.Manager(), pkg)
 		if err != nil {
