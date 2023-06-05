@@ -31,6 +31,8 @@ var (
 	staticUpload        = flag.String("upload-static", "", "bucket path for uploading static analysis results")
 	uploadFileWriteInfo = flag.String("upload-file-write-info", "", "bucket path for uploading information from file writes")
 	offline             = flag.Bool("offline", false, "disables sandbox network access")
+	customSandbox       = flag.String("sandbox-image", "", "override default dynamic analysis sandbox with custom image")
+	customAnalysisCmd   = flag.String("analysis-command", "", "override default dynamic analysis script path (use with custom sandbox image)")
 	listModes           = flag.Bool("list-modes", false, "prints out a list of available analysis modes")
 	help                = flag.Bool("help", false, "print help on available options")
 	analysisMode        = utils.CommaSeparatedFlags("mode", []string{"static", "dynamic"},
@@ -84,6 +86,13 @@ func dynamicAnalysis(pkg *pkgmanager.Pkg) {
 	}
 
 	sbOpts := append(worker.DynamicSandboxOptions(pkg.Ecosystem()), makeSandboxOptions()...)
+
+	if *customSandbox != "" {
+		sbOpts = append(sbOpts, sandbox.Image(*customSandbox))
+	}
+	if *customAnalysisCmd != "" {
+		sbOpts = append(sbOpts, sandbox.Command(*customAnalysisCmd))
+	}
 
 	result, err := worker.RunDynamicAnalysis(pkg, sbOpts)
 	if err != nil {
