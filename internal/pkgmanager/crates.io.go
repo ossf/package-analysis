@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
@@ -34,8 +33,5 @@ func getCratesLatest(pkg string) (string, error) {
 
 var cratesPkgManager = PkgManager{
 	ecosystem:     pkgecosystem.CratesIO,
-	image:         combinedDynamicAnalysisImage,
-	command:       "/usr/local/bin/analyze-rust.py",
 	latestVersion: getCratesLatest,
-	dynamicPhases: analysisrun.DefaultDynamicPhases(),
 }

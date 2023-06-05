@@ -81,11 +81,14 @@ func (r *RunResult) Stderr() []byte {
 
 type Sandbox interface {
 	// Run will execute the supplied command and args in the sandbox.
+	// If sandbox.Command() was used as an option to create this sandbox,
+	// the executed commandline will have the form <command> <args...>
+	// Otherwise, it will be just <args...>
 	//
 	// The container used to execute the command is reused until Clean() is
 	// called.
 	//
-	// If there is an error while using the sandbox an error will be returned.
+	// If an error occurs while using the sandbox, it will be returned.
 	//
 	// The result of the supplied command will be returned in an instance of
 	// RunResult.
@@ -155,6 +158,7 @@ type podmanSandbox struct {
 	tag        string
 	id         string
 	container  string
+	command    string
 	noPull     bool
 	rawSockets bool
 	strace     bool
@@ -175,11 +179,12 @@ type (
 
 func (o option) set(sb *podmanSandbox) { o(sb) }
 
-func New(image string, options ...Option) Sandbox {
+func New(options ...Option) Sandbox {
 	sb := &podmanSandbox{
-		image:      image,
+		image:      "",
 		tag:        "",
 		container:  "",
+		command:    "",
 		noPull:     false,
 		rawSockets: false,
 		strace:     false,
@@ -194,7 +199,20 @@ func New(image string, options ...Option) Sandbox {
 	for _, o := range options {
 		o.set(sb)
 	}
+
+	if sb.image == "" {
+		log.Fatal("image is required")
+	}
 	return sb
+}
+
+// Image sets the image to be used by the sandbox. It is a required option.
+func Image(image string) Option {
+	return option(func(sb *podmanSandbox) { sb.image = image })
+}
+
+func Command(command string) Option {
+	return option(func(sb *podmanSandbox) { sb.command = command })
 }
 
 // EnableRawSockets allows use of raw sockets in the sandbox.
@@ -245,7 +263,6 @@ func NoPull() Option {
 }
 
 // Volume can be used to specify an additional volume map into the container.
-//
 // src is the path in the host that will be mapped to the dest path.
 func Volume(src, dest string) Option {
 	return option(func(sb *podmanSandbox) {
@@ -380,6 +397,9 @@ func (s *podmanSandbox) execContainerCmd(execArgs []string) *exec.Cmd {
 		"exec",
 		s.container,
 	}
+	if s.command != "" {
+		args = append(args, s.command)
+	}
 	args = append(args, execArgs...)
 	return podman(args...)
 }
@@ -467,10 +487,10 @@ func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
 
 	// Prepare stdout and stderr writers
 	logOut := log.Writer(log.InfoLevel,
-		"args", args)
+		"command", s.command, "args", args)
 	defer logOut.Close()
 	logErr := log.Writer(log.WarnLevel,
-		"args", args)
+		"command", s.command, "args", args)
 	defer logErr.Close()
 
 	outWriters := []io.Writer{&stdout}

@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
@@ -51,8 +50,5 @@ func getPackagistLatest(pkg string) (string, error) {
 
 var packagistPkgManager = PkgManager{
 	ecosystem:     pkgecosystem.Packagist,
-	image:         combinedDynamicAnalysisImage,
-	command:       "/usr/local/bin/analyze-php.php",
 	latestVersion: getPackagistLatest,
-	dynamicPhases: analysisrun.DefaultDynamicPhases(),
 }

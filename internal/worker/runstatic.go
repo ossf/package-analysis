@@ -15,8 +15,8 @@ import (
 	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 )
 
-// staticAnalysisImage is the Docker image for the static analysis sandbox.
-const staticAnalysisImage = "gcr.io/ossf-malware-analysis/static-analysis"
+// defaultStaticAnalysisImage is the default Docker image for the static analysis sandbox.
+const defaultStaticAnalysisImage = "gcr.io/ossf-malware-analysis/static-analysis"
 
 // staticAnalyzeBinary is the absolute path to the compiled staticanalyze.go binary
 // inside the static analysis sandbox (see sandboxes/staticanalysis/Dockerfile).
@@ -61,7 +61,7 @@ func RunStaticAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option, tasks ...st
 	// for saving static analysis results inside the sandbox
 	sbOpts = append(sbOpts, sandbox.Volume(resultsJSONFile, resultsJSONFile))
 
-	sb := sandbox.New(staticAnalysisImage, sbOpts...)
+	sb := sandbox.New(sbOpts...)
 	defer func() {
 		if err := sb.Clean(); err != nil {
 			log.Error("error cleaning up sandbox", "error", err)

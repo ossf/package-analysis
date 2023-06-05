@@ -168,8 +168,8 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		return err
 	}
 
-	dynamicSandboxOpts := append(worker.DynamicSandboxOptions(), sandboxOpts...)
-	results, _, _, err := worker.RunDynamicAnalysis(pkg, dynamicSandboxOpts)
+	dynamicSandboxOpts := append(worker.DynamicSandboxOptions(ecosystem), sandboxOpts...)
+	result, err := worker.RunDynamicAnalysis(pkg, dynamicSandboxOpts)
 	if err != nil {
 		return err
 	}
@@ -183,7 +183,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		}
 	}
 
-	err = saveResults(ctx, pkg, resultsBuckets, results, staticResults)
+	err = saveResults(ctx, pkg, resultsBuckets, result.Data, staticResults)
 	if err != nil {
 		return err
 	}

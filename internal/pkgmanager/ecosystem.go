@@ -4,22 +4,16 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
 // PkgManager represents how packages from a common ecosystem are accessed.
 type PkgManager struct {
 	ecosystem      pkgecosystem.Ecosystem
-	image          string
-	command        string
 	latestVersion  func(string) (string, error)
 	archiveURL     func(string, string) (string, error)
 	extractArchive func(string, string) error
-	dynamicPhases  []analysisrun.DynamicPhase
 }
-
-const combinedDynamicAnalysisImage = "gcr.io/ossf-malware-analysis/dynamic-analysis"
 
 var (
 	supportedPkgManagers = map[pkgecosystem.Ecosystem]*PkgManager{
@@ -40,12 +34,8 @@ func (p *PkgManager) String() string {
 	return string(p.ecosystem)
 }
 
-func (p *PkgManager) DynamicAnalysisImage() string {
-	return p.image
-}
-
-func (p *PkgManager) DynamicPhases() []analysisrun.DynamicPhase {
-	return p.dynamicPhases
+func (p *PkgManager) Ecosystem() pkgecosystem.Ecosystem {
+	return p.ecosystem
 }
 
 func (p *PkgManager) Latest(name string) (*Pkg, error) {

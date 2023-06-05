@@ -83,9 +83,9 @@ func dynamicAnalysis(pkg *pkgmanager.Pkg) {
 		sandbox.InitNetwork()
 	}
 
-	sbOpts := append(worker.DynamicSandboxOptions(), makeSandboxOptions()...)
+	sbOpts := append(worker.DynamicSandboxOptions(pkg.Ecosystem()), makeSandboxOptions()...)
 
-	results, lastRunPhase, lastStatus, err := worker.RunDynamicAnalysis(pkg, sbOpts)
+	result, err := worker.RunDynamicAnalysis(pkg, sbOpts)
 	if err != nil {
 		log.Fatal("Dynamic analysis aborted (run error)", "error", err)
 	}
@@ -94,12 +94,12 @@ func dynamicAnalysis(pkg *pkgmanager.Pkg) {
 	if *dynamicUpload != "" {
 		bucket, path := parseBucketPath(*dynamicUpload)
 		rs := resultstore.New(bucket, resultstore.BasePath(path))
-		if err := rs.Save(ctx, pkg, results.StraceSummary); err != nil {
+		if err := rs.Save(ctx, pkg, result.Data.StraceSummary); err != nil {
 			log.Fatal("Failed to upload dynamic analysis results to blobstore",
 				"error", err)
 		}
 		execLogFilename := resultstore.MakeFilename(pkg, "execution-log")
-		if err := rs.SaveWithFilename(ctx, pkg, execLogFilename, results.ExecutionLog); err != nil {
+		if err := rs.SaveWithFilename(ctx, pkg, execLogFilename, result.Data.ExecutionLog); err != nil {
 			log.Fatal("Failed to upload dynamic analysis results to blobstore",
 				"error", err)
 		}
@@ -109,7 +109,7 @@ func dynamicAnalysis(pkg *pkgmanager.Pkg) {
 
 	if *uploadFileWriteInfo != "" {
 		bucket, path := parseBucketPath(*uploadFileWriteInfo)
-		if err := worker.SaveFileWriteResults(bucket, resultstore.BasePath(path), ctx, pkg, results); err != nil {
+		if err := worker.SaveFileWriteResults(bucket, resultstore.BasePath(path), ctx, pkg, result.Data); err != nil {
 			log.Fatal("Failed to save write results", "error", err)
 		}
 	}
@@ -123,10 +123,10 @@ func dynamicAnalysis(pkg *pkgmanager.Pkg) {
 	)
 
 	// this is only valid if RunDynamicAnalysis() returns nil err
-	if lastStatus != analysis.StatusCompleted {
+	if result.LastStatus != analysis.StatusCompleted {
 		log.Warn("Dynamic analysis phase did not complete successfully",
-			"lastRunPhase", lastRunPhase,
-			"status", lastStatus)
+			"lastRunPhase", result.LastRunPhase,
+			"status", result.LastStatus)
 	}
 }
 
