@@ -61,7 +61,7 @@ def path_to_import(path):
     return import_path.replace('/', '.')
 
 
-def importPkg(package):
+def import_package(package):
     """Import phase for analyzing the package."""
 
     for path in files(package.name):
@@ -90,23 +90,63 @@ def import_module(import_path):
     except:
         print('Failed to import', import_path)
         traceback.print_exc()
-        module = None
+        return
 
-    # execute code
-    if module is not None:
-        # set handler for function execution timeout alarms
-        signal.signal(signal.SIGALRM, handler=alarm_handler)
-        try:
-            with open(EXECUTION_LOG_PATH, "at") as execution_log:
-                with contextlib.redirect_stdout(execution_log):
-                    with contextlib.redirect_stderr(execution_log):
-                        execute_module(module)
-        except:
-            print('Failed to execute code for module', import_path)
-            traceback.print_exc()
-        finally:
-            # restore default signal handler for alarms
-            signal.signal(signal.SIGALRM, signal.SIG_DFL)
+    # Setup for module execution
+    # 1. handler for function execution timeout alarms
+    # 2. redirect stdout and stderr to execution log file
+    signal.signal(signal.SIGALRM, handler=alarm_handler)
+    with open(EXECUTION_LOG_PATH, "at") as execution_log:
+        with contextlib.redirect_stdout(execution_log):
+            with contextlib.redirect_stderr(execution_log):
+                try:
+                    execute_module(module)
+                except:
+                    print('Failed to execute code for module', import_path)
+                    traceback.print_exc()
+
+    # restore default signal handler for SIGALRM
+    signal.signal(signal.SIGALRM, signal.SIG_DFL)
+
+
+def execute_module(module):
+    """Best-effort execution of code in a module"""
+    print("[module]", module)
+
+    # Keep track of all types belonging to the module we've seen so far in return values,
+    # so that we can recursively explore each one's methods without going in infinite loops.
+    # Using instances returned by module code is likely to be a more useful than ones
+    # instantiated with mocked constructor args
+    seen_types = set()
+
+    def should_investigate(t):
+        return t.__module__ == module.__name__ and t not in seen_types
+
+    def mark_seen(t):
+        seen_types.add(t)
+
+    instantiated_types = set()
+
+    skipped_names = []
+    for (name, member) in inspect.getmembers(module):
+        if inspect.isfunction(member):
+            return_value = try_invoke_function(member, name)
+            return_type = return_value.__class__
+            # TODO should it be DFS or BFS?
+            if should_investigate(return_type):
+                print("[investigate type]", return_type)
+                mark_seen(return_type)
+                try_call_methods(return_value, return_type, should_investigate, mark_seen)
+        elif inspect.isclass(member):
+            instance = try_instantiate_class(member, name)
+            assert instance.__class__ == member
+            if instance is not None and member not in instantiated_types:
+                instantiated_types.add(member)
+                try_call_methods(instance, name, should_investigate, mark_seen)
+        else:
+            skipped_names.append(name)
+
+    print("[skipped members]", " ".join(skipped_names))
 
 
 def alarm_handler(sig_num, frame):
@@ -195,51 +235,10 @@ def try_call_methods(instance, class_name, should_investigate, mark_seen):
             try_call_methods(return_value, return_type, should_investigate, mark_seen)
 
 
-def execute_module(module):
-    """Best-effort execution of code in a module"""
-
-    print("[module]", module)
-
-    # Keep track of all types belonging to the module we've seen so far in return values,
-    # so that we can recursively explore each one's methods without going in infinite loops.
-    # Using instances returned by module code is likely to be a more useful than ones
-    # instantiated with mocked constructor args
-    seen_types = set()
-
-    def should_investigate(t):
-        return t.__module__ == module.__name__ and t not in seen_types
-
-    def mark_seen(t):
-        seen_types.add(t)
-
-    instantiated_types = set()
-
-    skipped_names = []
-    for (name, member) in inspect.getmembers(module):
-        if inspect.isfunction(member):
-            return_value = try_invoke_function(member, name)
-            return_type = return_value.__class__
-            # TODO should it be DFS or BFS?
-            if should_investigate(return_type):
-                print("[investigate type]", return_type)
-                mark_seen(return_type)
-                try_call_methods(return_value, return_type, should_investigate, mark_seen)
-        elif inspect.isclass(member):
-            instance = try_instantiate_class(member, name)
-            assert instance.__class__ == member
-            if instance is not None and member not in instantiated_types:
-                instantiated_types.add(member)
-                try_call_methods(instance, name, should_investigate, mark_seen)
-        else:
-            skipped_names.append(name)
-
-    print("[skipped members]", " ".join(skipped_names))
-
-
 PHASES = {
-    "all": [install, importPkg],
+    "all": [install, import_package],
     "install": [install],
-    "import": [importPkg]
+    "import": [import_package]
 }
 
 
