@@ -2,6 +2,7 @@ package sandbox
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -94,6 +95,14 @@ type Sandbox interface {
 	//
 	// Once called the Sandbox cannot be used again.
 	Clean() error
+
+	// CopyToHost copies a path in the sandbox (src) to a path in the host (dest).
+	// It will fail if the src path does not exist in the sandbox.
+	// See https://docs.podman.io/en/latest/markdown/podman-cp.1.html for
+	// semantics of src and dest paths.
+	// Caution: files coming out of the sandbox are untrusted and proper validation
+	// should be performed on the file before use.
+	CopyToHost(src, dest string) error
 }
 
 // volume represents a volume mapping between a host src and a container dest.
@@ -107,6 +116,37 @@ func (v volume) args() []string {
 		"-v",
 		fmt.Sprintf("%s:%s", v.src, v.dest),
 	}
+}
+
+// copySpec specifies the source and destination of a copy operation.
+// The copy may be made from the host into the sandbox or vice versa.
+// See https://docs.podman.io/en/latest/markdown/podman-cp.1.html for
+// semantics of src and dest paths.
+// srcInContainer and destInContainer specify whether the copy source
+// and destination are respectively in the host (false) or container (true)
+type copySpec struct {
+	src             string
+	dest            string
+	srcInContainer  bool
+	destInContainer bool
+}
+
+func (c copySpec) args(containerId string) []string {
+	copySrc := c.src
+	if c.srcInContainer {
+		copySrc = fmt.Sprintf("%s:%s", containerId, c.src)
+	}
+
+	copyDest := c.dest
+	if c.destInContainer {
+		copyDest = fmt.Sprintf("%s:%s", containerId, c.dest)
+	}
+
+	return []string{"cp", copySrc, copyDest}
+}
+
+func (c copySpec) String() string {
+	return strings.Join(c.args("container"), " ")
 }
 
 // Implements the Sandbox interface using "podman".
@@ -125,6 +165,7 @@ type podmanSandbox struct {
 	echoStdOut bool
 	echoStdErr bool
 	volumes    []volume
+	copies     []copySpec
 }
 
 type (
@@ -211,6 +252,18 @@ func Volume(src, dest string) Option {
 		sb.volumes = append(sb.volumes, volume{
 			src:  src,
 			dest: dest,
+		})
+	})
+}
+
+// Copy copies a file from the host into the sandbox during initialisation
+func Copy(src, dest string) Option {
+	return option(func(sb *podmanSandbox) {
+		sb.copies = append(sb.copies, copySpec{
+			src:             src,
+			dest:            dest,
+			srcInContainer:  false,
+			destInContainer: true,
 		})
 	})
 }
@@ -369,6 +422,16 @@ func (s *podmanSandbox) init() error {
 	} else {
 		return fmt.Errorf("error creating container: %w", err)
 	}
+
+	// run each copy command separately
+	for _, copyOp := range s.copies {
+		copyArgs := copyOp.args(s.container)
+		log.Info("podman copy: " + copyOp.String())
+		if err := podmanRun(copyArgs...); err != nil {
+			return fmt.Errorf("copy into sandbox [%s]  failed: %w", copyOp, err)
+		}
+	}
+
 	return nil
 }
 
@@ -480,4 +543,21 @@ func (s *podmanSandbox) Clean() error {
 		return err
 	}
 	return podmanCleanContainers()
+}
+
+// CopyToHost copies a file from the sandbox back the host (after it has run)
+// src is a path in the container and dest is a path in the host
+func (s *podmanSandbox) CopyToHost(src, dest string) error {
+	if len(s.container) == 0 {
+		return errors.New("cannot copy while container ID is empty. (Has the container been initialised?)")
+	}
+
+	copyCmd := copySpec{
+		src:             src,
+		dest:            dest,
+		srcInContainer:  true,
+		destInContainer: false,
+	}.args(s.container)
+
+	return podmanRun(copyCmd...)
 }

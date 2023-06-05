@@ -121,7 +121,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		return nil
 	}
 
-	manager := pkgmanager.Manager(ecosystem, true)
+	manager := pkgmanager.Manager(ecosystem)
 	if manager == nil {
 		log.Warn("Unsupported pkg manager",
 			log.Label("ecosystem", ecosystem.String()),

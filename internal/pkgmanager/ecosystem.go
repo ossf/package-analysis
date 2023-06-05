@@ -29,21 +29,9 @@ var (
 		packagistPkgManager.ecosystem: &packagistPkgManager,
 		cratesPkgManager.ecosystem:    &cratesPkgManager,
 	}
-
-	supportedPkgManagersCombinedSandbox = map[pkgecosystem.Ecosystem]*PkgManager{
-		npmPkgManagerCombinedSandbox.ecosystem:       &npmPkgManagerCombinedSandbox,
-		pypiPkgManagerCombinedSandbox.ecosystem:      &pypiPkgManagerCombinedSandbox,
-		rubygemsPkgManagerCombinedSandbox.ecosystem:  &rubygemsPkgManagerCombinedSandbox,
-		packagistPkgManagerCombinedSandbox.ecosystem: &packagistPkgManagerCombinedSandbox,
-		cratesPkgManagerCombinedSandbox.ecosystem:    &cratesPkgManagerCombinedSandbox,
-	}
 )
 
-func Manager(e pkgecosystem.Ecosystem, combinedSandbox bool) *PkgManager {
-	if combinedSandbox {
-		return supportedPkgManagersCombinedSandbox[e]
-	}
-
+func Manager(e pkgecosystem.Ecosystem) *PkgManager {
 	return supportedPkgManagers[e]
 }
 

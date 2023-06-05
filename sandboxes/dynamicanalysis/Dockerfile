@@ -19,8 +19,8 @@ ENV DEBCONF_NOWARNINGS="yes"
 
 # setup repo for kubectl
 RUN mkdir -m 0700 -p /etc/apt/keyrings && \
- 	curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg -o /etc/apt/keyrings/kubernetes.gpg && \
- 	echo "deb [signed-by=/etc/apt/keyrings/kubernetes.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list
+	curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /etc/apt/trusted.gpg.d/kubernetes-archive-keyring.gpg && \
+	echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list
 
 # install keys for powershell
 RUN curl -fsSL "https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb" -o /setup/packages-microsoft-prod.deb && \
@@ -57,7 +57,7 @@ RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-reco
 RUN echo "ALL ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 #
-# PHP
+# PHP setup
 #
 WORKDIR /setup/php
 RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
@@ -72,23 +72,19 @@ RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" &&
     php -r "unlink('composer-setup.php');" && \
     mv composer.phar /usr/local/bin/
 
-COPY analyze-php.php /usr/local/bin/
-RUN chmod 755 /usr/local/bin/analyze-php.php
-
 #
-# NPM
+# NPM setup
 #
 WORKDIR /setup/node
 RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
 	nodejs \
 	npm
 
-COPY analyze-node.js /usr/local/bin/
-RUN chmod 755 /usr/local/bin/analyze-node.js
 COPY bowerrc /app/.bowerrc
 
+
 #
-# Python
+# Python setup
 #
 WORKDIR /setup/python
 RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
@@ -99,35 +95,29 @@ RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-reco
 COPY pypi-packages.txt ./
 RUN pip install -r pypi-packages.txt
 
-COPY analyze-python.py /usr/local/bin/
-RUN chmod 755 /usr/local/bin/analyze-python.py
 
 #
-# Rubygems
+# Rubygems setup
 #
 WORKDIR /setup/ruby
 RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
 	ruby \
 	ruby-rubygems
 
-COPY analyze-ruby.rb /usr/local/bin/
-RUN chmod 755 /usr/local/bin/analyze-ruby.rb
-
 #
-# Rust
+# Rust setup
 #
 WORKDIR /setup/rust
 RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
 	rust-all
 
-COPY analyze-rust.py /usr/local/bin/
-RUN chmod 755 /usr/local/bin/analyze-rust.py
 
 WORKDIR /app
 RUN cargo init
 
 # Remove setup files
 RUN rm -rf /setup
+
 
 #
 # Second stage build
@@ -147,6 +137,19 @@ ENV NODE_PATH="/app/node_modules"
 # Test stuff
 RUN ruby --version && php --version && python3 --version && pip --version && node --version && npm --version && rustc --version && cargo --version
 
-ENTRYPOINT [ "sleep" ]
 
+# Add analysis scripts
+WORKDIR /usr/local/bin/
+COPY analyze-php.php .
+COPY analyze-node.js .
+COPY analyze-python.py .
+COPY analyze-ruby.rb .
+COPY analyze-rust.py .
+
+RUN chmod 755 analyze-php.php analyze-node.js analyze-python.py analyze-ruby.rb analyze-rust.py
+
+
+# Set main cmd to 'sleep 30m'
+
+ENTRYPOINT [ "sleep" ]
 CMD [ "30m" ]
