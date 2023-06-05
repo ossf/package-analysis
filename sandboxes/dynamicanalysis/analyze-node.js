@@ -6,7 +6,10 @@
 "use strict";
 
 const {spawnSync} = require('child_process');
+const fs = require('fs');
 const process = require('process');
+
+const executionLogPath = "/execution.log";
 
 function install(pkg) {
   // Specify the package to install.
@@ -29,12 +32,57 @@ function install(pkg) {
   }
 }
 
+function redirectConsoleWrite(stdoutWrite, stderrWrite) {
+  process.stdout.write = stdoutWrite;
+  process.stderr.write = stderrWrite;
+}
+
 function importPkg(pkg) {
+  let mod = null;
   try {
-    const mod = require(pkg.name);
-    executeModuleCode(pkg.name, mod);
+    mod = require(pkg.name);
   } catch (e) {
     console.log(`Failed to import ${pkg.name}: ${e}`);
+    return;
+  }
+
+  executeModule(pkg.name, mod);
+}
+
+function executeModule(name, mod) {
+  // redirect stdout and stderr to execution log during execution phase
+  let executionLogStream = null;
+  try {
+    executionLogStream = fs.createWriteStream(executionLogPath, {'flags': 'a'});
+  } catch (e) {
+    console.log(`Failed to open execution log: ${e}`);
+    return;
+  }
+
+  const defaultStdoutWrite = process.stdout.write;
+  const defaultStderrWrite = process.stderr.write;
+  const executionLogWrite = function () {
+    //defaultStdoutWrite.apply(process.stdout, arguments);
+    executionLogStream.write.apply(executionLogStream, arguments);
+  };
+
+  redirectConsoleWrite(executionLogWrite, executionLogWrite);
+
+  let executionErr = null;
+  try {
+    executeModuleCode(pkg.name, mod);
+  } catch (e) {
+    executionErr = e;
+    console.log(`Error while executing ${pkg.name} module code: ${e}`);
+  } finally {
+    executionLogStream.close();
+    // restore default console behaviour
+    redirectConsoleWrite(defaultStdoutWrite, defaultStderrWrite);
+  }
+
+  if (executionErr !== null) {
+    // log to normal console too
+    console.log(`Error while executing ${pkg.name} module code: ${executionErr}`);
   }
 }
 
@@ -59,7 +107,6 @@ function executeModuleCode(name, mod) {
   // - StackOverflow thread discussing how complex this problem is [2]
   //
   // Solution uses code from an answer in [2]
-
   // [1] https://github.com/nodejs/node/blob/main/lib/internal/util/inspect.js
   // [2] https://stackoverflow.com/questions/30758961/how-to-check-if-a-variable-is-an-es6-class-declaration/72326559
   const callableNames = Object.keys(mod).filter((key) => typeof mod[key] === "function");
@@ -72,7 +119,7 @@ function executeModuleCode(name, mod) {
   // TODO basic support for function arguments
 
   // https://nodejs.org/api/process.html#event-uncaughtexception
-  // tl;dr this may cause things to break but we're in a sandbox so we'll do it anyway
+  // tl;dr this may cause things to break, but we're in a sandbox so we'll do it anyway
   process.on('uncaughtException', (err, origin) => {
 	  console.log("[uncaught exception]");
 	  console.log(err);
