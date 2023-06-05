@@ -6,7 +6,7 @@ metadata:
     app: workers
 spec:
   serviceName: workers
-  replicas: 5
+  replicas: 700
   selector:
     matchLabels:
       app: workers
