@@ -98,10 +98,12 @@ func dynamicAnalysis(pkg *pkgmanager.Pkg) {
 			log.Fatal("Failed to upload dynamic analysis results to blobstore",
 				"error", err)
 		}
-		execLogFilename := resultstore.MakeFilename(pkg, "execution-log")
-		if err := rs.SaveWithFilename(ctx, pkg, execLogFilename, results.ExecutionLog); err != nil {
-			log.Fatal("Failed to upload dynamic analysis results to blobstore",
-				"error", err)
+		if len(results.ExecutionLog) > 0 {
+			execLogFilename := resultstore.MakeFilename(pkg, "execution-log")
+			if err := rs.SaveWithFilename(ctx, pkg, execLogFilename, results.ExecutionLog); err != nil {
+				log.Fatal("Failed to upload dynamic analysis results to blobstore",
+					"error", err)
+			}
 		}
 	}
 

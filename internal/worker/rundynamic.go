@@ -113,7 +113,7 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option) (analysisr
 	executionLogPath := path.Join(executionLogDir, "execution.log")
 
 	if err := sb.CopyToHost("/execution.log", executionLogPath); err != nil {
-		log.Error("Error retrieving execution log from sandbox", "error", err)
+		log.Warn("Could not retrieve execution log from sandbox", "error", err)
 	} else {
 		logData, err := os.ReadFile(executionLogPath)
 		if err != nil {
