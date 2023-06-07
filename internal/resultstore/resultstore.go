@@ -32,8 +32,8 @@ type (
 
 func (o option) set(sb *ResultStore) { o(sb) }
 
-// ConstructPath will cause Save() to generate the path based on Pkg.EcosystemName()
-// and Pkg.Name().
+// ConstructPath will cause Save() to append a suffix to the base path
+// based on Pkg.EcosystemName() and Pkg.Name().
 func ConstructPath() Option {
 	return option(func(rs *ResultStore) { rs.constructPath = true })
 }
@@ -51,6 +51,14 @@ func New(bucket string, options ...Option) *ResultStore {
 		o.set(rs)
 	}
 	return rs
+}
+
+func (rs *ResultStore) String() string {
+	s := rs.bucket + "/" + rs.basePath
+	if rs.constructPath {
+		s += "+"
+	}
+	return s
 }
 
 func (rs *ResultStore) generatePath(p Pkg) string {
