@@ -73,6 +73,10 @@ func (p *PkgManager) DownloadArchive(name, version, directory string) (string, e
 		return "", fmt.Errorf("no directory specified")
 	}
 
+	if p.archiveURL == nil {
+		return "", fmt.Errorf("not yet implemented for %s", p.Ecosystem())
+	}
+
 	downloadURL, err := p.archiveURL(name, version)
 	if err != nil {
 		return "", err
