@@ -429,18 +429,18 @@ func (s *podmanSandbox) init() error {
 	if err := removeAllLogs(); err != nil {
 		return fmt.Errorf("failed removing all logs: %w", err)
 	}
+	if err := podmanPrune(); err != nil {
+		return fmt.Errorf("error pruning images: %w", err)
+	}
 	if !s.noPull {
 		if err := s.pullImage(); err != nil {
 			return fmt.Errorf("error pulling image: %w", err)
 		}
 	}
-	if err := podmanPrune(); err != nil {
-		return fmt.Errorf("error pruning images: %w", err)
-	}
-	if id, err := s.createContainer(); err == nil {
-		s.container = id
-	} else {
+	if id, err := s.createContainer(); err != nil {
 		return fmt.Errorf("error creating container: %w", err)
+	} else {
+		s.container = id
 	}
 
 	// run each copy command separately

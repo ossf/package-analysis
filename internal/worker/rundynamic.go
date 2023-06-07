@@ -17,10 +17,39 @@ import (
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
+func retrieveExecutionLog(sb sandbox.Sandbox) (string, error) {
+	// retrieve execution log back to host
+	executionLogDir, err := os.MkdirTemp("", "")
+	if err != nil {
+		return "", err
+	}
+
+	defer os.RemoveAll(executionLogDir)
+	executionLogPath := path.Join(executionLogDir, "execution.log")
+
+	// if the copy fails, it could be that the execution log is not actually present.
+	// For now, we'll just log the error and otherwise ignore it
+	if err := sb.CopyToHost("/execution.log", executionLogPath); err != nil {
+		log.Warn("Could not copy execution log from sandbox", "error", err)
+		return "", nil
+	}
+
+	logData, err := os.ReadFile(executionLogPath)
+	if err != nil {
+		return "", err
+	}
+
+	// remove control characters except tab (\x09) and newline (\x0A)
+	processedLog := nonSpaceControlChars.ReplaceAllLiteral(logData, []byte{})
+	log.Info("Read execution log", "rawLength", len(logData), "processedLength", len(processedLog))
+
+	return string(processedLog), nil
+}
+
 /*
 DynamicAnalysisResult holds all the results from RunDynamicAnalysis
 
-Data: Map of each successfully run phase to a summary of
+AnalysisData: Map of each successfully run phase to a summary of
 the corresponding dynamic analysis result. This summary has two parts:
 1. StraceSummary: information about system calls performed by the process
 2. FileWrites: list of files which were written to and counts of bytes written
@@ -154,28 +183,6 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option) (DynamicAn
 		}
 	}
 
-	// retrieve execution log back to host
-	executionLogDir, err := os.MkdirTemp("", "")
-	if err != nil {
-		log.Error("Error creating temp dir for execution log", "error", err)
-	}
-	defer os.RemoveAll(executionLogDir)
-	executionLogPath := path.Join(executionLogDir, "execution.log")
-
-	if err := sb.CopyToHost("/execution.log", executionLogPath); err != nil {
-		log.Error("Error retrieving execution log from sandbox", "error", err)
-	} else {
-		logData, err := os.ReadFile(executionLogPath)
-		if err != nil {
-			log.Error("Error reading execution log", "error", err)
-		} else {
-			// remove control characters except tab (\x09) and newline (\x0A)
-			processedLog := nonSpaceControlChars.ReplaceAllLiteral(logData, []byte{})
-			log.Info("Read execution log", "rawLength", len(logData), "processedLength", len(processedLog))
-			data.ExecutionLog = analysisrun.DynamicAnalysisExecutionLog(processedLog)
-		}
-	}
-
 	var afterDynamic runtime.MemStats
 	runtime.ReadMemStats(&afterDynamic)
 	log.Info("Memory Stats, heap usage after dynamic analysis",
@@ -186,9 +193,18 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option) (DynamicAn
 
 	if lastError != nil {
 		LogDynamicAnalysisError(pkg, lastRunPhase, lastError)
-	} else {
-		LogDynamicAnalysisResult(pkg, lastRunPhase, lastStatus)
+		return DynamicAnalysisResult{data, lastRunPhase, lastStatus}, lastError
 	}
 
-	return DynamicAnalysisResult{data, lastRunPhase, lastStatus}, lastError
+	LogDynamicAnalysisResult(pkg, lastRunPhase, lastStatus)
+
+	executionLog, err := retrieveExecutionLog(sb)
+	if err != nil {
+		// don't return this error, just log it
+		log.Error("Error retrieving execution log", "error", err)
+	} else {
+		data.ExecutionLog = analysisrun.DynamicAnalysisExecutionLog(executionLog)
+	}
+
+	return DynamicAnalysisResult{data, lastRunPhase, lastStatus}, nil
 }
