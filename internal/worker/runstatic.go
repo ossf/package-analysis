@@ -68,7 +68,7 @@ func RunStaticAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option, tasks ...st
 		}
 	}()
 
-	runResult, err := sb.Run(args...)
+	runResult, err := sb.Run(staticAnalyzeBinary, args...)
 	if err != nil {
 		return nil, "", fmt.Errorf("sandbox failed (%w)", err)
 	}

@@ -81,9 +81,6 @@ func (r *RunResult) Stderr() []byte {
 
 type Sandbox interface {
 	// Run will execute the supplied command and args in the sandbox.
-	// If sandbox.Command() was used as an option to create this sandbox,
-	// the executed commandline will have the form <command> <args...>
-	// Otherwise, it will be just <args...>
 	//
 	// The container used to execute the command is reused until Clean() is
 	// called.
@@ -92,7 +89,7 @@ type Sandbox interface {
 	//
 	// The result of the supplied command will be returned in an instance of
 	// RunResult.
-	Run(...string) (*RunResult, error)
+	Run(string, ...string) (*RunResult, error)
 
 	// Clean cleans up a Sandbox.
 	//
@@ -158,7 +155,6 @@ type podmanSandbox struct {
 	tag        string
 	id         string
 	container  string
-	command    string
 	noPull     bool
 	rawSockets bool
 	strace     bool
@@ -184,7 +180,6 @@ func New(options ...Option) Sandbox {
 		image:      "",
 		tag:        "",
 		container:  "",
-		command:    "",
 		noPull:     false,
 		rawSockets: false,
 		strace:     false,
@@ -209,10 +204,6 @@ func New(options ...Option) Sandbox {
 // Image sets the image to be used by the sandbox. It is a required option.
 func Image(image string) Option {
 	return option(func(sb *podmanSandbox) { sb.image = image })
-}
-
-func Command(command string) Option {
-	return option(func(sb *podmanSandbox) { sb.command = command })
 }
 
 // EnableRawSockets allows use of raw sockets in the sandbox.
@@ -392,15 +383,8 @@ func (s *podmanSandbox) forceStopContainer() error {
 		s.container)
 }
 
-func (s *podmanSandbox) execContainerCmd(execArgs []string) *exec.Cmd {
-	args := []string{
-		"exec",
-		s.container,
-	}
-	if s.command != "" {
-		args = append(args, s.command)
-	}
-	args = append(args, execArgs...)
+func (s *podmanSandbox) execContainerCmd(execCmd string, execArgs []string) *exec.Cmd {
+	args := append([]string{"exec", s.container, execCmd}, execArgs...)
 	return podman(args...)
 }
 
@@ -456,7 +440,7 @@ func (s *podmanSandbox) init() error {
 }
 
 // Run implements the Sandbox interface.
-func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
+func (s *podmanSandbox) Run(command string, args ...string) (*RunResult, error) {
 	if err := s.init(); err != nil {
 		return &RunResult{}, err
 	}
@@ -487,10 +471,10 @@ func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
 
 	// Prepare stdout and stderr writers
 	logOut := log.Writer(log.InfoLevel,
-		"command", s.command, "args", args)
+		"command", command, "args", args)
 	defer logOut.Close()
 	logErr := log.Writer(log.WarnLevel,
-		"command", s.command, "args", args)
+		"command", command, "args", args)
 	defer logErr.Close()
 
 	outWriters := []io.Writer{&stdout}
@@ -520,7 +504,7 @@ func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
 	}
 
 	// Run the command in the sandbox
-	cmd := s.execContainerCmd(args)
+	cmd := s.execContainerCmd(command, args)
 	cmd.Stdout = outWriter
 	cmd.Stderr = errWriter
 

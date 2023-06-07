@@ -103,16 +103,13 @@ func dynamicAnalysis(pkg *pkgmanager.Pkg, resultStores worker.ResultStores) {
 		sandbox.InitNetwork()
 	}
 
-	sbOpts := append(worker.DynamicSandboxOptions(pkg.Ecosystem()), makeSandboxOptions()...)
+	sbOpts := append(worker.DynamicSandboxOptions(), makeSandboxOptions()...)
 
 	if *customSandbox != "" {
 		sbOpts = append(sbOpts, sandbox.Image(*customSandbox))
 	}
-	if *customAnalysisCmd != "" {
-		sbOpts = append(sbOpts, sandbox.Command(*customAnalysisCmd))
-	}
 
-	result, err := worker.RunDynamicAnalysis(pkg, sbOpts)
+	result, err := worker.RunDynamicAnalysis(pkg, sbOpts, *customAnalysisCmd)
 	if err != nil {
 		log.Error("Dynamic analysis aborted (run error)", "error", err)
 		return
@@ -126,7 +123,7 @@ func dynamicAnalysis(pkg *pkgmanager.Pkg, resultStores worker.ResultStores) {
 	}
 
 	ctx := context.Background()
-	if err := worker.SaveDynamicAnalysisData(ctx, pkg, resultStores, result.Data); err != nil {
+	if err := worker.SaveDynamicAnalysisData(ctx, pkg, resultStores, result.AnalysisData); err != nil {
 		log.Error("Upload error", "error", err)
 	}
 }
