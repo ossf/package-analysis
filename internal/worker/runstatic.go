@@ -39,7 +39,6 @@ func RunStaticAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option, tasks ...st
 	analyses := utils.Transform(tasks, func(t staticanalysis.Task) string { return string(t) })
 
 	args := []string{
-		staticAnalyzeBinary,
 		"-ecosystem", pkg.EcosystemName(),
 		"-package", pkg.Name(),
 		"-version", pkg.Version(),
