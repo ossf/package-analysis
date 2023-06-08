@@ -13,7 +13,6 @@ import (
 )
 
 const (
-	maxOutputLines = 20
 	maxOutputBytes = 4 * 1024
 )
 
@@ -71,8 +70,8 @@ func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
 	analysisResult := Result{
 		StraceSummary: analysisrun.StraceSummary{
 			Status: analysis.StatusForRunResult(r),
-			Stdout: lastLines(r.Stdout(), maxOutputLines, maxOutputBytes),
-			Stderr: lastLines(r.Stderr(), maxOutputLines, maxOutputBytes),
+			Stdout: lastNBytes(r.Stdout(), maxOutputBytes),
+			Stderr: lastNBytes(r.Stderr(), maxOutputBytes),
 		},
 	}
 	analysisResult.setData(straceResult, dns)
