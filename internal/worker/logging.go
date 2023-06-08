@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"errors"
 	"os/exec"
 
 	"github.com/ossf/package-analysis/internal/analysis"
@@ -36,7 +37,8 @@ func LogDynamicAnalysisError(pkg *pkgmanager.Pkg, errorPhase analysisrun.Dynamic
 		"version", pkg.Version(),
 		"error", err)
 
-	if exitErr, ok := err.(*exec.ExitError); ok {
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
 		log.Debug("Command stderr", "stderr", exitErr.Stderr)
 	}
 }
