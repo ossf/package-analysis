@@ -80,26 +80,20 @@ func (r *RunResult) Stderr() []byte {
 }
 
 type Sandbox interface {
-	// Run will execute the supplied command and args in the sandbox.
-	//
-	// The container used to execute the command is reused until Clean() is
-	// called.
-	//
-	// If there is an error while using the sandbox an error will be returned.
-	//
-	// The result of the supplied command will be returned in an instance of
-	// RunResult.
-	Run(...string) (*RunResult, error)
+	// Run executes the supplied command and args in the sandbox.
+	// Multiple calls to Run will reuse the same container state,
+	// until Clean() is called.
+	// The returned RunResult stores information about the execution.
+	// If any error occurs, it is returned with a partial RunResult.
+	Run(command string, args ...string) (*RunResult, error)
 
-	// Clean cleans up a Sandbox.
-	//
-	// Once called the Sandbox cannot be used again.
+	// Clean cleans up the Sandbox. Once called, the Sandbox cannot be used again.
 	Clean() error
 
 	// CopyToHost copies a path in the sandbox (src) to a path in the host (dest).
 	// It will fail if the src path does not exist in the sandbox.
-	// See https://docs.podman.io/en/latest/markdown/podman-cp.1.html for
-	// semantics of src and dest paths.
+	// See https://docs.podman.io/en/latest/markdown/podman-cp.1.html
+	// for semantics of src and dest paths.
 	// Caution: files coming out of the sandbox are untrusted and proper validation
 	// should be performed on the file before use.
 	CopyToHost(src, dest string) error
@@ -175,9 +169,9 @@ type (
 
 func (o option) set(sb *podmanSandbox) { o(sb) }
 
-func New(image string, options ...Option) Sandbox {
+func New(options ...Option) Sandbox {
 	sb := &podmanSandbox{
-		image:      image,
+		image:      "",
 		tag:        "",
 		container:  "",
 		noPull:     false,
@@ -194,7 +188,16 @@ func New(image string, options ...Option) Sandbox {
 	for _, o := range options {
 		o.set(sb)
 	}
+
+	if sb.image == "" {
+		log.Fatal("image is required")
+	}
 	return sb
+}
+
+// Image sets the image to be used by the sandbox. It is a required option.
+func Image(image string) Option {
+	return option(func(sb *podmanSandbox) { sb.image = image })
 }
 
 // EnableRawSockets allows use of raw sockets in the sandbox.
@@ -245,7 +248,6 @@ func NoPull() Option {
 }
 
 // Volume can be used to specify an additional volume map into the container.
-//
 // src is the path in the host that will be mapped to the dest path.
 func Volume(src, dest string) Option {
 	return option(func(sb *podmanSandbox) {
@@ -375,12 +377,8 @@ func (s *podmanSandbox) forceStopContainer() error {
 		s.container)
 }
 
-func (s *podmanSandbox) execContainerCmd(execArgs []string) *exec.Cmd {
-	args := []string{
-		"exec",
-		s.container,
-	}
-	args = append(args, execArgs...)
+func (s *podmanSandbox) execContainerCmd(execCmd string, execArgs []string) *exec.Cmd {
+	args := append([]string{"exec", s.container, execCmd}, execArgs...)
 	return podman(args...)
 }
 
@@ -436,7 +434,7 @@ func (s *podmanSandbox) init() error {
 }
 
 // Run implements the Sandbox interface.
-func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
+func (s *podmanSandbox) Run(command string, args ...string) (*RunResult, error) {
 	if err := s.init(); err != nil {
 		return &RunResult{}, err
 	}
@@ -467,10 +465,10 @@ func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
 
 	// Prepare stdout and stderr writers
 	logOut := log.Writer(log.InfoLevel,
-		"args", args)
+		"command", command, "args", args)
 	defer logOut.Close()
 	logErr := log.Writer(log.WarnLevel,
-		"args", args)
+		"command", command, "args", args)
 	defer logErr.Close()
 
 	outWriters := []io.Writer{&stdout}
@@ -500,7 +498,7 @@ func (s *podmanSandbox) Run(args ...string) (*RunResult, error) {
 	}
 
 	// Run the command in the sandbox
-	cmd := s.execContainerCmd(args)
+	cmd := s.execContainerCmd(command, args)
 	cmd.Stdout = outWriter
 	cmd.Stderr = errWriter
 

@@ -16,7 +16,34 @@ import (
 	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 )
 
+// defaultDynamicAnalysisImage is container image name of the default dynamic analysis sandbox
+const defaultDynamicAnalysisImage = "gcr.io/ossf-malware-analysis/dynamic-analysis"
+
 var nonSpaceControlChars = regexp.MustCompile("[\x00-\x08\x0b-\x1f\x7f]")
+
+/*
+DynamicAnalysisResult holds all the results from RunDynamicAnalysis
+
+AnalysisData: Map of each successfully run phase to a summary of
+the corresponding dynamic analysis result. This summary has two parts:
+1. StraceSummary: information about system calls performed by the process
+2. FileWrites: list of files which were written to and counts of bytes written
+
+Note, if error is not nil, then results[lastRunPhase] is nil.
+
+LastRunPhase: the last phase that was run. If error is non-nil, this phase did not
+successfully complete, and the results for this phase are not recorded.
+Otherwise, the results contain data for this phase, even in cases where the
+sandboxed process terminated abnormally.
+
+Status: the status of the last run phase if it completed without error, else empty
+*/
+
+type DynamicAnalysisResult struct {
+	AnalysisData analysisrun.DynamicAnalysisResults
+	LastRunPhase analysisrun.DynamicPhase
+	LastStatus   analysis.Status
+}
 
 func retrieveExecutionLog(sb sandbox.Sandbox) (string, error) {
 	// retrieve execution log back to host
@@ -48,30 +75,22 @@ func retrieveExecutionLog(sb sandbox.Sandbox) (string, error) {
 }
 
 /*
-RunDynamicAnalysis runs dynamic analysis on the given package in the sandbox
-provided, across all phases (e.g. import, install) valid in the package ecosystem.
-Status and errors are logged to stdout. There are 4 return values:
+RunDynamicAnalysis runs dynamic analysis on the given package across the phases
+valid in the package ecosystem (e.g. import, install), in a sandbox created
+using the provided options. The options must specify the sandbox image to use.
 
-DynamicAnalysisResults: Map of each successfully run phase to a summary of
-the corresponding dynamic analysis result. This summary has two parts:
-1. StraceSummary: information about system calls performed by the process
-2. FileWrites: list of files which were written to and counts of bytes written
+analysisCmd is an optional argument used to override the default command run
+inside the sandbox to perform the analysis. It must support the interface
+described under "Adding a new Runtime Analysis script" in sandboxes/README.md
 
-Note, if error is not nil, then results[lastRunPhase] is nil.
+All data and status relating to analysis (including errors produced by invalid packages)
+is returned in the DynamicAnalysisResult struct. Status and errors are also logged to stdout.
 
-RunPhase: the last phase that was run. If error is non-nil, this phase did not
-successfully complete, and the results for this phase are not recorded.
-Otherwise, the results contain data for this phase, even in cases where the
-sandboxed process terminated abnormally.
-
-Status: the status of the last run phase if it completed without error, else empty
-
-error: Any error that occurred in the runtime/sandbox infrastructure.
-This does not include errors caused by the package under analysis.
+The returned error holds any error that occurred in the runtime/sandbox infrastructure,
+excluding from within the analysis itself. In other words, it does not include errors
+produced by the package under analysis.
 */
-
-func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option) (analysisrun.DynamicAnalysisResults, analysisrun.DynamicPhase, analysis.Status, error) {
-
+func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option, analysisCmd string) (DynamicAnalysisResult, error) {
 	var beforeDynamic runtime.MemStats
 	runtime.ReadMemStats(&beforeDynamic)
 	log.Info("Memory Stats, heap usage before dynamic analysis",
@@ -81,13 +100,17 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option) (analysisr
 		"heap_usage_before_dynamic_analysis", strconv.FormatUint(beforeDynamic.Alloc, 10),
 	)
 
-	results := analysisrun.DynamicAnalysisResults{
+	if analysisCmd == "" {
+		analysisCmd = dynamicanalysis.DefaultCommand(pkg.Ecosystem())
+	}
+
+	data := analysisrun.DynamicAnalysisResults{
 		StraceSummary:      make(analysisrun.DynamicAnalysisStraceSummary),
 		FileWritesSummary:  make(analysisrun.DynamicAnalysisFileWritesSummary),
 		FileWriteBufferIds: make(analysisrun.DynamicAnalysisFileWriteBufferIds),
 	}
 
-	sb := sandbox.New(pkg.Manager().DynamicAnalysisImage(), sbOpts...)
+	sb := sandbox.New(sbOpts...)
 
 	defer func() {
 		if err := sb.Clean(); err != nil {
@@ -98,9 +121,10 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option) (analysisr
 	var lastRunPhase analysisrun.DynamicPhase
 	var lastStatus analysis.Status
 	var lastError error
-	for _, phase := range pkg.Manager().DynamicPhases() {
+	for _, phase := range analysisrun.DefaultDynamicPhases() {
 		startTime := time.Now()
-		phaseResult, err := dynamicanalysis.Run(sb, pkg.Command(phase))
+		args := dynamicanalysis.MakeAnalysisArgs(pkg, phase)
+		phaseResult, err := dynamicanalysis.Run(sb, analysisCmd, args)
 		lastRunPhase = phase
 
 		runDuration := time.Since(startTime)
@@ -121,10 +145,10 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option) (analysisr
 			break
 		}
 
-		results.StraceSummary[phase] = &phaseResult.StraceSummary
-		results.FileWritesSummary[phase] = &phaseResult.FileWritesSummary
+		data.StraceSummary[phase] = &phaseResult.StraceSummary
+		data.FileWritesSummary[phase] = &phaseResult.FileWritesSummary
 		lastStatus = phaseResult.StraceSummary.Status
-		results.FileWriteBufferIds[phase] = phaseResult.FileWriteBufferIds
+		data.FileWriteBufferIds[phase] = phaseResult.FileWriteBufferIds
 
 		if lastStatus != analysis.StatusCompleted {
 			// Error caused by an issue with the package (probably).
@@ -143,7 +167,7 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option) (analysisr
 
 	if lastError != nil {
 		LogDynamicAnalysisError(pkg, lastRunPhase, lastError)
-		return results, lastRunPhase, lastStatus, lastError
+		return DynamicAnalysisResult{data, lastRunPhase, lastStatus}, lastError
 	}
 
 	LogDynamicAnalysisResult(pkg, lastRunPhase, lastStatus)
@@ -153,8 +177,8 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option) (analysisr
 		// don't return this error, just log it
 		log.Error("Error retrieving execution log", "error", err)
 	} else {
-		results.ExecutionLog = analysisrun.DynamicAnalysisExecutionLog(executionLog)
+		data.ExecutionLog = analysisrun.DynamicAnalysisExecutionLog(executionLog)
 	}
 
-	return results, lastRunPhase, lastStatus, nil
+	return DynamicAnalysisResult{data, lastRunPhase, lastStatus}, nil
 }
