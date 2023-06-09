@@ -10,11 +10,11 @@ import (
 
 // PkgManager represents how packages from a common ecosystem are accessed.
 type PkgManager struct {
-	ecosystem      pkgecosystem.Ecosystem
-	latestVersion  func(string) (string, error)
-	archiveURL     func(string, string) (string, error)
+	ecosystem       pkgecosystem.Ecosystem
+	latestVersion   func(string) (string, error)
+	archiveURL      func(string, string) (string, error)
 	archiveFilename func(string, string, string) string
-	extractArchive func(string, string) error
+	extractArchive  func(string, string) error
 }
 
 var (
@@ -87,7 +87,6 @@ func (p *PkgManager) DownloadArchive(name, version, directory string) (string, e
 	if err != nil {
 		return "", err
 	}
-
 
 	fileName := p.archiveFilename(name, version, downloadURL)
 

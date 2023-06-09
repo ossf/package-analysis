@@ -17,7 +17,7 @@ type packagistJSON struct {
 		License           []string  `json:"license,omitempty"`
 		Time              time.Time `json:"time"`
 		Name              string    `json:"name,omitempty"`
-		Dist struct {
+		Dist              struct {
 			URL       string `json:"url"`
 			Type      string `json:"type"`
 			Shasum    string `json:"shasum,omitempty"`
@@ -88,6 +88,6 @@ func getPackagistArchiveFilename(pkgName, version, _ string) string {
 var packagistPkgManager = PkgManager{
 	ecosystem:       pkgecosystem.Packagist,
 	latestVersion:   getPackagistLatest,
-    archiveURL:      getPackagistArchiveURL,
+	archiveURL:      getPackagistArchiveURL,
 	archiveFilename: getPackagistArchiveFilename,
 }
