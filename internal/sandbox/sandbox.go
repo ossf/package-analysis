@@ -80,26 +80,20 @@ func (r *RunResult) Stderr() []byte {
 }
 
 type Sandbox interface {
-	// Run will execute the supplied command and args in the sandbox.
-	//
-	// The container used to execute the command is reused until Clean() is
-	// called.
-	//
-	// If an error occurs while using the sandbox, it will be returned.
-	//
-	// The result of the supplied command will be returned in an instance of
-	// RunResult.
-	Run(string, ...string) (*RunResult, error)
+	// Run executes the supplied command and args in the sandbox.
+	// Multiple calls to Run will reuse the same container state,
+	// until Clean() is called.
+	// The returned RunResult stores information about the execution.
+	// If any error occurs, it is returned with a partial RunResult.
+	Run(command string, args ...string) (*RunResult, error)
 
-	// Clean cleans up a Sandbox.
-	//
-	// Once called the Sandbox cannot be used again.
+	// Clean cleans up the Sandbox. Once called, the Sandbox cannot be used again.
 	Clean() error
 
 	// CopyToHost copies a path in the sandbox (src) to a path in the host (dest).
 	// It will fail if the src path does not exist in the sandbox.
-	// See https://docs.podman.io/en/latest/markdown/podman-cp.1.html for
-	// semantics of src and dest paths.
+	// See https://docs.podman.io/en/latest/markdown/podman-cp.1.html
+	// for semantics of src and dest paths.
 	// Caution: files coming out of the sandbox are untrusted and proper validation
 	// should be performed on the file before use.
 	CopyToHost(src, dest string) error
