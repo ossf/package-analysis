@@ -148,8 +148,9 @@ COPY analyze-rust.py .
 
 RUN chmod 755 analyze-php.php analyze-node.js analyze-python.py analyze-ruby.rb analyze-rust.py
 
+# Ensure that this the last WORKDIR statement, otherwise things like cargo will break
+WORKDIR /app
 
 # Set main cmd to 'sleep 30m'
-
 ENTRYPOINT [ "sleep" ]
 CMD [ "30m" ]

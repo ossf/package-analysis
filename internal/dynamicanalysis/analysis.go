@@ -30,7 +30,7 @@ var resultError = &Result{
 	},
 }
 
-func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
+func Run(sb sandbox.Sandbox, command string, args []string) (*Result, error) {
 	log.Info("Running dynamic analysis",
 		"args", args)
 
@@ -46,8 +46,8 @@ func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
 
 	// Run the command
 	log.Debug("Running dynamic analysis command",
-		"args", args)
-	r, err := sb.Run(args...)
+		"command", command, "args", args)
+	r, err := sb.Run(command, args...)
 	if err != nil {
 		return resultError, fmt.Errorf("sandbox failed (%w)", err)
 	}

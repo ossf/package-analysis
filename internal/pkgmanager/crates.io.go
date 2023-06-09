@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
@@ -50,10 +49,7 @@ func getCratesArchiveFilename(pkgName, version, _ string) string {
 
 var cratesPkgManager = PkgManager{
 	ecosystem:       pkgecosystem.CratesIO,
-	image:           combinedDynamicAnalysisImage,
-	command:         "/usr/local/bin/analyze-rust.py",
 	latestVersion:   getCratesLatest,
 	archiveURL:      getCratesArchiveURL,
 	archiveFilename: getCratesArchiveFilename,
-	dynamicPhases:   analysisrun.DefaultDynamicPhases(),
 }

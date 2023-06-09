@@ -8,6 +8,7 @@ import (
 // static analysis sandboxes.
 func StaticSandboxOptions() []sandbox.Option {
 	return []sandbox.Option{
+		sandbox.Image(defaultStaticAnalysisImage),
 		sandbox.EchoStdErr(),
 	}
 }
@@ -16,6 +17,7 @@ func StaticSandboxOptions() []sandbox.Option {
 // dynamic analysis sandboxes.
 func DynamicSandboxOptions() []sandbox.Option {
 	return []sandbox.Option{
+		sandbox.Image(defaultDynamicAnalysisImage),
 		sandbox.EnableStrace(),
 		sandbox.EnableRawSockets(),
 		sandbox.EnablePacketLogging(),

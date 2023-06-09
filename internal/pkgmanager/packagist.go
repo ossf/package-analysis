@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
@@ -88,10 +87,7 @@ func getPackagistArchiveFilename(pkgName, version, _ string) string {
 
 var packagistPkgManager = PkgManager{
 	ecosystem:       pkgecosystem.Packagist,
-	image:           combinedDynamicAnalysisImage,
-	command:         "/usr/local/bin/analyze-php.php",
 	latestVersion:   getPackagistLatest,
-	archiveURL:      getPackagistArchiveURL,
+    archiveURL:      getPackagistArchiveURL,
 	archiveFilename: getPackagistArchiveFilename,
-	dynamicPhases:   analysisrun.DefaultDynamicPhases(),
 }
