@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/ossf/package-analysis/pkg/api/analysisrun"
@@ -80,11 +81,17 @@ func getPackagistArchiveURL(pkgName, version string) (string, error) {
 	return "", nil
 }
 
+func getPackagistArchiveFilename(pkgName, version, _ string) string {
+	pkg := strings.Split(pkgName, "/")
+	return strings.Join([]string{pkg[0], "-", pkg[1], "-", version, ".zip"}, "")
+}
+
 var packagistPkgManager = PkgManager{
-	ecosystem:     pkgecosystem.Packagist,
-	image:         combinedDynamicAnalysisImage,
-	command:       "/usr/local/bin/analyze-php.php",
-	latestVersion: getPackagistLatest,
-	archiveURL:    getPackagistArchiveURL,
-	dynamicPhases: analysisrun.DefaultDynamicPhases(),
+	ecosystem:       pkgecosystem.Packagist,
+	image:           combinedDynamicAnalysisImage,
+	command:         "/usr/local/bin/analyze-php.php",
+	latestVersion:   getPackagistLatest,
+	archiveURL:      getPackagistArchiveURL,
+	archiveFilename: getPackagistArchiveFilename,
+	dynamicPhases:   analysisrun.DefaultDynamicPhases(),
 }

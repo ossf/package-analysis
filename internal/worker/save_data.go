@@ -17,6 +17,7 @@ type ResultStores struct {
 	DynamicAnalysis *resultstore.ResultStore
 	StaticAnalysis  *resultstore.ResultStore
 	FileWrites      *resultstore.ResultStore
+	AnalyzedPackage *resultstore.ResultStore
 }
 
 // SaveDynamicAnalysisData saves the data from dynamic analysis to the corresponding bucket in the ResultStores.
@@ -35,6 +36,10 @@ func SaveDynamicAnalysisData(ctx context.Context, pkg *pkgmanager.Pkg, dest Resu
 		return err
 	}
 	if err := SaveFileWritesData(ctx, pkg, dest, data); err != nil {
+		return err
+	}
+
+	if err := SaveAnalyzedPackage(ctx, pkg, dest); err != nil {
 		return err
 	}
 
@@ -66,6 +71,10 @@ func SaveStaticAnalysisData(ctx context.Context, pkg *pkgmanager.Pkg, dest Resul
 		return fmt.Errorf("failed to save static analysis results to %s: %w", dest.StaticAnalysis, err)
 	}
 
+	if err := SaveAnalyzedPackage(ctx, pkg, dest); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -87,6 +96,19 @@ func SaveFileWritesData(ctx context.Context, pkg *pkgmanager.Pkg, dest ResultSto
 		"version", pkg.Version(),
 		"write_data_upload_duration", fileWriteDataDuration,
 	)
+
+	return nil
+}
+
+// SaveAnalyzedPackage saves the analyzed package from static and dynamic analysis to the analyzed packages bucket in the ResultStores
+func SaveAnalyzedPackage(ctx context.Context, pkg *pkgmanager.Pkg, dest ResultStores) error {
+	if pkg.IsLocal() {
+		return nil
+	}
+
+	if err := dest.AnalyzedPackage.SaveAnalyzedPackage(ctx, pkg.Manager(), pkg); err != nil {
+		return fmt.Errorf("failed to upload analyzed package to blobstore = %w", err)
+	}
 
 	return nil
 }

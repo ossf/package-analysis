@@ -63,6 +63,11 @@ func makeResultStores() worker.ResultStores {
 		rs.FileWrites = resultstore.New(bucket, resultstore.BasePath(path))
 	}
 
+	if *uploadAnalyzedPkg != "" {
+		bucket, path := parseBucketPath(*uploadAnalyzedPkg)
+		rs.AnalyzedPackage = resultstore.New(bucket, resultstore.BasePath(path))
+	}
+
 	return rs
 }
 

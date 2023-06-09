@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -15,26 +14,26 @@ import (
 /*
 downloadToDirectory downloads a file from the given URL to the given directory.
 On successful download, the full path to the downloaded file is returned.
+
+fileName argument allows passing a custom filename for local file.
+The default filename will be obtained from the last element
+of the URL path when split on the '/' character.
 */
-func downloadToDirectory(dir string, url string, fileName string, append_hash bool) (string, error) {
-	if fileName == "" {
-		fileName = path.Base(url)
-	}
+func downloadToDirectory(dir string, url string, fileName string) (string, error) {
 	filePath := filepath.Join(dir, fileName)
 	err := downloadToPath(filePath, url)
 	if err != nil {
 		return "", err
 	}
 
-	if append_hash {
-		hash, err := utils.HashFile(filePath)
-		if err != nil {
-			return "", err
-		}
-		err = os.Rename(filePath, strings.Join([]string{filePath, hash[7:]}, "-"))
-		if err != nil {
-			return "", err
-		}
+	hash, err := utils.HashFile(filePath)
+	if err != nil {
+		return filePath, nil
+	}
+
+	err = os.Rename(filePath, strings.Join([]string{filePath, hash[7:]}, "-"))
+	if err != nil {
+		return filePath, nil
 	}
 
 	return filePath, nil

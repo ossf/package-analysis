@@ -47,5 +47,6 @@ var rubygemsPkgManager = PkgManager{
 	command:       "/usr/local/bin/analyze-ruby.rb",
 	latestVersion: getRubyGemsLatest,
 	archiveURL:    getRubyGemsArchiveURL,
+	archiveFilename: DefaultArchiveFilename,
 	dynamicPhases: analysisrun.DefaultDynamicPhases(),
 }

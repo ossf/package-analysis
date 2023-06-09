@@ -79,11 +79,12 @@ func getPyPIArchiveURL(pkgName, version string) (string, error) {
 }
 
 var pypiPkgManager = PkgManager{
-	ecosystem:      pkgecosystem.PyPI,
-	image:          combinedDynamicAnalysisImage,
-	command:        "/usr/local/bin/analyze-python.py",
-	latestVersion:  getPyPILatest,
-	archiveURL:     getPyPIArchiveURL,
-	extractArchive: utils.ExtractTarGzFile,
-	dynamicPhases:  analysisrun.DefaultDynamicPhases(),
+	ecosystem:       pkgecosystem.PyPI,
+	image:           combinedDynamicAnalysisImage,
+	command:         "/usr/local/bin/analyze-python.py",
+	latestVersion:   getPyPILatest,
+	archiveURL:      getPyPIArchiveURL,
+	archiveFilename: DefaultArchiveFilename,
+	extractArchive:  utils.ExtractTarGzFile,
+	dynamicPhases:   analysisrun.DefaultDynamicPhases(),
 }

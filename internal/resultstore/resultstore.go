@@ -130,7 +130,7 @@ func (rs *ResultStore) SaveAnalyzedPackage(ctx context.Context, manager *pkgmana
 	}
 	defer w.Close()
 
-	_, err = manager.DownloadArchive(pkg.Name(), pkg.Version(), uploadPath, true)
+	_, err = manager.DownloadArchive(pkg.Name(), pkg.Version(), uploadPath)
 
 	if err != nil {
 		return err

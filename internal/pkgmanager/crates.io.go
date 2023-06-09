@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
@@ -43,11 +44,16 @@ func getCratesArchiveURL(pkgName, version string) (string, error) {
 	return pkgURL, nil
 }
 
+func getCratesArchiveFilename(pkgName, version, _ string) string {
+	return strings.Join([]string{pkgName, "-", version, ".tar.gz"}, "")
+}
+
 var cratesPkgManager = PkgManager{
-	ecosystem:     pkgecosystem.CratesIO,
-	image:         combinedDynamicAnalysisImage,
-	command:       "/usr/local/bin/analyze-rust.py",
-	latestVersion: getCratesLatest,
-	archiveURL:    getCratesArchiveURL,
-	dynamicPhases: analysisrun.DefaultDynamicPhases(),
+	ecosystem:       pkgecosystem.CratesIO,
+	image:           combinedDynamicAnalysisImage,
+	command:         "/usr/local/bin/analyze-rust.py",
+	latestVersion:   getCratesLatest,
+	archiveURL:      getCratesArchiveURL,
+	archiveFilename: getCratesArchiveFilename,
+	dynamicPhases:   analysisrun.DefaultDynamicPhases(),
 }

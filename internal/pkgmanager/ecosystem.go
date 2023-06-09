@@ -11,13 +11,14 @@ import (
 
 // PkgManager represents how packages from a common ecosystem are accessed.
 type PkgManager struct {
-	ecosystem      pkgecosystem.Ecosystem
-	image          string
-	command        string
-	latestVersion  func(string) (string, error)
-	archiveURL     func(string, string) (string, error)
-	extractArchive func(string, string) error
-	dynamicPhases  []analysisrun.DynamicPhase
+	ecosystem       pkgecosystem.Ecosystem
+	image           string
+	command         string
+	latestVersion   func(string) (string, error)
+	archiveURL      func(string, string) (string, error)
+	archiveFilename func(string, string, string) string
+	extractArchive  func(string, string) error
+	dynamicPhases   []analysisrun.DynamicPhase
 }
 
 const combinedDynamicAnalysisImage = "gcr.io/ossf-malware-analysis/dynamic-analysis"
@@ -31,6 +32,10 @@ var (
 		cratesPkgManager.ecosystem:    &cratesPkgManager,
 	}
 )
+
+func DefaultArchiveFilename(pkgName, version, downloadURL string) string {
+	return path.Base(downloadURL)
+}
 
 func Manager(e pkgecosystem.Ecosystem) *PkgManager {
 	return supportedPkgManagers[e]
@@ -79,7 +84,7 @@ func (p *PkgManager) Package(name, version string) *Pkg {
 	}
 }
 
-func (p *PkgManager) DownloadArchive(name, version, directory string, append_hash bool) (string, error) {
+func (p *PkgManager) DownloadArchive(name, version, directory string) (string, error) {
 	if directory == "" {
 		return "", fmt.Errorf("no directory specified")
 	}
@@ -89,16 +94,10 @@ func (p *PkgManager) DownloadArchive(name, version, directory string, append_has
 		return "", err
 	}
 
-	fileName := ""
-	// Rename for crates (The name of downloaded archive is download)
-	if p.ecosystem == "crates.io" && path.Base(downloadURL) == "download" {
-		fileName = strings.Join([]string{name, "-", version, ".tar.gz"}, "")
-	} else if p.ecosystem == "packagist" {
-		pkg := strings.Split(name, "/")
-		fileName = strings.Join([]string{pkg[0], "-", pkg[1], "-", version, ".zip"}, "")
-	}
 
-	archivePath, err := downloadToDirectory(directory, downloadURL, fileName, append_hash)
+	fileName := p.archiveFilename(name, version, downloadURL)
+
+	archivePath, err := downloadToDirectory(directory, downloadURL, fileName)
 
 	if err != nil {
 		return "", err
