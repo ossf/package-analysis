@@ -154,13 +154,14 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	}
 
 	dynamicSandboxOpts := append(worker.DynamicSandboxOptions(), sandboxOpts...)
-	results, _, _, err := worker.RunDynamicAnalysis(pkg, dynamicSandboxOpts)
+	result, err := worker.RunDynamicAnalysis(pkg, dynamicSandboxOpts, "")
 	if err != nil {
 		return err
 	}
 
 	staticSandboxOpts := append(worker.StaticSandboxOptions(), sandboxOpts...)
 	var staticResults analysisrun.StaticAnalysisResults
+	// TODO run static analysis first and remove the if statement below
 	if resultStores.StaticAnalysis != nil {
 		staticResults, _, err = worker.RunStaticAnalysis(pkg, staticSandboxOpts, staticanalysis.All)
 		if err != nil {
@@ -171,8 +172,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	if err := worker.SaveStaticAnalysisData(ctx, pkg, resultStores, staticResults); err != nil {
 		return err
 	}
-
-	if err := worker.SaveDynamicAnalysisData(ctx, pkg, resultStores, results); err != nil {
+	if err := worker.SaveDynamicAnalysisData(ctx, pkg, resultStores, result.AnalysisData); err != nil {
 		return err
 	}
 

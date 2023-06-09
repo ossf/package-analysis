@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
@@ -43,9 +42,6 @@ func getRubyGemsArchiveURL(pkgName, version string) (string, error) {
 
 var rubygemsPkgManager = PkgManager{
 	ecosystem:     pkgecosystem.RubyGems,
-	image:         combinedDynamicAnalysisImage,
-	command:       "/usr/local/bin/analyze-ruby.rb",
 	latestVersion: getRubyGemsLatest,
-	archiveURL:    getRubyGemsArchiveURL,
-	dynamicPhases: analysisrun.DefaultDynamicPhases(),
+  archiveURL:    getRubyGemsArchiveURL,
 }

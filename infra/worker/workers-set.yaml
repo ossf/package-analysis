@@ -1,12 +1,11 @@
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
-  name: workers-set
+  name: workers-deployment
   labels:
     app: workers
 spec:
-  serviceName: workers
-  replicas: 5
+  replicas: 700
   selector:
     matchLabels:
       app: workers
@@ -42,6 +41,8 @@ spec:
         volumeMounts:
           - mountPath: "/var/lib/containers"
             name: image-storage
+          - mountPath: "/worker_tmp"
+            name: worker-tmp
         resources:
           requests:
             cpu: 750m
@@ -49,13 +50,11 @@ spec:
           limits:
             cpu: 1
             memory: 2Gi
-  volumeClaimTemplates:
-  - metadata:
-      name: image-storage
-    spec:
-      accessModes:
-        - ReadWriteOnce
-      storageClassName: premium-rwo
-      resources:
-        requests:
-          storage: 30Gi
+      volumes:
+      - name: image-storage
+        emptyDir:
+          sizeLimit: 20Gi
+      - name: worker-tmp
+        emptyDir:
+          sizeLimit: 5Gi
+  

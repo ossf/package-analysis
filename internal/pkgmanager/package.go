@@ -1,7 +1,6 @@
 package pkgmanager
 
 import (
-	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
@@ -38,26 +37,4 @@ func (p *Pkg) Manager() *PkgManager {
 
 func (p *Pkg) LocalPath() string {
 	return p.local
-}
-
-// Command returns the analysis command for the package.
-func (p *Pkg) Command(phase analysisrun.DynamicPhase) []string {
-	args := make([]string, 0)
-	args = append(args, p.manager.command)
-
-	if p.local != "" {
-		args = append(args, "--local", p.local)
-	} else if p.version != "" {
-		args = append(args, "--version", p.version)
-	}
-
-	if phase == "" {
-		args = append(args, "all")
-	} else {
-		args = append(args, string(phase))
-	}
-
-	args = append(args, p.name)
-
-	return args
 }
