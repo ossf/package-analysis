@@ -1,12 +1,12 @@
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
-  name: workers-set
+  name: workers-deployment
   labels:
     app: workers
 spec:
   serviceName: workers
-  replicas: 5
+  replicas: 700
   selector:
     matchLabels:
       app: workers
@@ -47,13 +47,7 @@ spec:
           limits:
             cpu: 1
             memory: 2Gi
-  volumeClaimTemplates:
-  - metadata:
-      name: image-storage
-    spec:
-      accessModes:
-        - ReadWriteOnce
-      storageClassName: premium-rwo
-      resources:
-        requests:
-          storage: 30Gi
+      volumes:
+      - name: image-storage
+        emptyDir:
+          sizeLimit: 20Gi
