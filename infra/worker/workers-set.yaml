@@ -5,7 +5,6 @@ metadata:
   labels:
     app: workers
 spec:
-  serviceName: workers
   replicas: 700
   selector:
     matchLabels:
@@ -40,6 +39,8 @@ spec:
         volumeMounts:
           - mountPath: "/var/lib/containers"
             name: image-storage
+          - mountPath: "/worker_tmp"
+            name: worker-tmp
         resources:
           requests:
             cpu: 750m
@@ -51,3 +52,7 @@ spec:
       - name: image-storage
         emptyDir:
           sizeLimit: 20Gi
+      - name: worker-tmp
+        emptyDir:
+          sizeLimit: 5Gi
+  
