@@ -31,12 +31,14 @@ func downloadToDirectory(dir string, url string, fileName string) (string, error
 		return filePath, nil
 	}
 
-	err = os.Rename(filePath, strings.Join([]string{filePath, hash[7:]}, "-"))
+	hashedFilePath := strings.Join([]string{filePath, hash[7:]}, "-")
+
+	err = os.Rename(filePath, hashedFilePath)
 	if err != nil {
 		return filePath, nil
 	}
 
-	return filePath, nil
+	return hashedFilePath, nil
 }
 
 /*
