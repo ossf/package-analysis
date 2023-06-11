@@ -117,7 +117,7 @@ func SaveAnalyzedPackage(ctx context.Context, pkg *pkgmanager.Pkg, dest ResultSt
 	}
 
 	if err := dest.AnalyzedPackage.SaveAnalyzedPackage(ctx, pkg.Manager(), pkg); err != nil {
-		return fmt.Errorf("failed to upload analyzed package to blobstore = %w", err)
+		return fmt.Errorf("failed to upload analyzed package to %s: %w", dest.AnalyzedPackage, err)
 	}
 
 	return nil
