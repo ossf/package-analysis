@@ -20,6 +20,8 @@ type ResultStores struct {
 	AnalyzedPackage *resultstore.ResultStore
 }
 
+var analyzedPackageSaved = false
+
 // SaveDynamicAnalysisData saves the data from dynamic analysis to the corresponding bucket in the ResultStores.
 // This includes strace data, execution log, and file writes (in that order).
 // If any operation fails, the rest are aborted
@@ -39,8 +41,12 @@ func SaveDynamicAnalysisData(ctx context.Context, pkg *pkgmanager.Pkg, dest Resu
 		return err
 	}
 
-	if err := SaveAnalyzedPackage(ctx, pkg, dest); err != nil {
-		return err
+	if !analyzedPackageSaved {
+		if err := SaveAnalyzedPackage(ctx, pkg, dest); err != nil {
+			return err
+		} else {
+			analyzedPackageSaved = true
+		}
 	}
 
 	return nil
@@ -71,8 +77,12 @@ func SaveStaticAnalysisData(ctx context.Context, pkg *pkgmanager.Pkg, dest Resul
 		return fmt.Errorf("failed to save static analysis results to %s: %w", dest.StaticAnalysis, err)
 	}
 
-	if err := SaveAnalyzedPackage(ctx, pkg, dest); err != nil {
-		return err
+	if !analyzedPackageSaved {
+		if err := SaveAnalyzedPackage(ctx, pkg, dest); err != nil {
+			return err
+		} else {
+			analyzedPackageSaved = true
+		}
 	}
 
 	return nil
