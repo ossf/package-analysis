@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/ossf/package-analysis/internal/analysis"
+	"github.com/ossf/package-analysis/internal/featureflags"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgmanager"
 	"github.com/ossf/package-analysis/internal/resultstore"
@@ -30,7 +31,10 @@ var (
 	staticUpload        = flag.String("upload-static", "", "bucket path for uploading static analysis results")
 	uploadFileWriteInfo = flag.String("upload-file-write-info", "", "bucket path for uploading information from file writes")
 	offline             = flag.Bool("offline", false, "disables sandbox network access")
+	customSandbox       = flag.String("sandbox-image", "", "override default dynamic analysis sandbox with custom image")
+	customAnalysisCmd   = flag.String("analysis-command", "", "override default dynamic analysis script path (use with custom sandbox image)")
 	listModes           = flag.Bool("list-modes", false, "prints out a list of available analysis modes")
+	features            = flag.String("feature-flags", "", "override default feature flag settings")
 	help                = flag.Bool("help", false, "print help on available options")
 	analysisMode        = utils.CommaSeparatedFlags("mode", []string{"static", "dynamic"},
 		"list of analysis modes to run, separated by commas. Use -list-modes to see available options")
@@ -103,21 +107,25 @@ func dynamicAnalysis(pkg *pkgmanager.Pkg, resultStores worker.ResultStores) {
 
 	sbOpts := append(worker.DynamicSandboxOptions(), makeSandboxOptions()...)
 
-	data, lastRunPhase, lastStatus, err := worker.RunDynamicAnalysis(pkg, sbOpts)
+	if *customSandbox != "" {
+		sbOpts = append(sbOpts, sandbox.Image(*customSandbox))
+	}
+
+	result, err := worker.RunDynamicAnalysis(pkg, sbOpts, *customAnalysisCmd)
 	if err != nil {
 		log.Error("Dynamic analysis aborted (run error)", "error", err)
 		return
 	}
 
 	// this is only valid if RunDynamicAnalysis() returns nil err
-	if lastStatus != analysis.StatusCompleted {
+	if result.LastStatus != analysis.StatusCompleted {
 		log.Warn("Dynamic analysis phase did not complete successfully",
-			"lastRunPhase", lastRunPhase,
-			"status", lastStatus)
+			"lastRunPhase", result.LastRunPhase,
+			"status", result.LastStatus)
 	}
 
 	ctx := context.Background()
-	if err := worker.SaveDynamicAnalysisData(ctx, pkg, resultStores, data); err != nil {
+	if err := worker.SaveDynamicAnalysisData(ctx, pkg, resultStores, result.AnalysisData); err != nil {
 		log.Error("Upload error", "error", err)
 	}
 }
@@ -150,6 +158,11 @@ func main() {
 
 	analysisMode.InitFlag()
 	flag.Parse()
+
+	if err := featureflags.Update(*features); err != nil {
+		log.Fatal("Failed to parse flags", "error", err)
+		return
+	}
 
 	if *help {
 		flag.Usage()

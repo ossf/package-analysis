@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 
+	"go.uber.org/zap"
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/fileblob"
 	_ "gocloud.dev/blob/gcsblob"
@@ -18,6 +19,7 @@ import (
 	_ "gocloud.dev/pubsub/gcppubsub"
 	_ "gocloud.dev/pubsub/kafkapubsub"
 
+	"github.com/ossf/package-analysis/internal/featureflags"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/notification"
 	"github.com/ossf/package-analysis/internal/pkgmanager"
@@ -153,13 +155,14 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	}
 
 	dynamicSandboxOpts := append(worker.DynamicSandboxOptions(), sandboxOpts...)
-	results, _, _, err := worker.RunDynamicAnalysis(pkg, dynamicSandboxOpts)
+	result, err := worker.RunDynamicAnalysis(pkg, dynamicSandboxOpts, "")
 	if err != nil {
 		return err
 	}
 
 	staticSandboxOpts := append(worker.StaticSandboxOptions(), sandboxOpts...)
 	var staticResults analysisrun.StaticAnalysisResults
+	// TODO run static analysis first and remove the if statement below
 	if resultStores.StaticAnalysis != nil {
 		staticResults, _, err = worker.RunStaticAnalysis(pkg, staticSandboxOpts, staticanalysis.All)
 		if err != nil {
@@ -170,8 +173,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	if err := worker.SaveStaticAnalysisData(ctx, pkg, resultStores, staticResults); err != nil {
 		return err
 	}
-
-	if err := worker.SaveDynamicAnalysisData(ctx, pkg, resultStores, results); err != nil {
+	if err := worker.SaveDynamicAnalysisData(ctx, pkg, resultStores, result.AnalysisData); err != nil {
 		return err
 	}
 
@@ -231,11 +233,17 @@ func messageLoop(ctx context.Context, subURL, packagesBucket, notificationTopicU
 }
 
 func main() {
+	logger := log.Initialize(os.Getenv("LOGGER_ENV"))
+
 	ctx := context.Background()
 	subURL := os.Getenv("OSSMALWARE_WORKER_SUBSCRIPTION")
 	packagesBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_PACKAGES")
 	notificationTopicURL := os.Getenv("OSSF_MALWARE_NOTIFICATION_TOPIC")
 	enableProfiler := os.Getenv("OSSF_MALWARE_ANALYSIS_ENABLE_PROFILER")
+
+	if err := featureflags.Update(os.Getenv("OSSF_MALWARE_FEATURE_FLAGS")); err != nil {
+		logger.Fatal("Failed to parse feature flags", zap.Error(err))
+	}
 
 	resultsBuckets := resultBucketPaths{
 		dynamicAnalysis: os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS"),
@@ -249,28 +257,29 @@ func main() {
 		noPull: os.Getenv("OSSF_SANDBOX_NOPULL") != "",
 	}
 
-	log.Initialize(os.Getenv("LOGGER_ENV"))
 	sandbox.InitNetwork()
 
 	// If configured, start a webserver so that Go's pprof can be accessed for
 	// debugging and profiling.
 	if enableProfiler != "" {
 		go func() {
-			log.Info("Starting profiler")
+			logger.Info("Starting profiler")
 			http.ListenAndServe(":6060", nil)
 		}()
 	}
 
 	// Log the configuration of the worker at startup so we can observe it.
-	log.Info("Starting worker",
-		"subscription", subURL,
-		"package_bucket", packagesBucket,
-		"results_bucket", resultsBuckets.dynamicAnalysis,
-		"static_results_bucket", resultsBuckets.staticAnalysis,
-		"file_write_results_bucket", resultsBuckets.fileWrites,
-		"image_tag", imageSpec.tag,
-		"image_nopull", fmt.Sprintf("%v", imageSpec.noPull),
-		"topic_notification", notificationTopicURL)
+	logger.With(
+		zap.String("subscription", subURL),
+		zap.String("package_bucket", packagesBucket),
+		zap.String("results_bucket", resultsBuckets.dynamicAnalysis),
+		zap.String("static_results_bucket", resultsBuckets.staticAnalysis),
+		zap.String("file_write_results_bucket", resultsBuckets.fileWrites),
+		zap.String("image_tag", imageSpec.tag),
+		zap.Bool("image_nopull", imageSpec.noPull),
+		zap.String("topic_notification", notificationTopicURL),
+		zap.Reflect("feature_flags", featureflags.State()),
+	).Info("Starting worker")
 
 	err := messageLoop(ctx, subURL, packagesBucket, notificationTopicURL, imageSpec, resultStores)
 	if err != nil {
