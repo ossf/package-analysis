@@ -9,6 +9,7 @@ import (
 	"github.com/ossf/package-analysis/internal/packetcapture"
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/internal/strace"
+	"github.com/ossf/package-analysis/internal/utils"
 	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 )
 
@@ -27,15 +28,6 @@ var resultError = &Result{
 	StraceSummary: analysisrun.StraceSummary{
 		Status: analysis.StatusErrorOther,
 	},
-}
-
-// lastNBytes returns the last n bytes from b.
-// If len(b) <= n, b itself is returned, otherwise a copy of the bytes is returned.
-func lastNBytes(b []byte, n int) []byte {
-	if len(b) <= n {
-		return b
-	}
-	return b[(len(b) - n):]
 }
 
 func Run(sb sandbox.Sandbox, command string, args []string) (*Result, error) {
@@ -79,8 +71,8 @@ func Run(sb sandbox.Sandbox, command string, args []string) (*Result, error) {
 	analysisResult := Result{
 		StraceSummary: analysisrun.StraceSummary{
 			Status: analysis.StatusForRunResult(r),
-			Stdout: lastNBytes(r.Stdout(), maxOutputBytes),
-			Stderr: lastNBytes(r.Stderr(), maxOutputBytes),
+			Stdout: utils.LastNBytes(r.Stdout(), maxOutputBytes),
+			Stderr: utils.LastNBytes(r.Stderr(), maxOutputBytes),
 		},
 	}
 	analysisResult.setData(straceResult, dns)
