@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ossf/package-analysis/internal/featureflags"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgmanager"
 	"github.com/ossf/package-analysis/internal/resultstore"
@@ -36,6 +37,10 @@ func SaveDynamicAnalysisData(ctx context.Context, pkg *pkgmanager.Pkg, dest Resu
 	}
 	if err := saveExecutionLog(ctx, pkg, dest, data); err != nil {
 		return err
+	}
+	if !featureflags.WriteFileContents.Enabled() {
+		// Abort writing file contents when feature is disabled.
+		return nil
 	}
 	if err := SaveFileWritesData(ctx, pkg, dest, data); err != nil {
 		return err

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/ossf/package-analysis/internal/analysis"
+	"github.com/ossf/package-analysis/internal/featureflags"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgmanager"
 	"github.com/ossf/package-analysis/internal/resultstore"
@@ -34,6 +35,7 @@ var (
 	customSandbox       = flag.String("sandbox-image", "", "override default dynamic analysis sandbox with custom image")
 	customAnalysisCmd   = flag.String("analysis-command", "", "override default dynamic analysis script path (use with custom sandbox image)")
 	listModes           = flag.Bool("list-modes", false, "prints out a list of available analysis modes")
+	features            = flag.String("feature-flags", "", "override default feature flag settings")
 	help                = flag.Bool("help", false, "print help on available options")
 	analysisMode        = utils.CommaSeparatedFlags("mode", []string{"static", "dynamic"},
 		"list of analysis modes to run, separated by commas. Use -list-modes to see available options")
@@ -162,6 +164,11 @@ func main() {
 
 	analysisMode.InitFlag()
 	flag.Parse()
+
+	if err := featureflags.Update(*features); err != nil {
+		log.Fatal("Failed to parse flags", "error", err)
+		return
+	}
 
 	if *help {
 		flag.Usage()

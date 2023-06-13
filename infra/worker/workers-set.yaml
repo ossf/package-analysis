@@ -36,6 +36,8 @@ spec:
           value: gs://ossf-malware-analysis-packages
         - name: OSSF_MALWARE_NOTIFICATION_TOPIC
           value: gcppubsub://projects/ossf-malware-analysis/topics/analysis-notify
+        - name: OSSF_MALWARE_FEATURE_FLAGS
+          value: -WriteFileContents
         securityContext:
           privileged: true
         volumeMounts:
@@ -57,4 +59,9 @@ spec:
       - name: worker-tmp
         emptyDir:
           sizeLimit: 5Gi
+  strategy:
+    type: "RollingUpdate"
+    rollingUpdate:
+      maxUnavailable: 10
+      maxSurge: 1
   

@@ -14,6 +14,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/ossf/package-analysis/internal/featureflags"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/utils"
 )
@@ -152,6 +153,10 @@ func (r *Result) recordFileAccess(file string, read, write, del bool) {
 
 func (r *Result) recordFileWrite(file string, writeBuffer []byte, bytesWritten int64) {
 	r.recordFileAccess(file, false, true, false)
+	if !featureflags.WriteFileContents.Enabled() {
+		// Abort writing file contents when feature is disabled.
+		return
+	}
 	hash := sha256.New()
 	hash.Write(writeBuffer)
 	writeID := hex.EncodeToString(hash.Sum(nil))
