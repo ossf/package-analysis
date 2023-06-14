@@ -80,7 +80,7 @@ func run() error {
 	}
 
 	if stat, err := os.Stat(*downloadDir); err != nil {
-		return fmt.Errorf("could not stat download directory %s: %w", downloadDir, err)
+		return fmt.Errorf("could not stat download directory %s: %w", *downloadDir, err)
 	} else if !stat.IsDir() {
 		return fmt.Errorf("%s is not a directory", *downloadDir)
 	}
