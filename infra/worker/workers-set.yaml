@@ -1,12 +1,11 @@
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
-  name: workers-set
+  name: workers-deployment
   labels:
     app: workers
 spec:
-  serviceName: workers
-  replicas: 5
+  replicas: 700
   selector:
     matchLabels:
       app: workers
@@ -35,11 +34,15 @@ spec:
           value: gs://ossf-malware-analysis-packages
         - name: OSSF_MALWARE_NOTIFICATION_TOPIC
           value: gcppubsub://projects/ossf-malware-analysis/topics/analysis-notify
+        - name: OSSF_MALWARE_FEATURE_FLAGS
+          value: -WriteFileContents
         securityContext:
           privileged: true
         volumeMounts:
           - mountPath: "/var/lib/containers"
             name: image-storage
+          - mountPath: "/worker_tmp"
+            name: worker-tmp
         resources:
           requests:
             cpu: 750m
@@ -47,13 +50,16 @@ spec:
           limits:
             cpu: 1
             memory: 2Gi
-  volumeClaimTemplates:
-  - metadata:
-      name: image-storage
-    spec:
-      accessModes:
-        - ReadWriteOnce
-      storageClassName: premium-rwo
-      resources:
-        requests:
-          storage: 30Gi
+      volumes:
+      - name: image-storage
+        emptyDir:
+          sizeLimit: 20Gi
+      - name: worker-tmp
+        emptyDir:
+          sizeLimit: 5Gi
+  strategy:
+    type: "RollingUpdate"
+    rollingUpdate:
+      maxUnavailable: 10
+      maxSurge: 1
+  

@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/ossf/package-analysis/internal/utils"
-	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
@@ -73,10 +72,7 @@ func getNPMArchiveURL(pkgName, version string) (string, error) {
 
 var npmPkgManager = PkgManager{
 	ecosystem:      pkgecosystem.NPM,
-	image:          combinedDynamicAnalysisImage,
-	command:        "/usr/local/bin/analyze-node.js",
 	latestVersion:  getNPMLatest,
 	archiveURL:     getNPMArchiveURL,
 	extractArchive: utils.ExtractTarGzFile,
-	dynamicPhases:  analysisrun.DefaultDynamicPhases(),
 }

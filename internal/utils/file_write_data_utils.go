@@ -10,7 +10,7 @@ Subfolder where write buffer data will be saved to disk before uploaded to a clo
 This subfolder needs to be shared across files so all functions that access it will be defined here.
 */
 
-const writeBufferFolder = "temp_write_buffers"
+const writeBufferFolder = "worker_tmp/write_buffers"
 
 /*
 Writes a file in the directory specified by write_buffer_folder and flushes the buffer.

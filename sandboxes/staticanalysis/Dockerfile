@@ -6,16 +6,15 @@ FROM golang:1.19-alpine@sha256:122f3484f844467ebe0674cf57272e61981770eb0bc7d316d
 # $ docker build -f sandboxes/staticanalysis/Dockerfile .
 
 # Cache dependencies to avoid downloading again on code change
-WORKDIR /src/sandboxes/staticanalysis
+WORKDIR /src
 # Dependencies for package analysis
-COPY ./go.mod ./go.sum /src/
-# Dependencies for sandbox binary
-COPY ./sandboxes/staticanalysis/go.mod ./sandboxes/staticanalysis/go.sum ./
+COPY ./go.mod ./go.sum ./
 
 RUN go mod download
 
-COPY . /src/
+COPY . ./
 
+WORKDIR /src/sandboxes/staticanalysis
 # If CGO is disabled then we don't need glibc
 RUN CGO_ENABLED=0 go build -o staticanalyze staticanalyze.go
 
