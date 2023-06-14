@@ -5,7 +5,7 @@ metadata:
   labels:
     app: workers
 spec:
-  replicas: 700
+  replicas: 1500
   selector:
     matchLabels:
       app: workers
@@ -52,14 +52,23 @@ spec:
             memory: 2Gi
       volumes:
       - name: image-storage
-        emptyDir:
-          sizeLimit: 20Gi
+        ephemeral:
+          volumeClaimTemplate:
+            metadata:
+              labels:
+                type: image-storage
+            spec:
+              accessModes:
+              - ReadWriteOnce
+              storageClassName: premium-rwo
+              resources:
+                requests:
+                  storage: 20Gi
       - name: worker-tmp
         emptyDir:
           sizeLimit: 5Gi
   strategy:
     type: "RollingUpdate"
     rollingUpdate:
-      maxUnavailable: 10
-      maxSurge: 1
-  
+      maxUnavailable: "5%"
+      maxSurge: "1%"
