@@ -6,6 +6,7 @@ require (
 	github.com/blendle/zapdriver v1.3.1
 	github.com/gopacket/gopacket v1.1.0
 	github.com/ossf/package-feeds v0.0.0-20211108050428-2ce6d6de33c8
+	github.com/package-url/packageurl-go v0.1.0
 	github.com/texttheater/golang-levenshtein/levenshtein v0.0.0-20200805054039-cae8b0eaed6c
 	go.uber.org/zap v1.24.0
 	gocloud.dev v0.29.0

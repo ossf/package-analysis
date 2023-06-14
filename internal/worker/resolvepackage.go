@@ -18,6 +18,9 @@ func ResolvePkg(manager *pkgmanager.PkgManager, name, version, localPath string)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get latest version for package %s: %w", name, err)
 		}
+		if pkg.Version() == "" {
+			return nil, fmt.Errorf("failed to get latest version for package %s: not found", name)
+		}
 	}
 	return pkg, nil
 }
