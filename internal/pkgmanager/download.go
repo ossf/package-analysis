@@ -16,7 +16,7 @@ local file is obtained from the last element of the URL path when split on the '
 On successful download, the full path to the downloaded file is returned.
 */
 func downloadToDirectory(dir string, url string) (string, error) {
-	if len(url) == 0 {
+	if url == "" {
 		return "", errors.New("url is empty")
 	}
 

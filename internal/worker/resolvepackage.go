@@ -19,10 +19,10 @@ func ResolvePkg(manager *pkgmanager.PkgManager, name, version, localPath string)
 	default:
 		pkg, err = manager.Latest(name)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get latest version for package %s: %w", name, err)
+			return nil, fmt.Errorf("failed to get latest version: %w", err)
 		}
 		if pkg.Version() == "" {
-			return nil, fmt.Errorf("failed to get latest version for package %s: not found", name)
+			return nil, fmt.Errorf("unknown package name '%s'", name)
 		}
 	}
 	return pkg, nil
@@ -33,12 +33,12 @@ func ResolvePkg(manager *pkgmanager.PkgManager, name, version, localPath string)
 func ResolvePurl(purl packageurl.PackageURL) (*pkgmanager.Pkg, error) {
 	var ecosystem pkgecosystem.Ecosystem
 	if err := ecosystem.UnmarshalText([]byte(purl.Type)); err != nil {
-		return nil, fmt.Errorf("unsupported package ecosystem for purl %s: %s", purl.String(), purl.Type)
+		return nil, fmt.Errorf("unsupported package ecosystem '%s'", purl.Type)
 	}
 
 	manager := pkgmanager.Manager(ecosystem)
 	if manager == nil {
-		return nil, fmt.Errorf("unsupported package ecosystem for purl %s: %s", purl.String(), purl.Type)
+		return nil, fmt.Errorf("unsupported package ecosystem '%s'", purl.Type)
 	}
 
 	// Prepend package namespace to package name, if present

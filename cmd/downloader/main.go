@@ -16,11 +16,11 @@ import (
 // Command-line tool to download a list of package archives, specified by purl
 // See https://github.com/package-url/purl-spec
 var (
-	purlFilePath = flag.String("f", "", "file containing packages to download")
-	downloadDir  = flag.String("d", "", "directory to download files to (must exist)")
+	purlFilePath = flag.String("f", "", "file containing list of package URLs")
+	downloadDir  = flag.String("d", "", "directory to store downloaded tarballs")
 )
 
-// usageError is a simple string error type, used when command usage
+// cmdError is a simple string error type, used when command usage
 // should be printed alongside the actual error message
 type cmdError struct {
 	message string
@@ -66,24 +66,26 @@ func checkDirectoryExists(path string) error {
 	return nil
 }
 
-func processFileLine(line int, text string) {
+func processFileLine(text string) error {
 	trimmed := strings.TrimSpace(text)
 	if len(trimmed) == 0 || trimmed[0] == '#' {
-		return
+		return nil
 	}
 
 	if purl, err := packageurl.FromString(trimmed); err != nil {
-		fmt.Fprintf(os.Stderr, "error parsing purl '%s' on line %d: %v", text, line, err)
+		return fmt.Errorf("invalid purl '%s': %w", text, err)
 	} else if err := downloadPackage(purl, *downloadDir); err != nil {
-		fmt.Fprintf(os.Stderr, "error downloading '%s': %v", text, err)
+		return fmt.Errorf("could not download %s: %w", text, err)
 	}
+
+	return nil
 }
 
 func run() error {
 	flag.Parse()
 
 	if *purlFilePath == "" {
-		return newCmdError("package list file (-f) is a required argument")
+		return newCmdError("Please specify packages to download using -f <file>")
 	}
 	if *downloadDir == "" {
 		*downloadDir = "."
@@ -98,13 +100,13 @@ func run() error {
 		return err
 	}
 
-	defer func() { _ = purlFile.Close() }()
+	defer purlFile.Close()
 
 	scanner := bufio.NewScanner(purlFile)
-	line := 0
-	for scanner.Scan() {
-		line += 1
-		processFileLine(line, scanner.Text())
+	for line := 1; scanner.Scan(); line += 1 {
+		if err := processFileLine(scanner.Text()); err != nil {
+			fmt.Fprintf(os.Stderr, "line %d: %v\n", line, err)
+		}
 	}
 
 	return nil
