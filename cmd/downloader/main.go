@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"flag"
 	"fmt"
@@ -9,15 +10,13 @@ import (
 
 	"github.com/package-url/packageurl-go"
 
-	"github.com/ossf/package-analysis/internal/pkgmanager"
 	"github.com/ossf/package-analysis/internal/worker"
-	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
 // Command-line tool to download a list of package archives, specified by purl
 // See https://github.com/package-url/purl-spec
 var (
-	packagesFile = flag.String("f", "", "file containing packages to download")
+	purlFilePath = flag.String("f", "", "file containing packages to download")
 	downloadDir  = flag.String("d", "", "directory to download files to (must exist)")
 )
 
@@ -36,79 +35,76 @@ func newCmdError(message string) error {
 }
 
 func downloadPackage(purl packageurl.PackageURL, downloadDir string) error {
-	var ecosystem pkgecosystem.Ecosystem
-	if err := ecosystem.UnmarshalText([]byte(purl.Type)); err != nil {
-		return fmt.Errorf("unsupported package ecosystem for purl %s: %s", purl.String(), purl.Type)
-	}
+	pkg, err := worker.ResolvePurl(purl)
 
-	manager := pkgmanager.Manager(ecosystem)
-	if manager == nil {
-		return fmt.Errorf("unsupported package ecosystem for purl %s: %s", purl.String(), purl.Type)
-	}
-
-	// Prepend package namespace to package name, if present
-	var pkgName string
-	if purl.Namespace != "" {
-		pkgName = purl.Namespace + "/" + purl.Name
-	} else {
-		pkgName = purl.Name
-	}
-
-	// Get the latest package version if not specified in the purl
-	pkg, err := worker.ResolvePkg(manager, pkgName, purl.Version, "")
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("[%s] %s@%s\n", ecosystem, pkg.Name(), pkg.Version())
+	fmt.Printf("[%s] %s@%s\n", pkg.EcosystemName(), pkg.Name(), pkg.Version())
 
-	if _, err := manager.DownloadArchive(pkg.Name(), pkg.Version(), downloadDir); err != nil {
+	if _, err := pkg.Manager().DownloadArchive(pkg.Name(), pkg.Version(), downloadDir); err != nil {
 		return err
 	}
 
 	return nil
 }
 
+func checkDirectoryExists(path string) error {
+	stat, err := os.Stat(path)
+
+	if err != nil && errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("path %s does not exist", path)
+	}
+	if err != nil {
+		return fmt.Errorf("could not stat %s: %w", path, err)
+	}
+	if !stat.IsDir() {
+		return fmt.Errorf("%s is not a directory", path)
+	}
+
+	return nil
+}
+
+func processFileLine(line int, text string) {
+	trimmed := strings.TrimSpace(text)
+	if len(trimmed) == 0 || trimmed[0] == '#' {
+		return
+	}
+
+	if purl, err := packageurl.FromString(trimmed); err != nil {
+		fmt.Fprintf(os.Stderr, "error parsing purl '%s' on line %d: %v", text, line, err)
+	} else if err := downloadPackage(purl, *downloadDir); err != nil {
+		fmt.Fprintf(os.Stderr, "error downloading '%s': %v", text, err)
+	}
+}
+
 func run() error {
 	flag.Parse()
 
-	if *packagesFile == "" {
+	if *purlFilePath == "" {
 		return newCmdError("package list file (-f) is a required argument")
 	}
 	if *downloadDir == "" {
 		*downloadDir = "."
 	}
 
-	if stat, err := os.Stat(*downloadDir); err != nil {
-		return fmt.Errorf("could not stat download directory %s: %w", *downloadDir, err)
-	} else if !stat.IsDir() {
-		return fmt.Errorf("%s is not a directory", *downloadDir)
-	}
-
-	var fileLines []string
-	if purlBytes, err := os.ReadFile(*packagesFile); err != nil {
+	if err := checkDirectoryExists(*downloadDir); err != nil {
 		return err
-	} else {
-		fileLines = strings.Split(string(purlBytes), "\n")
 	}
 
-	var purls []packageurl.PackageURL
-	for i, s := range fileLines {
-		trimmed := strings.TrimSpace(s)
-		if len(trimmed) == 0 || trimmed[0] == '#' {
-			continue
-		}
-		if purl, err := packageurl.FromString(trimmed); err != nil {
-			return fmt.Errorf("could not parse purl '%s' on line %d: %w", s, i+1, err)
-		} else {
-			purls = append(purls, purl)
-		}
+	purlFile, err := os.Open(*purlFilePath)
+	if err != nil {
+		return err
 	}
 
-	for _, purl := range purls {
-		if err := downloadPackage(purl, *downloadDir); err != nil {
-			return err
-		}
+	defer func() { _ = purlFile.Close() }()
+
+	scanner := bufio.NewScanner(purlFile)
+	line := 0
+	for scanner.Scan() {
+		line += 1
+		processFileLine(line, scanner.Text())
 	}
 
 	return nil

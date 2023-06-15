@@ -3,7 +3,10 @@ package worker
 import (
 	"fmt"
 
+	"github.com/package-url/packageurl-go"
+
 	"github.com/ossf/package-analysis/internal/pkgmanager"
+	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
 // ResolvePkg creates a Pkg object with the arguments passed to the worker process.
@@ -22,5 +25,35 @@ func ResolvePkg(manager *pkgmanager.PkgManager, name, version, localPath string)
 			return nil, fmt.Errorf("failed to get latest version for package %s: not found", name)
 		}
 	}
+	return pkg, nil
+}
+
+// ResolvePurl creates a Pkg object from the given purl
+// See https://github.com/package-url/purl-spec
+func ResolvePurl(purl packageurl.PackageURL) (*pkgmanager.Pkg, error) {
+	var ecosystem pkgecosystem.Ecosystem
+	if err := ecosystem.UnmarshalText([]byte(purl.Type)); err != nil {
+		return nil, fmt.Errorf("unsupported package ecosystem for purl %s: %s", purl.String(), purl.Type)
+	}
+
+	manager := pkgmanager.Manager(ecosystem)
+	if manager == nil {
+		return nil, fmt.Errorf("unsupported package ecosystem for purl %s: %s", purl.String(), purl.Type)
+	}
+
+	// Prepend package namespace to package name, if present
+	var pkgName string
+	if purl.Namespace != "" {
+		pkgName = purl.Namespace + "/" + purl.Name
+	} else {
+		pkgName = purl.Name
+	}
+
+	// Get the latest package version if not specified in the purl
+	pkg, err := ResolvePkg(manager, pkgName, purl.Version, "")
+	if err != nil {
+		return nil, err
+	}
+
 	return pkg, nil
 }
