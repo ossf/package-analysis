@@ -15,7 +15,7 @@ const writeBufferFolder = "worker_tmp/write_buffers"
 // CreateAndWriteTempFile writes a file in the directory specified by
 // writeBufferFolder.
 //
-// This directory is must be cleaned up with a call to RemoveTempFilesDirectory().
+// This directory must be cleaned up with a call to RemoveTempFilesDirectory().
 func CreateAndWriteTempFile(fileName string, data []byte) error {
 	err := os.MkdirAll(writeBufferFolder, 0777)
 	if err != nil {
