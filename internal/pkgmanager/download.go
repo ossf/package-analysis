@@ -1,6 +1,7 @@
 package pkgmanager
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,13 +16,16 @@ local file is obtained from the last element of the URL path when split on the '
 On successful download, the full path to the downloaded file is returned.
 */
 func downloadToDirectory(dir string, url string) (string, error) {
-	fileName := path.Base(url)
-	filePath := filepath.Join(dir, fileName)
-	err := downloadToPath(filePath, url)
-	if err != nil {
-		return "", err
+	if url == "" {
+		return "", errors.New("url is empty")
 	}
 
+	fileName := path.Base(url)
+	filePath := filepath.Join(dir, fileName)
+
+	if err := downloadToPath(filePath, url); err != nil {
+		return "", err
+	}
 	return filePath, nil
 }
 
