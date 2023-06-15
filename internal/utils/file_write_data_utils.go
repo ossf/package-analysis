@@ -28,10 +28,7 @@ func CreateAndWriteTempFile(fileName string, data []byte) error {
 	}
 	defer f.Close()
 	_, err = f.Write(data)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func OpenTempFile(fileName string) (*os.File, error) {
