@@ -35,7 +35,7 @@ spec:
         - name: OSSF_MALWARE_NOTIFICATION_TOPIC
           value: gcppubsub://projects/ossf-malware-analysis/topics/analysis-notify
         - name: OSSF_MALWARE_FEATURE_FLAGS
-          value: -WriteFileContents
+          value: ""
         securityContext:
           privileged: true
         volumeMounts:
