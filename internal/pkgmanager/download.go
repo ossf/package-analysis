@@ -1,7 +1,6 @@
 package pkgmanager
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
