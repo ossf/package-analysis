@@ -83,6 +83,9 @@ func (p *PkgManager) DownloadArchive(name, version, directory string) (string, e
 	if err != nil {
 		return "", err
 	}
+	if downloadURL == "" {
+		return "", fmt.Errorf("no url found for package %s, version %s", name, version)
+	}
 
 	fileName := p.archiveFilename(name, version, downloadURL)
 

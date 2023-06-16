@@ -1,6 +1,7 @@
 package pkgmanager
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -21,8 +22,8 @@ original filename is used.
 */
 func downloadToDirectory(dir string, url string, fileName string) (string, error) {
 	filePath := filepath.Join(dir, fileName)
-	err := downloadToPath(filePath, url)
-	if err != nil {
+
+	if err := downloadToPath(filePath, url); err != nil {
 		return "", err
 	}
 
