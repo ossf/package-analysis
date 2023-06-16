@@ -92,7 +92,7 @@ func makeResultStores(dest resultBucketPaths) worker.ResultStores {
 	return resultStores
 }
 
-func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blob.Bucket, resultStores worker.ResultStores, imageSpec sandboxImageSpec, notificationTopic *pubsub.Topic) error {
+func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blob.Bucket, resultStores *worker.ResultStores, imageSpec sandboxImageSpec, notificationTopic *pubsub.Topic) error {
 	name := msg.Metadata["name"]
 	if name == "" {
 		log.Warn("name is empty")
@@ -178,6 +178,8 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		return err
 	}
 
+	resultStores.AnalyzedPackageSaved = false
+
 	if notificationTopic != nil {
 		err := notification.PublishAnalysisCompletion(ctx, notificationTopic, name, version, ecosystem)
 		if err != nil {
@@ -189,7 +191,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	return nil
 }
 
-func messageLoop(ctx context.Context, subURL, packagesBucket, notificationTopicURL string, imageSpec sandboxImageSpec, resultsBuckets worker.ResultStores) error {
+func messageLoop(ctx context.Context, subURL, packagesBucket, notificationTopicURL string, imageSpec sandboxImageSpec, resultsBuckets *worker.ResultStores) error {
 	sub, err := pubsub.OpenSubscription(ctx, subURL)
 	if err != nil {
 		return err
@@ -277,13 +279,14 @@ func main() {
 		zap.String("results_bucket", resultsBuckets.dynamicAnalysis),
 		zap.String("static_results_bucket", resultsBuckets.staticAnalysis),
 		zap.String("file_write_results_bucket", resultsBuckets.fileWrites),
+		zap.String("analyzed_packages_bucket", resultsBuckets.analyzedPkg),
 		zap.String("image_tag", imageSpec.tag),
 		zap.Bool("image_nopull", imageSpec.noPull),
 		zap.String("topic_notification", notificationTopicURL),
 		zap.Reflect("feature_flags", featureflags.State()),
 	).Info("Starting worker")
 
-	err := messageLoop(ctx, subURL, packagesBucket, notificationTopicURL, imageSpec, resultStores)
+	err := messageLoop(ctx, subURL, packagesBucket, notificationTopicURL, imageSpec, &resultStores)
 	if err != nil {
 		log.Error("Error encountered", "error", err)
 	}

@@ -106,7 +106,7 @@ func makeSandboxOptions() []sandbox.Option {
 	return sbOpts
 }
 
-func dynamicAnalysis(pkg *pkgmanager.Pkg, resultStores worker.ResultStores) {
+func dynamicAnalysis(pkg *pkgmanager.Pkg, resultStores *worker.ResultStores) {
 	if !*offline {
 		sandbox.InitNetwork()
 	}
@@ -136,7 +136,7 @@ func dynamicAnalysis(pkg *pkgmanager.Pkg, resultStores worker.ResultStores) {
 	}
 }
 
-func staticAnalysis(pkg *pkgmanager.Pkg, resultStores worker.ResultStores) {
+func staticAnalysis(pkg *pkgmanager.Pkg, resultStores *worker.ResultStores) {
 	if !*offline {
 		sandbox.InitNetwork()
 	}
@@ -221,12 +221,12 @@ func main() {
 
 	if runMode[analysis.Static] {
 		log.Info("Starting static analysis")
-		staticAnalysis(pkg, resultStores)
+		staticAnalysis(pkg, &resultStores)
 	}
 
 	// dynamicAnalysis() currently panics on error, so it's last
 	if runMode[analysis.Dynamic] {
 		log.Info("Starting dynamic analysis")
-		dynamicAnalysis(pkg, resultStores)
+		dynamicAnalysis(pkg, &resultStores)
 	}
 }
