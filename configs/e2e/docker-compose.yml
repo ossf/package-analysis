@@ -47,7 +47,7 @@ services:
       MINIO_ROOT_PASSWORD: minio123
       MINIO_REGION_NAME: dummy_region
     entrypoint: sh
-    command: -c 'mkdir -p /data/package-analysis{,-static,-file-writes} && /usr/bin/minio server /data'
+    command: -c 'mkdir -p /data/package-analysis{,-static,-file-writes,-analyzed-packages} && /usr/bin/minio server /data'
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s

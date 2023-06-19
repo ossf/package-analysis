@@ -44,8 +44,8 @@ func SaveDynamicAnalysisData(ctx context.Context, pkg *pkgmanager.Pkg, dest *Res
 	if err := SaveFileWritesData(ctx, pkg, dest, data); err != nil {
 		return err
 	}
-	if !featureflags.AnalyzedPackage.Enabled() {
-		// Abort saving analyzed package when feature is disabled.
+	if !featureflags.SaveAnalyzedPackages.Enabled() {
+		// Abort saving analyzed packages when feature is disabled.
 		return nil
 	}
 	if !dest.AnalyzedPackageSaved {
@@ -84,8 +84,8 @@ func SaveStaticAnalysisData(ctx context.Context, pkg *pkgmanager.Pkg, dest *Resu
 		return fmt.Errorf("failed to save static analysis results to %s: %w", dest.StaticAnalysis, err)
 	}
 
-	if !featureflags.AnalyzedPackage.Enabled() {
-		// Abort saving analyzed package when feature is disabled.
+	if !featureflags.SaveAnalyzedPackages.Enabled() {
+		// Abort saving analyzed packages when feature is disabled.
 		return nil
 	}
 
