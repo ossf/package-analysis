@@ -1,4 +1,4 @@
-// The pkgecosystem package defines the open source ecosystems supported by Package Analysis.
+// Package pkgecosystem defines the open source ecosystems supported by Package Analysis.
 package pkgecosystem
 
 import (
@@ -25,6 +25,12 @@ const (
 // correspond to a defined ecosystem constant is passed in as a parameter.
 var ErrUnsupported = errors.New("ecosystem unsupported")
 
+// Unsupported returns a new ErrUnsupported that adds the unsupported ecosystem name
+// to the error message
+func Unsupported(name string) error {
+	return fmt.Errorf("%w: %s", ErrUnsupported, name)
+}
+
 // SupportedEcosystems is a list of all the ecosystems supported.
 var SupportedEcosystems = []Ecosystem{
 	CratesIO,
@@ -43,14 +49,14 @@ var SupportedEcosystemsStrings = EcosystemsAsStrings(SupportedEcosystems)
 // It will only succeed when unmarshaling ecosytems in SupportedEcosystems or
 // empty.
 func (e *Ecosystem) UnmarshalText(text []byte) error {
-	search := string(text)
-	for _, s := range append(SupportedEcosystems, None) {
-		if string(s) == search {
-			*e = s
-			return nil
-		}
+	ecosystem, err := Parse(string(text))
+
+	if err != nil {
+		return err
 	}
-	return fmt.Errorf("%w: %s", ErrUnsupported, text)
+
+	*e = ecosystem
+	return nil
 }
 
 // MarshalText implements the encoding.TextMarshaler interface.
@@ -70,4 +76,17 @@ func EcosystemsAsStrings(es []Ecosystem) []string {
 		s = append(s, e.String())
 	}
 	return s
+}
+
+// Parse returns an Ecosystem corresponding to the given string name, or
+// the None ecosystem along with an error if there is no matching Ecosystem.
+// If name == "", then the None ecosystem is returned with no error.
+func Parse(name string) (Ecosystem, error) {
+	for _, s := range append(SupportedEcosystems, None) {
+		if string(s) == name {
+			return s, nil
+		}
+	}
+
+	return None, Unsupported(name)
 }
