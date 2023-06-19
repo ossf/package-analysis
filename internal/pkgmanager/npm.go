@@ -71,8 +71,9 @@ func getNPMArchiveURL(pkgName, version string) (string, error) {
 }
 
 var npmPkgManager = PkgManager{
-	ecosystem:      pkgecosystem.NPM,
-	latestVersion:  getNPMLatest,
-	archiveURL:     getNPMArchiveURL,
-	extractArchive: utils.ExtractTarGzFile,
+	ecosystem:       pkgecosystem.NPM,
+	latestVersion:   getNPMLatest,
+	archiveURL:      getNPMArchiveURL,
+	archiveFilename: DefaultArchiveFilename,
+	extractArchive:  utils.ExtractTarGzFile,
 }

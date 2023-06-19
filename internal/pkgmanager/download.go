@@ -1,32 +1,47 @@
 package pkgmanager
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
+	"strings"
+
+	"github.com/ossf/package-analysis/internal/utils"
 )
 
 /*
-downloadToDirectory downloads a file from the given URL to the given directory. The name of the
-local file is obtained from the last element of the URL path when split on the '/' character.
+downloadToDirectory downloads a file from the given URL to the given directory.
 On successful download, the full path to the downloaded file is returned.
-*/
-func downloadToDirectory(dir string, url string) (string, error) {
-	if url == "" {
-		return "", errors.New("url is empty")
-	}
 
-	fileName := path.Base(url)
+fileName argument is required with no default value, and the hash of the file
+is appended to the given filename. If an error occurs during hashing, then the
+original filename is used.
+*/
+func downloadToDirectory(dir string, url string, fileName string) (string, error) {
 	filePath := filepath.Join(dir, fileName)
 
 	if err := downloadToPath(filePath, url); err != nil {
 		return "", err
 	}
-	return filePath, nil
+
+	hash, err := utils.HashFile(filePath)
+	if err != nil {
+		// Error is ignored and the path with the original filename is returned
+		// We treat hashing as 'best-effort' rather than a strictly necessary part of the function
+		return filePath, nil
+	}
+
+	hashedFilePath := strings.Join([]string{filePath, hash[7:]}, "-")
+
+	err = os.Rename(filePath, hashedFilePath)
+	if err != nil {
+		// See above comment
+		return filePath, nil
+	}
+
+	return hashedFilePath, nil
 }
 
 /*

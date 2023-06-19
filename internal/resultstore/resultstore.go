@@ -16,6 +16,7 @@ import (
 
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/utils"
+	"github.com/ossf/package-analysis/internal/pkgmanager"
 )
 
 type ResultStore struct {
@@ -108,6 +109,33 @@ func (rs *ResultStore) SaveTempFilesToZip(ctx context.Context, p Pkg, fileName s
 			return err
 		}
 	}
+	return nil
+}
+
+func (rs *ResultStore) SaveAnalyzedPackage(ctx context.Context, manager *pkgmanager.PkgManager, pkg Pkg) error {
+	bkt, err := blob.OpenBucket(ctx, rs.bucket)
+	if err != nil {
+		return err
+	}
+	defer bkt.Close()
+
+	uploadPath := rs.generatePath(pkg)
+	log.Info("Uploading analyzed package",
+		"bucket", rs.bucket,
+		"path", uploadPath)
+
+	w, err := bkt.NewWriter(ctx, uploadPath, nil)
+	if err != nil {
+		return err
+	}
+	defer w.Close()
+
+	_, err = manager.DownloadArchive(pkg.Name(), pkg.Version(), uploadPath)
+
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

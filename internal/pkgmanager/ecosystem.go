@@ -2,6 +2,7 @@ package pkgmanager
 
 import (
 	"fmt"
+	"path"
 	"strings"
 
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
@@ -9,10 +10,11 @@ import (
 
 // PkgManager represents how packages from a common ecosystem are accessed.
 type PkgManager struct {
-	ecosystem      pkgecosystem.Ecosystem
-	latestVersion  func(string) (string, error)
-	archiveURL     func(string, string) (string, error)
-	extractArchive func(string, string) error
+	ecosystem       pkgecosystem.Ecosystem
+	latestVersion   func(string) (string, error)
+	archiveURL      func(string, string) (string, error)
+	archiveFilename func(string, string, string) string
+	extractArchive  func(string, string) error
 }
 
 var (
@@ -24,6 +26,10 @@ var (
 		cratesPkgManager.ecosystem:    &cratesPkgManager,
 	}
 )
+
+func DefaultArchiveFilename(pkgName, version, downloadURL string) string {
+	return path.Base(downloadURL)
+}
 
 func Manager(e pkgecosystem.Ecosystem) *PkgManager {
 	return supportedPkgManagers[e]
@@ -73,10 +79,6 @@ func (p *PkgManager) DownloadArchive(name, version, directory string) (string, e
 		return "", fmt.Errorf("no directory specified")
 	}
 
-	if p.archiveURL == nil {
-		return "", fmt.Errorf("not yet implemented for %s", p.Ecosystem())
-	}
-
 	downloadURL, err := p.archiveURL(name, version)
 	if err != nil {
 		return "", err
@@ -85,7 +87,10 @@ func (p *PkgManager) DownloadArchive(name, version, directory string) (string, e
 		return "", fmt.Errorf("no url found for package %s, version %s", name, version)
 	}
 
-	archivePath, err := downloadToDirectory(directory, downloadURL)
+	fileName := p.archiveFilename(name, version, downloadURL)
+
+	archivePath, err := downloadToDirectory(directory, downloadURL, fileName)
+
 	if err != nil {
 		return "", err
 	}

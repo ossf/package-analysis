@@ -28,6 +28,8 @@ spec:
           value: gs://ossf-malware-static-analysis-results
         - name: OSSF_MALWARE_ANALYSIS_FILE_WRITE_RESULTS
           value: gs://ossf-malware-analysis-file-write-results
+        # - name: OSSF_MALWARE_ANALYZED_PACKAGES
+          # value: gs://ossf-malware-analysis-analyzed-packages
         - name: LOGGER_ENV
           value: prod
         - name: OSSF_MALWARE_ANALYSIS_PACKAGES

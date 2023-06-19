@@ -30,6 +30,7 @@ var (
 	dynamicUpload       = flag.String("upload", "", "bucket path for uploading dynamic analysis results")
 	staticUpload        = flag.String("upload-static", "", "bucket path for uploading static analysis results")
 	uploadFileWriteInfo = flag.String("upload-file-write-info", "", "bucket path for uploading information from file writes")
+	uploadAnalyzedPkg   = flag.String("upload-analyzed-pkg", "", "bucket path for uploading analyzed packages")
 	offline             = flag.Bool("offline", false, "disables sandbox network access")
 	customSandbox       = flag.String("sandbox-image", "", "override default dynamic analysis sandbox with custom image")
 	customAnalysisCmd   = flag.String("analysis-command", "", "override default dynamic analysis script path (use with custom sandbox image)")
@@ -66,6 +67,11 @@ func makeResultStores() worker.ResultStores {
 		rs.FileWrites = resultstore.New(bucket, resultstore.BasePath(path))
 	}
 
+	if *uploadAnalyzedPkg != "" {
+		bucket, path := parseBucketPath(*uploadAnalyzedPkg)
+		rs.AnalyzedPackage = resultstore.New(bucket, resultstore.BasePath(path))
+	}
+
 	return rs
 }
 
@@ -100,7 +106,7 @@ func makeSandboxOptions() []sandbox.Option {
 	return sbOpts
 }
 
-func dynamicAnalysis(pkg *pkgmanager.Pkg, resultStores worker.ResultStores) {
+func dynamicAnalysis(pkg *pkgmanager.Pkg, resultStores *worker.ResultStores) {
 	if !*offline {
 		sandbox.InitNetwork()
 	}
@@ -130,7 +136,7 @@ func dynamicAnalysis(pkg *pkgmanager.Pkg, resultStores worker.ResultStores) {
 	}
 }
 
-func staticAnalysis(pkg *pkgmanager.Pkg, resultStores worker.ResultStores) {
+func staticAnalysis(pkg *pkgmanager.Pkg, resultStores *worker.ResultStores) {
 	if !*offline {
 		sandbox.InitNetwork()
 	}
@@ -215,12 +221,12 @@ func main() {
 
 	if runMode[analysis.Static] {
 		log.Info("Starting static analysis")
-		staticAnalysis(pkg, resultStores)
+		staticAnalysis(pkg, &resultStores)
 	}
 
 	// dynamicAnalysis() currently panics on error, so it's last
 	if runMode[analysis.Dynamic] {
 		log.Info("Starting dynamic analysis")
-		dynamicAnalysis(pkg, resultStores)
+		dynamicAnalysis(pkg, &resultStores)
 	}
 }

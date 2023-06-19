@@ -29,7 +29,20 @@ func getRubyGemsLatest(pkg string) (string, error) {
 	return details.Version, nil
 }
 
+func getRubyGemsArchiveURL(pkgName, version string) (string, error) {
+	pkgURL := fmt.Sprintf("https://rubygems.org/gems/%v-%v.gem", pkgName, version)
+	resp, err := http.Get(pkgURL)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	return pkgURL, nil
+}
+
 var rubygemsPkgManager = PkgManager{
-	ecosystem:     pkgecosystem.RubyGems,
-	latestVersion: getRubyGemsLatest,
+	ecosystem:       pkgecosystem.RubyGems,
+	latestVersion:   getRubyGemsLatest,
+	archiveURL:      getRubyGemsArchiveURL,
+	archiveFilename: DefaultArchiveFilename,
 }

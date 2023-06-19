@@ -1,6 +1,7 @@
 package pkgmanager
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -73,13 +74,31 @@ func TestDownloadPyPIArchive(t *testing.T) {
 	testDownload(t, tests, Manager(pkgecosystem.PyPI))
 }
 
+func TestDownloadCratesArchive(t *testing.T) {
+	tests := []downloadTestSpec{
+		{"pkgname=rand version=(valid)", "rand", "0.8.5", false},
+		{"pkgname=rand version=(invalid)", "rand", "0.8.55", true},
+		{"pkgname=(invalid)", "fr(2t5j923)", "123", true},
+	}
+
+	testDownload(t, tests, Manager(pkgecosystem.CratesIO))
+}
+
 func TestDownloadToDirectory(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "package-analysis-test-dl")
 	if err != nil {
 		t.Fatalf("Could not create temp dir for downloads: %v", err)
 	}
 
-	testURL := "https://google.com/robots.txt"
+	testPkg := "black"
+	version := "23.3.0"
+	checksum := "1c7b8d606e728a41ea1ccbd7264677e494e87cf630e399262ced92d4a8dac940"
+	fileName := fmt.Sprintf("%s-%s.tar.gz-%s", testPkg, version, checksum)
+
+	testURL, err := getPyPIArchiveURL(testPkg, version)
+	if err != nil {
+		t.Fatalf("Could not get PyPI archive url")
+	}
 
 	tests := []struct {
 		name     string
@@ -88,13 +107,13 @@ func TestDownloadToDirectory(t *testing.T) {
 		filename string
 		wantErr  bool
 	}{
-		{testURL + " (plain)", testURL, tmpDir, "robots.txt", false},
+		{testURL + " (plain)", testURL, tmpDir, fileName, false},
 		{testURL + "123 (invalid URL)", testURL + "123", tmpDir, testURL + "123", true},
-		{testURL + " (invalid dir)", testURL, "/tmp/does/not/exist", "robots.txt", true},
+		{testURL + " (invalid dir)", testURL, "/tmp/does/not/exist", fileName, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			downloadedFile, err := downloadToDirectory(tt.dir, tt.url)
+			downloadedFile, err := downloadToDirectory(tt.dir, tt.url, DefaultArchiveFilename(testPkg, version, testURL))
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Want error: %v; got error: %v", tt.wantErr, err)
 				return
