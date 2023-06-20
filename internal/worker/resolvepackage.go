@@ -31,7 +31,7 @@ func ResolvePkg(manager *pkgmanager.PkgManager, name, version, localPath string)
 // ResolvePurl creates a Pkg object from the given purl
 // See https://github.com/package-url/purl-spec
 func ResolvePurl(purl packageurl.PackageURL) (*pkgmanager.Pkg, error) {
-	ecosystem, err := pkgecosystem.Parse(purl.Type)
+	ecosystem, err := pkgecosystem.ParsePurlType(purl.Type)
 	if err != nil {
 		return nil, err
 	}

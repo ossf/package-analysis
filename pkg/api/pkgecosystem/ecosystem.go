@@ -90,3 +90,20 @@ func Parse(name string) (Ecosystem, error) {
 
 	return None, Unsupported(name)
 }
+
+// ParsePurlType converts from a Package URL type, defined at
+// https://github.com/package-url/purl-spec/blob/master/PURL-TYPES.rst
+// to an Ecosystem object
+func ParsePurlType(purlType string) (Ecosystem, error) {
+	switch purlType {
+	case "cargo":
+		return CratesIO, nil
+	case "composer":
+		return Packagist, nil
+	case "gem":
+		return RubyGems, nil
+	default:
+		// we use the same name for NPM and PyPI as the purl type string
+		return Parse(purlType)
+	}
+}
