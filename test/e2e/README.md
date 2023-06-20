@@ -15,7 +15,7 @@ The test is orchestrated using docker-compose, using an adapted setup based on t
 In the top-level project directory, run
 
 ```shell
-$ make RELEASE_TAG=test build_all_images sync_all_sandboxes # rebuild images with 'test' tag
+$ make RELEASE_TAG=test build_prod_images sync_prod_sandboxes # rebuild images with 'test' tag
 $ make e2e_test_start
 
 ```
@@ -44,7 +44,7 @@ In the top-level project directory, run
 
 `make e2e_test_logs_scheduler` to see information on the packages which have been received and proxied onto the analysis workers.
 
-`make e2e_tests_logs_analysis` to see analysis stdout (too much to be useful); better to check minio output as described above.
+`make e2e_test_logs_analysis` to see analysis stdout (too much to be useful); better to check minio output as described above.
 
 ## PubSub (Kafka) Inspection
 
