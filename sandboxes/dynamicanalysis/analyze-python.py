@@ -14,7 +14,7 @@ from unittest.mock import MagicMock
 
 PY_EXTENSION = '.py'
 
-EXECUTION_LOG_PATH = "/execution.log"
+EXECUTION_LOG_PATH = '/execution.log'
 EXECUTION_TIMEOUT_SECONDS = 10
 
 @dataclass
@@ -79,7 +79,7 @@ def import_single_module(import_path):
 
     module_name = os.path.basename(import_path).rstrip(PY_EXTENSION)
 
-    print(f"Import single module at {import_path}")
+    print(f'Import single module at {import_path}')
     import_module(module_name)
 
 
@@ -96,7 +96,7 @@ def import_module(import_path):
     # 1. handler for function execution timeout alarms
     # 2. redirect stdout and stderr to execution log file
     signal.signal(signal.SIGALRM, handler=alarm_handler)
-    with open(EXECUTION_LOG_PATH, "at") as execution_log:
+    with open(EXECUTION_LOG_PATH, 'at') as execution_log:
         with contextlib.redirect_stdout(execution_log):
             with contextlib.redirect_stderr(execution_log):
                 try:
@@ -111,7 +111,7 @@ def import_module(import_path):
 
 def execute_module(module):
     """Best-effort execution of code in a module"""
-    print("[module]", module)
+    print('[module]', module)
 
     # Keep track of all types belonging to the module we've seen so far in return values,
     # so that we can recursively explore each one's methods without going in infinite loops.
@@ -134,7 +134,7 @@ def execute_module(module):
             return_type = return_value.__class__
             # TODO should it be DFS or BFS?
             if should_investigate(return_type):
-                print("[investigate type]", return_type)
+                print('[investigate type]', return_type)
                 mark_seen(return_type)
                 try_call_methods(return_value, return_type, should_investigate, mark_seen)
         elif inspect.isclass(member):
@@ -146,11 +146,11 @@ def execute_module(module):
         else:
             skipped_names.append(name)
 
-    print("[skipped members]", " ".join(skipped_names))
+    print('[skipped members]', ' '.join(skipped_names))
 
 
 def alarm_handler(sig_num, frame):
-    raise TimeoutError("Timeout exceeded for function execution")
+    raise TimeoutError('Timeout exceeded for function execution')
 
 
 # Call a function with mock arguments based on its declared signature.
@@ -194,11 +194,11 @@ def run_and_catch_all(c: callable):
         return c()
     except BaseException as e:
         # catch ALL exceptions, including KeyboardInterrupt and system exit
-        print(type(e), e, sep=": ")
+        print(type(e), e, sep=': ')
 
 
 def try_invoke_function(f, name, is_method=False):
-    print("[method]" if is_method else "[function]", name)
+    print('[method]' if is_method else '[function]', name)
 
     def invoke():
         return invoke_function(f)
@@ -206,12 +206,12 @@ def try_invoke_function(f, name, is_method=False):
     ret = run_and_catch_all(invoke)
 
     if ret is not None:
-        print("[return value]", repr(ret))
+        print('[return value]', repr(ret))
         return ret
 
 
 def try_instantiate_class(c, name):
-    print("[class]", name)
+    print('[class]', name)
 
     def instantiate():
         return invoke_function(c)
@@ -220,25 +220,25 @@ def try_instantiate_class(c, name):
 
 
 def try_call_methods(instance, class_name, should_investigate, mark_seen):
-    print("[instance methods]", class_name)
+    print('[instance methods]', class_name)
 
     def is_non_init_method(m):
-        return inspect.ismethod(m) and m.__name__ != "__init__"
+        return inspect.ismethod(m) and m.__name__ != '__init__'
 
     for method_name, method in inspect.getmembers(instance, is_non_init_method):
         return_value = try_invoke_function(method, method_name, is_method=True)
         return_type = return_value.__class__
         # TODO should it be DFS or BFS?
         if should_investigate(return_type):
-            print("[investigate type]", return_type)
+            print('[investigate type]', return_type)
             mark_seen(return_type)
             try_call_methods(return_value, return_type, should_investigate, mark_seen)
 
 
 PHASES = {
-    "all": [install, import_package],
-    "install": [install],
-    "import": [import_package]
+    'all': [install, import_package],
+    'install': [install],
+    'import': [import_package]
 }
 
 
@@ -273,11 +273,11 @@ def main():
 
     if package_name is None:
         # single module mode
-        if phase == "import" and local_path is not None:
+        if phase == 'import' and local_path is not None:
             import_single_module(local_path)
             return
         else:
-            print("'install' requested but no package name given, or local file missing for single module import")
+            print('install requested but no package name given, or local file missing for single module import')
             exit(1)
 
     package = Package(name=package_name, version=version, local_path=local_path)

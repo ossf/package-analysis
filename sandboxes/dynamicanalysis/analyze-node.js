@@ -3,13 +3,13 @@
 // eslint no-var: 0
 // jshint esversion: 6
 // jshint node: true
-"use strict";
+'use strict';
 
 const {spawnSync} = require('child_process');
 const fs = require('fs');
 const process = require('process');
 
-const executionLogPath = "/execution.log";
+const executionLogPath = '/execution.log';
 
 function install(pkg) {
   // Specify the package to install.
@@ -89,11 +89,11 @@ function executeModule(name, mod) {
 // Adapted from https://stackoverflow.com/a/72326559.
 // Premise is that classes have a non-writable prototype
 function isES6Class(obj) {
-  if (typeof obj !== "function") {
+  if (typeof obj !== 'function') {
     return false;
   }
 
-  const descriptor = Object.getOwnPropertyDescriptor(obj, "prototype");
+  const descriptor = Object.getOwnPropertyDescriptor(obj, 'prototype');
   return descriptor && !descriptor.writable;
 }
 
@@ -109,7 +109,7 @@ function executeModuleCode(name, mod) {
   // Solution uses code from an answer in [2]
   // [1] https://github.com/nodejs/node/blob/main/lib/internal/util/inspect.js
   // [2] https://stackoverflow.com/questions/30758961/how-to-check-if-a-variable-is-an-es6-class-declaration/72326559
-  const callableNames = Object.keys(mod).filter((key) => typeof mod[key] === "function");
+  const callableNames = Object.keys(mod).filter((key) => typeof mod[key] === 'function');
   console.log(`[keys] ${callableNames}`);
 
   // Call all the exported names. If there is a TypeError, it's
@@ -121,14 +121,14 @@ function executeModuleCode(name, mod) {
   // https://nodejs.org/api/process.html#event-uncaughtexception
   // tl;dr this may cause things to break, but we're in a sandbox so we'll do it anyway
   process.on('uncaughtException', (err, origin) => {
-	  console.log("[uncaught exception]");
+	  console.log('[uncaught exception]');
 	  console.log(err);
 	  console.log(origin);
   });
 
   // https://nodejs.org/api/process.html#event-unhandledrejection
   process.on('unhandledRejection', (reason, promise) => {
-	  console.log("[unhandled rejection]");
+	  console.log('[unhandled rejection]');
 	  console.log(reason);
 	  console.log(promise);
   });
