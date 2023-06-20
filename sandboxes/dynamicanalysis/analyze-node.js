@@ -46,6 +46,11 @@ function importPkg(pkg) {
     return;
   }
 
+  // run package execution only if the log file exists
+  if (!fs.existsSync(executionLogPath)) {
+    return;
+  }
+
   executeModule(pkg.name, mod);
 }
 
@@ -135,7 +140,8 @@ function executeModuleCode(name, mod) {
 
   for (const name of callableNames) {
     try {
-      // TODO call each function or class in a separate thread or sandbox
+      // TODO call each function or class in a separate thread or sandbox,
+      //  so that functions that block can be interrupted
       if (isES6Class(mod[name])) {
         console.log(`[class] ${name}`);
         const instance = new mod[name]();
@@ -167,8 +173,8 @@ if (argv.length < 2 || argv > 4) {
 
 // Parse the arguments manually to avoid introducing unnecessary dependencies
 // and side effects that add noise to the strace output.
-var localFile = null;
-var ver = null;
+let localFile = null;
+let ver = null;
 switch (argv[0]) {
   case '--local':
     argv.shift();

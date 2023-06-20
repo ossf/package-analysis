@@ -92,6 +92,10 @@ def import_module(import_path):
         traceback.print_exc()
         return
 
+    # only run package execution if the log file exists
+    if not os.path.exists(EXECUTION_LOG_PATH):
+        return
+
     # Setup for module execution
     # 1. handler for function execution timeout alarms
     # 2. redirect stdout and stderr to execution log file
