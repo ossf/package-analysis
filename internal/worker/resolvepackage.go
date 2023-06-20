@@ -31,14 +31,14 @@ func ResolvePkg(manager *pkgmanager.PkgManager, name, version, localPath string)
 // ResolvePurl creates a Pkg object from the given purl
 // See https://github.com/package-url/purl-spec
 func ResolvePurl(purl packageurl.PackageURL) (*pkgmanager.Pkg, error) {
-	var ecosystem pkgecosystem.Ecosystem
-	if err := ecosystem.UnmarshalText([]byte(purl.Type)); err != nil {
-		return nil, fmt.Errorf("unsupported package ecosystem '%s'", purl.Type)
+	ecosystem, err := pkgecosystem.ParsePurlType(purl.Type)
+	if err != nil {
+		return nil, err
 	}
 
 	manager := pkgmanager.Manager(ecosystem)
 	if manager == nil {
-		return nil, fmt.Errorf("unsupported package ecosystem '%s'", purl.Type)
+		return nil, pkgecosystem.Unsupported(purl.Type)
 	}
 
 	// Prepend package namespace to package name, if present
