@@ -47,7 +47,7 @@ services:
       MINIO_ROOT_PASSWORD: minio123
       MINIO_REGION_NAME: dummy_region
     entrypoint: sh
-    command: -c 'mkdir -p /data/package-analysis{,-static,-file-writes} && /usr/bin/minio server /data'
+    command: -c 'mkdir -p /data/package-analysis{,-static,-file-writes,-analyzed-packages} && /usr/bin/minio server /data'
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
@@ -67,6 +67,7 @@ services:
       OSSF_MALWARE_ANALYSIS_RESULTS: s3://package-analysis?endpoint=minio:9000&disableSSL=true&s3ForcePathStyle=true
       OSSF_MALWARE_STATIC_ANALYSIS_RESULTS: s3://package-analysis-static?endpoint=minio:9000&disableSSL=true&s3ForcePathStyle=true
       OSSF_MALWARE_ANALYSIS_FILE_WRITE_RESULTS: s3://package-analysis-file-writes?endpoint=minio:9000&disableSSL=true&s3ForcePathStyle=true
+      OSSF_MALWARE_ANALYZED_PACKAGES: s3://package-analysis-analyzed-packages?endpoint=minio:9000&disableSSL=true&s3ForcePathStyle=true
       OSSF_MALWARE_ANALYSIS_ENABLE_PROFILER: "true"
       KAFKA_BROKERS: kafka:9092
       AWS_ACCESS_KEY_ID: minio

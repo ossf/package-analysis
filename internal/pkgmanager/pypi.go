@@ -78,8 +78,9 @@ func getPyPIArchiveURL(pkgName, version string) (string, error) {
 }
 
 var pypiPkgManager = PkgManager{
-	ecosystem:      pkgecosystem.PyPI,
-	latestVersion:  getPyPILatest,
-	archiveURL:     getPyPIArchiveURL,
-	extractArchive: utils.ExtractTarGzFile,
+	ecosystem:       pkgecosystem.PyPI,
+	latestVersion:   getPyPILatest,
+	archiveURL:      getPyPIArchiveURL,
+	archiveFilename: DefaultArchiveFilename,
+	extractArchive:  utils.ExtractTarGzFile,
 }
