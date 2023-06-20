@@ -6,7 +6,7 @@ import signal
 import subprocess
 import sys
 import traceback
-import contextlib
+from contextlib import redirect_stdout, redirect_stderr
 from dataclasses import dataclass
 from importlib.metadata import files
 from typing import Optional
@@ -96,14 +96,12 @@ def import_module(import_path):
     # 1. handler for function execution timeout alarms
     # 2. redirect stdout and stderr to execution log file
     signal.signal(signal.SIGALRM, handler=alarm_handler)
-    with open(EXECUTION_LOG_PATH, 'at') as execution_log:
-        with contextlib.redirect_stdout(execution_log):
-            with contextlib.redirect_stderr(execution_log):
-                try:
-                    execute_module(module)
-                except:
-                    print('Failed to execute code for module', import_path)
-                    traceback.print_exc()
+    with open(EXECUTION_LOG_PATH, 'at') as log, redirect_stdout(log), redirect_stderr(log):
+        try:
+            execute_module(module)
+        except:
+            print('Failed to execute code for module', import_path)
+            traceback.print_exc()
 
     # restore default signal handler for SIGALRM
     signal.signal(signal.SIGALRM, signal.SIG_DFL)
@@ -219,6 +217,10 @@ def try_instantiate_class(c, name):
     return run_and_catch_all(instantiate)
 
 
+# tries to call the methods of the given object instance
+# should_investigate and mark_seen are mutable input/output variables
+# that track which types have been traversed
+# TODO support calling async methods
 def try_call_methods(instance, class_name, should_investigate, mark_seen):
     print('[instance methods]', class_name)
 
@@ -264,7 +266,7 @@ def main():
 
     phase = args.pop(0)
 
-    if len(args) > 0:
+    if args:
         package_name = args.pop(0)
 
     if phase not in PHASES:
