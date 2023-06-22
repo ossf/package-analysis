@@ -229,13 +229,20 @@ func messageLoop(ctx context.Context, subURL, packagesBucket, notificationTopicU
 			// All subsequent receive calls will return the same error, so we bail out.
 			return fmt.Errorf("error receiving message: %w", err)
 		}
-		me := extender.Start(ctx, msg, func() {
+		me, err := extender.Start(ctx, msg, func() {
 			log.Info("Message Ack deadline extended", "message_id", msg.LoggableID, "message_meta", msg.Metadata)
 		})
+		if err != nil {
+			// If Start fails it will always fail, so we bail out.
+			// Nack the message if we can to indicate the failure.
+			if msg.Nackable() {
+				msg.Nack()
+			}
+			return fmt.Errorf("error starting message ack deadline extender: %w", err)
+		}
 
 		if err := handleMessage(ctx, msg, pkgsBkt, resultsBuckets, imageSpec, notificationTopic); err != nil {
-			log.Error("Failed to process message",
-				"error", err)
+			log.Error("Failed to process message", "error", err)
 			if err := me.Stop(); err != nil {
 				log.Error("Extender failed", "error", err)
 			}

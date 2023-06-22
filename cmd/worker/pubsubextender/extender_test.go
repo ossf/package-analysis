@@ -58,7 +58,7 @@ func TestExtender(t *testing.T) {
 		Metadata:   map[string]string{"test": "test"},
 	}
 
-	me := e.Start(ctx, wantMsg, func() {
+	me, err := e.Start(ctx, wantMsg, func() {
 		if got := d.lastExtend.msg; got != wantMsg {
 			t.Errorf("ExtendMessageDeadline got message %v, want %v", got, wantMsg)
 		}
@@ -69,6 +69,9 @@ func TestExtender(t *testing.T) {
 		d.lastExtend.msg = nil
 		d.lastExtend.deadline = 0
 	})
+	if err != nil {
+		t.Fatalf("Start() = %v; want no error", err)
+	}
 	if !me.IsRunning() {
 		t.Errorf("IsRunning()#1 = false; want true")
 	}
@@ -116,7 +119,10 @@ func TestExtender_Error(t *testing.T) {
 		Metadata:   map[string]string{"test": "test"},
 	}
 
-	me := e.Start(ctx, wantMsg, nil)
+	me, err := e.Start(ctx, wantMsg, nil)
+	if err != nil {
+		t.Fatalf("Start() = %v; want no error", err)
+	}
 
 	time.Sleep(500 * time.Millisecond)
 

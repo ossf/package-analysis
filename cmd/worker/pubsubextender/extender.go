@@ -2,8 +2,9 @@ package pubsubextender
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/url"
-	"regexp"
 	"time"
 
 	"gocloud.dev/pubsub"
@@ -15,7 +16,7 @@ const (
 	defaultDeadline    = 300 * time.Second
 )
 
-var subscriptionPathRE = regexp.MustCompile("^projects/.+/subscriptions/.+$")
+var ErrInvalidGracePeriod = errors.New("invalid grace period")
 
 type driver interface {
 	// ExtendMessageDeadline sends a request to the pubsub service to change
@@ -75,11 +76,11 @@ type MessageExtender struct {
 	running  bool
 }
 
-func (e *Extender) Start(ctx context.Context, msg *pubsub.Message, callback func()) *MessageExtender {
+func (e *Extender) Start(ctx context.Context, msg *pubsub.Message, callback func()) (*MessageExtender, error) {
 	freq := e.Deadline - e.GracePeriod
 	if freq < 0 {
-		// GracePeriod is larger than Deadline. Fallback to half the deadline.
-		freq = e.Deadline / 2
+		// GracePeriod is larger than Deadline.
+		return nil, fmt.Errorf("%w: deadline %v is smaller than grace period %v", ErrInvalidGracePeriod, e.Deadline, e.GracePeriod)
 	}
 
 	me := &MessageExtender{
@@ -112,7 +113,7 @@ func (e *Extender) Start(ctx context.Context, msg *pubsub.Message, callback func
 			}
 		}
 	}(ctx, me, e)
-	return me
+	return me, nil
 }
 
 func (me *MessageExtender) IsRunning() bool {

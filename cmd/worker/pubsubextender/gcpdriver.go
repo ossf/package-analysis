@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"path"
+	"regexp"
 	"strings"
 	"time"
 
@@ -19,6 +20,8 @@ const (
 	gcpMinAckDeadline = 10 * time.Second
 	gcpMaxAckDeadline = 600 * time.Second
 )
+
+var subscriptionPathRE = regexp.MustCompile("^projects/.+/subscriptions/.+$")
 
 type gcpDriver struct {
 	client *api.SubscriberClient
