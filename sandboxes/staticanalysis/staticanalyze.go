@@ -151,7 +151,7 @@ func run() (err error) {
 	if *localFile != "" {
 		archivePath = *localFile
 	} else {
-		archivePath, err = manager.DownloadArchive(pkg.Name(), pkg.Version(), workDirs.archiveDir)
+		archivePath, err = manager.DownloadArchive(pkg.Name(), pkg.Version(), workDirs.archiveDir, false)
 		if err != nil {
 			return fmt.Errorf("error downloading archive: %v\n", err)
 		}
