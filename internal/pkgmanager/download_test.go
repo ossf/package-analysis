@@ -3,8 +3,10 @@ package pkgmanager
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/ossf/package-analysis/internal/utils"
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
@@ -24,7 +26,7 @@ func testDownload(t *testing.T, tests []downloadTestSpec, manager *PkgManager) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			downloadPath, err := manager.DownloadArchive(tt.pkgName, tt.pkgVersion, tmpDir)
+			downloadPath, err := manager.DownloadArchive(tt.pkgName, tt.pkgVersion, tmpDir, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Want error: %v; got error: %v", tt.wantErr, err)
 				return
@@ -84,7 +86,7 @@ func TestDownloadCratesArchive(t *testing.T) {
 	testDownload(t, tests, Manager(pkgecosystem.CratesIO))
 }
 
-func TestDownloadToDirectory(t *testing.T) {
+func TestDownloadWithHashing(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "package-analysis-test-dl")
 	if err != nil {
 		t.Fatalf("Could not create temp dir for downloads: %v", err)
@@ -113,18 +115,26 @@ func TestDownloadToDirectory(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			downloadedFile, err := downloadToDirectory(tt.dir, tt.url, DefaultArchiveFilename(testPkg, version, testURL))
+			basename := DefaultArchiveFilename(testPkg, version, testURL)
+			downloadPath := filepath.Join(tt.dir, basename)
+			err := downloadToPath(downloadPath, tt.url)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Want error: %v; got error: %v", tt.wantErr, err)
 				return
 			}
-
 			if err != nil {
 				// File wasn't meant to download properly
 				return
 			}
 
-			stat, err := os.Stat(downloadedFile)
+			pathWithHash, err := utils.RenameWithHash(downloadPath, basename+"-", "")
+			if err != nil {
+				// this part isn't meant to throw an error
+				t.Errorf("Rename with hash failed: %v", err)
+				return
+			}
+
+			stat, err := os.Stat(pathWithHash)
 			if err != nil {
 				t.Errorf("stat() returned error: %v", err)
 				return
@@ -132,8 +142,8 @@ func TestDownloadToDirectory(t *testing.T) {
 			if stat.Name() != tt.filename {
 				t.Errorf("Expected filename %s, got filename %s", tt.filename, stat.Name())
 			}
-			err = os.Remove(downloadedFile)
-			if err != nil {
+
+			if err = os.Remove(pathWithHash); err != nil {
 				t.Errorf("Error removing file: %v", err)
 			}
 		})

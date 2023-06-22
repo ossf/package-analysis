@@ -145,7 +145,7 @@ func GetBasicData(fileList []string, pathInArchive map[string]string) (*BasicPac
 		}
 
 		var fileHash string
-		if hash, err := utils.HashFile(filePath); err != nil {
+		if hash, err := utils.HashFile(filePath, true); err != nil {
 			log.Error("Error hashing file", "path", archivePath, "error", err)
 		} else {
 			fileHash = hash

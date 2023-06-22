@@ -3,8 +3,10 @@ package pkgmanager
 import (
 	"fmt"
 	"path"
+	"path/filepath"
 	"strings"
 
+	"github.com/ossf/package-analysis/internal/utils"
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
@@ -74,9 +76,23 @@ func (p *PkgManager) Package(name, version string) *Pkg {
 	}
 }
 
-func (p *PkgManager) DownloadArchive(name, version, directory string) (string, error) {
+/*
+DownloadArchive downloads an archive of the given package name and version
+to the specified directory, and returns the path to the downloaded archive.
+
+If renameWithHash is true, the SHA256 sum of the archive is computed via
+utils.HashFile and appended to the base filename, separated by '-'.
+
+Note: If an error occurs during hashing or renaming of the file, it is not removed.
+The temporary path is returned; it is the responsibility of the caller
+to remove the file and retry if desired.
+
+If an error occurs during download of the file, the error is returned along
+with an empty path value. No cleanup is required.
+*/
+func (p *PkgManager) DownloadArchive(name, version, directory string, renameWithHash bool) (string, error) {
 	if directory == "" {
-		return "", fmt.Errorf("no directory specified")
+		panic("no directory specified")
 	}
 
 	downloadURL, err := p.archiveURL(name, version)
@@ -87,15 +103,30 @@ func (p *PkgManager) DownloadArchive(name, version, directory string) (string, e
 		return "", fmt.Errorf("no url found for package %s, version %s", name, version)
 	}
 
-	fileName := p.archiveFilename(name, version, downloadURL)
+	baseFilename := p.archiveFilename(name, version, downloadURL)
+	if baseFilename == "" {
+		panic("base filename for archive is empty")
+	}
 
-	archivePath, err := downloadToDirectory(directory, downloadURL, fileName)
-
-	if err != nil {
+	// final path if renameWithHash is false
+	destPath := filepath.Join(directory, baseFilename)
+	if err := downloadToPath(destPath, downloadURL); err != nil {
 		return "", err
 	}
 
-	return archivePath, nil
+	if !renameWithHash {
+		// nothing more to do
+		return destPath, nil
+	}
+
+	// TODO this puts the hash after the file extension - see if we can put it before
+	pathWithHash, err := utils.RenameWithHash(destPath, baseFilename+"-", "")
+	if err != nil {
+		// rename failed but don't remove the file, just return unmodified path
+		return destPath, err
+	}
+
+	return pathWithHash, nil
 }
 
 func (p *PkgManager) ExtractArchive(archivePath, outputDir string) error {

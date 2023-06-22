@@ -15,8 +15,8 @@ import (
 	_ "gocloud.dev/blob/s3blob"
 
 	"github.com/ossf/package-analysis/internal/log"
-	"github.com/ossf/package-analysis/internal/utils"
 	"github.com/ossf/package-analysis/internal/pkgmanager"
+	"github.com/ossf/package-analysis/internal/utils"
 )
 
 type ResultStore struct {
@@ -130,9 +130,7 @@ func (rs *ResultStore) SaveAnalyzedPackage(ctx context.Context, manager *pkgmana
 	}
 	defer w.Close()
 
-	_, err = manager.DownloadArchive(pkg.Name(), pkg.Version(), uploadPath)
-
-	if err != nil {
+	if _, err = manager.DownloadArchive(pkg.Name(), pkg.Version(), uploadPath, true); err != nil {
 		return err
 	}
 
