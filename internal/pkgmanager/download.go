@@ -13,6 +13,8 @@ contents of whatever is at the given URL to that given file using downloadToFile
 and finally closes the file.
 
 If any error occurs, the created file is removed.
+
+Callers must ensure that path and url are nonempty, otherwise the function will panic.
 */
 func downloadToPath(path string, url string) error {
 	if path == "" {
@@ -50,6 +52,8 @@ func downloadToPath(path string, url string) error {
 downloadToFile writes the contents of whatever is at the given URL to the
 given file, without opening or closing the file. If any errors occur while
 making the network request, then no file operations will be performed.
+
+Callers must ensure that url is nonempty, otherwise the function will panic.
 */
 func downloadToFile(dest *os.File, url string) error {
 	if url == "" {

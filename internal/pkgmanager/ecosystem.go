@@ -80,6 +80,8 @@ func (p *PkgManager) Package(name, version string) *Pkg {
 DownloadArchive downloads an archive of the given package name and version
 to the specified directory, and returns the path to the downloaded archive.
 
+If directory is empty, the current directory is used.
+
 If renameWithHash is true, the SHA256 sum of the archive is computed via
 utils.HashFile and appended to the base filename, separated by '-'.
 
@@ -92,7 +94,7 @@ with an empty path value. No cleanup is required.
 */
 func (p *PkgManager) DownloadArchive(name, version, directory string, renameWithHash bool) (string, error) {
 	if directory == "" {
-		panic("no directory specified")
+		directory = "."
 	}
 
 	downloadURL, err := p.archiveURL(name, version)
