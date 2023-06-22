@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"os"
+	"path"
 	"path/filepath"
 	"time"
 
@@ -113,25 +115,54 @@ func (rs *ResultStore) SaveTempFilesToZip(ctx context.Context, p Pkg, fileName s
 }
 
 func (rs *ResultStore) SaveAnalyzedPackage(ctx context.Context, manager *pkgmanager.PkgManager, pkg Pkg) error {
+	archivePath, err := manager.DownloadArchive(pkg.Name(), pkg.Version(), "")
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err := os.Remove(archivePath); err != nil {
+			log.Error("could not clean up downloaded archive", "error", err)
+		}
+	}()
+
+	filenameWithHash, err := utils.BasenameWithHash(archivePath, "-", "")
+	if err != nil {
+		return err
+	}
+
 	bkt, err := blob.OpenBucket(ctx, rs.bucket)
 	if err != nil {
 		return err
 	}
 	defer bkt.Close()
 
-	uploadPath := rs.generatePath(pkg)
+	// generate default upload path and then rename using basename with hash
+	uploadPath := path.Join(path.Dir(rs.generatePath(pkg)), filenameWithHash)
 	log.Info("Uploading analyzed package",
 		"bucket", rs.bucket,
 		"path", uploadPath)
+
+	f, err := os.Open(archivePath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
 
 	w, err := bkt.NewWriter(ctx, uploadPath, nil)
 	if err != nil {
 		return err
 	}
-	defer w.Close()
 
-	if _, err = manager.DownloadArchive(pkg.Name(), pkg.Version(), uploadPath, true); err != nil {
-		return err
+	_, writeErr := io.Copy(w, f)
+	closeErr := w.Close()
+
+	if writeErr != nil {
+		// TODO golang 1.20: use errors.Join(writeErr, closeErr)
+		return writeErr
+	}
+	if closeErr != nil {
+		return closeErr
 	}
 
 	return nil

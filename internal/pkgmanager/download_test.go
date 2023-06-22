@@ -26,7 +26,7 @@ func testDownload(t *testing.T, tests []downloadTestSpec, manager *PkgManager) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			downloadPath, err := manager.DownloadArchive(tt.pkgName, tt.pkgVersion, tmpDir, false)
+			downloadPath, err := manager.DownloadArchive(tt.pkgName, tt.pkgVersion, tmpDir)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Want error: %v; got error: %v", tt.wantErr, err)
 				return
@@ -115,7 +115,7 @@ func TestDownloadWithHashing(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			basename := DefaultArchiveFilename(testPkg, version, testURL)
+			basename := defaultArchiveFilename(testPkg, version, testURL)
 			downloadPath := filepath.Join(tt.dir, basename)
 			err := downloadToPath(downloadPath, tt.url)
 			if (err != nil) != tt.wantErr {
@@ -127,7 +127,7 @@ func TestDownloadWithHashing(t *testing.T) {
 				return
 			}
 
-			pathWithHash, err := utils.RenameWithHash(downloadPath, basename+"-", "")
+			pathWithHash, err := utils.BasenameWithHash(downloadPath, basename+"-", "")
 			if err != nil {
 				// this part isn't meant to throw an error
 				t.Errorf("Rename with hash failed: %v", err)

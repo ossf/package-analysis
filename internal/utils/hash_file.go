@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // HashFile returns the SHA256 hashsum of a file.
@@ -29,19 +30,34 @@ func HashFile(path string, prependHashType bool) (string, error) {
 	return digest, nil
 }
 
-// RenameWithHash renames the file at the given path to the SHA256 digest
-// of its contents, with an optional prefix and suffix (which may be empty).
-func RenameWithHash(path, prefix, suffix string) (string, error) {
-	hashsum, hashErr := HashFile(path, false)
+/*
+BasenameWithHash computes the SHA256 digest of the file at the given path
+and produces a new filename (basename) by inserting the digest into the
+current filename just before the file extension, if present.
+
+The file extension is defined as everything after and including the first
+'.' character in the basename. If there is no '.' character, the digest is
+simply appended to the filename. Note, this definition is different from the
+one used in filepath.Ext(); this way allows for extensions such as .tar.gz
+
+The prefix and suffix are extra strings which are concatenated with the
+digest before the result is added to the basename. They may be left blank.
+
+If an error occurs during hashing, it is returned along with an empty path.
+*/
+func BasenameWithHash(path, prefix, suffix string) (string, error) {
+	digest, hashErr := HashFile(path, false)
 	if hashErr != nil {
 		return "", hashErr
 	}
+	hashString := prefix + digest + suffix
 
-	dir := filepath.Dir(path)
-	newPath := filepath.Join(dir, prefix+hashsum+suffix)
-
-	if err := os.Rename(path, newPath); err != nil {
-		return "", err
+	// check for extension
+	basename := filepath.Base(path)
+	if extIndex := strings.IndexByte(basename, '.'); extIndex >= 0 {
+		return basename[0:extIndex] + hashString + basename[extIndex:], nil
 	}
-	return newPath, nil
+
+	// else no extension, just append
+	return basename + hashString, nil
 }

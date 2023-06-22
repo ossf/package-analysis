@@ -83,52 +83,71 @@ func TestHashFile_MissingFile(t *testing.T) {
 	}
 }
 
-func TestRenameWithHash(t *testing.T) {
+func TestBasenameWithHash(t *testing.T) {
 	tests := []struct {
 		name             string
+		filename         string
 		fileContents     string
 		prefix           string
 		suffix           string
 		expectedFilename string
 	}{
 		{
-			name:             "empty file",
+			name:             "empty file, no extension",
+			filename:         "empty",
 			fileContents:     hashPairs[0][0],
-			expectedFilename: hashPairs[0][1],
+			expectedFilename: "empty" + hashPairs[0][1],
 		},
 		{
-			name:             "single line hash only",
+			name:             "empty file, with extension",
+			filename:         "empty.txt",
+			fileContents:     hashPairs[0][0],
+			expectedFilename: "empty" + hashPairs[0][1] + ".txt",
+		},
+		{
+			name:             "single line hash only, no extension",
+			filename:         "single",
 			fileContents:     hashPairs[1][0],
-			expectedFilename: hashPairs[1][1],
+			expectedFilename: "single" + hashPairs[1][1],
 		},
 		{
 			name:             "single line with prefix and suffix filename",
+			filename:         "single.txt",
 			fileContents:     hashPairs[1][0],
-			prefix:           "abc",
-			suffix:           "def",
-			expectedFilename: "abc" + hashPairs[1][1] + "def",
+			prefix:           "-",
+			suffix:           "xxxx",
+			expectedFilename: "single-" + hashPairs[1][1] + "xxxx.txt",
 		},
 		{
-			name:             "multi line",
+			name:             "multi line, double file extension",
+			filename:         "multi.txt.bak",
 			fileContents:     hashPairs[1][0],
-			expectedFilename: hashPairs[1][1],
+			expectedFilename: "multi" + hashPairs[1][1] + ".txt.bak",
+		},
+		{
+			name:             "multi line, double file extension, no filename",
+			filename:         ".txt.bak",
+			fileContents:     hashPairs[1][0],
+			prefix:           "test",
+			suffix:           "xxxx",
+			expectedFilename: "test" + hashPairs[1][1] + "xxxx.txt.bak",
 		},
 	}
 	dir := t.TempDir()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			path := filepath.Join(dir, tt.name)
+			path := filepath.Join(dir, tt.filename)
 			if err := os.WriteFile(path, []byte(tt.fileContents), 0o666); err != nil {
 				t.Fatalf("Failed to create hash file: %v", err)
 			}
-			newPath, err := utils.RenameWithHash(path, tt.prefix, tt.suffix)
+			gotPath, err := utils.BasenameWithHash(path, tt.prefix, tt.suffix)
 			if err != nil {
-				t.Errorf("RenameWithHash() error: %v", err)
+				t.Errorf("BasenameWithHash() error: %v", err)
 				return
 			}
-			gotFilename := filepath.Base(newPath)
-			if gotFilename != tt.expectedFilename {
-				t.Errorf("RenameWithHash() expected filename = %v but got %v", tt.expectedFilename, gotFilename)
+			expectedPath := filepath.Join(dir, tt.expectedFilename)
+			if gotPath != expectedPath {
+				t.Errorf("BasenameWithHash() expected filename = %v but got %v", expectedPath, gotPath)
 			}
 		})
 	}

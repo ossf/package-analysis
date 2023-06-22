@@ -42,7 +42,7 @@ func downloadPackage(purl packageurl.PackageURL, dir string) error {
 
 	fmt.Printf("[%s] %s@%s\n", pkg.EcosystemName(), pkg.Name(), pkg.Version())
 
-	if _, err := pkg.Manager().DownloadArchive(pkg.Name(), pkg.Version(), dir, false); err != nil {
+	if _, err := pkg.Manager().DownloadArchive(pkg.Name(), pkg.Version(), dir); err != nil {
 		return err
 	}
 
