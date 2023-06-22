@@ -1,7 +1,6 @@
 package pkgmanager
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -30,14 +29,18 @@ func downloadToPath(path string, url string) error {
 
 	if downloadErr := downloadToFile(file, url); downloadErr != nil {
 		// cleanup file
-		removeErr := os.Remove(path)
-		return errors.Join(downloadErr, removeErr)
+		if removeErr := os.Remove(path); removeErr != nil {
+			return fmt.Errorf("%w\n%v", downloadErr, removeErr)
+		}
+		return downloadErr
 	}
 
 	if closeErr := file.Close(); closeErr != nil {
 		// cleanup file
-		removeErr := os.Remove(path)
-		return errors.Join(closeErr, removeErr)
+		if removeErr := os.Remove(path); removeErr != nil {
+			return fmt.Errorf("%w\n%v", closeErr, removeErr)
+		}
+		return closeErr
 	}
 
 	return nil
