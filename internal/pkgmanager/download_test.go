@@ -16,15 +16,10 @@ type downloadTestSpec struct {
 }
 
 func testDownload(t *testing.T, tests []downloadTestSpec, manager *PkgManager) {
-	t.Helper()
-	tmpDir, err := os.MkdirTemp("", "package-analysis-test-npm-dl")
-	if err != nil {
-		t.Fatalf("Could not create temp dir for downloads: %v", err)
-	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			downloadPath, err := manager.DownloadArchive(tt.pkgName, tt.pkgVersion, tmpDir)
+			downloadDir := t.TempDir()
+			downloadPath, err := manager.DownloadArchive(tt.pkgName, tt.pkgVersion, downloadDir)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Want error: %v; got error: %v", tt.wantErr, err)
 				return
@@ -35,21 +30,10 @@ func testDownload(t *testing.T, tests []downloadTestSpec, manager *PkgManager) {
 				return
 			}
 
-			if downloadPath == "" {
-				t.Errorf("downloadNPMArchive() returned no error but empty path")
-				return
-			}
-
-			err = os.Remove(downloadPath)
-			if err != nil {
+			if err := os.Remove(downloadPath); err != nil {
 				t.Errorf("Error removing file: %v", err)
 			}
 		})
-	}
-
-	err = os.RemoveAll(tmpDir)
-	if err != nil {
-		t.Errorf("error removing temp dir (%s): %v", tmpDir, err)
 	}
 }
 
