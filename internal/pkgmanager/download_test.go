@@ -1,9 +1,7 @@
 package pkgmanager
 
 import (
-	"fmt"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/ossf/package-analysis/internal/utils"
@@ -86,38 +84,44 @@ func TestDownloadCratesArchive(t *testing.T) {
 	testDownload(t, tests, Manager(pkgecosystem.CratesIO))
 }
 
-func TestDownloadWithHashing(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "package-analysis-test-dl")
-	if err != nil {
-		t.Fatalf("Could not create temp dir for downloads: %v", err)
-	}
-
-	testPkg := "black"
-	version := "23.3.0"
-	checksum := "1c7b8d606e728a41ea1ccbd7264677e494e87cf630e399262ced92d4a8dac940"
-	fileName := fmt.Sprintf("%s-%s.tar.gz-%s", testPkg, version, checksum)
-
-	testURL, err := getPyPIArchiveURL(testPkg, version)
-	if err != nil {
-		t.Fatalf("Could not get PyPI archive url")
-	}
-
+func TestDownloadAndHashCheck(t *testing.T) {
 	tests := []struct {
-		name     string
-		url      string
-		dir      string
-		filename string
-		wantErr  bool
+		name         string
+		pkgEcosystem pkgecosystem.Ecosystem
+		pkgName      string
+		pkgVersion   string
+		archiveHash  string
+		wantErr      bool
 	}{
-		{testURL + " (plain)", testURL, tmpDir, fileName, false},
-		{testURL + "123 (invalid URL)", testURL + "123", tmpDir, testURL + "123", true},
-		{testURL + " (invalid dir)", testURL, "/tmp/does/not/exist", fileName, true},
+		{
+			name:         "pypi black 23.3.0",
+			pkgEcosystem: pkgecosystem.PyPI,
+			pkgName:      "black",
+			pkgVersion:   "23.3.0",
+			archiveHash:  "1c7b8d606e728a41ea1ccbd7264677e494e87cf630e399262ced92d4a8dac940",
+			wantErr:      false,
+		},
+		{
+			name:         "npm invalid package name",
+			pkgEcosystem: pkgecosystem.PyPI,
+			pkgName:      "3i3ii3ii3i3i",
+			pkgVersion:   "",
+			archiveHash:  "",
+			wantErr:      true,
+		},
+		{
+			name:         "pypi black invalid version",
+			pkgEcosystem: pkgecosystem.PyPI,
+			pkgName:      "black",
+			pkgVersion:   "23333.3.0",
+			archiveHash:  "",
+			wantErr:      true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			basename := defaultArchiveFilename(testPkg, version, testURL)
-			downloadPath := filepath.Join(tt.dir, basename)
-			err := downloadToPath(downloadPath, tt.url)
+			downloadDir := t.TempDir()
+			downloadPath, err := Manager(tt.pkgEcosystem).DownloadArchive(tt.pkgName, tt.pkgVersion, downloadDir)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Want error: %v; got error: %v", tt.wantErr, err)
 				return
@@ -127,29 +131,20 @@ func TestDownloadWithHashing(t *testing.T) {
 				return
 			}
 
-			pathWithHash, err := utils.BasenameWithHash(downloadPath, basename+"-", "")
+			gotHash, err := utils.HashFile(downloadPath, false)
 			if err != nil {
-				// this part isn't meant to throw an error
-				t.Errorf("Rename with hash failed: %v", err)
+				// hashing isn't meant to throw an error
+				t.Errorf("hashing failed: %v", err)
 				return
 			}
 
-			stat, err := os.Stat(pathWithHash)
-			if err != nil {
-				t.Errorf("stat() returned error: %v", err)
-				return
-			}
-			if stat.Name() != tt.filename {
-				t.Errorf("Expected filename %s, got filename %s", tt.filename, stat.Name())
+			if tt.archiveHash != gotHash {
+				t.Errorf("Expected hash %s, got %s", tt.archiveHash, gotHash)
 			}
 
-			if err = os.Remove(pathWithHash); err != nil {
-				t.Errorf("Error removing file: %v", err)
+			if err := os.Remove(downloadPath); err != nil {
+				t.Errorf("Error removing downloaded archive: %v", err)
 			}
 		})
-	}
-	err = os.RemoveAll(tmpDir)
-	if err != nil {
-		t.Errorf("error removing temp dir (%s): %v", tmpDir, err)
 	}
 }

@@ -7,7 +7,6 @@ import (
 	"errors"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"time"
 
@@ -126,7 +125,7 @@ func (rs *ResultStore) SaveAnalyzedPackage(ctx context.Context, manager *pkgmana
 		}
 	}()
 
-	filenameWithHash, err := utils.BasenameWithHash(archivePath, "-", "")
+	hash, err := utils.HashFile(archivePath, false)
 	if err != nil {
 		return err
 	}
@@ -137,11 +136,8 @@ func (rs *ResultStore) SaveAnalyzedPackage(ctx context.Context, manager *pkgmana
 	}
 	defer bkt.Close()
 
-	// generate default upload path and then rename using basename with hash
-	uploadPath := path.Join(path.Dir(rs.generatePath(pkg)), filenameWithHash)
-	log.Info("Uploading analyzed package",
-		"bucket", rs.bucket,
-		"path", uploadPath)
+	uploadPath := rs.generatePath(pkg) + "-" + hash
+	log.Info("Uploading analyzed package", "bucket", rs.bucket, "path", uploadPath)
 
 	f, err := os.Open(archivePath)
 	if err != nil {
