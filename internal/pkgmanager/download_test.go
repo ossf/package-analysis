@@ -129,7 +129,7 @@ func TestDownload(t *testing.T) {
 			}
 
 			if tt.archiveHash != "" {
-				gotHash, err := utils.HashFile(downloadPath, false)
+				gotHash, err := utils.SHA256Hash(downloadPath)
 				if err != nil {
 					// hashing isn't meant to throw an error
 					t.Errorf("hashing failed: %v", err)

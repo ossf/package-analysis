@@ -7,9 +7,9 @@ import (
 	"os"
 )
 
-// HashFile returns the SHA256 hashsum of a file.
+// SHA256Hash returns the SHA256 hashsum of a file.
 // If prependHashType is true, the string "sha256:" is prepended
-func HashFile(path string, prependHashType bool) (string, error) {
+func SHA256Hash(path string) (string, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return "", err
@@ -21,9 +21,5 @@ func HashFile(path string, prependHashType bool) (string, error) {
 		return "", err
 	}
 
-	digest := fmt.Sprintf("%x", hash.Sum([]byte{}))
-	if prependHashType {
-		digest = "sha256:" + digest
-	}
-	return digest, nil
+	return fmt.Sprintf("%x", hash.Sum([]byte{})), nil
 }

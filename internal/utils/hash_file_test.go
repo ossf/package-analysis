@@ -18,40 +18,29 @@ var hashPairs = [][2]string{
 
 func TestHashFile(t *testing.T) {
 	tests := []struct {
-		name        string
-		contents    string
-		prependType bool
-		want        string
+		name     string
+		contents string
+		want     string
 	}{
 		{
-			name:        "empty file",
-			contents:    hashPairs[0][0],
-			prependType: true,
-			want:        "sha256:" + hashPairs[0][1],
+			name:     "empty file",
+			contents: hashPairs[0][0],
+			want:     hashPairs[0][1],
 		},
 		{
-			name:        "single line",
-			contents:    hashPairs[1][0],
-			prependType: true,
-			want:        "sha256:" + hashPairs[1][1],
+			name:     "single line",
+			contents: hashPairs[1][0],
+			want:     hashPairs[1][1],
 		},
 		{
-			name:        "single line hash only",
-			contents:    hashPairs[1][0],
-			prependType: false,
-			want:        hashPairs[1][1],
+			name:     "multi line",
+			contents: hashPairs[2][0],
+			want:     hashPairs[2][1],
 		},
 		{
-			name:        "multi line",
-			contents:    hashPairs[2][0],
-			prependType: true,
-			want:        "sha256:" + hashPairs[2][1],
-		},
-		{
-			name:        "trailing new line",
-			contents:    hashPairs[3][0],
-			prependType: true,
-			want:        "sha256:" + hashPairs[3][1],
+			name:     "trailing new line",
+			contents: hashPairs[3][0],
+			want:     hashPairs[3][1],
 		},
 	}
 	for _, test := range tests {
@@ -61,12 +50,12 @@ func TestHashFile(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to prepare hash file: %v", err)
 			}
-			got, err := utils.HashFile(f, test.prependType)
+			got, err := utils.SHA256Hash(f)
 			if err != nil {
 				t.Fatalf("Failed to generate hash: %v", err)
 			}
 			if got != test.want {
-				t.Errorf("HashFile() = %v; want %v", got, test.want)
+				t.Errorf("SHA256Hash() = %v; want %v", got, test.want)
 			}
 		})
 	}
@@ -74,11 +63,11 @@ func TestHashFile(t *testing.T) {
 
 func TestHashFile_MissingFile(t *testing.T) {
 	f := filepath.Join(t.TempDir(), "missing.txt")
-	got, err := utils.HashFile(f, true)
+	got, err := utils.SHA256Hash(f)
 	if err == nil {
-		t.Error("HashFile() returned no error; want an error")
+		t.Error("SHA256Hash() returned no error; want an error")
 	}
 	if got != "" {
-		t.Errorf("HashFile() = %v; want ''", got)
+		t.Errorf("SHA256Hash() = %v; want ''", got)
 	}
 }
