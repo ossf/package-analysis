@@ -67,8 +67,18 @@ spec:
                 requests:
                   storage: 20Gi
       - name: worker-tmp
-        emptyDir:
-          sizeLimit: 5Gi
+        ephemeral:
+          volumeClaimTemplate:
+            metadata:
+              labels:
+                type: worker-tmp
+            spec:
+              accessModes:
+              - ReadWriteOnce
+              storageClassName: premium-rwo
+              resources:
+                requests:
+                  storage: 5Gi
   strategy:
     type: "RollingUpdate"
     rollingUpdate:
