@@ -19,6 +19,7 @@ import (
 	_ "gocloud.dev/pubsub/gcppubsub"
 	_ "gocloud.dev/pubsub/kafkapubsub"
 
+	"github.com/ossf/package-analysis/cmd/worker/pubsubextender"
 	"github.com/ossf/package-analysis/internal/featureflags"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/notification"
@@ -96,7 +97,6 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	name := msg.Metadata["name"]
 	if name == "" {
 		log.Warn("name is empty")
-		msg.Ack()
 		return nil
 	}
 
@@ -104,7 +104,6 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	if ecosystem == "" {
 		log.Warn("ecosystem is empty",
 			"name", name)
-		msg.Ack()
 		return nil
 	}
 
@@ -113,7 +112,6 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		log.Warn("Unsupported pkg manager",
 			log.Label("ecosystem", ecosystem.String()),
 			"name", name)
-		msg.Ack()
 		return nil
 	}
 
@@ -187,7 +185,6 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		}
 	}
 
-	msg.Ack()
 	return nil
 }
 
@@ -196,6 +193,11 @@ func messageLoop(ctx context.Context, subURL, packagesBucket, notificationTopicU
 	if err != nil {
 		return err
 	}
+	extender, err := pubsubextender.New(ctx, subURL, sub)
+	if err != nil {
+		return err
+	}
+	log.Info("Subscription deadline extender", "deadline", extender.Deadline, "grace_period", extender.GracePeriod)
 
 	// the default value of the notificationTopic object is nil
 	// if no environment variable for a notification topic is set,
@@ -227,10 +229,31 @@ func messageLoop(ctx context.Context, subURL, packagesBucket, notificationTopicU
 			// All subsequent receive calls will return the same error, so we bail out.
 			return fmt.Errorf("error receiving message: %w", err)
 		}
+		me, err := extender.Start(ctx, msg, func() {
+			log.Info("Message Ack deadline extended", "message_id", msg.LoggableID, "message_meta", msg.Metadata)
+		})
+		if err != nil {
+			// If Start fails it will always fail, so we bail out.
+			// Nack the message if we can to indicate the failure.
+			if msg.Nackable() {
+				msg.Nack()
+			}
+			return fmt.Errorf("error starting message ack deadline extender: %w", err)
+		}
 
 		if err := handleMessage(ctx, msg, pkgsBkt, resultsBuckets, imageSpec, notificationTopic); err != nil {
-			log.Error("Failed to process message",
-				"error", err)
+			log.Error("Failed to process message", "error", err)
+			if err := me.Stop(); err != nil {
+				log.Error("Extender failed", "error", err)
+			}
+			if msg.Nackable() {
+				msg.Nack()
+			}
+		} else {
+			if err := me.Stop(); err != nil {
+				log.Error("Extender failed", "error", err)
+			}
+			msg.Ack()
 		}
 	}
 }
