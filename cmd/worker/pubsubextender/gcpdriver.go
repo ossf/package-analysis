@@ -43,8 +43,8 @@ func newGCPDriver(u *url.URL, sub *pubsub.Subscription) (driver, error) {
 	}
 
 	var c *api.SubscriberClient
-	if !sub.As(c) {
-		return nil, nil
+	if !sub.As(&c) {
+		return nil, errors.New("not a GCP subscription")
 	}
 	d.client = c
 	d.path = subPath
@@ -61,7 +61,7 @@ func (d *gcpDriver) ExtendMessageDeadline(ctx context.Context, msg *pubsub.Messa
 	}
 
 	var rm *pb.ReceivedMessage
-	if !msg.As(rm) {
+	if !msg.As(&rm) {
 		return errors.New("not a gcp message")
 	}
 
