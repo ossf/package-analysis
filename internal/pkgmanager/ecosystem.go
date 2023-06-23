@@ -78,12 +78,13 @@ func (p *PkgManager) Package(name, version string) *Pkg {
 /*
 DownloadArchive downloads an archive of the given package name and version
 to the specified directory, and returns the path to the downloaded archive.
-The file is named according to ecosystem-specific rules.
 
-If directory is empty, the current directory is used.
+The archive file is named according to ecosystem-specific rules.
+An empty string can be passed for directory, in which case the current
+directory is used.
 
-If an error occurs during download of the file, the error is returned along
-with an empty path value.
+If an error occurs during download of the file, it is returned along with
+an empty path value.
 */
 func (p *PkgManager) DownloadArchive(name, version, directory string) (string, error) {
 	if directory == "" {
