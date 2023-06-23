@@ -13,9 +13,9 @@ import (
 type PkgManager struct {
 	ecosystem       pkgecosystem.Ecosystem
 	latestVersion   func(name string) (string, error)
-	archiveURL      func(name string, version string) (string, error)
-	archiveFilename func(name string, version string, downloadURL string) string
-	extractArchive  func(path string, outputDir string) error
+	archiveURL      func(name, version string) (string, error)
+	archiveFilename func(name, version, downloadURL string) string
+	extractArchive  func(path, outputDir string) error
 }
 
 var (

@@ -16,7 +16,7 @@ If any error occurs, the created file is removed.
 
 Callers must ensure that path and url are nonempty, otherwise the function will panic.
 */
-func downloadToPath(path string, url string) error {
+func downloadToPath(path, url string) error {
 	if path == "" {
 		panic("path is empty")
 	}
