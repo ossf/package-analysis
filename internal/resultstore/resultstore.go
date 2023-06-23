@@ -125,7 +125,7 @@ func (rs *ResultStore) SaveAnalyzedPackage(ctx context.Context, manager *pkgmana
 		}
 	}()
 
-	hash, err := utils.HashFile(archivePath, false)
+	hash, err := utils.SHA256Hash(archivePath)
 	if err != nil {
 		return err
 	}
