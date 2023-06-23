@@ -8,7 +8,6 @@ import (
 )
 
 // SHA256Hash returns the SHA256 hashsum of a file.
-// If prependHashType is true, the string "sha256:" is prepended
 func SHA256Hash(path string) (string, error) {
 	f, err := os.Open(path)
 	if err != nil {
