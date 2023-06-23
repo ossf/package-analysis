@@ -5,69 +5,44 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
-	"strings"
-
-	"github.com/ossf/package-analysis/internal/utils"
 )
-
-/*
-downloadToDirectory downloads a file from the given URL to the given directory.
-On successful download, the full path to the downloaded file is returned.
-
-fileName argument is required with no default value, and the hash of the file
-is appended to the given filename. If an error occurs during hashing, then the
-original filename is used.
-*/
-func downloadToDirectory(dir string, url string, fileName string) (string, error) {
-	filePath := filepath.Join(dir, fileName)
-
-	if err := downloadToPath(filePath, url); err != nil {
-		return "", err
-	}
-
-	hash, err := utils.HashFile(filePath)
-	if err != nil {
-		// Error is ignored and the path with the original filename is returned
-		// We treat hashing as 'best-effort' rather than a strictly necessary part of the function
-		return filePath, nil
-	}
-
-	hashedFilePath := strings.Join([]string{filePath, hash[7:]}, "-")
-
-	err = os.Rename(filePath, hashedFilePath)
-	if err != nil {
-		// See above comment
-		return filePath, nil
-	}
-
-	return hashedFilePath, nil
-}
 
 /*
 downloadToPath creates (and/or truncates) a file at the given path, then writes
 contents of whatever is at the given URL to that given file using downloadToFile,
 and finally closes the file.
+
+If any error occurs, the created file is removed.
+
+Callers must ensure that path and url are nonempty, otherwise the function will panic.
 */
-func downloadToPath(path string, url string) (err error) {
+func downloadToPath(path, url string) error {
+	if path == "" {
+		panic("path is empty")
+	}
+	if url == "" {
+		panic("url is empty")
+	}
+
 	file, err := os.Create(path)
 	if err != nil {
 		return err
 	}
 
-	defer func() {
-		closeErr := file.Close()
-		if err == nil {
-			err = closeErr
-		} else if closeErr != nil {
-			err = fmt.Errorf("%w; error closing file %s: %v", err, path, closeErr)
+	if downloadErr := downloadToFile(file, url); downloadErr != nil {
+		// cleanup file
+		if removeErr := os.Remove(path); removeErr != nil {
+			return fmt.Errorf("%w\n%v", downloadErr, removeErr)
 		}
-	}()
+		return downloadErr
+	}
 
-	err = downloadToFile(file, url)
-
-	if err != nil {
-		return err
+	if closeErr := file.Close(); closeErr != nil {
+		// cleanup file
+		if removeErr := os.Remove(path); removeErr != nil {
+			return fmt.Errorf("%w\n%v", closeErr, removeErr)
+		}
+		return closeErr
 	}
 
 	return nil
@@ -77,8 +52,14 @@ func downloadToPath(path string, url string) (err error) {
 downloadToFile writes the contents of whatever is at the given URL to the
 given file, without opening or closing the file. If any errors occur while
 making the network request, then no file operations will be performed.
+
+Callers must ensure that url is nonempty, otherwise the function will panic.
 */
 func downloadToFile(dest *os.File, url string) error {
+	if url == "" {
+		panic("url is empty")
+	}
+
 	resp, err := http.Get(url)
 	if err != nil {
 		return err
@@ -90,8 +71,7 @@ func downloadToFile(dest *os.File, url string) error {
 		return fmt.Errorf("http status %s", resp.Status)
 	}
 
-	_, err = io.Copy(dest, resp.Body)
-	if err != nil {
+	if _, err := io.Copy(dest, resp.Body); err != nil {
 		return err
 	}
 

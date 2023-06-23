@@ -74,6 +74,6 @@ var npmPkgManager = PkgManager{
 	ecosystem:       pkgecosystem.NPM,
 	latestVersion:   getNPMLatest,
 	archiveURL:      getNPMArchiveURL,
-	archiveFilename: DefaultArchiveFilename,
+	archiveFilename: defaultArchiveFilename,
 	extractArchive:  utils.ExtractTarGzFile,
 }

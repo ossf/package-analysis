@@ -44,5 +44,5 @@ var rubygemsPkgManager = PkgManager{
 	ecosystem:       pkgecosystem.RubyGems,
 	latestVersion:   getRubyGemsLatest,
 	archiveURL:      getRubyGemsArchiveURL,
-	archiveFilename: DefaultArchiveFilename,
+	archiveFilename: defaultArchiveFilename,
 }

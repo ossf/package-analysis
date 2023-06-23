@@ -34,16 +34,15 @@ func newCmdError(message string) error {
 	return &cmdError{message}
 }
 
-func downloadPackage(purl packageurl.PackageURL, downloadDir string) error {
+func downloadPackage(purl packageurl.PackageURL, dir string) error {
 	pkg, err := worker.ResolvePurl(purl)
-
 	if err != nil {
 		return err
 	}
 
 	fmt.Printf("[%s] %s@%s\n", pkg.EcosystemName(), pkg.Name(), pkg.Version())
 
-	if _, err := pkg.Manager().DownloadArchive(pkg.Name(), pkg.Version(), downloadDir); err != nil {
+	if _, err := pkg.Manager().DownloadArchive(pkg.Name(), pkg.Version(), dir); err != nil {
 		return err
 	}
 

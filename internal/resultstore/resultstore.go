@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -15,8 +16,8 @@ import (
 	_ "gocloud.dev/blob/s3blob"
 
 	"github.com/ossf/package-analysis/internal/log"
-	"github.com/ossf/package-analysis/internal/utils"
 	"github.com/ossf/package-analysis/internal/pkgmanager"
+	"github.com/ossf/package-analysis/internal/utils"
 )
 
 type ResultStore struct {
@@ -113,27 +114,51 @@ func (rs *ResultStore) SaveTempFilesToZip(ctx context.Context, p Pkg, fileName s
 }
 
 func (rs *ResultStore) SaveAnalyzedPackage(ctx context.Context, manager *pkgmanager.PkgManager, pkg Pkg) error {
+	archivePath, err := manager.DownloadArchive(pkg.Name(), pkg.Version(), "")
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err := os.Remove(archivePath); err != nil {
+			log.Error("could not clean up downloaded archive", "error", err)
+		}
+	}()
+
+	hash, err := utils.SHA256Hash(archivePath)
+	if err != nil {
+		return err
+	}
+
 	bkt, err := blob.OpenBucket(ctx, rs.bucket)
 	if err != nil {
 		return err
 	}
 	defer bkt.Close()
 
-	uploadPath := rs.generatePath(pkg)
-	log.Info("Uploading analyzed package",
-		"bucket", rs.bucket,
-		"path", uploadPath)
+	uploadPath := rs.generatePath(pkg) + "-" + hash
+	log.Info("Uploading analyzed package", "bucket", rs.bucket, "path", uploadPath)
+
+	f, err := os.Open(archivePath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
 
 	w, err := bkt.NewWriter(ctx, uploadPath, nil)
 	if err != nil {
 		return err
 	}
-	defer w.Close()
 
-	_, err = manager.DownloadArchive(pkg.Name(), pkg.Version(), uploadPath)
+	_, writeErr := io.Copy(w, f)
+	closeErr := w.Close()
 
-	if err != nil {
-		return err
+	if writeErr != nil {
+		// TODO golang 1.20: use errors.Join(writeErr, closeErr)
+		return writeErr
+	}
+	if closeErr != nil {
+		return closeErr
 	}
 
 	return nil

@@ -145,10 +145,11 @@ func GetBasicData(fileList []string, pathInArchive map[string]string) (*BasicPac
 		}
 
 		var fileHash string
-		if hash, err := utils.HashFile(filePath); err != nil {
+		if hash, err := utils.SHA256Hash(filePath); err != nil {
 			log.Error("Error hashing file", "path", archivePath, "error", err)
 		} else {
-			fileHash = hash
+			// append label to hash
+			fileHash = "sha256:" + hash
 		}
 
 		var lineLengthCounts map[int]int
