@@ -6,23 +6,22 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/ossf/package-analysis/internal/log"
 )
 
-// ExtractTarGzFile extracts a .tar.gz / .tgz file located at path, using
-// outputDir as the root of the extracted files.
-func ExtractTarGzFile(path string, outputDir string) error {
-	return processGzipFile(path, func(reader io.Reader) error {
+// ExtractTarGzFile extracts a .tar.gz / .tgz file located at filePath,
+// using outputDir as the root of the extracted files.
+func ExtractTarGzFile(filePath string, outputDir string) error {
+	return processGzipFile(filePath, func(reader io.Reader) error {
 		return extractTar(reader, outputDir)
 	})
 }
 
-func processGzipFile(path string, process func(io.Reader) error) error {
-	gzFile, err := os.Open(path)
+func processGzipFile(filePath string, process func(io.Reader) error) error {
+	gzFile, err := os.Open(filePath)
 	if err != nil {
 		return err
 	}
@@ -41,7 +40,6 @@ func processGzipFile(path string, process func(io.Reader) error) error {
 	if err := process(unzippedBytes); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -79,7 +77,7 @@ func extractTar(tarStream io.Reader, outputDir string) error {
 
 			// ensure containing directories exist; some archives don't include an explicit entry
 			// for parent directories
-			parentDir := path.Dir(outputPath)
+			parentDir := filepath.Dir(outputPath)
 			if err = os.MkdirAll(parentDir, 0o755); err != nil {
 				return fmt.Errorf("create parent dirs for %s failed: %w", header.Name, err)
 			}

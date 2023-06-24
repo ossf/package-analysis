@@ -5,7 +5,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -90,8 +90,8 @@ func createTgzFile(path string, headers []*tar.Header) (err error) {
 func makePaths(t *testing.T, testName string) (workDir, archivePath, extractPath string, err error) {
 	t.Helper()
 	workDir = t.TempDir()
-	archivePath = path.Join(workDir, testName+".tar.gz")
-	extractPath = path.Join(workDir, "extracted")
+	archivePath = filepath.Join(workDir, testName+".tar.gz")
+	extractPath = filepath.Join(workDir, "extracted")
 
 	if err = os.Mkdir(extractPath, 0o700); err != nil {
 		t.Fatalf("failed to create dir for extraction: %v", err)
@@ -129,7 +129,7 @@ func TestExtractSimpleTarGzFile(t *testing.T) {
 	}
 
 	err = doExtractionTest(archivePath, extractPath, testHeaders, func() error {
-		dirInfo, err := os.Stat(path.Join(extractPath, "test"))
+		dirInfo, err := os.Stat(filepath.Join(extractPath, "test"))
 		if err != nil {
 			return fmt.Errorf("stat extracted dir: %w", err)
 		}
@@ -140,7 +140,7 @@ func TestExtractSimpleTarGzFile(t *testing.T) {
 			return fmt.Errorf("expected to extract directory but it was not a directory")
 		}
 
-		fileInfo, err := os.Stat(path.Join(extractPath, "test", "1.txt"))
+		fileInfo, err := os.Stat(filepath.Join(extractPath, "test", "1.txt"))
 		if err != nil {
 			return fmt.Errorf("stat extracted file: %w", err)
 		}
@@ -175,7 +175,7 @@ func TestExtractMissingParentDir(t *testing.T) {
 	}
 
 	err = doExtractionTest(archivePath, extractPath, testHeaders, func() error {
-		dirInfo, err := os.Stat(path.Join(extractPath, "test"))
+		dirInfo, err := os.Stat(filepath.Join(extractPath, "test"))
 		if err != nil {
 			return fmt.Errorf("stat extracted dir: %w", err)
 		}
@@ -186,7 +186,7 @@ func TestExtractMissingParentDir(t *testing.T) {
 			return fmt.Errorf("expected to extract directory but it was not a directory")
 		}
 
-		fileInfo, err := os.Stat(path.Join(extractPath, "test", "1.txt"))
+		fileInfo, err := os.Stat(filepath.Join(extractPath, "test", "1.txt"))
 		if err != nil {
 			return fmt.Errorf("stat extracted file: %w", err)
 		}
@@ -222,7 +222,7 @@ func TestExtractAbsolutePathTarGzFile(t *testing.T) {
 	}
 
 	err = doExtractionTest(archivePath, extractPath, testHeaders, func() error {
-		dirInfo, err := os.Stat(path.Join(extractPath, "test"))
+		dirInfo, err := os.Stat(filepath.Join(extractPath, "test"))
 		if err != nil {
 			return fmt.Errorf("stat extracted dir: %w", err)
 		}
@@ -233,7 +233,7 @@ func TestExtractAbsolutePathTarGzFile(t *testing.T) {
 			return fmt.Errorf("expected to extract directory but it was not a directory")
 		}
 
-		fileInfo, err := os.Stat(path.Join(extractPath, "2.txt"))
+		fileInfo, err := os.Stat(filepath.Join(extractPath, "2.txt"))
 		if err != nil {
 			return fmt.Errorf("stat extracted file: %w", err)
 		}
@@ -292,11 +292,11 @@ func TestExtractZipSlip2(t *testing.T) {
 	err = os.Mkdir(similarlyNamedDir, 0o700)
 
 	testHeaders := []*tar.Header{
-		makeFileHeader(path.Join("..", path.Base(similarlyNamedDir), "bad2.txt"), 1),
+		makeFileHeader(filepath.Join("..", filepath.Base(similarlyNamedDir), "bad2.txt"), 1),
 	}
 
 	err = doExtractionTest(archivePath, extractPath, testHeaders, func() error {
-		bad2Info, err := os.Stat(path.Join(similarlyNamedDir, "bad2.txt"))
+		bad2Info, err := os.Stat(filepath.Join(similarlyNamedDir, "bad2.txt"))
 		if err == nil && bad2Info.Size() == 1 {
 			t.Errorf("Found file in similarly named directory")
 		}
@@ -323,7 +323,7 @@ func TestExtractZipSlip3(t *testing.T) {
 	}
 
 	err = doExtractionTest(archivePath, extractPath, testHeaders, func() error {
-		bad3Info, err := os.Stat(path.Join(workDir, "bad3.txt"))
+		bad3Info, err := os.Stat(filepath.Join(workDir, "bad3.txt"))
 		if err == nil && bad3Info.Size() == 1 {
 			t.Errorf("Found file in parent directory")
 		}
