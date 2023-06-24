@@ -12,22 +12,23 @@ import (
 	"github.com/ossf/package-analysis/internal/log"
 )
 
-// ExtractTarGzFile extracts a .tar.gz / .tgz file located at filePath,
+// ExtractTarGzFile extracts a .tar.gz / .tgz file located at tgzPath,
 // using outputDir as the root of the extracted files.
-func ExtractTarGzFile(filePath string, outputDir string) error {
-	return processGzipFile(filePath, func(reader io.Reader) error {
+func ExtractTarGzFile(tgzPath string, outputDir string) error {
+	f, err := os.Open(tgzPath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	return processGzipFile(f, func(reader io.Reader) error {
 		return extractTar(reader, outputDir)
 	})
 }
 
-func processGzipFile(filePath string, process func(io.Reader) error) error {
-	gzFile, err := os.Open(filePath)
+func processGzipFile(gzFile *os.File, process func(io.Reader) error) error {
+	unzippedBytes, err := gzip.NewReader(gzFile)
 	if err != nil {
-		return err
-	}
-
-	var unzippedBytes *gzip.Reader
-	if unzippedBytes, err = gzip.NewReader(gzFile); err != nil {
 		return err
 	}
 

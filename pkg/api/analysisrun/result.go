@@ -13,6 +13,8 @@ type (
 	DynamicAnalysisExecutionLog       string
 )
 
+// TODO rename to DynamicAnalysisData
+
 type DynamicAnalysisResults struct {
 	StraceSummary     DynamicAnalysisStraceSummary
 	FileWritesSummary DynamicAnalysisFileWritesSummary
