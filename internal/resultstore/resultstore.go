@@ -7,7 +7,7 @@ import (
 	"errors"
 	"io"
 	"os"
-	"path/filepath"
+	"path"
 	"time"
 
 	"gocloud.dev/blob"
@@ -63,11 +63,11 @@ func (rs *ResultStore) String() string {
 }
 
 func (rs *ResultStore) generatePath(p Pkg) string {
-	path := rs.basePath
+	uploadPath := rs.basePath
 	if rs.constructPath {
-		path = filepath.Join(path, p.EcosystemName(), p.Name())
+		uploadPath = path.Join(uploadPath, p.EcosystemName(), p.Name())
 	}
-	return path
+	return uploadPath
 }
 
 func (rs *ResultStore) SaveTempFilesToZip(ctx context.Context, p Pkg, fileName string, tempFileNames []string) error {
@@ -77,7 +77,7 @@ func (rs *ResultStore) SaveTempFilesToZip(ctx context.Context, p Pkg, fileName s
 	}
 	defer bkt.Close()
 
-	uploadPath := filepath.Join(rs.generatePath(p), fileName+".zip")
+	uploadPath := path.Join(rs.generatePath(p), fileName+".zip")
 	log.Info("Uploading results",
 		"bucket", rs.bucket,
 		"path", uploadPath)
@@ -191,8 +191,7 @@ func (rs *ResultStore) SaveWithFilename(ctx context.Context, p Pkg, filename str
 	}
 	defer bkt.Close()
 
-	path := rs.generatePath(p)
-	uploadPath := filepath.Join(path, filename)
+	uploadPath := path.Join(rs.generatePath(p), filename)
 	log.Info("Uploading results",
 		"bucket", rs.bucket,
 		"path", uploadPath)
