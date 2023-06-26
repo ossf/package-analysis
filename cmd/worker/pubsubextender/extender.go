@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/ossf/package-analysis/internal/featureflags"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/gcppubsub"
 )
@@ -41,15 +42,17 @@ func New(ctx context.Context, subURL string, sub *pubsub.Subscription) (*Extende
 		return nil, err
 	}
 
-	var d driver
-	switch u.Scheme {
-	case gcppubsub.Scheme:
-		d, err = newGCPDriver(u, sub)
-		if err != nil {
-			return nil, err
+	var d driver = &noopDriver{}
+	if featureflags.PubSubExtender.Enabled() {
+		switch u.Scheme {
+		case gcppubsub.Scheme:
+			d, err = newGCPDriver(u, sub)
+			if err != nil {
+				return nil, err
+			}
+		default:
+			d = &noopDriver{}
 		}
-	default:
-		d = &noopDriver{}
 	}
 
 	deadline, err := d.GetSubscriptionDeadline(ctx)
