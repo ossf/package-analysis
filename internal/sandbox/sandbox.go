@@ -8,7 +8,6 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -275,7 +274,7 @@ func Tag(tag string) Option {
 }
 
 func removeAllLogs() error {
-	matches, err := filepath.Glob(path.Join(os.TempDir(), logDirPattern+"*"))
+	matches, err := filepath.Glob(filepath.Join(os.TempDir(), logDirPattern+"*"))
 	if err != nil {
 		return err
 	}
@@ -349,7 +348,7 @@ func (s *podmanSandbox) startContainerCmd(logDir string) *exec.Cmd {
 		"start",
 		"--runtime=" + runtimeBin,
 		"--runtime-flag=root=" + rootDir,
-		"--runtime-flag=debug-log=" + path.Join(logDir, "runsc.log.%COMMAND%"),
+		"--runtime-flag=debug-log=" + filepath.Join(logDir, "runsc.log.%COMMAND%"),
 	}
 	if s.rawSockets {
 		args = append(args, "--runtime-flag=net-raw")
@@ -457,7 +456,7 @@ func (s *podmanSandbox) Run(command string, args ...string) (*RunResult, error) 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	result := &RunResult{
-		logPath: path.Join(logDir, runLogFile),
+		logPath: filepath.Join(logDir, runLogFile),
 		status:  RunStatusUnknown,
 		stdout:  &stdout,
 		stderr:  &stderr,

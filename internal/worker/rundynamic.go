@@ -2,7 +2,7 @@ package worker
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -53,7 +53,7 @@ func retrieveExecutionLog(sb sandbox.Sandbox) (string, error) {
 	}
 
 	defer os.RemoveAll(executionLogDir)
-	executionLogPath := path.Join(executionLogDir, "execution.log")
+	executionLogPath := filepath.Join(executionLogDir, "execution.log")
 
 	// if the copy fails, it could be that the execution log is not actually present.
 	// For now, we'll just log the error and otherwise ignore it

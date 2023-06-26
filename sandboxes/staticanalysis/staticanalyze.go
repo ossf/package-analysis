@@ -5,7 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/ossf/package-analysis/internal/log"
@@ -164,7 +164,7 @@ func run() (err error) {
 
 	extractionTime := time.Since(startExtractionTime)
 
-	jsParserConfig, parserInitErr := parsing.InitParser(path.Join(workDirs.parserDir, jsParserDirName))
+	jsParserConfig, parserInitErr := parsing.InitParser(filepath.Join(workDirs.parserDir, jsParserDirName))
 	if parserInitErr != nil {
 		log.Error("failed to init JS parser", "error", parserInitErr)
 	}
