@@ -36,23 +36,29 @@ type Extender struct {
 	GracePeriod time.Duration
 }
 
+func getDriver(u *url.URL, sub *pubsub.Subscription) (driver, error) {
+	if !featureflags.PubSubExtender.Enabled() {
+		// Use the noopDriver if the feature is disabled.
+		return &noopDriver{}, nil
+	}
+
+	switch u.Scheme {
+	case gcppubsub.Scheme:
+		return newGCPDriver(u, sub)
+	default:
+		return &noopDriver{}, nil
+	}
+}
+
 func New(ctx context.Context, subURL string, sub *pubsub.Subscription) (*Extender, error) {
 	u, err := url.Parse(subURL)
 	if err != nil {
 		return nil, err
 	}
 
-	var d driver = &noopDriver{}
-	if featureflags.PubSubExtender.Enabled() {
-		switch u.Scheme {
-		case gcppubsub.Scheme:
-			d, err = newGCPDriver(u, sub)
-			if err != nil {
-				return nil, err
-			}
-		default:
-			d = &noopDriver{}
-		}
+	d, err := getDriver(u, sub)
+	if err != nil {
+		return nil, err
 	}
 
 	deadline, err := d.GetSubscriptionDeadline(ctx)
