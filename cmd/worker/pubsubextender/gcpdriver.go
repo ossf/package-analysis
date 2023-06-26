@@ -31,8 +31,7 @@ type gcpDriver struct {
 func newGCPDriver(u *url.URL, sub *pubsub.Subscription) (driver, error) {
 	d := &gcpDriver{}
 
-	// Ignore unsupported schemes
-	if u.Scheme != "" && u.Scheme != gcppubsub.Scheme {
+	if u.Scheme != gcppubsub.Scheme {
 		return nil, errors.New("unsupported scheme")
 	}
 
@@ -82,5 +81,5 @@ func (d *gcpDriver) GetSubscriptionDeadline(ctx context.Context) (time.Duration,
 	if err != nil {
 		return 0, err
 	}
-	return time.Duration(resp.GetAckDeadlineSeconds()), nil
+	return time.Duration(resp.GetAckDeadlineSeconds()) * time.Second, nil
 }
