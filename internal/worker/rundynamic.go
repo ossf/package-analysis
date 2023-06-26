@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -10,14 +11,20 @@ import (
 
 	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/dynamicanalysis"
+	"github.com/ossf/package-analysis/internal/featureflags"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgmanager"
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/pkg/api/analysisrun"
+	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
 // defaultDynamicAnalysisImage is container image name of the default dynamic analysis sandbox
 const defaultDynamicAnalysisImage = "gcr.io/ossf-malware-analysis/dynamic-analysis"
+
+// sandboxExecutionLogPath is the absolute path of the execution log file
+// inside the sandbox. The file is used for code execution feature.
+const sandboxExecutionLogPath = "/execution.log"
 
 var nonSpaceControlChars = regexp.MustCompile("[\x00-\x08\x0b-\x1f\x7f]")
 
@@ -45,24 +52,58 @@ type DynamicAnalysisResult struct {
 	LastStatus   analysis.Status
 }
 
+func shouldEnableCodeExecution(ecosystem pkgecosystem.Ecosystem) bool {
+	if !featureflags.CodeExecution.Enabled() {
+		return false
+	}
+
+	switch ecosystem {
+	case pkgecosystem.PyPI:
+		return true
+	default:
+		return false
+	}
+}
+
+func enableCodeExecution(sb sandbox.Sandbox) error {
+	// Create empty execution log file and copy to sandbox, to enable code execution feature
+	tempFile, err := os.CreateTemp("", "")
+	if err != nil {
+		return fmt.Errorf("could not create execution log file in host: %w", err)
+	}
+
+	if err := tempFile.Close(); err != nil {
+		return fmt.Errorf("could not close execution log file in host: %w", err)
+	}
+
+	if err := sb.CopyIntoSandbox(tempFile.Name(), sandboxExecutionLogPath); err != nil {
+		return fmt.Errorf("could not copy execution log file to sandbox: %w", err)
+	}
+
+	return nil
+}
+
+// retrieveExecutionLog copies the execution log back from the sandbox
+// to the host, so it can be included in the dynamic analysis results.
+// To mitigate tampering of the file, all control characters except tab
+// and newline are stripped from the file.
 func retrieveExecutionLog(sb sandbox.Sandbox) (string, error) {
-	// retrieve execution log back to host
 	executionLogDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return "", err
 	}
 
 	defer os.RemoveAll(executionLogDir)
-	executionLogPath := filepath.Join(executionLogDir, "execution.log")
+	hostExecutionLogPath := filepath.Join(executionLogDir, "execution.log")
 
 	// if the copy fails, it could be that the execution log is not actually present.
 	// For now, we'll just log the error and otherwise ignore it
-	if err := sb.CopyToHost("/execution.log", executionLogPath); err != nil {
+	if err := sb.CopyBackToHost(sandboxExecutionLogPath, hostExecutionLogPath); err != nil {
 		log.Warn("Could not copy execution log from sandbox", "error", err)
 		return "", nil
 	}
 
-	logData, err := os.ReadFile(executionLogPath)
+	logData, err := os.ReadFile(hostExecutionLogPath)
 	if err != nil {
 		return "", err
 	}
@@ -118,6 +159,15 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option, analysisCm
 		}
 	}()
 
+	codeExecutionEnabled := false
+	if shouldEnableCodeExecution(pkg.Ecosystem()) {
+		if err := enableCodeExecution(sb); err != nil {
+			log.Error("code execution disabled due to error", "error", err)
+		} else {
+			codeExecutionEnabled = true
+		}
+	}
+
 	var lastRunPhase analysisrun.DynamicPhase
 	var lastStatus analysis.Status
 	var lastError error
@@ -165,12 +215,23 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option, analysisCm
 		"version", pkg.Version(),
 		"heap_usage_after_dynamic_analysis", strconv.FormatUint(afterDynamic.Alloc, 10))
 
+	analysisResult := DynamicAnalysisResult{
+		AnalysisData: data,
+		LastRunPhase: lastRunPhase,
+		LastStatus:   lastStatus,
+	}
+
 	if lastError != nil {
 		LogDynamicAnalysisError(pkg, lastRunPhase, lastError)
-		return DynamicAnalysisResult{data, lastRunPhase, lastStatus}, lastError
+		return analysisResult, lastError
 	}
 
 	LogDynamicAnalysisResult(pkg, lastRunPhase, lastStatus)
+
+	if !codeExecutionEnabled {
+		// nothing more to do
+		return analysisResult, nil
+	}
 
 	executionLog, err := retrieveExecutionLog(sb)
 	if err != nil {
@@ -180,5 +241,5 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option, analysisCm
 		data.ExecutionLog = analysisrun.DynamicAnalysisExecutionLog(executionLog)
 	}
 
-	return DynamicAnalysisResult{data, lastRunPhase, lastStatus}, nil
+	return analysisResult, nil
 }
