@@ -93,7 +93,7 @@ RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-reco
 
 # Some Python packages expect certain dependencies to already be installed
 COPY pypi-packages.txt ./
-RUN pip install -r pypi-packages.txt
+RUN pip install --require-hashes --requirement pypi-packages.txt
 
 
 #
