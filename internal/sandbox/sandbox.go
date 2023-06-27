@@ -235,12 +235,8 @@ func Volume(src, dest string) Option {
 // Copy copies a file from the host into the sandbox during initialisation
 func Copy(src, dest string) Option {
 	return option(func(sb *podmanSandbox) {
-		sb.copies = append(sb.copies, copySpec{
-			src:             src,
-			dest:            dest,
-			srcInContainer:  false,
-			destInContainer: true,
-		})
+		// container ID is set later
+		sb.copies = append(sb.copies, hostToContainerCopyCmd(src, dest, ""))
 	})
 }
 

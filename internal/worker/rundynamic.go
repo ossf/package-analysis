@@ -72,13 +72,16 @@ func enableCodeExecution(sb sandbox.Sandbox) error {
 		return fmt.Errorf("could not create execution log file in host: %w", err)
 	}
 
-	if err := tempFile.Close(); err != nil {
-		return fmt.Errorf("could not close execution log file in host: %w", err)
-	}
+	// file wasn't written to so don't worry too much about close errors
+	_ = tempFile.Close()
+	tempPath := tempFile.Name()
 
-	if err := sb.CopyIntoSandbox(tempFile.Name(), sandboxExecutionLogPath); err != nil {
+	if err := sb.CopyIntoSandbox(tempPath, sandboxExecutionLogPath); err != nil {
 		return fmt.Errorf("could not copy execution log file to sandbox: %w", err)
 	}
+
+	// file wasn't written to so don't worry too much about remove errors
+	_ = os.Remove(tempPath)
 
 	return nil
 }
