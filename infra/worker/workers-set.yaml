@@ -21,6 +21,7 @@ spec:
         command: ["worker"]
         env:
         - name: OSSMALWARE_WORKER_SUBSCRIPTION
+          # See: https://pkg.go.dev/gocloud.dev/pubsub/gcppubsub#URLOpener
           value: gcppubsub://projects/ossf-malware-analysis/subscriptions/workers?nacklazy=1
         - name: OSSF_MALWARE_ANALYSIS_RESULTS
           value: gs://ossf-malware-analysis-results
