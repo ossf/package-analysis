@@ -211,3 +211,59 @@ func TestGCPExtendAckDeadline(t *testing.T) {
 		t.Errorf("AckIDs = %v; want %v", got, wantAckIDs)
 	}
 }
+
+func TestGCPExtendAckDeadline_LowerBound(t *testing.T) {
+	u, err := url.Parse("gcppubsub://" + fakeServerPath)
+	if err != nil {
+		t.Fatalf("Parse() = %v; want no error", err)
+	}
+	ctx := context.Background()
+	srv := newServer()
+	client, closer := initTestClient(t, ctx, srv)
+	defer closer()
+	sub := gcppubsub.OpenSubscription(client, "test", "sub", nil)
+	d, err := newGCPDriver(u, sub)
+	if err != nil {
+		t.Fatalf("New() = %v; want no error", err)
+	}
+	msg, err := sub.Receive(ctx)
+	if err != nil {
+		t.Fatalf("Receive() = %v; want no error", err)
+	}
+	var wantDeadline int32 = 10
+	err = d.ExtendMessageDeadline(ctx, msg, 5*time.Second)
+	if err != nil {
+		t.Fatalf("ExtendMessageDeadline() = %v; want no error", err)
+	}
+	if got := srv.lastAckDeadline; got != wantDeadline {
+		t.Errorf("Ack Deadline = %v; want %v", got, wantDeadline)
+	}
+}
+
+func TestGCPExtendAckDeadline_UpperBound(t *testing.T) {
+	u, err := url.Parse("gcppubsub://" + fakeServerPath)
+	if err != nil {
+		t.Fatalf("Parse() = %v; want no error", err)
+	}
+	ctx := context.Background()
+	srv := newServer()
+	client, closer := initTestClient(t, ctx, srv)
+	defer closer()
+	sub := gcppubsub.OpenSubscription(client, "test", "sub", nil)
+	d, err := newGCPDriver(u, sub)
+	if err != nil {
+		t.Fatalf("New() = %v; want no error", err)
+	}
+	msg, err := sub.Receive(ctx)
+	if err != nil {
+		t.Fatalf("Receive() = %v; want no error", err)
+	}
+	var wantDeadline int32 = 600
+	err = d.ExtendMessageDeadline(ctx, msg, 1000*time.Second)
+	if err != nil {
+		t.Fatalf("ExtendMessageDeadline() = %v; want no error", err)
+	}
+	if got := srv.lastAckDeadline; got != wantDeadline {
+		t.Errorf("Ack Deadline = %v; want %v", got, wantDeadline)
+	}
+}
