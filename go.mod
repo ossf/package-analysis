@@ -3,7 +3,7 @@ module github.com/ossf/package-analysis
 go 1.19
 
 require (
-	cloud.google.com/go/pubsub v1.31.0
+	cloud.google.com/go/pubsub v1.32.0
 	github.com/blendle/zapdriver v1.3.1
 	github.com/gopacket/gopacket v1.1.0
 	github.com/ossf/package-feeds v0.0.0-20211108050428-2ce6d6de33c8
