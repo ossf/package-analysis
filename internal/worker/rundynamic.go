@@ -1,10 +1,8 @@
 package worker
 
 import (
-	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -104,13 +102,7 @@ func retrieveExecutionLog(sb sandbox.Sandbox) (string, error) {
 	// if the copy fails, it could be that the execution log is not actually present.
 	// For now, we'll just log the error and otherwise ignore it
 	if err := sb.CopyBackToHost(hostExecutionLogPath, sandboxExecutionLogPath); err != nil {
-		// log stdout if possible
-		stdout := ""
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
-			stdout = string(exitErr.Stderr)
-		}
-		log.Warn("Could not retrieve execution log from sandbox", "error", err, "stdout", stdout)
+		log.Warn("Could not retrieve execution log from sandbox", "error", err)
 		return "", nil
 	}
 

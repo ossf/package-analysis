@@ -515,7 +515,8 @@ func (s *podmanSandbox) Clean() error {
 	return podmanCleanContainers()
 }
 
-// CopyIntoSandbox copies a file from the host into the sandbox.
+// CopyIntoSandbox copies a path from the host into the sandbox.
+// If the source path does not exist, the command will fail with exit status 125.
 func (s *podmanSandbox) CopyIntoSandbox(hostPath, sandboxPath string) error {
 	if !s.initialised {
 		return errors.New("sandbox not initialised")
@@ -529,7 +530,8 @@ func (s *podmanSandbox) CopyIntoSandbox(hostPath, sandboxPath string) error {
 	return podmanRun(copyCmd.Args()...)
 }
 
-// CopyBackToHost copies a file from the sandbox back the host (after it has run)
+// CopyBackToHost copies a path from the sandbox back to the host (after it has run).
+// If the source path does not exist, the command will fail with exit status 125.
 func (s *podmanSandbox) CopyBackToHost(hostPath, sandboxPath string) error {
 	if !s.initialised {
 		return errors.New("sandbox not initialised")
