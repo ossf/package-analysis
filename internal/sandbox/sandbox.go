@@ -79,6 +79,10 @@ func (r *RunResult) Stderr() []byte {
 }
 
 type Sandbox interface {
+	// Init prepares the sandbox for run and copy commands. The sandbox is
+	// only properly initialised if this function returns nil.
+	Init() error
+
 	// Run executes the supplied command and args in the sandbox.
 	// Multiple calls to Run will reuse the same container state,
 	// until Clean() is called.
@@ -93,6 +97,7 @@ type Sandbox interface {
 	// may be files or directories. The copy fails if the host path does not exist.
 	// See https://docs.podman.io/en/latest/markdown/podman-cp.1.html for details
 	// on specifying paths.
+	// The sandbox must be initialised using Init() before calling this function.
 	CopyIntoSandbox(hostPath, sandboxPath string) error
 
 	// CopyBackToHost copies a path in the sandbox to one in the host. The paths
@@ -101,6 +106,7 @@ type Sandbox interface {
 	// on specifying paths.
 	// Caution: files coming out of the sandbox are untrusted and proper validation
 	// should be performed on the file before use.
+	// The sandbox must be initialised using Init() before calling this function.
 	CopyBackToHost(hostPath, sandboxPath string) error
 }
 
@@ -119,21 +125,22 @@ func (v volume) args() []string {
 
 // Implements the Sandbox interface using "podman".
 type podmanSandbox struct {
-	image      string
-	tag        string
-	id         string
-	container  string
-	noPull     bool
-	rawSockets bool
-	strace     bool
-	offline    bool
-	logPackets bool
-	logStdOut  bool
-	logStdErr  bool
-	echoStdOut bool
-	echoStdErr bool
-	volumes    []volume
-	copies     []copySpec
+	image       string
+	tag         string
+	id          string
+	container   string
+	noPull      bool
+	rawSockets  bool
+	strace      bool
+	offline     bool
+	logPackets  bool
+	logStdOut   bool
+	logStdErr   bool
+	echoStdOut  bool
+	echoStdErr  bool
+	initialised bool
+	volumes     []volume
+	copies      []copySpec
 }
 
 type (
@@ -144,21 +151,7 @@ type (
 func (o option) set(sb *podmanSandbox) { o(sb) }
 
 func New(options ...Option) Sandbox {
-	sb := &podmanSandbox{
-		image:      "",
-		tag:        "",
-		container:  "",
-		noPull:     false,
-		rawSockets: false,
-		strace:     false,
-		offline:    false,
-		logPackets: false,
-		logStdOut:  false,
-		logStdErr:  false,
-		echoStdOut: false,
-		echoStdErr: false,
-		volumes:    make([]volume, 0),
-	}
+	sb := &podmanSandbox{}
 	for _, o := range options {
 		o.set(sb)
 	}
@@ -368,8 +361,14 @@ func (s *podmanSandbox) imageWithTag() string {
 	return fmt.Sprintf("%s:%s", s.image, tag)
 }
 
-// init initializes the sandbox.
-func (s *podmanSandbox) init() error {
+// Init initializes the sandbox, including creating the container and pulling the image.
+// The sandbox is marked as initialised if the function completes with no errors.
+// If the sandbox has already been marked as initialised, this function simply returns nil.
+func (s *podmanSandbox) Init() error {
+	if s.initialised {
+		return nil
+	}
+
 	if s.container != "" {
 		return nil
 	}
@@ -400,12 +399,15 @@ func (s *podmanSandbox) init() error {
 		}
 	}
 
+	s.initialised = true
+
 	return nil
 }
 
 // Run implements the Sandbox interface.
+// If Init() has not yet been run, it will be called automatically before running
 func (s *podmanSandbox) Run(command string, args ...string) (*RunResult, error) {
-	if err := s.init(); err != nil {
+	if err := s.Init(); err != nil {
 		return &RunResult{}, err
 	}
 
@@ -515,8 +517,11 @@ func (s *podmanSandbox) Clean() error {
 
 // CopyIntoSandbox copies a file from the host into the sandbox.
 func (s *podmanSandbox) CopyIntoSandbox(hostPath, sandboxPath string) error {
-	if len(s.container) == 0 {
-		return errors.New("cannot copy while container ID is empty. (Has the container been initialised?)")
+	if !s.initialised {
+		return errors.New("sandbox not initialised")
+	}
+	if s.container == "" {
+		return errors.New("container ID is empty")
 	}
 
 	copyCmd := hostToContainerCopyCmd(hostPath, sandboxPath, s.container)
@@ -526,8 +531,11 @@ func (s *podmanSandbox) CopyIntoSandbox(hostPath, sandboxPath string) error {
 
 // CopyBackToHost copies a file from the sandbox back the host (after it has run)
 func (s *podmanSandbox) CopyBackToHost(hostPath, sandboxPath string) error {
-	if len(s.container) == 0 {
-		return errors.New("cannot copy while container ID is empty. (Has the container been initialised?)")
+	if !s.initialised {
+		return errors.New("sandbox not initialised")
+	}
+	if s.container == "" {
+		return errors.New("container ID is empty")
 	}
 
 	copyCmd := containerToHostCopyCmd(hostPath, sandboxPath, s.container)
