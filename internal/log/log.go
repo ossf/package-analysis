@@ -46,9 +46,15 @@ const (
 )
 
 var (
+	// Default logger is the legacy global logger for package analysis
+	// Deprecated: do not use global logger
 	defaultLogger     *zap.SugaredLogger
 	defaultLoggingEnv LoggingEnv = LoggingEnvDev
 )
+
+func GetDefaultLogger() *zap.SugaredLogger {
+	return defaultLogger
+}
 
 // Initialize the logger for logging.
 //
@@ -56,7 +62,7 @@ var (
 // "false" will use the default development configuration.
 //
 // Note: this method MUST be called before any other method in this package.
-func Initialize(env string) *zap.Logger {
+func Initialize(env string) *zap.SugaredLogger {
 	var err error
 	var logger *zap.Logger
 	switch strings.ToLower(env) {
@@ -79,7 +85,7 @@ func Initialize(env string) *zap.Logger {
 	zap.RedirectStdLog(logger)
 	logger = logger.WithOptions(zap.AddCallerSkip(1))
 	defaultLogger = logger.Sugar() // Set defaultLogger to provide legacy support
-	return logger
+	return defaultLogger
 }
 
 func checkInit() {

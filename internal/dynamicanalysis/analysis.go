@@ -3,6 +3,8 @@ package dynamicanalysis
 import (
 	"fmt"
 
+	"go.uber.org/zap"
+
 	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/dnsanalyzer"
 	"github.com/ossf/package-analysis/internal/log"
@@ -30,7 +32,7 @@ var resultError = &Result{
 	},
 }
 
-func Run(sb sandbox.Sandbox, command string, args []string) (*Result, error) {
+func Run(sb sandbox.Sandbox, command string, args []string, straceLogger *zap.SugaredLogger) (*Result, error) {
 	log.Info("Running dynamic analysis",
 		"args", args)
 
@@ -63,7 +65,7 @@ func Run(sb sandbox.Sandbox, command string, args []string) (*Result, error) {
 	}
 	defer l.Close()
 
-	straceResult, err := strace.Parse(l)
+	straceResult, err := strace.Parse(l, straceLogger)
 	if err != nil {
 		return resultError, fmt.Errorf("strace parsing failed (%w)", err)
 	}
