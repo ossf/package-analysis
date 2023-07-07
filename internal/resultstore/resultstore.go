@@ -4,8 +4,10 @@ import (
 	"archive/zip"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
-	"path/filepath"
+	"os"
+	"path"
 	"time"
 
 	"gocloud.dev/blob"
@@ -14,6 +16,7 @@ import (
 	_ "gocloud.dev/blob/s3blob"
 
 	"github.com/ossf/package-analysis/internal/log"
+	"github.com/ossf/package-analysis/internal/pkgmanager"
 	"github.com/ossf/package-analysis/internal/utils"
 )
 
@@ -30,8 +33,8 @@ type (
 
 func (o option) set(sb *ResultStore) { o(sb) }
 
-// ConstructPath will cause Save() to generate the path based on Pkg.EcosystemName()
-// and Pkg.Name().
+// ConstructPath will cause Save() to append a suffix to the base path
+// based on Pkg.EcosystemName() and Pkg.Name().
 func ConstructPath() Option {
 	return option(func(rs *ResultStore) { rs.constructPath = true })
 }
@@ -51,12 +54,20 @@ func New(bucket string, options ...Option) *ResultStore {
 	return rs
 }
 
-func (rs *ResultStore) generatePath(p Pkg) string {
-	path := rs.basePath
+func (rs *ResultStore) String() string {
+	s := rs.bucket + "/" + rs.basePath
 	if rs.constructPath {
-		path = filepath.Join(path, p.EcosystemName(), p.Name())
+		s += "+"
 	}
-	return path
+	return s
+}
+
+func (rs *ResultStore) generatePath(p Pkg) string {
+	uploadPath := rs.basePath
+	if rs.constructPath {
+		uploadPath = path.Join(uploadPath, p.EcosystemName(), p.Name())
+	}
+	return uploadPath
 }
 
 func (rs *ResultStore) SaveTempFilesToZip(ctx context.Context, p Pkg, fileName string, tempFileNames []string) error {
@@ -66,7 +77,7 @@ func (rs *ResultStore) SaveTempFilesToZip(ctx context.Context, p Pkg, fileName s
 	}
 	defer bkt.Close()
 
-	uploadPath := filepath.Join(rs.generatePath(p), fileName+".zip")
+	uploadPath := path.Join(rs.generatePath(p), fileName+".zip")
 	log.Info("Uploading results",
 		"bucket", rs.bucket,
 		"path", uploadPath)
@@ -102,13 +113,68 @@ func (rs *ResultStore) SaveTempFilesToZip(ctx context.Context, p Pkg, fileName s
 	return nil
 }
 
-func (rs *ResultStore) Save(ctx context.Context, p Pkg, analysis interface{}) error {
-	version := p.Version()
+func (rs *ResultStore) SaveAnalyzedPackage(ctx context.Context, manager *pkgmanager.PkgManager, pkg Pkg) error {
+	archivePath, err := manager.DownloadArchive(pkg.Name(), pkg.Version(), "")
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err := os.Remove(archivePath); err != nil {
+			log.Error("could not clean up downloaded archive", "error", err)
+		}
+	}()
+
+	hash, err := utils.SHA256Hash(archivePath)
+	if err != nil {
+		return err
+	}
+
+	bkt, err := blob.OpenBucket(ctx, rs.bucket)
+	if err != nil {
+		return err
+	}
+	defer bkt.Close()
+
+	uploadPath := rs.generatePath(pkg) + "-" + hash
+	log.Info("Uploading analyzed package", "bucket", rs.bucket, "path", uploadPath)
+
+	f, err := os.Open(archivePath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	w, err := bkt.NewWriter(ctx, uploadPath, nil)
+	if err != nil {
+		return err
+	}
+
+	_, writeErr := io.Copy(w, f)
+	closeErr := w.Close()
+
+	if writeErr != nil {
+		// TODO golang 1.20: use errors.Join(writeErr, closeErr)
+		return writeErr
+	}
+	if closeErr != nil {
+		return closeErr
+	}
+
+	return nil
+}
+
+// SaveWithFilename saves results to the bucket with the given filename
+func (rs *ResultStore) SaveWithFilename(ctx context.Context, p Pkg, filename string, analysis any) error {
+	if filename == "" {
+		return errors.New("filename cannot be empty")
+	}
+
 	result := &result{
 		Package: pkg{
 			Name:      p.Name(),
 			Ecosystem: p.EcosystemName(),
-			Version:   version,
+			Version:   p.Version(),
 		},
 		CreatedTimestamp: time.Now().UTC().Unix(),
 		Analysis:         analysis,
@@ -125,13 +191,7 @@ func (rs *ResultStore) Save(ctx context.Context, p Pkg, analysis interface{}) er
 	}
 	defer bkt.Close()
 
-	filename := "results.json"
-	if version != "" {
-		filename = version + ".json"
-	}
-
-	path := rs.generatePath(p)
-	uploadPath := filepath.Join(path, filename)
+	uploadPath := path.Join(rs.generatePath(p), filename)
 	log.Info("Uploading results",
 		"bucket", rs.bucket,
 		"path", uploadPath)
@@ -148,4 +208,31 @@ func (rs *ResultStore) Save(ctx context.Context, p Pkg, analysis interface{}) er
 	}
 
 	return nil
+}
+
+// MakeFilename returns the default filename to use for saving analysis results,
+// using an optional label.
+// If the package has a version, the default filename is
+// "<label>-<version>.json" if label is nonempty, or <version>.json otherwise.
+// If the package does not have a version specified, the default filename is
+// "<label>.json" if label is nonempty, or "results.json" if not.
+func MakeFilename(p Pkg, label string) string {
+	prefix := "results"
+	version := p.Version()
+
+	if version != "" && label != "" {
+		prefix = label + "-" + version
+	} else if version != "" {
+		prefix = version
+	} else if label != "" {
+		prefix = label
+	}
+	return prefix + ".json"
+
+}
+
+// Save saves the results with the default filename
+func (rs *ResultStore) Save(ctx context.Context, p Pkg, analysis interface{}) error {
+	filename := MakeFilename(p, "")
+	return rs.SaveWithFilename(ctx, p, filename, analysis)
 }

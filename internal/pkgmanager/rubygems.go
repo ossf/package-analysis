@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
@@ -30,18 +29,20 @@ func getRubyGemsLatest(pkg string) (string, error) {
 	return details.Version, nil
 }
 
-var rubygemsPkgManager = PkgManager{
-	ecosystem:     pkgecosystem.RubyGems,
-	image:         "gcr.io/ossf-malware-analysis/ruby",
-	command:       "/usr/local/bin/analyze.rb",
-	latestVersion: getRubyGemsLatest,
-	dynamicPhases: analysisrun.DefaultDynamicPhases(),
+func getRubyGemsArchiveURL(pkgName, version string) (string, error) {
+	pkgURL := fmt.Sprintf("https://rubygems.org/gems/%v-%v.gem", pkgName, version)
+	resp, err := http.Get(pkgURL)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	return pkgURL, nil
 }
 
-var rubygemsPkgManagerCombinedSandbox = PkgManager{
-	ecosystem:     pkgecosystem.RubyGems,
-	image:         combinedDynamicAnalysisImage,
-	command:       "/usr/local/bin/analyze-ruby.rb",
-	latestVersion: getRubyGemsLatest,
-	dynamicPhases: analysisrun.DefaultDynamicPhases(),
+var rubygemsPkgManager = PkgManager{
+	ecosystem:       pkgecosystem.RubyGems,
+	latestVersion:   getRubyGemsLatest,
+	archiveURL:      getRubyGemsArchiveURL,
+	archiveFilename: defaultArchiveFilename,
 }

@@ -7,9 +7,9 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/ossf/package-analysis/internal/analysis"
+	"github.com/ossf/package-analysis/internal/featureflags"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgmanager"
 	"github.com/ossf/package-analysis/internal/resultstore"
@@ -30,9 +30,12 @@ var (
 	dynamicUpload       = flag.String("upload", "", "bucket path for uploading dynamic analysis results")
 	staticUpload        = flag.String("upload-static", "", "bucket path for uploading static analysis results")
 	uploadFileWriteInfo = flag.String("upload-file-write-info", "", "bucket path for uploading information from file writes")
+	uploadAnalyzedPkg   = flag.String("upload-analyzed-pkg", "", "bucket path for uploading analyzed packages")
 	offline             = flag.Bool("offline", false, "disables sandbox network access")
-	combinedSandbox     = flag.Bool("combined-sandbox", true, "use combined sandbox image for dynamic analysis")
+	customSandbox       = flag.String("sandbox-image", "", "override default dynamic analysis sandbox with custom image")
+	customAnalysisCmd   = flag.String("analysis-command", "", "override default dynamic analysis script path (use with custom sandbox image)")
 	listModes           = flag.Bool("list-modes", false, "prints out a list of available analysis modes")
+	features            = flag.String("feature-flags", "", "override default feature flag settings")
 	help                = flag.Bool("help", false, "print help on available options")
 	analysisMode        = utils.CommaSeparatedFlags("mode", []string{"static", "dynamic"},
 		"list of analysis modes to run, separated by commas. Use -list-modes to see available options")
@@ -46,6 +49,30 @@ func parseBucketPath(path string) (string, string) {
 	}
 
 	return parsed.Scheme + "://" + parsed.Host, parsed.Path
+}
+
+func makeResultStores() worker.ResultStores {
+	rs := worker.ResultStores{}
+
+	if *dynamicUpload != "" {
+		bucket, path := parseBucketPath(*dynamicUpload)
+		rs.DynamicAnalysis = resultstore.New(bucket, resultstore.BasePath(path))
+	}
+	if *staticUpload != "" {
+		bucket, path := parseBucketPath(*staticUpload)
+		rs.StaticAnalysis = resultstore.New(bucket, resultstore.BasePath(path))
+	}
+	if *uploadFileWriteInfo != "" {
+		bucket, path := parseBucketPath(*uploadFileWriteInfo)
+		rs.FileWrites = resultstore.New(bucket, resultstore.BasePath(path))
+	}
+
+	if *uploadAnalyzedPkg != "" {
+		bucket, path := parseBucketPath(*uploadAnalyzedPkg)
+		rs.AnalyzedPackage = resultstore.New(bucket, resultstore.BasePath(path))
+	}
+
+	return rs
 }
 
 func printAnalysisModes() {
@@ -67,7 +94,7 @@ func makeSandboxOptions() []sandbox.Option {
 	sbOpts := []sandbox.Option{sandbox.Tag(*imageTag)}
 
 	if *localPkg != "" {
-		sbOpts = append(sbOpts, sandbox.Volume(*localPkg, *localPkg))
+		sbOpts = append(sbOpts, sandbox.Copy(*localPkg, *localPkg))
 	}
 	if *noPull {
 		sbOpts = append(sbOpts, sandbox.NoPull())
@@ -79,74 +106,54 @@ func makeSandboxOptions() []sandbox.Option {
 	return sbOpts
 }
 
-func dynamicAnalysis(pkg *pkgmanager.Pkg) {
+func dynamicAnalysis(pkg *pkgmanager.Pkg, resultStores *worker.ResultStores) {
 	if !*offline {
 		sandbox.InitNetwork()
 	}
 
 	sbOpts := append(worker.DynamicSandboxOptions(), makeSandboxOptions()...)
 
-	results, lastRunPhase, lastStatus, err := worker.RunDynamicAnalysis(pkg, sbOpts)
+	if *customSandbox != "" {
+		sbOpts = append(sbOpts, sandbox.Image(*customSandbox))
+	}
+
+	result, err := worker.RunDynamicAnalysis(pkg, sbOpts, *customAnalysisCmd)
 	if err != nil {
-		log.Fatal("Dynamic analysis aborted (run error)", "error", err)
+		log.Error("Dynamic analysis aborted (run error)", "error", err)
+		return
+	}
+
+	// this is only valid if RunDynamicAnalysis() returns nil err
+	if result.LastStatus != analysis.StatusCompleted {
+		log.Warn("Dynamic analysis phase did not complete successfully",
+			"lastRunPhase", result.LastRunPhase,
+			"status", result.LastStatus)
 	}
 
 	ctx := context.Background()
-	if *dynamicUpload != "" {
-		bucket, path := parseBucketPath(*dynamicUpload)
-		err := resultstore.New(bucket, resultstore.BasePath(path)).Save(ctx, pkg, results.StraceSummary)
-		if err != nil {
-			log.Fatal("Failed to upload dynamic analysis results to blobstore",
-				"error", err)
-		}
-	}
-
-	fileWriteDataUploadStart := time.Now()
-
-	if *uploadFileWriteInfo != "" {
-		bucket, path := parseBucketPath(*uploadFileWriteInfo)
-		if err := worker.SaveFileWriteResults(bucket, resultstore.BasePath(path), ctx, pkg, results); err != nil {
-			log.Fatal("Failed to save write results", "error", err)
-		}
-	}
-
-	fileWriteDataDuration := time.Since(fileWriteDataUploadStart)
-	log.Info("Write data upload duration",
-		log.Label("ecosystem", pkg.EcosystemName()),
-		"name", pkg.Name(),
-		"version", pkg.Version(),
-		"write_data_upload_duration", fileWriteDataDuration,
-	)
-
-	// this is only valid if RunDynamicAnalysis() returns nil err
-	if lastStatus != analysis.StatusCompleted {
-		log.Warn("Dynamic analysis phase did not complete successfully",
-			"lastRunPhase", lastRunPhase,
-			"status", lastStatus)
+	if err := worker.SaveDynamicAnalysisData(ctx, pkg, resultStores, result.AnalysisData); err != nil {
+		log.Error("Upload error", "error", err)
 	}
 }
 
-func staticAnalysis(pkg *pkgmanager.Pkg) {
+func staticAnalysis(pkg *pkgmanager.Pkg, resultStores *worker.ResultStores) {
 	if !*offline {
 		sandbox.InitNetwork()
 	}
 
 	sbOpts := append(worker.StaticSandboxOptions(), makeSandboxOptions()...)
 
-	results, status, err := worker.RunStaticAnalysis(pkg, sbOpts, staticanalysis.All)
+	data, status, err := worker.RunStaticAnalysis(pkg, sbOpts, staticanalysis.All)
 	if err != nil {
-		log.Fatal("Static analysis aborted", "error", err)
+		log.Error("Static analysis aborted", "error", err)
+		return
 	}
 
 	log.Info("Static analysis completed", "status", status)
 
 	ctx := context.Background()
-	if *staticUpload != "" {
-		bucket, path := parseBucketPath(*staticUpload)
-		err := resultstore.New(bucket, resultstore.BasePath(path)).Save(ctx, pkg, results)
-		if err != nil {
-			log.Fatal("Failed to upload static results to blobstore", "error", err)
-		}
+	if err := worker.SaveStaticAnalysisData(ctx, pkg, resultStores, data); err != nil {
+		log.Error("Upload error", "error", err)
 	}
 }
 
@@ -157,6 +164,11 @@ func main() {
 
 	analysisMode.InitFlag()
 	flag.Parse()
+
+	if err := featureflags.Update(*features); err != nil {
+		log.Fatal("Failed to parse flags", "error", err)
+		return
+	}
 
 	if *help {
 		flag.Usage()
@@ -173,7 +185,7 @@ func main() {
 		return
 	}
 
-	manager := pkgmanager.Manager(ecosystem, *combinedSandbox)
+	manager := pkgmanager.Manager(ecosystem)
 	if manager == nil {
 		log.Panic("Unsupported pkg manager",
 			log.Label("ecosystem", string(ecosystem)))
@@ -205,14 +217,16 @@ func main() {
 			"error", err)
 	}
 
+	resultStores := makeResultStores()
+
 	if runMode[analysis.Static] {
 		log.Info("Starting static analysis")
-		staticAnalysis(pkg)
+		staticAnalysis(pkg, &resultStores)
 	}
 
 	// dynamicAnalysis() currently panics on error, so it's last
 	if runMode[analysis.Dynamic] {
 		log.Info("Starting dynamic analysis")
-		dynamicAnalysis(pkg)
+		dynamicAnalysis(pkg, &resultStores)
 	}
 }

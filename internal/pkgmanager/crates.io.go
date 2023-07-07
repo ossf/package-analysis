@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
-	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
@@ -32,22 +32,24 @@ func getCratesLatest(pkg string) (string, error) {
 	return details.Versions[0].Num, nil
 }
 
-var cratesPkgManager = PkgManager{
-	ecosystem:     pkgecosystem.CratesIO,
-	image:         "gcr.io/ossf-malware-analysis/crates.io",
-	command:       "/usr/local/bin/analyze.py",
-	latestVersion: getCratesLatest,
-	dynamicPhases: []analysisrun.DynamicPhase{
-		analysisrun.DynamicPhaseInstall,
-	},
+func getCratesArchiveURL(pkgName, version string) (string, error) {
+	pkgURL := fmt.Sprintf("https://crates.io/api/v1/crates/%s/%s/download", pkgName, version)
+	resp, err := http.Get(pkgURL)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	return pkgURL, nil
 }
 
-var cratesPkgManagerCombinedSandbox = PkgManager{
-	ecosystem:     pkgecosystem.CratesIO,
-	image:         combinedDynamicAnalysisImage,
-	command:       "/usr/local/bin/analyze-rust.py",
-	latestVersion: getCratesLatest,
-	dynamicPhases: []analysisrun.DynamicPhase{
-		analysisrun.DynamicPhaseInstall,
-	},
+func getCratesArchiveFilename(pkgName, version, _ string) string {
+	return strings.Join([]string{pkgName, "-", version, ".tar.gz"}, "")
+}
+
+var cratesPkgManager = PkgManager{
+	ecosystem:       pkgecosystem.CratesIO,
+	latestVersion:   getCratesLatest,
+	archiveURL:      getCratesArchiveURL,
+	archiveFilename: getCratesArchiveFilename,
 }

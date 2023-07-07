@@ -1,6 +1,0 @@
-cloud.google.com/go/apigeeregistry v0.4.0/go.mod h1:EUG4PGcsZvxOXAdyEghIdXwAEi/4MEaoqLMLDMIwKXY=
-cloud.google.com/go/apikeys v0.4.0/go.mod h1:XATS/yqZbaBK0HOssf+ALHp8jAlNHUgyfprvNcBIszU=
-cloud.google.com/go/datacatalog v1.8.1/go.mod h1:RJ58z4rMp3gvETA465Vg+ag8BGgBdnRPEMMSTr5Uv+M=
-cloud.google.com/go/dialogflow v1.29.0/go.mod h1:b+2bzMe+k1s9V+F2jbJwpHPzrnIyHihAdRFMtn2WXuM=
-github.com/pierrec/lz4 v2.6.1+incompatible h1:9UY3+iC23yxF0UfGaYrGplQ+79Rg+h/q9FV9ix19jjM=
-google.golang.org/genproto v0.0.0-20221109142239-94d6d90a7d66/go.mod h1:rZS5c/ZVYMaOGBfO68GWtjOw/eLaZM1X6iVtgjZ+EWg=

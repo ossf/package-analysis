@@ -9,11 +9,11 @@ import (
 	"github.com/ossf/package-analysis/internal/packetcapture"
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/internal/strace"
+	"github.com/ossf/package-analysis/internal/utils"
 	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 )
 
 const (
-	maxOutputLines = 20
 	maxOutputBytes = 4 * 1024
 )
 
@@ -30,7 +30,7 @@ var resultError = &Result{
 	},
 }
 
-func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
+func Run(sb sandbox.Sandbox, command string, args []string) (*Result, error) {
 	log.Info("Running dynamic analysis",
 		"args", args)
 
@@ -46,8 +46,8 @@ func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
 
 	// Run the command
 	log.Debug("Running dynamic analysis command",
-		"args", args)
-	r, err := sb.Run(args...)
+		"command", command, "args", args)
+	r, err := sb.Run(command, args...)
 	if err != nil {
 		return resultError, fmt.Errorf("sandbox failed (%w)", err)
 	}
@@ -71,8 +71,8 @@ func Run(sb sandbox.Sandbox, args []string) (*Result, error) {
 	analysisResult := Result{
 		StraceSummary: analysisrun.StraceSummary{
 			Status: analysis.StatusForRunResult(r),
-			Stdout: lastLines(r.Stdout(), maxOutputLines, maxOutputBytes),
-			Stderr: lastLines(r.Stderr(), maxOutputLines, maxOutputBytes),
+			Stdout: utils.LastNBytes(r.Stdout(), maxOutputBytes),
+			Stderr: utils.LastNBytes(r.Stderr(), maxOutputBytes),
 		},
 	}
 	analysisResult.setData(straceResult, dns)

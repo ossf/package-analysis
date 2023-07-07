@@ -24,7 +24,7 @@ endif
 # This recipe builds and pushes images for production. Note: RELEASE_TAG must be set
 #
 .PHONY: cloudbuild
-cloudbuild: require_release_tag push_all_images
+cloudbuild: require_release_tag push_prod_images
 
 .PHONY: require_release_tag
 require_release_tag:
@@ -55,26 +55,6 @@ build_scheduler_image: DIR=$(PREFIX)
 build_scheduler_image: DOCKERFILE=$(PREFIX)/cmd/scheduler/Dockerfile
 build_scheduler_image: IMAGE_NAME=scheduler
 
-build_node_sandbox: DIR=$(SANDBOX_DIR)/npm
-build_node_sandbox: DOCKERFILE=$(SANDBOX_DIR)/npm/Dockerfile
-build_node_sandbox: IMAGE_NAME=node
-
-build_python_sandbox: DIR=$(SANDBOX_DIR)/pypi
-build_python_sandbox: DOCKERFILE=$(SANDBOX_DIR)/pypi/Dockerfile
-build_python_sandbox: IMAGE_NAME=python
-
-build_ruby_sandbox: DIR=$(SANDBOX_DIR)/rubygems
-build_ruby_sandbox: DOCKERFILE=$(SANDBOX_DIR)/rubygems/Dockerfile
-build_ruby_sandbox: IMAGE_NAME=ruby
-
-build_packagist_sandbox: DIR=$(SANDBOX_DIR)/packagist
-build_packagist_sandbox: DOCKERFILE=$(SANDBOX_DIR)/packagist/Dockerfile
-build_packagist_sandbox: IMAGE_NAME=packagist
-
-build_crates_sandbox: DIR=$(SANDBOX_DIR)/crates.io
-build_crates_sandbox: DOCKERFILE=$(SANDBOX_DIR)/crates.io/Dockerfile
-build_crates_sandbox: IMAGE_NAME=crates.io
-
 build_static_analysis_sandbox: DIR=$(PREFIX)
 build_static_analysis_sandbox: DOCKERFILE=$(SANDBOX_DIR)/staticanalysis/Dockerfile
 build_static_analysis_sandbox: IMAGE_NAME=static-analysis
@@ -83,11 +63,8 @@ build_dynamic_analysis_sandbox: DIR=$(SANDBOX_DIR)/dynamicanalysis
 build_dynamic_analysis_sandbox: DOCKERFILE=$(SANDBOX_DIR)/dynamicanalysis/Dockerfile
 build_dynamic_analysis_sandbox: IMAGE_NAME=dynamic-analysis
 
-.PHONY: build_all_sandboxes
-build_all_sandboxes: build_node_sandbox build_python_sandbox build_ruby_sandbox build_packagist_sandbox build_crates_sandbox build_dynamic_analysis_sandbox build_static_analysis_sandbox
-
-.PHONY: build_all_images
-build_all_images: build_all_sandboxes build_analysis_image build_scheduler_image
+.PHONY: build_prod_images
+build_prod_images: build_dynamic_analysis_sandbox build_static_analysis_sandbox build_analysis_image build_scheduler_image
 
 #
 # Builds then pushes analysis and sandbox images
@@ -102,56 +79,26 @@ push_analysis_image: build_analysis_image
 push_scheduler_image: IMAGE_NAME=scheduler
 push_scheduler_image: build_scheduler_image
 
-push_node_sandbox: IMAGE_NAME=node
-push_node_sandbox: build_node_sandbox
-
-push_python_sandbox: IMAGE_NAME=python
-push_python_sandbox: build_python_sandbox
-
-push_ruby_sandbox: IMAGE_NAME=ruby
-push_ruby_sandbox: build_ruby_sandbox
-
-push_packagist_sandbox: IMAGE_NAME=packagist
-push_packagist_sandbox: build_packagist_sandbox
-
-push_crates_sandbox: IMAGE_NAME=crates.io
-push_crates_sandbox: build_crates_sandbox
-
 push_dynamic_analysis_sandbox: IMAGE_NAME=dynamic-analysis
 push_dynamic_analysis_sandbox: build_dynamic_analysis_sandbox
 
 push_static_analysis_sandbox: IMAGE_NAME=static-analysis
 push_static_analysis_sandbox: build_static_analysis_sandbox
 
-.PHONY: push_all_sandboxes
-push_all_sandboxes: push_node_sandbox push_python_sandbox push_ruby_sandbox push_packagist_sandbox push_crates_sandbox push_dynamic_analysis_sandbox push_static_analysis_sandbox
+.PHONY: push_prod_sandboxes
+push_prod_sandboxes: push_dynamic_analysis_sandbox push_static_analysis_sandbox
 
-.PHONY: push_all_images
-push_all_images: push_all_sandboxes push_analysis_image push_scheduler_image
+.PHONY: push_prod_images
+push_prod_images: push_prod_sandboxes push_analysis_image push_scheduler_image
 
 
 #
-# These update (sync) locally build sandbox images from Docker to podman.
-# This is needed for local analyses; in order to use these updated images,
+# These update (sync) locally built sandbox images from Docker to
+# podman. In order to use locally built sandbox images for analysis,
 # pass '-nopull' to scripts/run_analysis.sh
 #
 sync_%_sandbox:
 	sudo buildah pull docker-daemon:${REGISTRY}/${IMAGE_NAME}:$(TAG)
-
-sync_node_sandbox: IMAGE_NAME=node
-sync_node_sandbox: build_node_sandbox
-
-sync_python_sandbox: IMAGE_NAME=python
-sync_python_sandbox: build_python_sandbox
-
-sync_ruby_sandbox: IMAGE_NAME=ruby
-sync_ruby_sandbox: build_ruby_sandbox
-
-sync_packagist_sandbox: IMAGE_NAME=packagist
-sync_packagist_sandbox: build_packagist_sandbox
-
-sync_crates_sandbox: IMAGE_NAME=crates.io
-sync_crates_sandbox: build_crates_sandbox
 
 sync_dynamic_analysis_sandbox: IMAGE_NAME=dynamic-analysis
 sync_dynamic_analysis_sandbox: build_dynamic_analysis_sandbox
@@ -159,8 +106,8 @@ sync_dynamic_analysis_sandbox: build_dynamic_analysis_sandbox
 sync_static_analysis_sandbox: IMAGE_NAME=static-analysis
 sync_static_analysis_sandbox: build_static_analysis_sandbox
 
-.PHONY: sync_all_sandboxes
-sync_all_sandboxes: sync_node_sandbox sync_python_sandbox sync_ruby_sandbox sync_packagist_sandbox sync_crates_sandbox sync_dynamic_analysis_sandbox sync_static_analysis_sandbox
+.PHONY: sync_prod_sandboxes
+sync_prod_sandboxes: sync_dynamic_analysis_sandbox sync_static_analysis_sandbox
 
 
 #

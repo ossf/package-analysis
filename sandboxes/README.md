@@ -3,37 +3,43 @@
 ## Sandbox Image Testing
 
 By default the analysis command will update the sandbox images from the grc.io
-repository.
+repository. To test local changes to sandboxes, they need to be built locally,
+and the analysis needs to redirect its container source to the local filesystem.
 
-To use local images for analysis:
+Details are below, but basically, this means two things:
 
-1. The images need to be manually pulled into `/var/lib/containers` using the
-   `buildah` tool included with `podman`.
-2. `/var/lib/containers` then needs to be mounted inside the container so it can
-   be used by `podman`.
-3. Finally, the `analysis` command should be run using the `-nopull` option to
-   use the local image only.
+1. Run `make sync_prod_sandboxes` to build and sync the sandbox images locally
+2. Use the `-nopull` option with `scripts/run_analysis.sh` to disable use of remote images
 
-For example, assuming there is a locally built npm image:
+
+### Building the images
+
+To use local images for analysis, they first need to be synced with the
+container directory used by `podman` (which is `/var/lib/containers`).
+This is automated using the project Makefile.
+
+To sync the both dynamic and static analysis sandboxes, run
 
 ```bash
-# Prepare the local machine.
-$ sudo apt install podman
-$ mkdir /tmp/results
-
-# Populate the local podman images with the image we want to use from docker.
-$ sudo buildah pull docker-daemon:gcr.io/ossf-malware-analysis/node:latest
-
-# Run the analysis locally, without pulling the image again.
-$ docker run --privileged -ti \
-    -v /tmp/results:/results \
-    -v /var/lib/containers:/var/lib/containers \
-    gcr.io/ossf-malware-analysis/analysis analyze \
-    -package test -ecosystem npm \
-    -upload file:///results/ -nopull
+make sync_dynamic_analyis_sandbox
+make sync_static_analyis_sandbox
+```
+or simply
+```bash
+make sync_prod_sandboxes
 ```
 
-## Adding a new Runtime Analysis Sandbox
+These commands will (re-)build both sandboxes and copy them to the correct location.
+
+### Running the analysis
+
+The `scripts/run_analysis.sh` script automates much of the setup for running
+local analysis, but it the default setting will pull the sandbox images from
+the remote container registry rather than using locally built ones. To change
+this, add the `-nopull` option to the script.
+
+
+## Adding a new Runtime Analysis script
 
 Each runtime analysis sandbox requires:
 
@@ -161,7 +167,7 @@ The `Dockerfile` must also set the analysis command as the `ENTRYPOINT`.
 
 ### Wiring It Up
 
-1. Update [build_docker.sh](../build/build_docker.sh) to reference the image.
+1. Update [Makefile](../Makefile) to reference the image.
 2. Extend [internal/pkgecosystem](../internal/pkgecosystem) to add support for
    the new sandbox.
 3. Ensure your new ecosystem is supported by

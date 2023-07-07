@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 
 	"github.com/ossf/package-analysis/internal/utils"
 )
@@ -61,8 +61,8 @@ func InitParser(installDir string) (ParserConfig, error) {
 	}
 
 	for _, file := range parserFiles {
-		filePath := path.Join(installDir, file.name)
-		if err := utils.WriteFile(filePath, file.contents, file.isExecutable); err != nil {
+		writePath := filepath.Join(installDir, file.name)
+		if err := utils.WriteFile(writePath, file.contents, file.isExecutable); err != nil {
 			return ParserConfig{}, fmt.Errorf("error writing %s to %s: %w", file.name, installDir, err)
 		}
 	}
@@ -83,6 +83,6 @@ func InitParser(installDir string) (ParserConfig, error) {
 
 	return ParserConfig{
 		InstallDir: installDir,
-		ParserPath: path.Join(installDir, parserFileName),
+		ParserPath: filepath.Join(installDir, parserFileName),
 	}, nil
 }

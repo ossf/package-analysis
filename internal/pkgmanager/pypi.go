@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/ossf/package-analysis/internal/utils"
-	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
@@ -79,21 +78,9 @@ func getPyPIArchiveURL(pkgName, version string) (string, error) {
 }
 
 var pypiPkgManager = PkgManager{
-	ecosystem:      pkgecosystem.PyPI,
-	image:          "gcr.io/ossf-malware-analysis/python",
-	command:        "/usr/local/bin/analyze.py",
-	latestVersion:  getPyPILatest,
-	archiveURL:     getPyPIArchiveURL,
-	extractArchive: utils.ExtractTarGzFile,
-	dynamicPhases:  analysisrun.DefaultDynamicPhases(),
-}
-
-var pypiPkgManagerCombinedSandbox = PkgManager{
-	ecosystem:      pkgecosystem.PyPI,
-	image:          combinedDynamicAnalysisImage,
-	command:        "/usr/local/bin/analyze-python.py",
-	latestVersion:  getPyPILatest,
-	archiveURL:     getPyPIArchiveURL,
-	extractArchive: utils.ExtractTarGzFile,
-	dynamicPhases:  analysisrun.DefaultDynamicPhases(),
+	ecosystem:       pkgecosystem.PyPI,
+	latestVersion:   getPyPILatest,
+	archiveURL:      getPyPIArchiveURL,
+	archiveFilename: defaultArchiveFilename,
+	extractArchive:  utils.ExtractTarGzFile,
 }

@@ -2,24 +2,21 @@ package pkgmanager
 
 import (
 	"fmt"
+	"path"
+	"path/filepath"
 	"strings"
 
-	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
 // PkgManager represents how packages from a common ecosystem are accessed.
 type PkgManager struct {
-	ecosystem      pkgecosystem.Ecosystem
-	image          string
-	command        string
-	latestVersion  func(string) (string, error)
-	archiveURL     func(string, string) (string, error)
-	extractArchive func(string, string) error
-	dynamicPhases  []analysisrun.DynamicPhase
+	ecosystem       pkgecosystem.Ecosystem
+	latestVersion   func(name string) (string, error)
+	archiveURL      func(name, version string) (string, error)
+	archiveFilename func(name, version, downloadURL string) string
+	extractArchive  func(path, outputDir string) error
 }
-
-const combinedDynamicAnalysisImage = "gcr.io/ossf-malware-analysis/dynamic-analysis"
 
 var (
 	supportedPkgManagers = map[pkgecosystem.Ecosystem]*PkgManager{
@@ -29,21 +26,13 @@ var (
 		packagistPkgManager.ecosystem: &packagistPkgManager,
 		cratesPkgManager.ecosystem:    &cratesPkgManager,
 	}
-
-	supportedPkgManagersCombinedSandbox = map[pkgecosystem.Ecosystem]*PkgManager{
-		npmPkgManagerCombinedSandbox.ecosystem:       &npmPkgManagerCombinedSandbox,
-		pypiPkgManagerCombinedSandbox.ecosystem:      &pypiPkgManagerCombinedSandbox,
-		rubygemsPkgManagerCombinedSandbox.ecosystem:  &rubygemsPkgManagerCombinedSandbox,
-		packagistPkgManagerCombinedSandbox.ecosystem: &packagistPkgManagerCombinedSandbox,
-		cratesPkgManagerCombinedSandbox.ecosystem:    &cratesPkgManagerCombinedSandbox,
-	}
 )
 
-func Manager(e pkgecosystem.Ecosystem, combinedSandbox bool) *PkgManager {
-	if combinedSandbox {
-		return supportedPkgManagersCombinedSandbox[e]
-	}
+func defaultArchiveFilename(_, _, downloadURL string) string {
+	return path.Base(downloadURL)
+}
 
+func Manager(e pkgecosystem.Ecosystem) *PkgManager {
 	return supportedPkgManagers[e]
 }
 
@@ -52,12 +41,8 @@ func (p *PkgManager) String() string {
 	return string(p.ecosystem)
 }
 
-func (p *PkgManager) DynamicAnalysisImage() string {
-	return p.image
-}
-
-func (p *PkgManager) DynamicPhases() []analysisrun.DynamicPhase {
-	return p.dynamicPhases
+func (p *PkgManager) Ecosystem() pkgecosystem.Ecosystem {
+	return p.ecosystem
 }
 
 func (p *PkgManager) Latest(name string) (*Pkg, error) {
@@ -90,22 +75,41 @@ func (p *PkgManager) Package(name, version string) *Pkg {
 	}
 }
 
+/*
+DownloadArchive downloads an archive of the given package name and version
+to the specified directory, and returns the path to the downloaded archive.
+
+The archive file is named according to ecosystem-specific rules.
+An empty string can be passed for directory, in which case the current
+directory is used.
+
+If an error occurs during download of the file, it is returned along with
+an empty path value.
+*/
 func (p *PkgManager) DownloadArchive(name, version, directory string) (string, error) {
 	if directory == "" {
-		return "", fmt.Errorf("no directory specified")
+		directory = "."
 	}
 
 	downloadURL, err := p.archiveURL(name, version)
 	if err != nil {
 		return "", err
 	}
+	if downloadURL == "" {
+		return "", fmt.Errorf("no url found for package %s, version %s", name, version)
+	}
 
-	archivePath, err := downloadToDirectory(directory, downloadURL)
-	if err != nil {
+	baseFilename := p.archiveFilename(name, version, downloadURL)
+	if baseFilename == "" {
+		panic("base filename for archive is empty")
+	}
+
+	destPath := filepath.Join(directory, baseFilename)
+	if err := downloadToPath(destPath, downloadURL); err != nil {
 		return "", err
 	}
 
-	return archivePath, nil
+	return destPath, nil
 }
 
 func (p *PkgManager) ExtractArchive(archivePath, outputDir string) error {

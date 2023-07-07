@@ -4,7 +4,7 @@ metadata:
   name: pubsub
 spec:
   minReplicas: 1
-  maxReplicas: 750
+  maxReplicas: 1500
   metrics:
   - external:
       metric:
@@ -18,5 +18,5 @@ spec:
     type: External
   scaleTargetRef:
     apiVersion: apps/v1
-    kind: StatefulSet
-    name: workers-set
+    kind: Deployment
+    name: workers-deployment

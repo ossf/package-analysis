@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/ossf/package-analysis/internal/pkgmanager"
@@ -10,8 +11,12 @@ import (
 	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 )
 
-func SaveFileWriteResults(bucket string, resultStoreOptions resultstore.Option, ctx context.Context, pkg *pkgmanager.Pkg, dynamicResults analysisrun.DynamicAnalysisResults) error {
-	rs := resultstore.New(bucket, resultStoreOptions)
+func saveFileWriteResults(rs *resultstore.ResultStore, ctx context.Context, pkg *pkgmanager.Pkg, dynamicResults analysisrun.DynamicAnalysisResults) error {
+	if rs == nil {
+		// TODO this should become a method on resultstore.ResultStore?
+		return errors.New("resultstore is nil")
+	}
+
 	if err := rs.Save(ctx, pkg, dynamicResults.FileWritesSummary); err != nil {
 		return fmt.Errorf("failed to upload file write analysis to blobstore = %w", err)
 	}
@@ -22,8 +27,8 @@ func SaveFileWriteResults(bucket string, resultStoreOptions resultstore.Option, 
 
 	// Remove potential duplicates across phases.
 	allPhasesWriteBufferIdsArray = utils.RemoveDuplicates(allPhasesWriteBufferIdsArray)
-
-	if err := rs.SaveTempFilesToZip(ctx, pkg, "write_buffers", allPhasesWriteBufferIdsArray); err != nil {
+	version := pkg.Version()
+	if err := rs.SaveTempFilesToZip(ctx, pkg, "write_buffers_"+version, allPhasesWriteBufferIdsArray); err != nil {
 		return fmt.Errorf("failed to upload file write buffer results to blobstore = #{err}")
 	}
 	if err := utils.RemoveTempFilesDirectory(); err != nil {

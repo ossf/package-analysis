@@ -1,12 +1,11 @@
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
-  name: workers-set
+  name: workers-deployment
   labels:
     app: workers
 spec:
-  serviceName: workers
-  replicas: 5
+  replicas: 1500
   selector:
     matchLabels:
       app: workers
@@ -22,24 +21,31 @@ spec:
         command: ["worker"]
         env:
         - name: OSSMALWARE_WORKER_SUBSCRIPTION
-          value: gcppubsub://projects/ossf-malware-analysis/subscriptions/workers
+          # See: https://pkg.go.dev/gocloud.dev/pubsub/gcppubsub#URLOpener
+          value: gcppubsub://projects/ossf-malware-analysis/subscriptions/workers?nacklazy=1
         - name: OSSF_MALWARE_ANALYSIS_RESULTS
           value: gs://ossf-malware-analysis-results
         - name: OSSF_MALWARE_STATIC_ANALYSIS_RESULTS
           value: gs://ossf-malware-static-analysis-results
         - name: OSSF_MALWARE_ANALYSIS_FILE_WRITE_RESULTS
           value: gs://ossf-malware-analysis-file-write-results
+        # - name: OSSF_MALWARE_ANALYZED_PACKAGES
+          # value: gs://ossf-malware-analysis-analyzed-packages
         - name: LOGGER_ENV
           value: prod
         - name: OSSF_MALWARE_ANALYSIS_PACKAGES
           value: gs://ossf-malware-analysis-packages
         - name: OSSF_MALWARE_NOTIFICATION_TOPIC
           value: gcppubsub://projects/ossf-malware-analysis/topics/analysis-notify
+        - name: OSSF_MALWARE_FEATURE_FLAGS
+          value: ""
         securityContext:
           privileged: true
         volumeMounts:
           - mountPath: "/var/lib/containers"
             name: image-storage
+          - mountPath: "/worker_tmp"
+            name: worker-tmp
         resources:
           requests:
             cpu: 750m
@@ -47,13 +53,35 @@ spec:
           limits:
             cpu: 1
             memory: 2Gi
-  volumeClaimTemplates:
-  - metadata:
-      name: image-storage
-    spec:
-      accessModes:
-        - ReadWriteOnce
-      storageClassName: premium-rwo
-      resources:
-        requests:
-          storage: 30Gi
+      volumes:
+      - name: image-storage
+        ephemeral:
+          volumeClaimTemplate:
+            metadata:
+              labels:
+                type: image-storage
+            spec:
+              accessModes:
+              - ReadWriteOnce
+              storageClassName: premium-rwo
+              resources:
+                requests:
+                  storage: 20Gi
+      - name: worker-tmp
+        ephemeral:
+          volumeClaimTemplate:
+            metadata:
+              labels:
+                type: worker-tmp
+            spec:
+              accessModes:
+              - ReadWriteOnce
+              storageClassName: premium-rwo
+              resources:
+                requests:
+                  storage: 5Gi
+  strategy:
+    type: "RollingUpdate"
+    rollingUpdate:
+      maxUnavailable: "5%"
+      maxSurge: "1%"

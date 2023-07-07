@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 from dataclasses import dataclass
+import os
 import sys
 import subprocess
+import traceback
 from typing import Optional
 
 @dataclass
@@ -38,10 +40,25 @@ def install(package: Package):
       # improve the analysis.
       raise
 
+def importPkg(package: Package):
+    path_to_rs = os.path.join(os.getcwd(), 'src', 'main.rs')
+    try:
+      with open(path_to_rs, 'r+') as handle:
+        content = handle.read()
+        handle.seek(0, 0)
+        handle.write('#[allow(unused_imports)]\n')
+        handle.write(f'use {package.name.strip()}::*;' + '\n' + content)
+        handle.flush()
+      subprocess.check_output(['cargo', 'run'], stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as e:
+      print('Failed to import:')
+      print(e.output.decode())
+      traceback.print_exc()
 
 PHASES = {
-    "all": [install],
+    "all": [install, importPkg],
     "install": [install],
+    "import": [importPkg],
 }
 
 def main():
