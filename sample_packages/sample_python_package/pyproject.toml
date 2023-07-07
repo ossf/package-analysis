@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "example_package"
 version = "0.0.1"
 authors = [
-    { name="osf/package-analysis" },
+    { name="ossf/package-analysis" },
 ]
 description = "A small example package"
 readme = "README.md"
