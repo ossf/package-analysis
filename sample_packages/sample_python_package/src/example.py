@@ -9,8 +9,7 @@ def sendHTTPSPostRequest():
   json_data = json.dumps(data)
   conn.request("POST", "/post", json_data, headers={"Host": host})
   response = conn.getresponse()
-  print(response.read())
-
+  print(response.read().decode())
 
 def main():
   sendHTTPSPostRequest()
