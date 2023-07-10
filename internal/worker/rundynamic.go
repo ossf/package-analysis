@@ -101,8 +101,8 @@ func retrieveExecutionLog(sb sandbox.Sandbox) (string, error) {
 
 	// if the copy fails, it could be that the execution log is not actually present.
 	// For now, we'll just log the error and otherwise ignore it
-	if err := sb.CopyBackToHost(sandboxExecutionLogPath, hostExecutionLogPath); err != nil {
-		log.Warn("Could not copy execution log from sandbox", "error", err)
+	if err := sb.CopyBackToHost(hostExecutionLogPath, sandboxExecutionLogPath); err != nil {
+		log.Warn("Could not retrieve execution log from sandbox", "error", err)
 		return "", nil
 	}
 
@@ -148,12 +148,6 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option, analysisCm
 		analysisCmd = dynamicanalysis.DefaultCommand(pkg.Ecosystem())
 	}
 
-	data := analysisrun.DynamicAnalysisResults{
-		StraceSummary:      make(analysisrun.DynamicAnalysisStraceSummary),
-		FileWritesSummary:  make(analysisrun.DynamicAnalysisFileWritesSummary),
-		FileWriteBufferIds: make(analysisrun.DynamicAnalysisFileWriteBufferIds),
-	}
-
 	sb := sandbox.New(sbOpts...)
 
 	defer func() {
@@ -161,6 +155,12 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option, analysisCm
 			log.Error("error cleaning up sandbox", "error", err)
 		}
 	}()
+
+	// initialise sandbox before copy/run
+	if err := sb.Init(); err != nil {
+		LogDynamicAnalysisError(pkg, "", err)
+		return DynamicAnalysisResult{}, err
+	}
 
 	codeExecutionEnabled := false
 	if shouldEnableCodeExecution(pkg.Ecosystem()) {
@@ -171,14 +171,24 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option, analysisCm
 		}
 	}
 
-	var lastRunPhase analysisrun.DynamicPhase
-	var lastStatus analysis.Status
+	result := DynamicAnalysisResult{
+		AnalysisData: analysisrun.DynamicAnalysisResults{
+			StraceSummary:      make(analysisrun.DynamicAnalysisStraceSummary),
+			FileWritesSummary:  make(analysisrun.DynamicAnalysisFileWritesSummary),
+			FileWriteBufferIds: make(analysisrun.DynamicAnalysisFileWriteBufferIds),
+		},
+	}
+
+	// lastError holds the error that occurred in the most recently run dynamic analysis phase.
+	// This is not a part of the result because a non-nil value means that the error originated
+	// from our code, as opposed to the package under analysis
 	var lastError error
+
 	for _, phase := range analysisrun.DefaultDynamicPhases() {
 		startTime := time.Now()
 		args := dynamicanalysis.MakeAnalysisArgs(pkg, phase)
 		phaseResult, err := dynamicanalysis.Run(sb, analysisCmd, args)
-		lastRunPhase = phase
+		result.LastRunPhase = phase
 
 		runDuration := time.Since(startTime)
 		log.Info("Dynamic analysis phase finished",
@@ -193,17 +203,17 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option, analysisCm
 		if err != nil {
 			// Error when trying to actually run; don't record the result for this phase
 			// or attempt subsequent phases
-			lastStatus = ""
+			result.LastStatus = ""
 			lastError = err
 			break
 		}
 
-		data.StraceSummary[phase] = &phaseResult.StraceSummary
-		data.FileWritesSummary[phase] = &phaseResult.FileWritesSummary
-		lastStatus = phaseResult.StraceSummary.Status
-		data.FileWriteBufferIds[phase] = phaseResult.FileWriteBufferIds
+		result.AnalysisData.StraceSummary[phase] = &phaseResult.StraceSummary
+		result.AnalysisData.FileWritesSummary[phase] = &phaseResult.FileWritesSummary
+		result.AnalysisData.FileWriteBufferIds[phase] = phaseResult.FileWriteBufferIds
 
-		if lastStatus != analysis.StatusCompleted {
+		result.LastStatus = phaseResult.StraceSummary.Status
+		if result.LastStatus != analysis.StatusCompleted {
 			// Error caused by an issue with the package (probably).
 			// Don't continue with phases if this one did not complete successfully.
 			break
@@ -218,22 +228,16 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option, analysisCm
 		"version", pkg.Version(),
 		"heap_usage_after_dynamic_analysis", strconv.FormatUint(afterDynamic.Alloc, 10))
 
-	analysisResult := DynamicAnalysisResult{
-		AnalysisData: data,
-		LastRunPhase: lastRunPhase,
-		LastStatus:   lastStatus,
-	}
-
 	if lastError != nil {
-		LogDynamicAnalysisError(pkg, lastRunPhase, lastError)
-		return analysisResult, lastError
+		LogDynamicAnalysisError(pkg, result.LastRunPhase, lastError)
+		return result, lastError
 	}
 
-	LogDynamicAnalysisResult(pkg, lastRunPhase, lastStatus)
+	LogDynamicAnalysisResult(pkg, result.LastRunPhase, result.LastStatus)
 
 	if !codeExecutionEnabled {
 		// nothing more to do
-		return analysisResult, nil
+		return result, nil
 	}
 
 	executionLog, err := retrieveExecutionLog(sb)
@@ -241,8 +245,8 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option, analysisCm
 		// don't return this error, just log it
 		log.Error("Error retrieving execution log", "error", err)
 	} else {
-		data.ExecutionLog = analysisrun.DynamicAnalysisExecutionLog(executionLog)
+		result.AnalysisData.ExecutionLog = analysisrun.DynamicAnalysisExecutionLog(executionLog)
 	}
 
-	return analysisResult, nil
+	return result, nil
 }
