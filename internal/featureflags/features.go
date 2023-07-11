@@ -16,5 +16,5 @@ var (
 	// CodeExecution automatically invokes package code during the import phase
 	// of dynamic analysis, which may uncover extra malicious behaviour.
 	// A list executed function/method/class names is saved.
-	CodeExecution = new("CodeExecution", false)
+	CodeExecution = new("CodeExecution", true)
 )
