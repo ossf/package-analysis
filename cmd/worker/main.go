@@ -311,6 +311,6 @@ func main() {
 
 	err := messageLoop(ctx, subURL, packagesBucket, notificationTopicURL, imageSpec, &resultStores)
 	if err != nil {
-		log.Error("Error encountered", "error", err)
+		logger.Errorw("Error encountered", "error", err)
 	}
 }
