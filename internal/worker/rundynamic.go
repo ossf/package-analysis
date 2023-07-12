@@ -187,7 +187,7 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option, analysisCm
 	for _, phase := range analysisrun.DefaultDynamicPhases() {
 		startTime := time.Now()
 		args := dynamicanalysis.MakeAnalysisArgs(pkg, phase)
-		phaseResult, err := dynamicanalysis.Run(sb, analysisCmd, args)
+		phaseResult, err := dynamicanalysis.Run(sb, analysisCmd, args, log.GetDefaultLogger())
 		result.LastRunPhase = phase
 
 		runDuration := time.Since(startTime)
