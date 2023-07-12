@@ -14,6 +14,8 @@ import (
 	"strings"
 	"unicode"
 
+	"go.uber.org/zap"
+
 	"github.com/ossf/package-analysis/internal/featureflags"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/utils"
@@ -192,7 +194,7 @@ func (r *Result) recordCommand(cmd, env []string) {
 	}
 }
 
-func (r *Result) parseEnterSyscall(syscall, args string) error {
+func (r *Result) parseEnterSyscall(syscall, args string, logger *zap.SugaredLogger) error {
 	switch syscall {
 	case "write":
 		// The index of the start of bytes written. Bytes written is expected to be in hex.
@@ -208,18 +210,20 @@ func (r *Result) parseEnterSyscall(syscall, args string) error {
 		}
 		writeBuffer := ""
 		match := writePattern.FindStringSubmatch(args)
+		path := match[1]
 		firstQuoteIndex := strings.Index(args, "\"")
 		lastQuoteIndex := strings.LastIndex(args, "\"")
 		if firstQuoteIndex != -1 && lastQuoteIndex != -1 && lastQuoteIndex > firstQuoteIndex {
 			// Save the contents between the first and last quote.
 			writeBuffer = args[firstQuoteIndex+1 : lastQuoteIndex]
 		}
-		r.recordFileWrite(match[1], []byte(writeBuffer), bytesWritten)
+		logger.Debugw("write", "path", path, "size", bytesWritten)
+		r.recordFileWrite(path, []byte(writeBuffer), bytesWritten)
 	}
 	return nil
 }
 
-func (r *Result) parseExitSyscall(syscall, args string) error {
+func (r *Result) parseExitSyscall(syscall, args string, logger *zap.SugaredLogger) error {
 	switch syscall {
 	case "creat":
 		match := creatPattern.FindStringSubmatch(args)
@@ -227,21 +231,19 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 			return fmt.Errorf("failed to parse create args: %s", args)
 		}
 
-		log.Debug("creat",
-			"path", match[1])
-		r.recordFileAccess(match[1], false, true, false)
+		path := match[1]
+		logger.Debugw("creat", "path", path)
+		r.recordFileAccess(path, false, true, false)
 	case "open":
 		match := openPattern.FindStringSubmatch(args)
 		if match == nil {
 			return fmt.Errorf("failed to parse open args: %s", args)
 		}
 
+		path := match[1]
 		read, write := parseOpenFlags(match[2])
-		log.Debug("open",
-			"path", match[1],
-			"read", read,
-			"write", write)
-		r.recordFileAccess(match[1], read, write, false)
+		logger.Debugw("open", "path", path, "read", read, "write", write)
+		r.recordFileAccess(path, read, write, false)
 	case "openat":
 		match := openatPattern.FindStringSubmatch(args)
 		if match == nil {
@@ -250,18 +252,15 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 
 		path := joinPaths(match[1], match[2])
 		read, write := parseOpenFlags(match[3])
-		log.Debug("openat",
-			"path", path,
-			"read", read,
-			"write", write)
+		logger.Debugw("openat", "path", path, "read", read, "write", write)
 		r.recordFileAccess(path, read, write, false)
 	case "execve":
 		match := execvePattern.FindStringSubmatch(args)
 		if match == nil {
 			return fmt.Errorf("failed to parse execve args: %s", args)
 		}
-		log.Debug("execve",
-			"cmdAndEnv", match[1])
+
+		logger.Debugw("execve", "cmdAndEnv", match[1])
 		cmd, env, err := parseCmdAndEnv(match[1])
 		if err != nil {
 			return err
@@ -284,26 +283,23 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 		if err != nil {
 			return err
 		}
-		log.Debug("socket",
-			"address", address,
-			"port", port)
+		logger.Debugw("socket", "address", address, "port", port)
 		r.recordSocket(address, port)
 	case "stat", "fstat", "lstat":
 		match := statPattern.FindStringSubmatch(args)
 		if match == nil {
 			return fmt.Errorf("failed to parse stat args: %s", args)
 		}
-		log.Debug("stat",
-			"path", match[1])
-		r.recordFileAccess(match[1], true, false, false)
+		path := match[1]
+		logger.Debugw("stat", "path", path)
+		r.recordFileAccess(path, true, false, false)
 	case "newfstatat":
 		match := newfstatatPattern.FindStringSubmatch(args)
 		if match == nil {
 			return fmt.Errorf("failed to parse newfstatat args: %s", args)
 		}
 		path := joinPaths(match[1], match[2])
-		log.Debug("newfstatat",
-			"path", path)
+		logger.Debugw("newfstatat", "path", path)
 		r.recordFileAccess(path, true, false, false)
 	case "unlink":
 		match := unlinkPatten.FindStringSubmatch(args)
@@ -311,8 +307,7 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 			return fmt.Errorf("failed to parse unlink args: %s", args)
 		}
 		path := match[1]
-		log.Debug("unlink",
-			"path", path)
+		logger.Infow("unlink", "path", path)
 		r.recordFileAccess(path, false, false, true)
 	case "unlinkat":
 		match := unlinkatPattern.FindStringSubmatch(args)
@@ -320,8 +315,7 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 			return fmt.Errorf("failed to parse unlinkat args: %s", args)
 		}
 		path := joinPaths(match[1], match[2])
-		log.Debug("unlinkat",
-			"path", path)
+		logger.Debugw("unlinkat", "path", path)
 		r.recordFileAccess(path, false, false, true)
 	}
 	return nil
@@ -329,7 +323,7 @@ func (r *Result) parseExitSyscall(syscall, args string) error {
 
 // Parse reads an strace and collects the files, sockets and commands that were
 // accessed.
-func Parse(r io.Reader) (*Result, error) {
+func Parse(r io.Reader, logger *zap.SugaredLogger) (*Result, error) {
 	result := &Result{
 		files:            make(map[string]*FileInfo),
 		sockets:          make(map[string]*SocketInfo),
@@ -347,22 +341,18 @@ func Parse(r io.Reader) (*Result, error) {
 
 		match := stracePattern.FindStringSubmatch(line)
 		if match != nil {
-			// Analyze entry events.
 			if match[2] == "E" {
-				err := result.parseEnterSyscall(match[3], match[4])
-				if err != nil {
+				// Analyze entry events.
+				if err := result.parseEnterSyscall(match[3], match[4], logger); err != nil {
 					// Log errors and continue.
 					log.Warn("Failed to parse entry syscall", "error", err)
 				}
 			}
-			// Analyze exit events.
 			if match[2] == "X" {
 				// Analyze exit events.
-				err := result.parseExitSyscall(match[3], match[4])
-				if err != nil {
+				if err := result.parseExitSyscall(match[3], match[4], logger); err != nil {
 					// Log errors and continue.
-					log.Warn("Failed to parse exit syscall",
-						"error", err)
+					log.Warn("Failed to parse exit syscall", "error", err)
 				}
 			}
 		}
