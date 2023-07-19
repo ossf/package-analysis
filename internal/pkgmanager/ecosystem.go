@@ -28,6 +28,12 @@ var (
 	}
 )
 
+/*
+defaultArchiveFilename returns a naive default choice of filename from a
+download URL by simply returning everything after the final slash in the URL.
+There is no guarantee that this method results in a good archive filename - e.g.
+NPM package namespace is not always included in the URL-derived filename.
+*/
 func defaultArchiveFilename(_, _, downloadURL string) string {
 	return path.Base(downloadURL)
 }
@@ -78,10 +84,10 @@ func (p *PkgManager) Package(name, version string) *Pkg {
 /*
 DownloadArchive downloads an archive of the given package name and version
 to the specified directory, and returns the path to the downloaded archive.
+The archive is named according to ecosystem-specific rules.
 
-The archive file is named according to ecosystem-specific rules.
-An empty string can be passed for directory, in which case the current
-directory is used.
+directory specifies the destination directory for the archive.
+If an empty string is passed, the current directory is used.
 
 If an error occurs during download of the file, it is returned along with
 an empty path value.
