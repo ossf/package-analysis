@@ -40,10 +40,13 @@ func downloadPackage(purl packageurl.PackageURL, dir string) error {
 		return err
 	}
 
-	fmt.Printf("[%s] %s@%s\n", pkg.EcosystemName(), pkg.Name(), pkg.Version())
+	fmt.Printf("[%s] %s@%s", pkg.EcosystemName(), pkg.Name(), pkg.Version())
 
-	if _, err := pkg.Manager().DownloadArchive(pkg.Name(), pkg.Version(), dir); err != nil {
+	if downloadPath, err := pkg.Manager().DownloadArchive(pkg.Name(), pkg.Version(), dir); err != nil {
+		fmt.Println()
 		return err
+	} else {
+		fmt.Printf(" -> %s\n", downloadPath)
 	}
 
 	return nil
