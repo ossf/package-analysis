@@ -1,7 +1,6 @@
 package pkgmanager
 
 import (
-	"os"
 	"testing"
 
 	"github.com/ossf/package-analysis/internal/utils"
@@ -141,9 +140,6 @@ func TestDownload(t *testing.T) {
 				}
 			}
 
-			if err := os.Remove(downloadPath); err != nil {
-				t.Errorf("Error removing downloaded archive: %v", err)
-			}
 		})
 	}
 }
