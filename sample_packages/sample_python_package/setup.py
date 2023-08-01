@@ -9,4 +9,4 @@ from src.example import *
 setup(name="sample_python_package",
       packages=find_packages(),)
 
-sendHTTPSPostRequest("setup.py")
+send_https_post_request("setup.py")

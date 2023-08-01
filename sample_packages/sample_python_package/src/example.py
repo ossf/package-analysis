@@ -2,7 +2,7 @@ import http.client
 import json
 
 # Sends an HTTPS post request and prints out the response.
-def sendHTTPSPostRequest(location: str) -> None:
+def send_https_post_request(location: str) -> None:
   host = "www.httpbin.org"
   conn = http.client.HTTPSConnection(host)
   data = {'text': 'Sending data through HTTPS from: ' + location}
@@ -12,7 +12,7 @@ def sendHTTPSPostRequest(location: str) -> None:
   print(response.read().decode())
 
 def main():
-  sendHTTPSPostRequest("main function")
+  send_https_post_request("main function")
 
 
 if __name__ == "__main__":

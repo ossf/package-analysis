@@ -5,4 +5,4 @@ sys.path.append(SCRIPT_DIR)
 
 from example import *
 
-sendHTTPSPostRequest("__init__.py")
+send_https_post_request("__init__.py")
