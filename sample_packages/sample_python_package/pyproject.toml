@@ -1,12 +1,12 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
 
 [project]
-name = "example_package"
+name = "sample_python_package"
 version = "0.0.1"
 authors = [
-    { name="ossf/package-analysis" },
+    { name="OpenSSF <openssf-wg-securing-crit-prjs@lists.openssf.org>" },
 ]
 description = "A small example package"
 readme = "README.md"
