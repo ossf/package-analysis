@@ -11,7 +11,7 @@ require (
 	github.com/texttheater/golang-levenshtein/levenshtein v0.0.0-20200805054039-cae8b0eaed6c
 	go.uber.org/zap v1.24.0
 	gocloud.dev v0.33.0
-	gocloud.dev/pubsub/kafkapubsub v0.32.0
+	gocloud.dev/pubsub/kafkapubsub v0.33.0
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
 	google.golang.org/api v0.134.0
 	google.golang.org/grpc v1.57.0
@@ -47,7 +47,7 @@ require (
 	github.com/aws/smithy-go v1.14.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/eapache/go-resiliency v1.3.0 // indirect
-	github.com/eapache/go-xerial-snappy v0.0.0-20230111030713-bf00bc1b83b6 // indirect
+	github.com/eapache/go-xerial-snappy v0.0.0-20230731223053-c322873962e3 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
