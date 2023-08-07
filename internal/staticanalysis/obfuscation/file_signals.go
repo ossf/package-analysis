@@ -64,6 +64,15 @@ type FileSignals struct {
 	// EscapedStrings contain string literals that contain large amount of escape
 	// characters, which may indicate obfuscation.
 	EscapedStrings []EscapedString
+
+	// URLs contains any urls (http or https) found in string literals
+	URLs []string
+
+	// IPAddresses contains any IP addresses found in string literals
+	IPAddresses []string
+
+	// EmailAddresses contains any email addresses found in string literals
+	EmailAddresses []string
 }
 
 func (s FileSignals) String() string {
@@ -145,9 +154,15 @@ func ComputeFileSignals(parseData parsing.SingleResult) FileSignals {
 	signals.Base64Strings = []string{}
 	signals.HexStrings = []string{}
 	signals.EscapedStrings = []EscapedString{}
+	signals.URLs = []string{}
+	signals.IPAddresses = []string{}
+	signals.EmailAddresses = []string{}
 	for _, s := range parseData.StringLiterals {
 		signals.Base64Strings = append(signals.Base64Strings, detections.FindBase64Substrings(s.Value)...)
 		signals.HexStrings = append(signals.HexStrings, detections.FindHexSubstrings(s.Value)...)
+		signals.URLs = append(signals.URLs, detections.FindURLs(s.Value)...)
+		signals.IPAddresses = append(signals.IPAddresses, detections.FindIPAddresses(s.Value)...)
+		signals.EmailAddresses = append(signals.EmailAddresses, detections.FindEmailAddresses(s.Value)...)
 		if detections.IsHighlyEscaped(s, 8, 0.25) {
 			escapedString := EscapedString{
 				RawLiteral:       s.Raw,
