@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net/url"
 	"os"
 	"path"
 	"time"
@@ -21,8 +22,7 @@ import (
 )
 
 type ResultStore struct {
-	bucket        string
-	basePath      string
+	bucket        *url.URL
 	constructPath bool
 }
 
@@ -39,15 +39,25 @@ func ConstructPath() Option {
 	return option(func(rs *ResultStore) { rs.constructPath = true })
 }
 
-// BasePath sets the base path used while saving files to storage.
-func BasePath(base string) Option {
-	return option(func(rs *ResultStore) { rs.basePath = base })
-}
-
+// New creates a new ResultStore instance with the given bucket URL and options.
+// If the bucket URL is invalid, a nil pointer is returned.
 func New(bucket string, options ...Option) *ResultStore {
-	rs := &ResultStore{
-		bucket: bucket,
+	bucketURL, err := url.Parse(bucket)
+	if err != nil {
+		return nil
 	}
+
+	if bucketURL.Scheme == "file" {
+		// https://github.com/google/go-cloud/issues/3294
+		params := bucketURL.Query()
+		params.Set("no_temp_dir", "true")
+		bucketURL.RawQuery = params.Encode()
+	}
+
+	rs := &ResultStore{
+		bucket: bucketURL,
+	}
+
 	for _, o := range options {
 		o.set(rs)
 	}
@@ -55,40 +65,39 @@ func New(bucket string, options ...Option) *ResultStore {
 }
 
 func (rs *ResultStore) String() string {
-	s := rs.bucket + "/" + rs.basePath
+	// label when bucket path is constructed from package name
 	if rs.constructPath {
-		s += "+"
+		return rs.bucket.JoinPath("<dynamic path>").String()
 	}
-	return s
+
+	return rs.bucket.String()
 }
 
 func (rs *ResultStore) generatePath(p Pkg) string {
-	uploadPath := rs.basePath
 	if rs.constructPath {
-		uploadPath = path.Join(uploadPath, p.EcosystemName(), p.Name())
+		return path.Join(rs.bucket.Path, p.EcosystemName(), p.Name())
 	}
-	return uploadPath
+
+	return rs.bucket.Path
 }
 
-func (rs *ResultStore) SaveTempFilesToZip(ctx context.Context, p Pkg, fileName string, tempFileNames []string) error {
-	bkt, err := blob.OpenBucket(ctx, rs.bucket)
+func (rs *ResultStore) SaveTempFilesToZip(ctx context.Context, p Pkg, zipName string, tempFileNames []string) error {
+	bkt, err := blob.OpenBucket(ctx, rs.bucket.String())
 	if err != nil {
 		return err
 	}
 	defer bkt.Close()
 
-	uploadPath := path.Join(rs.generatePath(p), fileName+".zip")
-	log.Info("Uploading results",
-		"bucket", rs.bucket,
-		"path", uploadPath)
+	uploadPath := path.Join(rs.generatePath(p), zipName+".zip")
+	log.Info("Uploading results", "bucket", rs.bucket.String(), "path", uploadPath)
 
-	w, err := bkt.NewWriter(ctx, uploadPath, nil)
+	bucketWriter, err := bkt.NewWriter(ctx, uploadPath, nil)
 	if err != nil {
 		return err
 	}
-	defer w.Close()
+	defer bucketWriter.Close()
 
-	zipWriter := zip.NewWriter(w)
+	zipWriter := zip.NewWriter(bucketWriter)
 	defer zipWriter.Close()
 
 	for _, fileName := range tempFileNames {
@@ -130,14 +139,14 @@ func (rs *ResultStore) SaveAnalyzedPackage(ctx context.Context, manager *pkgmana
 		return err
 	}
 
-	bkt, err := blob.OpenBucket(ctx, rs.bucket)
+	bkt, err := blob.OpenBucket(ctx, rs.bucket.String())
 	if err != nil {
 		return err
 	}
 	defer bkt.Close()
 
 	uploadPath := rs.generatePath(pkg) + "-" + hash
-	log.Info("Uploading analyzed package", "bucket", rs.bucket, "path", uploadPath)
+	log.Info("Uploading analyzed package", "bucket", rs.bucket.String(), "path", uploadPath)
 
 	f, err := os.Open(archivePath)
 	if err != nil {
@@ -185,16 +194,14 @@ func (rs *ResultStore) SaveWithFilename(ctx context.Context, p Pkg, filename str
 		return err
 	}
 
-	bkt, err := blob.OpenBucket(ctx, rs.bucket)
+	bkt, err := blob.OpenBucket(ctx, rs.bucket.String())
 	if err != nil {
 		return err
 	}
 	defer bkt.Close()
 
 	uploadPath := path.Join(rs.generatePath(p), filename)
-	log.Info("Uploading results",
-		"bucket", rs.bucket,
-		"path", uploadPath)
+	log.Info("Uploading results", "bucket", rs.bucket.String(), "path", uploadPath)
 
 	w, err := bkt.NewWriter(ctx, uploadPath, nil)
 	if err != nil {

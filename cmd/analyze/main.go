@@ -55,21 +55,17 @@ func makeResultStores() worker.ResultStores {
 	rs := worker.ResultStores{}
 
 	if *dynamicUpload != "" {
-		bucket, path := parseBucketPath(*dynamicUpload)
-		rs.DynamicAnalysis = resultstore.New(bucket, resultstore.BasePath(path))
+		rs.DynamicAnalysis = resultstore.New(*dynamicUpload)
 	}
 	if *staticUpload != "" {
-		bucket, path := parseBucketPath(*staticUpload)
-		rs.StaticAnalysis = resultstore.New(bucket, resultstore.BasePath(path))
+		rs.StaticAnalysis = resultstore.New(*staticUpload)
 	}
 	if *uploadFileWriteInfo != "" {
-		bucket, path := parseBucketPath(*uploadFileWriteInfo)
-		rs.FileWrites = resultstore.New(bucket, resultstore.BasePath(path))
+		rs.FileWrites = resultstore.New(*uploadFileWriteInfo)
 	}
 
 	if *uploadAnalyzedPkg != "" {
-		bucket, path := parseBucketPath(*uploadAnalyzedPkg)
-		rs.AnalyzedPackage = resultstore.New(bucket, resultstore.BasePath(path))
+		rs.AnalyzedPackage = resultstore.New(*uploadAnalyzedPkg, resultstore.ConstructPath())
 	}
 
 	return rs

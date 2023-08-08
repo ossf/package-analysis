@@ -10,7 +10,7 @@ require (
 	github.com/package-url/packageurl-go v0.1.1
 	github.com/texttheater/golang-levenshtein/levenshtein v0.0.0-20200805054039-cae8b0eaed6c
 	go.uber.org/zap v1.25.0
-	gocloud.dev v0.33.0
+	gocloud.dev v0.33.1-0.20230803173437-cfe20caf3c31
 	gocloud.dev/pubsub/kafkapubsub v0.33.0
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
 	google.golang.org/api v0.134.0
