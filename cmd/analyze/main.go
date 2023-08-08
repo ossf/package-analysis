@@ -8,6 +8,9 @@ import (
 	"os"
 	"strings"
 
+	"golang.org/x/exp/maps"
+	"golang.org/x/exp/slices"
+
 	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/featureflags"
 	"github.com/ossf/package-analysis/internal/log"
@@ -35,7 +38,8 @@ var (
 	customSandbox       = flag.String("sandbox-image", "", "override default dynamic analysis sandbox with custom image")
 	customAnalysisCmd   = flag.String("analysis-command", "", "override default dynamic analysis script path (use with custom sandbox image)")
 	listModes           = flag.Bool("list-modes", false, "prints out a list of available analysis modes")
-	features            = flag.String("feature-flags", "", "override default feature flag settings")
+	features            = flag.String("features", "", "override features that are enabled/disabled by default")
+	listFeatures        = flag.Bool("list-features", false, "list available features that can be toggled")
 	help                = flag.Bool("help", false, "print help on available options")
 	analysisMode        = utils.CommaSeparatedFlags("mode", []string{"static", "dynamic"},
 		"list of analysis modes to run, separated by commas. Use -list-modes to see available options")
@@ -80,6 +84,25 @@ func printAnalysisModes() {
 	for _, mode := range analysis.AllModes() {
 		fmt.Println(mode)
 	}
+	fmt.Println()
+}
+
+func printFeatureFlags() {
+	fmt.Printf("Feature List\n\n")
+	fmt.Printf("%-30s %s\n", "Name", "Default")
+	fmt.Printf("----------------------------------------\n")
+
+	// print features in sorted order
+	state := featureflags.State()
+	sortedFeatures := maps.Keys(state)
+	slices.Sort(sortedFeatures)
+
+	// print Off/On rather than 'false' and 'true'
+	stateStrings := map[bool]string{false: "Off", true: "On"}
+	for _, feature := range sortedFeatures {
+		fmt.Printf("%-30s %s\n", feature, stateStrings[state[feature]])
+	}
+
 	fmt.Println()
 }
 
@@ -177,6 +200,11 @@ func main() {
 
 	if *listModes {
 		printAnalysisModes()
+		return
+	}
+
+	if *listFeatures {
+		printFeatureFlags()
 		return
 	}
 
