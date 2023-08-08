@@ -45,6 +45,16 @@ var (
 		"list of analysis modes to run, separated by commas. Use -list-modes to see available options")
 )
 
+func parseBucketPath(path string) (string, string) {
+	parsed, err := url.Parse(path)
+	if err != nil {
+		log.Panic("Failed to parse bucket path",
+			"path", path)
+	}
+
+	return parsed.Scheme + "://" + parsed.Host, parsed.Path
+}
+
 func makeResultStores() worker.ResultStores {
 	rs := worker.ResultStores{}
 
