@@ -3,9 +3,9 @@ package detections
 import "regexp"
 
 var (
-	hex        = regexp.MustCompile("_0x[[:xdigit:]]{3,}")
-	numeric    = regexp.MustCompile("^[A-Za-z_]\\d{3,}")
-	singleChar = regexp.MustCompile("^[A-Za-z_]$")
+	hexIdentifier        = regexp.MustCompile("_0x[[:xdigit:]]{3,}")
+	numericIdentifier    = regexp.MustCompile("^[A-Za-z_]\\d{3,}")
+	singleCharIdentifier = regexp.MustCompile("^[A-Za-z_]$")
 )
 
 /*
@@ -16,7 +16,7 @@ but if there is a large number of suspicious identifiers (especially of the
 same type) then obfuscation is probable.
 */
 var SuspiciousIdentifierPatterns = map[string]*regexp.Regexp{
-	"hex":     hex,
-	"numeric": numeric,
-	"single":  singleChar,
+	"hex":     hexIdentifier,
+	"numeric": numericIdentifier,
+	"single":  singleCharIdentifier,
 }
