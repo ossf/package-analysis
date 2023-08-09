@@ -219,7 +219,7 @@ func run() (err error) {
 func main() {
 	err := run()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+		log.Error("static analysis failed", "error", err)
 		os.Exit(1)
 	}
 }

@@ -52,6 +52,7 @@ var (
 	defaultLoggingEnv LoggingEnv = LoggingEnvDev
 )
 
+// Deprecated: do not use global logger
 func GetDefaultLogger() *zap.SugaredLogger {
 	return defaultLogger
 }
