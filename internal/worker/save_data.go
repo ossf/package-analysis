@@ -66,7 +66,11 @@ func saveExecutionLog(ctx context.Context, pkg *pkgmanager.Pkg, dest *ResultStor
 		return nil
 	}
 
-	execLogFilename := resultstore.MakeFilename(pkg, "execution-log")
+	execLogFilename := "execution-log.json"
+	if pkg.Version() != "" {
+		execLogFilename = fmt.Sprintf("execution-log-%s.json", pkg.Version())
+	}
+
 	if err := dest.DynamicAnalysis.SaveWithFilename(ctx, pkg, execLogFilename, data.ExecutionLog); err != nil {
 		return fmt.Errorf("failed to save execution log to %s: %w", dest.DynamicAnalysis, err)
 	}

@@ -58,7 +58,7 @@ func makeResultStores() worker.ResultStores {
 	}
 
 	if *uploadAnalyzedPkg != "" {
-		rs.AnalyzedPackage = resultstore.New(*uploadAnalyzedPkg, resultstore.ConstructPath())
+		rs.AnalyzedPackage = resultstore.New(*uploadAnalyzedPkg)
 	}
 
 	return rs
