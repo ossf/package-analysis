@@ -38,6 +38,8 @@ var validURLs = []string{
 	"http://www.qwertyuiop.com/?Mamas&papa&resources-for-papas&Id=123",
 	"http://[2001:db8::1]:80",
 	"http://[2001:db8::1]:80/anz?val=42",
+	"ws://[2600:3c00::f03c:91ff:fe73:2b08]:31333",
+	"http://[1080:0:0:0:8:800:200C:417A]/index.html",
 	"HTTPS://GITHUB.COM/",
 	"http://GITHUB.COM/",
 	"https://GITHUB.com:443",
@@ -47,6 +49,11 @@ var validURLs = []string{
 	"http://10.1.1.255",
 	"http://224.1.1.1",
 	"http://10.1.1.1",
+	// TODO data URLs
+	// "data:,Hello%2C%20World%21",
+	// "data:text/plain;base64,SGVsbG8sIFdvcmxkIQ==",
+	// "data:text/html,%3Ch1%3EHello%2C%20World%21%3C%2Fh1%3E",
+	// "data:text/html,%3Cscript%3Ealert%28%27hi%27%29%3B%3C%2Fscript%3E",
 	// Unsupported but still technically valid URLs
 	//"http://उदाहरण.परीक्षा",
 	//"http://userid:password@example.com:8080",
