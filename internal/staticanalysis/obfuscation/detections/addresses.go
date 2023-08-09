@@ -47,8 +47,8 @@ var ipv6Regexp4 = regexp.MustCompile(fmt.Sprintf(`(?:(?:%s:){1,6}|:)(?:(?::%s){1
 // also be matched.
 var ipv6Regexp = utils.CombineRegexp(ipv6Regexp1, ipv6Regexp2, ipv6Regexp3, ipv6Regexp4)
 
-var urlSchemes = regexp.MustCompile(`(?:https?|ftp|ws)`).String()
-var urlChars = regexp.MustCompile(`[\p{L}\p{N}\p{S}_-]`).String() // any unicode letter, number or symbol
+var urlSchemes = regexp.MustCompile(`(?i:https?|ftp|ws)`)
+var urlChars = regexp.MustCompile(`[\p{L}\p{N}\p{S}_-]`) // any unicode letter, number or symbol
 
 // portAndQuery represents an optional port (e.g :443) and query string (e.g. /search?q=hello) in a URL
 var portAndQuery = regexp.MustCompile(`(?::\d+)?(?:[^.]\S*)?`)

@@ -38,6 +38,9 @@ var validURLs = []string{
 	"http://www.qwertyuiop.com/?Mamas&papa&resources-for-papas&Id=123",
 	"http://[2001:db8::1]:80",
 	"http://[2001:db8::1]:80/anz?val=42",
+	"HTTPS://GITHUB.COM/",
+	"http://GITHUB.COM/",
+	"https://GITHUB.com:443",
 	// note, these IP addresses were specified as invalid in the source test cases
 	"http://0.0.0.0",
 	"http://10.1.1.0",
@@ -206,6 +209,8 @@ var validEmailAddresses = []string{
 	"postmaster@[123.123.123.123]",
 	"postmaster@[IPv6:2001:0db8:85a3:0000:0000:8a2e:0370:7334]",
 	`"john..doe"@example.org`,
+	"UPPERCASE_NAME@lowercasedomain.com",
+	"lower_case_name@UPPERCASEDOMAIN.COM",
 	// Unsupported email addresses
 	// `" "@example.org`,
 	// `"very.(),:;<>[]\".VERY.\"very@\\ \"very\".unusual"@strange.example.com`,
