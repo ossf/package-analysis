@@ -50,7 +50,7 @@ func New(bucket string, options ...Option) *ResultStore {
 	if bucketURL.Scheme == "file" {
 		// https://github.com/google/go-cloud/issues/3294
 		params := bucketURL.Query()
-		params.Set("no_temp_dir", "true")
+		params.Set("no_tmp_dir", "true")
 		bucketURL.RawQuery = params.Encode()
 	}
 
@@ -81,8 +81,12 @@ func (rs *ResultStore) generatePath(p Pkg) string {
 	return rs.bucket.Path
 }
 
+func (rs *ResultStore) openBucket(ctx context.Context) (*blob.Bucket, error) {
+	return blob.OpenBucket(ctx, rs.bucket.String())
+}
+
 func (rs *ResultStore) SaveTempFilesToZip(ctx context.Context, p Pkg, zipName string, tempFileNames []string) error {
-	bkt, err := blob.OpenBucket(ctx, rs.bucket.String())
+	bkt, err := rs.openBucket(ctx)
 	if err != nil {
 		return err
 	}
@@ -139,7 +143,7 @@ func (rs *ResultStore) SaveAnalyzedPackage(ctx context.Context, manager *pkgmana
 		return err
 	}
 
-	bkt, err := blob.OpenBucket(ctx, rs.bucket.String())
+	bkt, err := rs.openBucket(ctx)
 	if err != nil {
 		return err
 	}
@@ -194,7 +198,7 @@ func (rs *ResultStore) SaveWithFilename(ctx context.Context, p Pkg, filename str
 		return err
 	}
 
-	bkt, err := blob.OpenBucket(ctx, rs.bucket.String())
+	bkt, err := rs.openBucket(ctx)
 	if err != nil {
 		return err
 	}
