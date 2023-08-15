@@ -23,6 +23,7 @@ import (
 
 type ResultStore struct {
 	bucket        *url.URL
+	keyPrefix     string
 	constructPath bool
 }
 
@@ -47,15 +48,24 @@ func New(bucket string, options ...Option) *ResultStore {
 		return nil
 	}
 
+	var pathPrefix string
+
 	if bucketURL.Scheme == "file" {
 		// https://github.com/google/go-cloud/issues/3294
 		params := bucketURL.Query()
 		params.Set("no_tmp_dir", "true")
 		bucketURL.RawQuery = params.Encode()
+	} else {
+		// for non-file schemes, we need to separate the path because OpenBucket
+		// doesn't support turning the path into a key prefix
+		pathPrefix = bucketURL.Path
+		bucketURL.Path = ""
+		bucketURL.RawPath = ""
 	}
 
 	rs := &ResultStore{
-		bucket: bucketURL,
+		bucket:    bucketURL,
+		keyPrefix: pathPrefix,
 	}
 
 	for _, o := range options {
@@ -67,10 +77,10 @@ func New(bucket string, options ...Option) *ResultStore {
 func (rs *ResultStore) String() string {
 	// label when bucket path is constructed from package name
 	if rs.constructPath {
-		return rs.bucket.JoinPath("<dynamic path>").String()
+		return rs.bucket.JoinPath(rs.keyPrefix, "<dynamic path>").String()
 	}
 
-	return rs.bucket.String()
+	return rs.bucket.JoinPath(rs.keyPrefix).String()
 }
 
 // generateKey creates an identifier key to store an object with.
@@ -78,11 +88,11 @@ func (rs *ResultStore) String() string {
 // the ConstructPath() option, then the base key will be prefixed
 // with the ecosystem and name of the given package (in that order).
 // Otherwise, the basename is returned.
-func (rs *ResultStore) generateKey(baseKey string, p Pkg) string {
+func (rs *ResultStore) generateKey(p Pkg, baseKey string) string {
 	if p != nil && rs.constructPath {
-		return path.Join(p.EcosystemName(), p.Name(), baseKey)
+		return path.Join(rs.keyPrefix, p.EcosystemName(), p.Name(), baseKey)
 	}
-	return baseKey
+	return path.Join(rs.keyPrefix, baseKey)
 }
 
 func (rs *ResultStore) openBucket(ctx context.Context) (*blob.Bucket, error) {
@@ -96,7 +106,7 @@ func (rs *ResultStore) SaveTempFilesToZip(ctx context.Context, p Pkg, zipName st
 	}
 	defer bkt.Close()
 
-	uploadPath := rs.generateKey(zipName+".zip", p)
+	uploadPath := rs.generateKey(p, zipName+".zip")
 	log.Info("Uploading results", "bucket", rs.bucket.String(), "path", uploadPath)
 
 	bucketWriter, err := bkt.NewWriter(ctx, uploadPath, nil)
@@ -153,7 +163,7 @@ func (rs *ResultStore) SaveAnalyzedPackage(ctx context.Context, manager *pkgmana
 	}
 	defer bkt.Close()
 
-	uploadPath := rs.generateKey(pkg.Version()+"-"+hash, pkg)
+	uploadPath := rs.generateKey(pkg, pkg.Version()+"-"+hash)
 	log.Info("Uploading analyzed package", "bucket", rs.bucket.String(), "path", uploadPath)
 
 	f, err := os.Open(archivePath)
@@ -208,7 +218,7 @@ func (rs *ResultStore) SaveWithFilename(ctx context.Context, p Pkg, filename str
 	}
 	defer bkt.Close()
 
-	uploadPath := rs.generateKey(filename, p)
+	uploadPath := rs.generateKey(p, filename)
 	log.Info("Uploading results", "bucket", rs.bucket.String(), "path", uploadPath)
 
 	w, err := bkt.NewWriter(ctx, uploadPath, nil)
