@@ -98,6 +98,8 @@ func makeWorkDirs() (workDirs, error) {
 func run() (err error) {
 	startTime := time.Now()
 
+	log.Initialize(os.Getenv("LOGGER_ENV"))
+
 	flag.TextVar(&ecosystem, "ecosystem", pkgecosystem.None, fmt.Sprintf("package ecosystem. Can be %s (required)", pkgecosystem.SupportedEcosystemsStrings))
 	analyses.InitFlag()
 	flag.Parse()
