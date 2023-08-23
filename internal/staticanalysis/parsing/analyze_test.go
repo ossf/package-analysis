@@ -83,7 +83,7 @@ func TestCollectData(t *testing.T) {
 				t.Errorf("%v", err)
 				return
 			}
-			got := result["stdin"][JavaScript]
+			got := result[0]
 
 			if !reflect.DeepEqual(got.Identifiers, tt.expectedData.Identifiers) {
 				t.Errorf("Identifiers mismatch: got %v, want %v", got.Identifiers, tt.expectedData.Identifiers)

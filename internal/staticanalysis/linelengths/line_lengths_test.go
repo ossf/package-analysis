@@ -3,13 +3,15 @@ package linelengths
 import (
 	"reflect"
 	"testing"
+
+	"github.com/ossf/package-analysis/internal/utils/valuecounts"
 )
 
 func TestSourceStringLineLengths(t *testing.T) {
 	tests := []struct {
 		name    string
 		source  string
-		want    map[int]int
+		want    valuecounts.ValueCounts
 		wantErr bool
 	}{
 		{

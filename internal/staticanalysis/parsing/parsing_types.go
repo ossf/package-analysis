@@ -12,6 +12,7 @@ import (
 type Language string
 
 const (
+	NoLanguage Language = ""
 	JavaScript Language = "JavaScript"
 )
 
@@ -83,11 +84,8 @@ func (s parserStatus) String() string {
 	return fmt.Sprintf("[%s] %s: %s pos %d:%d", s.Type, s.Name, s.Message, s.Pos.Row(), s.Pos.Col())
 }
 
-// languageResult maps filenames to languageData for that file (i.e. parsing results for a single language).
-type languageResult map[string]languageData
-
-// languageData holds data for a single file processed by a single language parser.
-type languageData struct {
+// singleParseData holds package-internal data for a single file processed by a single language parser.
+type singleParseData struct {
 	ValidInput  bool
 	Identifiers []parsedIdentifier
 	Literals    []parsedLiteral[any]
@@ -96,12 +94,12 @@ type languageData struct {
 	Errors      []parserStatus
 }
 
-func (p languageData) String() string {
-	identifiers := utils.Transform(p.Identifiers, func(pi parsedIdentifier) string { return pi.String() })
-	literals := utils.Transform(p.Literals, func(pl parsedLiteral[any]) string { return pl.String() })
-	comments := utils.Transform(p.Comments, func(c parsedComment) string { return c.String() })
-	info := utils.Transform(p.Info, func(i parserStatus) string { return i.String() })
-	errors := utils.Transform(p.Errors, func(e parserStatus) string { return e.String() })
+func (d singleParseData) String() string {
+	identifiers := utils.Transform(d.Identifiers, func(pi parsedIdentifier) string { return pi.String() })
+	literals := utils.Transform(d.Literals, func(pl parsedLiteral[any]) string { return pl.String() })
+	comments := utils.Transform(d.Comments, func(c parsedComment) string { return c.String() })
+	info := utils.Transform(d.Info, func(i parserStatus) string { return i.String() })
+	errors := utils.Transform(d.Errors, func(e parserStatus) string { return e.String() })
 
 	parts := []string{
 		"== Identifiers ==",
