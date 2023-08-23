@@ -22,6 +22,8 @@ func Analyze(parseData []*parsing.SingleResult) Result {
 		case parsing.JavaScript:
 			signals := ComputeFileSignals(*fileData)
 			signals.Filename = fileData.Filename
+			// remove NaNs for JSON
+			RemoveNaNs(&signals)
 			result.Signals = append(result.Signals, signals)
 		}
 	}

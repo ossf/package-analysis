@@ -98,8 +98,6 @@ func makeWorkDirs() (workDirs, error) {
 func run() (err error) {
 	startTime := time.Now()
 
-	log.Initialize(os.Getenv("LOGGER_ENV"))
-
 	flag.TextVar(&ecosystem, "ecosystem", pkgecosystem.None, fmt.Sprintf("package ecosystem. Can be %s (required)", pkgecosystem.SupportedEcosystemsStrings))
 	analyses.InitFlag()
 	flag.Parse()
@@ -180,7 +178,8 @@ func run() (err error) {
 
 	jsonResult, err := json.Marshal(results)
 	if err != nil {
-		return fmt.Errorf("JSON marshall error: %v", err)
+		log.Debug(fmt.Sprintf("unserialisable JSON: %v", results))
+		return fmt.Errorf("JSON marshal error: %v", err)
 	}
 
 	outputFile := os.Stdout
