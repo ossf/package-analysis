@@ -11,14 +11,18 @@ import (
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 	"github.com/ossf/package-analysis/internal/utils"
+	"github.com/ossf/package-analysis/internal/utils/valuecounts"
 )
 
 // FileSignals holds information related to the presence of obfuscated code in a single file.
 type FileSignals struct {
-	// StringLengths is a map from length (in characters) to number of
-	// string literals in the file having that length. If a length key is
-	// missing, it is assumed to be zero.
-	StringLengths map[int]int
+	// Filename is the path in the package
+	Filename string
+
+	// StringLengths counts the lengths of string literals in the file.
+	// If there is no count for a given string length, it means that there
+	// were no strings of that length in the file
+	StringLengths valuecounts.ValueCounts
 
 	// StringEntropySummary provides sample statistics for the set of entropy
 	// values calculated on each string literal. Character probabilities for the
@@ -31,10 +35,10 @@ type FileSignals struct {
 	// to normalise the values in StringEntropySummary.
 	CombinedStringEntropy float64
 
-	// IdentifierLengths is a map from length (in characters) to number of
-	// identifiers in the file having that length. If a length key is missing,
-	// it is assumed to be zero.
-	IdentifierLengths map[int]int
+	// IdentifierLengths counts the lengths of identifiers in the file.
+	// If there is no entry for a given length, it means that there
+	// were no identifiers of that length in the file
+	IdentifierLengths valuecounts.ValueCounts
 
 	// IdentifierEntropySummary provides sample statistics for the set of entropy
 	// values calculated on each identifier. Character probabilities for the
@@ -77,6 +81,7 @@ type FileSignals struct {
 
 func (s FileSignals) String() string {
 	parts := []string{
+		fmt.Sprintf("filename: %s", s.Filename),
 		fmt.Sprintf("string lengths: %v", s.StringLengths),
 		fmt.Sprintf("string entropy: %s", s.StringEntropySummary),
 		fmt.Sprintf("combined string entropy: %f", s.CombinedStringEntropy),

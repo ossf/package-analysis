@@ -3,6 +3,8 @@ package obfuscation
 import (
 	"fmt"
 	"strings"
+
+	"github.com/ossf/package-analysis/internal/utils"
 )
 
 // Result holds all data produced by obfuscation analysis (see Analyze() in analyze.go).
@@ -11,21 +13,16 @@ type Result struct {
 	// e.g. because they could not be parsed by any supported parser.
 	ExcludedFiles []string `json:"excluded_files"`
 
-	// Signals maps package file names to corresponding obfuscation.FileSignals
-	// that are used to detect suspicious files.
-	Signals map[string]FileSignals `json:"signals"`
+	// Signals contains an obfuscation.FileSignals object that is useful for detecting suspicious files.
+	Signals []FileSignals `json:"signals"`
 }
 
 func (r Result) String() string {
-	fileSignalsStrings := make([]string, 0)
-
-	for filename, signals := range r.Signals {
-		fileSignalsStrings = append(fileSignalsStrings, fmt.Sprintf("== %s ==\n%s\n", filename, signals))
-	}
+	signalsStrings := utils.Transform(r.Signals, func(s FileSignals) string { return s.String() })
 
 	parts := []string{
-		fmt.Sprintf("excluded files:\n%v", r.ExcludedFiles),
-		fmt.Sprintf("file signals\n%s", strings.Join(fileSignalsStrings, "\n\n")),
+		fmt.Sprintf("excluded files:\n%s", strings.Join(r.ExcludedFiles, ", ")),
+		fmt.Sprintf("file signals:\n%s", strings.Join(signalsStrings, "\n==================\n")),
 	}
 
 	return strings.Join(parts, "\n\n-----------------------------\n\n")

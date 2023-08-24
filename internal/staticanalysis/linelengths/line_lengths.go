@@ -5,6 +5,8 @@ import (
 	"io"
 	"os"
 	"strings"
+
+	"github.com/ossf/package-analysis/internal/utils/valuecounts"
 )
 
 /*
@@ -22,7 +24,7 @@ Note: there may not be much useful information to be gathered by distinguishing
 between line lengths when they get very long. It may be pragmatic to just report
 all lines above e.g. 64K as 64K long.
 */
-func GetLineLengths(filePath string, sourceString string) (map[int]int, error) {
+func GetLineLengths(filePath string, sourceString string) (valuecounts.ValueCounts, error) {
 	var reader *bufio.Reader
 	if len(filePath) > 0 {
 		file, err := os.Open(filePath)
@@ -36,7 +38,7 @@ func GetLineLengths(filePath string, sourceString string) (map[int]int, error) {
 		reader = bufio.NewReader(strings.NewReader(sourceString))
 	}
 
-	lengths := map[int]int{}
+	lengths := valuecounts.ValueCounts{}
 	for {
 		/* Normally bufio.Scanner would be more convenient to use here, however by default
 		it uses a fixed maximum buffer size (MaxScanTokenSize = 64 * 1024). Since some

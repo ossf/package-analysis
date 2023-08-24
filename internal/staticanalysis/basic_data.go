@@ -13,29 +13,33 @@ import (
 	"github.com/ossf/package-analysis/internal/staticanalysis/externalcmd"
 	"github.com/ossf/package-analysis/internal/staticanalysis/linelengths"
 	"github.com/ossf/package-analysis/internal/utils"
+	"github.com/ossf/package-analysis/internal/utils/valuecounts"
 )
 
 // BasicPackageData records basic information about files in a package,
 // mapping file path within the archive to BasicFileData about that file.
 type BasicPackageData struct {
-	Files map[string]BasicFileData `json:"files"`
+	Files []BasicFileData `json:"files"`
 }
 
 // BasicFileData records various information about a file that can be determined
 // without parsing it using a programming language parser.
 type BasicFileData struct {
+	// Filename records the path to the file within the package archive
+	Filename string `json:"filename"`
+
 	// FileType records the output of the `file` command run on that file.
-	FileType string
+	FileType string `json:"filetype"`
 
 	// Size records the size of the file (as reported by the filesystem).
-	Size int64
+	Size int64 `json:"size"`
 
 	// Hash records the SHA256sum hash of the file.
-	Hash string
+	Hash string `json:"hash"`
 
 	// LineLengthCounts records the count of lines of each length in the file,
 	// where a line is defined as all characters up to a newline.
-	LineLengthCounts map[int]int
+	LineLengthCounts valuecounts.ValueCounts `json:"line_length_counts"`
 }
 
 func (bd BasicFileData) String() string {
@@ -128,7 +132,7 @@ func GetBasicData(fileList []string, pathInArchive map[string]string) (*BasicPac
 	}
 
 	result := BasicPackageData{
-		Files: map[string]BasicFileData{},
+		Files: []BasicFileData{},
 	}
 
 	for index, filePath := range fileList {
@@ -152,19 +156,20 @@ func GetBasicData(fileList []string, pathInArchive map[string]string) (*BasicPac
 			fileHash = "sha256:" + hash
 		}
 
-		var lineLengthCounts map[int]int
+		var lineLengthCounts valuecounts.ValueCounts
 		if lineLengths, err := linelengths.GetLineLengths(filePath, ""); err != nil {
 			log.Error("Error collecting line lengths", "path", archivePath, "error", err)
 		} else {
 			lineLengthCounts = lineLengths
 		}
 
-		result.Files[archivePath] = BasicFileData{
+		result.Files = append(result.Files, BasicFileData{
+			Filename:         archivePath,
 			FileType:         fileType,
 			Size:             fileSize,
 			Hash:             fileHash,
 			LineLengthCounts: lineLengthCounts,
-		}
+		})
 	}
 
 	return &result, nil
