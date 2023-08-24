@@ -2,6 +2,7 @@ package stringentropy
 
 import (
 	"math"
+	"unicode/utf8"
 )
 
 /*
@@ -23,23 +24,22 @@ the entropy approaches 0.
 
 Reference: https://link.springer.com/chapter/10.1007/978-3-642-10509-8_19
 */
-func CalculateEntropy(s string, prob *map[rune]float64) float64 {
+func CalculateEntropy(s string, prob map[rune]float64) float64 {
 	if len(s) == 0 {
 		return 0
 	}
 
-	counts := CharacterCounts([]string{s})
-
 	if prob == nil {
-		prob = CharacterProbabilitiesFromCounts(counts)
+		counts, sumCounts := CharacterCounts([]string{s})
+		prob = characterProbabilitiesFromCounts(counts, sumCounts)
 	}
 
 	entropy := 0.0
-
-	// can't iterate over string as we need to iterate over distinct chars
-	for char := range *counts {
-		p := (*prob)[char]
-		entropy -= p * math.Log(p)
+	for _, char := range s {
+		p := prob[char]
+		if p > 0 {
+			entropy -= p * math.Log(p)
+		}
 	}
 
 	return entropy
@@ -48,7 +48,7 @@ func CalculateEntropy(s string, prob *map[rune]float64) float64 {
 /*
 CalculateNormalisedEntropy returns the string entropy normalised by the log of the length of the string.
 This quantity is used because for log(N) is the maximum possible entropy out of all strings with length N,
-where N > 0. If the string has one or fewer characters, the ratio is defined to be 1.
+where N > 0. Special cases are empty strings (0) and single character strings (1).
 As a formula:
 
 	E_n(S) := {
@@ -59,44 +59,43 @@ As a formula:
 */
 // TODO does this make sense when a general probability structure is used?
 // TODO calculate max string entropy for a given set of character counts.
-func CalculateNormalisedEntropy(s string, prob *map[rune]float64) float64 {
-	switch len(s) {
+func CalculateNormalisedEntropy(s string, prob map[rune]float64) float64 {
+	length := utf8.RuneCountInString(s)
+	switch length {
 	case 0:
 		return 0
 	case 1:
 		return 1
 	default:
-		return CalculateEntropy(s, prob) / math.Log(float64(len(s)))
+		return CalculateEntropy(s, prob) / math.Log(float64(length))
 	}
 }
 
-func CharacterCounts(strs []string) *map[rune]int {
+// CharacterCounts computes a map of character (rune) to number of occurrences
+// in the input strings
+func CharacterCounts(strs []string) (map[rune]int, int64) {
 	counts := make(map[rune]int)
+	var sumCounts int64 = 0
 	for _, s := range strs {
 		for _, b := range s {
-			// if b is not in map, the read value will be zero, which is what we want
-			counts[b] = counts[b] + 1
+			counts[b] += 1
+			sumCounts += 1
 		}
 	}
-	return &counts
+	return counts, sumCounts
 }
 
-func CharacterProbabilitiesFromCounts(counts *map[rune]int) *map[rune]float64 {
-	total := 0
-	for _, count := range *counts {
-		total += count
-	}
-
-	prob := make(map[rune]float64, len(*counts))
-	for char, count := range *counts {
-		prob[char] = float64(count) / float64(total)
-	}
-	return &prob
+// CharacterProbabilities computes a map of character (rune) to
+// frequency/probability of occurrence in the input strings
+func CharacterProbabilities(strs []string) map[rune]float64 {
+	counts, sumCounts := CharacterCounts(strs)
+	return characterProbabilitiesFromCounts(counts, sumCounts)
 }
 
-// CharacterProbabilities is just a convenience function that chains together CharacterCounts
-// and CharacterProbabilitiesFromCounts.
-func CharacterProbabilities(strs []string) *map[rune]float64 {
-	counts := CharacterCounts(strs)
-	return CharacterProbabilitiesFromCounts(counts)
+func characterProbabilitiesFromCounts(counts map[rune]int, sumCounts int64) map[rune]float64 {
+	prob := make(map[rune]float64, len(counts))
+	for char, count := range counts {
+		prob[char] = float64(count) / float64(sumCounts)
+	}
+	return prob
 }
