@@ -49,7 +49,7 @@ func processJsData(filename string, fileData singleParseData) *SingleResult {
 	}
 
 	for _, c := range fileData.Comments {
-		result.Comments = append(result.Comments, token.Comment{Value: c.Data})
+		result.Comments = append(result.Comments, token.Comment{Text: c.Data})
 	}
 	return result
 }
@@ -62,11 +62,11 @@ func computeEntropy(parseResults []*SingleResult) {
 	var identifiers []string
 
 	for _, result := range parseResults {
-		for _, sl := range result.StringLiterals {
-			strings = append(strings, sl.Value)
+		for _, str := range result.StringLiterals {
+			strings = append(strings, str.Value)
 		}
-		for _, id := range result.Identifiers {
-			identifiers = append(identifiers, id.Name)
+		for _, ident := range result.Identifiers {
+			identifiers = append(identifiers, ident.Name)
 		}
 	}
 
@@ -74,11 +74,11 @@ func computeEntropy(parseResults []*SingleResult) {
 	identifierCharDistribution := stringentropy.CharacterProbabilities(identifiers)
 
 	for _, result := range parseResults {
-		for _, sl := range result.StringLiterals {
-			sl.Entropy = stringentropy.CalculateEntropy(sl.Value, stringLiteralCharDistribution)
+		for i := range result.StringLiterals {
+			result.StringLiterals[i].ComputeEntropy(stringLiteralCharDistribution)
 		}
-		for _, id := range result.Identifiers {
-			id.Entropy = stringentropy.CalculateEntropy(id.Name, identifierCharDistribution)
+		for i := range result.Identifiers {
+			result.Identifiers[i].ComputeEntropy(identifierCharDistribution)
 		}
 	}
 }

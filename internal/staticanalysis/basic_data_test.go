@@ -4,55 +4,98 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
+
+	"github.com/ossf/package-analysis/internal/utils"
+	"github.com/ossf/package-analysis/internal/utils/valuecounts"
 )
 
-func TestGetFileTypes(t *testing.T) {
-	testDir := t.TempDir()
-	fileName1 := filepath.Join(testDir, "test1.txt")
-	fileName2 := filepath.Join(testDir, "test2.txt")
+type testFile struct {
+	filename     string
+	contents     []byte
+	contentsHash string
+	fileType     string
+	lineLengths  valuecounts.ValueCounts
+}
 
-	if err := os.WriteFile(fileName1, []byte("hello test 1!\n"), 0o666); err != nil {
-		t.Fatalf("failed to write test file 1: %v", err)
-	}
-	if err := os.WriteFile(fileName2, []byte("#! /bin/bash\necho 'Hello test 2'\n"), 0o666); err != nil {
-		t.Fatalf("failed to write test file 2: %v", err)
-	}
+var testFiles = []testFile{
+	{
+		filename:     "test1.txt",
+		contents:     []byte("hello test 1!\n"),
+		contentsHash: "sha256:bd96959573979235b87180b0b7513c7f1d5cbf046b263f366f2f10fe1b966494",
+		fileType:     "ASCII text",
+		lineLengths:  valuecounts.Count([]int{13}),
+	},
+	{
+		filename:     "test2.txt",
+		contents:     []byte("#! /bin/bash\necho 'Hello test 2'\n"),
+		contentsHash: "sha256:6179db3c673ceddcdbd384116ae4d301d64e65fc2686db9ba64945677a5a893c",
+		fileType:     "Bourne-Again shell script, ASCII text executable",
+		lineLengths:  valuecounts.Count([]int{12, 19}),
+	},
+}
 
+func TestGetBasicData(t *testing.T) {
 	tests := []struct {
-		name     string
-		fileList []string
-		want     []string
-		wantErr  bool
+		name    string
+		files   []testFile
+		wantErr bool
 	}{
 		{
-			name:     "test no files",
-			fileList: []string{},
-			want:     []string{},
-			wantErr:  false,
+			name:    "test no files",
+			files:   nil,
+			wantErr: false,
 		},
 		{
-			name:     "test one file",
-			fileList: []string{fileName1},
-			want:     []string{"ASCII text"},
-			wantErr:  false,
+			name:    "test one file",
+			files:   []testFile{testFiles[0]},
+			wantErr: false,
 		},
 		{
-			name:     "test two files",
-			fileList: []string{fileName1, fileName2},
-			want:     []string{"ASCII text", "Bourne-Again shell script, ASCII text executable"},
-			wantErr:  false,
+			name:    "test two files",
+			files:   []testFile{testFiles[0], testFiles[1]},
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := getFileTypes(tt.fileList)
+			testDir := t.TempDir()
+			paths := utils.Transform(tt.files, func(f testFile) string {
+				return filepath.Join(testDir, f.filename)
+			})
+
+			for i := range tt.files {
+				if err := os.WriteFile(paths[i], tt.files[i].contents, 0o666); err != nil {
+					t.Fatalf("failed to write test file %d: %v", i, err)
+				}
+			}
+
+			getArchivePath := func(absolutePath string) string {
+				return strings.TrimPrefix(absolutePath, testDir+string(os.PathSeparator))
+			}
+
+			got, err := GetBasicData(paths, getArchivePath)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getFileTypes() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("getFileTypes() got = %#v, want %#v", got, tt.want)
+
+			wantData := utils.Transform(tt.files, func(f testFile) BasicFileData {
+				return BasicFileData{
+					Filename:    f.filename,
+					FileType:    f.fileType,
+					Size:        int64(len(f.contents)),
+					Hash:        f.contentsHash,
+					LineLengths: f.lineLengths,
+				}
+			})
+
+			gotData := got.Files
+
+			if !reflect.DeepEqual(gotData, wantData) {
+				t.Errorf("TestGetBasicData() data mismatch:\n"+
+					"== got == \n%v\n== want ==\n%v", got, wantData)
 			}
 		})
 	}

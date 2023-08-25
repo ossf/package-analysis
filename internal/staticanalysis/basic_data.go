@@ -107,7 +107,7 @@ some files should not prevent the analysis of other files.
 pathInArchive maps the absolute paths in fileList to relative paths
 in the package archive, to use for results.
 */
-func GetBasicData(fileList []string, pathInArchive map[string]string) (*BasicPackageData, error) {
+func GetBasicData(fileList []string, pathInArchive func(absolutePath string) string) (*BasicPackageData, error) {
 	// First, run file in batch processing mode to get all the file types at once.
 	// Then, file size, hash and line lengths can be done in a simple loop
 
@@ -124,7 +124,7 @@ func GetBasicData(fileList []string, pathInArchive map[string]string) (*BasicPac
 	}
 
 	for index, filePath := range fileList {
-		archivePath := pathInArchive[filePath]
+		archivePath := pathInArchive(filePath)
 		fileType := fileTypes[index]
 
 		var fileSize int64

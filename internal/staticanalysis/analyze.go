@@ -30,10 +30,6 @@ func enumeratePackageFiles(extractDir string) ([]string, error) {
 	return paths, err
 }
 
-func getPathInArchive(path, extractDir string) string {
-	return strings.TrimPrefix(path, extractDir+string(os.PathSeparator))
-}
-
 /*
 AnalyzePackageFiles walks a tree of extracted package files and runs the analysis tasks
 listed in analysisTasks to produce the result data.
@@ -76,14 +72,13 @@ func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig,
 
 	result := Result{}
 
-	archivePath := map[string]string{}
-	for _, path := range fileList {
-		archivePath[path] = getPathInArchive(path, extractDir)
+	getPathInArchive := func(absolutePath string) string {
+		return strings.TrimPrefix(absolutePath, extractDir+string(os.PathSeparator))
 	}
 
 	if runTask[Basic] {
 		log.Info("run basic analysis")
-		basicData, err := GetBasicData(fileList, archivePath)
+		basicData, err := GetBasicData(fileList, getPathInArchive)
 		if err != nil {
 			log.Error("static analysis error", log.Label("task", string(Basic)), "error", err)
 		} else {
@@ -101,8 +96,8 @@ func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig,
 			log.Error("static analysis error", log.Label("task", string(Parsing)), "error", err)
 		} else {
 			// change absolute path in parsingResults to package-relative path
-			for _, parseResult := range parsingResults {
-				parseResult.Filename = archivePath[parseResult.Filename]
+			for i, r := range parsingResults {
+				parsingResults[i].Filename = getPathInArchive(r.Filename)
 			}
 			result.ParsingData = parsingResults
 		}
