@@ -6,6 +6,7 @@ import (
 
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
+	"github.com/ossf/package-analysis/internal/utils"
 )
 
 /*
@@ -18,20 +19,17 @@ type Result struct {
 	// NOTE: the JSON names below should match the values in task.go
 	BasicData *BasicPackageData `json:"basic,omitempty"`
 
-	ParsingData parsing.PackageResult `json:"parsing,omitempty"`
+	ParsingData []*parsing.SingleResult `json:"parsing,omitempty"`
 
 	ObfuscationData *obfuscation.Result `json:"obfuscation,omitempty"`
 }
 
 func (ar Result) String() string {
-	parseDataStrings := make([]string, 0)
-	for filename, parseData := range ar.ParsingData {
-		parseDataStrings = append(parseDataStrings, fmt.Sprintf("== %s ==\n%s", filename, parseData))
-	}
+	parsingDataStrings := utils.Transform(ar.ParsingData, func(d *parsing.SingleResult) string { return d.String() })
 
 	parts := []string{
 		fmt.Sprintf("File basic data\n%v", ar.BasicData),
-		fmt.Sprintf("File parse data\n%s", strings.Join(parseDataStrings, "\n\n")),
+		fmt.Sprintf("File parse data\n%s", strings.Join(parsingDataStrings, "\n\n")),
 		fmt.Sprintf("File obfuscation data\n%s", ar.ObfuscationData),
 	}
 

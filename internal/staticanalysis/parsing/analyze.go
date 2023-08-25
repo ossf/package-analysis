@@ -6,61 +6,87 @@ import (
 	"strconv"
 
 	"github.com/ossf/package-analysis/internal/staticanalysis/externalcmd"
+	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stringentropy"
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
 
-func (p PackageResult) processAndAdd(language Language, result languageResult) {
-	for fileName, fileResult := range result {
-		if p[fileName] == nil {
-			p[fileName] = FileResult{}
+func processJsData(filename string, fileData singleParseData) *SingleResult {
+	if !fileData.ValidInput {
+		return &SingleResult{
+			Filename: filename,
+			Language: NoLanguage,
 		}
+	}
 
-		if !fileResult.ValidInput {
-			p[fileName][language] = nil
-			continue
-		}
-
+	result := &SingleResult{
+		Filename: filename,
+		Language: JavaScript,
 		// Initialise with empty slices to avoid null values in JSON
-		data := &SingleResult{
-			Identifiers:    []token.Identifier{},
-			StringLiterals: []token.String{},
-			IntLiterals:    []token.Int{},
-			FloatLiterals:  []token.Float{},
-			Comments:       []token.Comment{},
-		}
+		Identifiers:    []token.Identifier{},
+		StringLiterals: []token.String{},
+		IntLiterals:    []token.Int{},
+		FloatLiterals:  []token.Float{},
+		Comments:       []token.Comment{},
+	}
 
-		for _, d := range fileResult.Literals {
-			if d.GoType == "string" {
-				data.StringLiterals = append(data.StringLiterals, token.String{Value: d.Value.(string), Raw: d.RawValue})
-			} else if d.GoType == "float64" {
-				if intValue, err := strconv.ParseInt(d.RawValue, 0, 64); err == nil {
-					data.IntLiterals = append(data.IntLiterals, token.Int{Value: intValue, Raw: d.RawValue})
-				} else {
-					data.FloatLiterals = append(data.FloatLiterals, token.Float{Value: d.Value.(float64), Raw: d.RawValue})
-				}
+	for _, d := range fileData.Literals {
+		if d.GoType == "string" {
+			result.StringLiterals = append(result.StringLiterals, token.String{Value: d.Value.(string), Raw: d.RawValue})
+		} else if d.GoType == "float64" {
+			if intValue, err := strconv.ParseInt(d.RawValue, 0, 64); err == nil {
+				result.IntLiterals = append(result.IntLiterals, token.Int{Value: intValue, Raw: d.RawValue})
+			} else {
+				result.FloatLiterals = append(result.FloatLiterals, token.Float{Value: d.Value.(float64), Raw: d.RawValue})
 			}
 		}
+	}
 
-		for _, ident := range fileResult.Identifiers {
-			switch ident.Type {
-			case token.Function, token.Class, token.Parameter, token.Property, token.Variable:
-				data.Identifiers = append(data.Identifiers, token.Identifier{Name: ident.Name, Type: ident.Type})
-			}
+	for _, ident := range fileData.Identifiers {
+		switch ident.Type {
+		case token.Function, token.Class, token.Parameter, token.Property, token.Variable:
+			result.Identifiers = append(result.Identifiers, token.Identifier{Name: ident.Name, Type: ident.Type})
 		}
+	}
 
-		for _, c := range fileResult.Comments {
-			data.Comments = append(data.Comments, token.Comment{Value: c.Data})
+	for _, c := range fileData.Comments {
+		result.Comments = append(result.Comments, token.Comment{Value: c.Data})
+	}
+	return result
+}
+
+// computeEntropy populates entropy values for identifiers and string literals.
+// Character frequency distribution is estimated by aggregating character counts
+// in across all identifiers and string literals respectively in the package.
+func computeEntropy(parseResults []*SingleResult) {
+	var strings []string
+	var identifiers []string
+
+	for _, result := range parseResults {
+		for _, sl := range result.StringLiterals {
+			strings = append(strings, sl.Value)
 		}
+		for _, id := range result.Identifiers {
+			identifiers = append(identifiers, id.Name)
+		}
+	}
 
-		p[fileName][language] = data
+	stringLiteralCharDistribution := stringentropy.CharacterProbabilities(strings)
+	identifierCharDistribution := stringentropy.CharacterProbabilities(identifiers)
+
+	for _, result := range parseResults {
+		for _, sl := range result.StringLiterals {
+			sl.Entropy = stringentropy.CalculateEntropy(sl.Value, stringLiteralCharDistribution)
+		}
+		for _, id := range result.Identifiers {
+			id.Entropy = stringentropy.CalculateEntropy(id.Name, identifierCharDistribution)
+		}
 	}
 }
 
 /*
 Analyze (parsing.Analyze) parses the specified list of files using all supported parsers
-and returns a map of file path to parsing.FileResult, which in turn is a map of language
-to parsing.SingleResult. Each parsing.SingleResult holds information about source code
-tokens found for that language.
+and returns a list of parsing.SingleResult, each of which holds information about source code
+tokens found for a given file and langauge parser combination.
 
 Currently, the only supported language is JavaScript, however more language parsers will
 be added in the future.
@@ -79,9 +105,7 @@ they are normally both parsed as floating point. This function records a numeric
 as an integer if it can be converted using strconv.Atoi(), otherwise it is recorded as
 floating point.
 */
-func Analyze(parserConfig ParserConfig, input externalcmd.Input, printDebug bool) (PackageResult, error) {
-	resultsByLanguage := map[Language]languageResult{}
-
+func Analyze(parserConfig ParserConfig, input externalcmd.Input, printDebug bool) ([]*SingleResult, error) {
 	// JavaScript parsing
 	jsResults, rawOutput, err := parseJS(parserConfig, input)
 	if printDebug {
@@ -91,11 +115,12 @@ func Analyze(parserConfig ParserConfig, input externalcmd.Input, printDebug bool
 		return nil, err
 	}
 
-	packageResult := PackageResult{}
-	resultsByLanguage[JavaScript] = jsResults
-	for language, result := range resultsByLanguage {
-		packageResult.processAndAdd(language, result)
+	packageResult := make([]*SingleResult, 0, len(jsResults))
+	for filename, jsData := range jsResults {
+		packageResult = append(packageResult, processJsData(filename, jsData))
 	}
+
+	computeEntropy(packageResult)
 
 	return packageResult, nil
 }

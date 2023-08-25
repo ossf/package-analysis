@@ -180,7 +180,8 @@ func run() (err error) {
 
 	jsonResult, err := json.Marshal(results)
 	if err != nil {
-		return fmt.Errorf("JSON marshall error: %v", err)
+		log.Debug(fmt.Sprintf("unserialisable JSON: %v", results))
+		return fmt.Errorf("JSON marshal error: %v", err)
 	}
 
 	outputFile := os.Stdout

@@ -6,53 +6,45 @@ import (
 	"os/exec"
 	"strings"
 
-	"golang.org/x/exp/maps"
-	"golang.org/x/exp/slices"
-
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/staticanalysis/externalcmd"
 	"github.com/ossf/package-analysis/internal/staticanalysis/linelengths"
 	"github.com/ossf/package-analysis/internal/utils"
+	"github.com/ossf/package-analysis/internal/utils/valuecounts"
 )
 
 // BasicPackageData records basic information about files in a package,
 // mapping file path within the archive to BasicFileData about that file.
 type BasicPackageData struct {
-	Files map[string]BasicFileData `json:"files"`
+	Files []BasicFileData `json:"files"`
 }
 
 // BasicFileData records various information about a file that can be determined
 // without parsing it using a programming language parser.
 type BasicFileData struct {
+	// Filename records the path to the file within the package archive
+	Filename string `json:"filename"`
+
 	// FileType records the output of the `file` command run on that file.
-	FileType string
+	FileType string `json:"filetype"`
 
 	// Size records the size of the file (as reported by the filesystem).
-	Size int64
+	Size int64 `json:"size"`
 
 	// Hash records the SHA256sum hash of the file.
-	Hash string
+	Hash string `json:"hash"`
 
-	// LineLengthCounts records the count of lines of each length in the file,
+	// LineLengths records the counts of line lengths in the file,
 	// where a line is defined as all characters up to a newline.
-	LineLengthCounts map[int]int
+	LineLengths valuecounts.ValueCounts `json:"line_lengths"`
 }
 
 func (bd BasicFileData) String() string {
-	// print line length counts in ascending order
-	lineLengths := maps.Keys(bd.LineLengthCounts)
-	slices.Sort(lineLengths)
-	lineLengthStrings := make([]string, 0, len(bd.LineLengthCounts))
-	for length := range lineLengths {
-		count := bd.LineLengthCounts[length]
-		lineLengthStrings = append(lineLengthStrings, fmt.Sprintf("length = %4d, count = %2d", length, count))
-	}
-
 	parts := []string{
 		fmt.Sprintf("file type: %v\n", bd.FileType),
 		fmt.Sprintf("size: %v\n", bd.Size),
 		fmt.Sprintf("hash: %v\n", bd.Hash),
-		fmt.Sprintf("line lengths:\n%s", strings.Join(lineLengthStrings, "\n")),
+		fmt.Sprintf("line lengths: %v\n", bd.LineLengths),
 	}
 	return strings.Join(parts, "\n")
 }
@@ -128,12 +120,11 @@ func GetBasicData(fileList []string, pathInArchive map[string]string) (*BasicPac
 	}
 
 	result := BasicPackageData{
-		Files: map[string]BasicFileData{},
+		Files: []BasicFileData{},
 	}
 
 	for index, filePath := range fileList {
 		archivePath := pathInArchive[filePath]
-
 		fileType := fileTypes[index]
 
 		var fileSize int64
@@ -152,19 +143,20 @@ func GetBasicData(fileList []string, pathInArchive map[string]string) (*BasicPac
 			fileHash = "sha256:" + hash
 		}
 
-		var lineLengthCounts map[int]int
-		if lineLengths, err := linelengths.GetLineLengths(filePath, ""); err != nil {
-			log.Error("Error collecting line lengths", "path", archivePath, "error", err)
+		var lineLengths valuecounts.ValueCounts
+		if ll, err := linelengths.GetLineLengths(filePath, ""); err != nil {
+			log.Error("Error counting line lengths", "path", archivePath, "error", err)
 		} else {
-			lineLengthCounts = lineLengths
+			lineLengths = valuecounts.Count(ll)
 		}
 
-		result.Files[archivePath] = BasicFileData{
-			FileType:         fileType,
-			Size:             fileSize,
-			Hash:             fileHash,
-			LineLengthCounts: lineLengthCounts,
-		}
+		result.Files = append(result.Files, BasicFileData{
+			Filename:    archivePath,
+			FileType:    fileType,
+			Size:        fileSize,
+			Hash:        fileHash,
+			LineLengths: lineLengths,
+		})
 	}
 
 	return &result, nil

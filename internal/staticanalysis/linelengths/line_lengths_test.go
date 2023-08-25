@@ -9,7 +9,7 @@ func TestSourceStringLineLengths(t *testing.T) {
 	tests := []struct {
 		name    string
 		source  string
-		want    map[int]int
+		want    []int
 		wantErr bool
 	}{
 		{
@@ -21,39 +21,39 @@ Three
 Four
 Five
 `,
-			want:    map[int]int{0: 1, 3: 2, 4: 2, 5: 1},
+			want:    []int{0, 3, 3, 5, 4, 4},
 			wantErr: false,
 		},
 		{
 			name:    "test simple single line",
 			source:  `One Two Three Four Five`,
-			want:    map[int]int{23: 1},
+			want:    []int{23},
 			wantErr: false,
 		},
 		{
 			name:    "test empty string",
 			source:  ``,
-			want:    map[int]int{0: 1},
+			want:    []int{0},
 			wantErr: false,
 		},
 		{
 			name:    "test single char",
 			source:  "a",
-			want:    map[int]int{1: 1},
+			want:    []int{1},
 			wantErr: false,
 		},
 		{
 			name: "test empty newline",
 			source: `
 `,
-			want:    map[int]int{0: 1},
+			want:    []int{0},
 			wantErr: false,
 		},
 
 		{
 			name:    "test carriage return",
 			source:  "\r\n",
-			want:    map[int]int{0: 1},
+			want:    []int{0},
 			wantErr: false,
 		},
 	}

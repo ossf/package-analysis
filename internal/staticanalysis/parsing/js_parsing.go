@@ -98,8 +98,8 @@ func runParser(parserPath string, input externalcmd.Input, extraArgs ...string) 
 	}
 }
 
-func (pd parseDataJSON) process() languageData {
-	processed := languageData{
+func (pd parseDataJSON) process() singleParseData {
+	processed := singleParseData{
 		ValidInput: true,
 	}
 
@@ -173,12 +173,12 @@ parseJS extracts source code identifiers and string literals from JavaScript cod
 
 parserConfig specifies options relevant to the parser itself, and is produced by InitParser
 
-If internal errors occurred during parsing, then a nil languageResult pointer is returned.
+If internal errors occurred during parsing, then a nil map is returned.
 The other two return values are the raw parser output and the error respectively.
 Otherwise, the first return value points to the parsing result object while the second
 contains the raw JSON output from the parser.
 */
-func parseJS(parserConfig ParserConfig, input externalcmd.Input) (languageResult, string, error) {
+func parseJS(parserConfig ParserConfig, input externalcmd.Input) (map[string]singleParseData, string, error) {
 	rawOutput, err := runParser(parserConfig.ParserPath, input)
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
@@ -195,7 +195,7 @@ func parseJS(parserConfig ParserConfig, input externalcmd.Input) (languageResult
 	}
 
 	// convert the elements into more natural data structure
-	result := languageResult{}
+	result := map[string]singleParseData{}
 	for filename, data := range parseOutput {
 		result[filename] = data.process()
 	}

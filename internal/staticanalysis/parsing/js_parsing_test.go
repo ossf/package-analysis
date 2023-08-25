@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/staticanalysis/externalcmd"
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
@@ -14,7 +13,7 @@ import (
 type jsTestCase struct {
 	name      string
 	inputJS   string
-	want      languageData
+	want      singleParseData
 	printJSON bool // set to true to see raw parser output
 }
 
@@ -37,7 +36,7 @@ function test() {
 //"'11"'` + "`" + `;
 	var mystring12 = ` + "`hello\"'${5.6 + 6.4}\"'`" + `;
 }`,
-		want: languageData{
+		want: singleParseData{
 			Identifiers: []parsedIdentifier{
 				{token.Function, "test", token.Position{2, 9}},
 				{token.Variable, "mystring1", token.Position{3, 8}},
@@ -81,7 +80,7 @@ function test() {
 function test2(param1, param2, param3 = "ahd") {
 	return param1 + param2 + param3;
 }`,
-		want: languageData{
+		want: singleParseData{
 			Identifiers: []parsedIdentifier{
 				{token.Function, "test2", token.Position{2, 9}},
 				{token.Parameter, "param1", token.Position{2, 15}},
@@ -114,7 +113,7 @@ outer:
     }
     console.log("End");
 }`,
-		want: languageData{
+		want: singleParseData{
 			Identifiers: []parsedIdentifier{
 				{token.Function, "test3", token.Position{2, 9}},
 				{token.Parameter, "a", token.Position{2, 15}},
@@ -166,7 +165,7 @@ function test4() {
             break;
     }
 }`,
-		want: languageData{
+		want: singleParseData{
 			Identifiers: []parsedIdentifier{
 				{token.Function, "test4", token.Position{2, 9}},
 				{token.Variable, "a", token.Position{3, 10}},
@@ -222,7 +221,7 @@ Rectangle = class Rectangle2 {
 console.log(Rectangle.name);
 // output: "Rectangle2"
 `,
-		want: languageData{
+		want: singleParseData{
 			Identifiers: []parsedIdentifier{
 				{token.Variable, "Rectangle", token.Position{3, 4}},
 				{token.Parameter, "height", token.Position{4, 16}},
@@ -250,7 +249,7 @@ console.log(Rectangle.name);
 'use strict';
 console.log("Hello");
 `,
-		want: languageData{
+		want: singleParseData{
 			Identifiers: []parsedIdentifier{
 				{token.Member, "log", token.Position{3, 8}},
 			},
@@ -270,7 +269,7 @@ var index = 0,
     {length, width} = 10,
     cancelled = false;
 `,
-		want: languageData{
+		want: singleParseData{
 			Identifiers: []parsedIdentifier{
 				{token.Variable, "a", token.Position{2, 5}},
 				{token.Variable, "b", token.Position{2, 8}},
@@ -305,7 +304,7 @@ function validateIPAddress(ipaddress) {
     return (false)
 }
 `,
-		want: languageData{
+		want: singleParseData{
 			ValidInput: true,
 			Identifiers: []parsedIdentifier{
 				{token.Function, "validateIPAddress", token.Position{2, 9}},
@@ -337,7 +336,7 @@ let b = 0o777777777777n;         // 68719476735
 let c = 0x123456789ABCDEFn;      // 81985529216486895
 let d = 0b11101001010101010101n; // 955733
 `,
-		want: languageData{
+		want: singleParseData{
 			ValidInput: true,
 			Identifiers: []parsedIdentifier{
 				{token.Variable, "a", token.Position{2, 4}},
@@ -359,7 +358,7 @@ let d = 0b11101001010101010101n; // 955733
 		inputJS: `
 a = w w;
 `,
-		want: languageData{
+		want: singleParseData{
 			ValidInput:  false,
 			Identifiers: []parsedIdentifier{},
 			Errors: []parserStatus{
@@ -373,10 +372,6 @@ a = w w;
 		},
 		printJSON: false,
 	},
-}
-
-func init() {
-	log.Initialize("")
 }
 
 func TestParseJS(t *testing.T) {

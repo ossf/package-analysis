@@ -9,7 +9,7 @@ import (
 
 /*
 GetLineLengths counts the number of characters on each line of a file or string,
-returning a map of length to the number of lines in the file with that length.
+returning a slice containing the length of each line in sequence.
 
 Lines are defined to be separated by newline ('\n') characters. If the newline
 character is preceded by a carriage return ('\r'), this will also be treated as
@@ -22,7 +22,7 @@ Note: there may not be much useful information to be gathered by distinguishing
 between line lengths when they get very long. It may be pragmatic to just report
 all lines above e.g. 64K as 64K long.
 */
-func GetLineLengths(filePath string, sourceString string) (map[int]int, error) {
+func GetLineLengths(filePath string, sourceString string) ([]int, error) {
 	var reader *bufio.Reader
 	if len(filePath) > 0 {
 		file, err := os.Open(filePath)
@@ -36,7 +36,7 @@ func GetLineLengths(filePath string, sourceString string) (map[int]int, error) {
 		reader = bufio.NewReader(strings.NewReader(sourceString))
 	}
 
-	lengths := map[int]int{}
+	lengths := make([]int, 0)
 	for {
 		/* Normally bufio.Scanner would be more convenient to use here, however by default
 		it uses a fixed maximum buffer size (MaxScanTokenSize = 64 * 1024). Since some
@@ -59,7 +59,7 @@ func GetLineLengths(filePath string, sourceString string) (map[int]int, error) {
 				}
 				l -= drop
 			}
-			lengths[l]++
+			lengths = append(lengths, l)
 		}
 
 		if readErr == io.EOF {
@@ -69,7 +69,7 @@ func GetLineLengths(filePath string, sourceString string) (map[int]int, error) {
 
 	if len(lengths) == 0 {
 		// define the empty string to have a single empty line
-		lengths[0] = 1
+		lengths = append(lengths, 0)
 	}
 
 	return lengths, nil

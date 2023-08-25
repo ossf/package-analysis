@@ -1,8 +1,9 @@
 package token
 
 type Identifier struct {
-	Name string
-	Type IdentifierType
+	Name    string
+	Type    IdentifierType
+	Entropy float64
 }
 
 type Comment struct {
@@ -10,8 +11,9 @@ type Comment struct {
 }
 
 type String struct {
-	Value string
-	Raw   string
+	Value   string
+	Raw     string
+	Entropy float64
 }
 
 type Int struct {
