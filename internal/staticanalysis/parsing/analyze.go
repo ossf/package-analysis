@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/ossf/package-analysis/internal/staticanalysis/externalcmd"
+	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stringentropy"
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
 
@@ -50,8 +51,36 @@ func processJsData(filename string, fileData singleParseData) *SingleResult {
 	for _, c := range fileData.Comments {
 		result.Comments = append(result.Comments, token.Comment{Value: c.Data})
 	}
-
 	return result
+}
+
+// computeEntropy populates entropy values for identifiers and string literals.
+// Character frequency distribution is estimated by aggregating character counts
+// in across all identifiers and string literals respectively in the package.
+func computeEntropy(parseResults []*SingleResult) {
+	var strings []string
+	var identifiers []string
+
+	for _, result := range parseResults {
+		for _, sl := range result.StringLiterals {
+			strings = append(strings, sl.Value)
+		}
+		for _, id := range result.Identifiers {
+			identifiers = append(identifiers, id.Name)
+		}
+	}
+
+	stringLiteralCharDistribution := stringentropy.CharacterProbabilities(strings)
+	identifierCharDistribution := stringentropy.CharacterProbabilities(identifiers)
+
+	for _, result := range parseResults {
+		for _, sl := range result.StringLiterals {
+			sl.Entropy = stringentropy.CalculateEntropy(sl.Value, stringLiteralCharDistribution)
+		}
+		for _, id := range result.Identifiers {
+			id.Entropy = stringentropy.CalculateEntropy(id.Name, identifierCharDistribution)
+		}
+	}
 }
 
 /*
@@ -90,6 +119,8 @@ func Analyze(parserConfig ParserConfig, input externalcmd.Input, printDebug bool
 	for filename, jsData := range jsResults {
 		packageResult = append(packageResult, processJsData(filename, jsData))
 	}
+
+	computeEntropy(packageResult)
 
 	return packageResult, nil
 }

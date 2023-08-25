@@ -21,10 +21,39 @@ func TestStringEntropy(t *testing.T) {
 		{"abcdefghij", math.Log(10)},
 		{"aaa", 0},
 		{"aA", math.Log(2)},
-		{"aaA", 0.636514168294813}, // math.Log(3) - 2*math.Log(2)/3
+		{"aaA", -2*2.0/3.0*math.Log(2.0/3.0) - math.Log(1.0/3.0)/3.0},
 	}
 	for index, test := range testCases {
 		actual := CalculateEntropy(test.s, nil)
+		if !utils.FloatEquals(test.expected, actual, tolerance) {
+			t.Errorf("Test case %d failed (str: %s, expected: %f, actual: %f\n",
+				index+1, test.s, test.expected, actual)
+		}
+	}
+}
+
+func TestStringEntropyWithFixedProbs(t *testing.T) {
+	tolerance := 1e-6
+	a := 0.125
+	b := 0.25
+	c := 0.125
+	d := 0.5
+	probs := map[rune]float64{
+		'a': 0.125,
+		'b': 0.25,
+		'c': 0.125,
+		'd': 0.5,
+	}
+	testCases := []entropyTestCase{
+		{"", 0},
+		{"a", -a * math.Log(a)},
+		{"abc", -a*math.Log(a) - b*math.Log(b) - c*math.Log(c)},
+		{"abcdefg", -a*math.Log(a) - b*math.Log(b) - c*math.Log(c) - d*math.Log(d)},
+		{"aaaAAA", -3 * a * math.Log(a)},
+		{" a \n", -a * math.Log(a)},
+	}
+	for index, test := range testCases {
+		actual := CalculateEntropy(test.s, probs)
 		if !utils.FloatEquals(test.expected, actual, tolerance) {
 			t.Errorf("Test case %d failed (str: %s, expected: %f, actual: %f\n",
 				index+1, test.s, test.expected, actual)
@@ -41,7 +70,7 @@ func TestStringEntropyRatio(t *testing.T) {
 		{"abcdefghij", 1},
 		{"aaa", 0},
 		{"aA", 1},
-		{"aaA", 0.5793801642856952}, // 1 - 2*math.Log(2)/(3*math.Log(3))
+		{"aaA", (-2*2.0*math.Log(2.0/3.0) - math.Log(1.0/3.0)) / (3.0 * math.Log(3))},
 	}
 	for index, test := range testCases {
 		actual := CalculateNormalisedEntropy(test.s, nil)
@@ -72,9 +101,9 @@ func TestCharacterProbabilities(t *testing.T) {
 		runeOf("d"): 1,
 		runeOf("m"): 2,
 	}
-	countsActual := CharacterCounts([]string{str, str2})
+	countsActual, _ := CharacterCounts([]string{str, str2})
 	for char, expectedCount := range countsExpected {
-		actualCount := (*countsActual)[char]
+		actualCount := countsActual[char]
 		if expectedCount != actualCount {
 			t.Errorf("Incorrect count for character '%s' (%d): expected %d, actual %d",
 				string(char), char, expectedCount, actualCount)
@@ -97,7 +126,7 @@ func TestCharacterProbabilities(t *testing.T) {
 	probsActual := CharacterProbabilities([]string{str, str2})
 
 	for char, expectedProb := range probsExpected {
-		actualProb := (*probsActual)[char]
+		actualProb := probsActual[char]
 		if !utils.FloatEquals(expectedProb, actualProb, tolerance) {
 			t.Errorf("Incorrect prob for character '%s' (%d): expected %.2f, actual %.2f",
 				string(char), char, expectedProb, actualProb)

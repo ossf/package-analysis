@@ -2,12 +2,10 @@ package obfuscation
 
 import (
 	"fmt"
-	"math"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/detections"
-	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stats"
-	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stringentropy"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 	"github.com/ossf/package-analysis/internal/utils"
@@ -17,178 +15,129 @@ import (
 // FileSignals holds information related to the presence of obfuscated code in a single file.
 type FileSignals struct {
 	// Filename is the path in the package
-	Filename string
+	Filename string `json:"filename"`
 
-	// StringLengths counts the lengths of string literals in the file.
-	// If there is no count for a given string length, it means that there
-	// were no strings of that length in the file
-	StringLengths valuecounts.ValueCounts
+	// The following two variables respectively record how many string literals
+	// and identifiers in the file have a given length. The absence of a count
+	// for a particular lengths means that there were no symbols of that length
+	// in the file.
+	IdentifierLengths valuecounts.ValueCounts `json:"identifier_lengths"`
+	StringLengths     valuecounts.ValueCounts `json:"string_lengths"`
 
-	// StringEntropySummary provides sample statistics for the set of entropy
-	// values calculated on each string literal. Character probabilities for the
-	// entropy calculation are estimated empirically from aggregated counts
-	// of characters across all string literals in the file.
-	StringEntropySummary stats.SampleStatistics
+	// SuspiciousIdentifiers holds identifiers that are deemed 'suspicious' (i.e.
+	// indicative of obfuscation) according to certain rules. Each entry contains
+	// the identifier name and the name of the first rule it was matched against.
+	SuspiciousIdentifiers []SuspiciousIdentifier `json:"suspicious_identifiers"`
 
-	// CombinedStringEntropy is the entropy of the string obtained from
-	// concatenating all string literals in the file together. It may be used
-	// to normalise the values in StringEntropySummary.
-	CombinedStringEntropy float64
-
-	// IdentifierLengths counts the lengths of identifiers in the file.
-	// If there is no entry for a given length, it means that there
-	// were no identifiers of that length in the file
-	IdentifierLengths valuecounts.ValueCounts
-
-	// IdentifierEntropySummary provides sample statistics for the set of entropy
-	// values calculated on each identifier. Character probabilities for the
-	// entropy calculation are estimated empirically from aggregated counts
-	// of characters across all identifiers in the file.
-	IdentifierEntropySummary stats.SampleStatistics
-
-	// CombinedIdentifierEntropy is the entropy of the string obtained from
-	// concatenating all identifiers in the file together. It may be used to
-	// normalise the values in IdentifierEntropySummary.
-	CombinedIdentifierEntropy float64
-
-	// SuspiciousIdentifiers holds lists of identifiers that are deemed 'suspicious'
-	// (i.e. indicative of obfuscation) according to certain rules. The keys of the
-	// map are the rule names, and the values are the identifiers matching each rule.
-	SuspiciousIdentifiers map[string][]string
+	// EscapedStrings contain string literals that contain large amount of escape
+	// characters, which may indicate obfuscation.
+	EscapedStrings []EscapedString `json:"escaped_strings"`
 
 	// Base64Strings holds a list of (substrings of) string literals found in the
 	// file that match a base64 regex pattern. This patten has a minimum matching
 	// length in order to reduce the number of false positives.
-	Base64Strings []string
+	Base64Strings []string `json:"base64_strings"`
+
+	// EmailAddresses contains any email addresses found in string literals
+	EmailAddresses []string `json:"email_addresses"`
 
 	// HexStrings holds a list of (substrings of) string literals found in the
 	// file that contain long (>8 digits) hexadecimal digit sequences.
-	HexStrings []string
-
-	// EscapedStrings contain string literals that contain large amount of escape
-	// characters, which may indicate obfuscation.
-	EscapedStrings []EscapedString
-
-	// URLs contains any urls (http or https) found in string literals
-	URLs []string
+	HexStrings []string `json:"hex_strings"`
 
 	// IPAddresses contains any IP addresses found in string literals
-	IPAddresses []string
+	IPAddresses []string `json:"ip_addresses"`
 
-	// EmailAddresses contains any email addresses found in string literals
-	EmailAddresses []string
+	// URLs contains any urls (http or https) found in string literals
+	URLs []string `json:"urls"`
 }
 
 func (s FileSignals) String() string {
 	parts := []string{
 		fmt.Sprintf("filename: %s", s.Filename),
-		fmt.Sprintf("string lengths: %v", s.StringLengths),
-		fmt.Sprintf("string entropy: %s", s.StringEntropySummary),
-		fmt.Sprintf("combined string entropy: %f", s.CombinedStringEntropy),
-
-		fmt.Sprintf("identifier lengths: %v", s.IdentifierLengths),
-		fmt.Sprintf("identifier entropy: %s", s.IdentifierEntropySummary),
-		fmt.Sprintf("combined identifier entropy: %f", s.CombinedIdentifierEntropy),
+		fmt.Sprintf("identifier length counts: %v", s.IdentifierLengths),
+		fmt.Sprintf("string length counts: %v", s.StringLengths),
 
 		fmt.Sprintf("suspicious identifiers: %v", s.SuspiciousIdentifiers),
+		fmt.Sprintf("escaped strings: %v", s.EscapedStrings),
 		fmt.Sprintf("potential base64 strings: %v", s.Base64Strings),
 		fmt.Sprintf("hex strings: %v", s.HexStrings),
-		fmt.Sprintf("escaped strings: %v", s.EscapedStrings),
+		fmt.Sprintf("email addresses: %v", s.EmailAddresses),
+		fmt.Sprintf("hex strings: %v", s.HexStrings),
+		fmt.Sprintf("IP addresses: %v", s.IPAddresses),
+		fmt.Sprintf("URLs: %v", s.URLs),
 	}
 	return strings.Join(parts, "\n")
 }
 
 type EscapedString struct {
-	RawLiteral       string
-	LevenshteinRatio float64
+	RawLiteral       string  `json:"raw_literal"`
+	LevenshteinRatio float64 `json:"levenshtein_ratio"`
 }
 
-/*
-characterAnalysis performs analysis on a collection of string symbols
+// SuspiciousIdentifier is an identifier that matches a specific rule intended
+// to pick out (potentially) suspicious names. Name stores the actual identifier,
+// and Rule holds the rule that the identifier matched against.
+type SuspiciousIdentifier struct {
+	Name string `json:"name"`
+	Rule string `json:"reason"`
+}
 
-This function returns:
-
-  - Counts of symbol (string) lengths,
-  - Stats summary of symbol (string) entropies,
-  - Entropy of all symbols concatenated together.
-*/
-func characterAnalysis(symbols []string) (
-	lengthCounts map[int]int,
-	entropySummary stats.SampleStatistics,
-	combinedEntropy float64,
-) {
-	// measure character probabilities by looking at entire set of strings
-	characterProbs := stringentropy.CharacterProbabilities(symbols)
-
-	var entropies []float64
-	var lengths []int
+// countLengths returns a map containing the aggregated lengths
+// of each of the strings in the input list
+func countLengths(symbols []string) valuecounts.ValueCounts {
+	lengths := make([]int, 0, len(symbols))
 	for _, s := range symbols {
-		entropies = append(entropies, stringentropy.CalculateEntropy(s, characterProbs))
-		lengths = append(lengths, len(s))
+		lengths = append(lengths, utf8.RuneCountInString(s))
 	}
 
-	lengthCounts = stats.CountDistinct(lengths)
-	entropySummary = stats.Summarise(entropies)
-	combinedEntropy = stringentropy.CalculateEntropy(strings.Join(symbols, ""), nil)
-	return
+	return valuecounts.Count(lengths)
 }
 
-/*
-ComputeFileSignals creates a FileSignals object based on the data obtained from ParseFile
-for a given file. These signals may be useful to determine whether the code is obfuscated.
-*/
+// ComputeFileSignals creates a FileSignals object based on the parsing data obtained from
+// a given file. These signals may be useful to determine whether the code is obfuscated.
 func ComputeFileSignals(parseData parsing.SingleResult) FileSignals {
-	signals := FileSignals{}
-
-	literals := utils.Transform(parseData.StringLiterals, func(s token.String) string { return s.Value })
-	signals.StringLengths, signals.StringEntropySummary, signals.CombinedStringEntropy = characterAnalysis(literals)
-
 	identifierNames := utils.Transform(parseData.Identifiers, func(i token.Identifier) string { return i.Name })
-	signals.IdentifierLengths, signals.IdentifierEntropySummary, signals.CombinedIdentifierEntropy = characterAnalysis(identifierNames)
+	stringLiterals := utils.Transform(parseData.StringLiterals, func(s token.String) string { return s.Value })
 
-	signals.SuspiciousIdentifiers = map[string][]string{}
-	for ruleName, pattern := range detections.SuspiciousIdentifierPatterns {
-		signals.SuspiciousIdentifiers[ruleName] = []string{}
-		for _, name := range identifierNames {
+	identifierLengths := countLengths(identifierNames)
+	stringLengths := countLengths(stringLiterals)
+
+	signals := FileSignals{
+		IdentifierLengths:     identifierLengths,
+		StringLengths:         stringLengths,
+		Base64Strings:         []string{},
+		HexStrings:            []string{},
+		EscapedStrings:        []EscapedString{},
+		SuspiciousIdentifiers: []SuspiciousIdentifier{},
+		URLs:                  []string{},
+		IPAddresses:           []string{},
+		EmailAddresses:        []string{},
+	}
+
+	for _, name := range identifierNames {
+		for rule, pattern := range detections.SuspiciousIdentifierPatterns {
 			if pattern.MatchString(name) {
-				signals.SuspiciousIdentifiers[ruleName] = append(signals.SuspiciousIdentifiers[ruleName], name)
+				signals.SuspiciousIdentifiers = append(signals.SuspiciousIdentifiers, SuspiciousIdentifier{name, rule})
+				break // don't bother searching for multiple matching rules
 			}
 		}
 	}
 
-	signals.Base64Strings = []string{}
-	signals.HexStrings = []string{}
-	signals.EscapedStrings = []EscapedString{}
-	signals.URLs = []string{}
-	signals.IPAddresses = []string{}
-	signals.EmailAddresses = []string{}
-	for _, s := range parseData.StringLiterals {
-		signals.Base64Strings = append(signals.Base64Strings, detections.FindBase64Substrings(s.Value)...)
-		signals.HexStrings = append(signals.HexStrings, detections.FindHexSubstrings(s.Value)...)
-		signals.URLs = append(signals.URLs, detections.FindURLs(s.Value)...)
-		signals.IPAddresses = append(signals.IPAddresses, detections.FindIPAddresses(s.Value)...)
-		signals.EmailAddresses = append(signals.EmailAddresses, detections.FindEmailAddresses(s.Value)...)
-		if detections.IsHighlyEscaped(s, 8, 0.25) {
+	for _, sl := range parseData.StringLiterals {
+		signals.Base64Strings = append(signals.Base64Strings, detections.FindBase64Substrings(sl.Value)...)
+		signals.HexStrings = append(signals.HexStrings, detections.FindHexSubstrings(sl.Value)...)
+		signals.URLs = append(signals.URLs, detections.FindURLs(sl.Value)...)
+		signals.IPAddresses = append(signals.IPAddresses, detections.FindIPAddresses(sl.Value)...)
+		signals.EmailAddresses = append(signals.EmailAddresses, detections.FindEmailAddresses(sl.Value)...)
+		if detections.IsHighlyEscaped(sl, 8, 0.25) {
 			escapedString := EscapedString{
-				RawLiteral:       s.Raw,
-				LevenshteinRatio: detections.LevenshteinRatio(s),
+				RawLiteral:       sl.Raw,
+				LevenshteinRatio: detections.LevenshteinRatio(sl),
 			}
 			signals.EscapedStrings = append(signals.EscapedStrings, escapedString)
 		}
 	}
 
 	return signals
-}
-
-// RemoveNaNs replaces all NaN values in this object with zeros.
-func RemoveNaNs(s *FileSignals) {
-	s.StringEntropySummary = s.StringEntropySummary.ReplaceNaNs(0)
-	s.IdentifierEntropySummary = s.IdentifierEntropySummary.ReplaceNaNs(0)
-
-	if math.IsNaN(s.CombinedStringEntropy) {
-		s.CombinedStringEntropy = 0.0
-	}
-	if math.IsNaN(s.CombinedIdentifierEntropy) {
-		s.CombinedIdentifierEntropy = 0.0
-	}
 }

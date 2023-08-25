@@ -6,9 +6,6 @@ import (
 	"os/exec"
 	"strings"
 
-	"golang.org/x/exp/maps"
-	"golang.org/x/exp/slices"
-
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/staticanalysis/externalcmd"
 	"github.com/ossf/package-analysis/internal/staticanalysis/linelengths"
@@ -37,26 +34,17 @@ type BasicFileData struct {
 	// Hash records the SHA256sum hash of the file.
 	Hash string `json:"hash"`
 
-	// LineLengthCounts records the count of lines of each length in the file,
+	// LineLengths records the counts of line lengths in the file,
 	// where a line is defined as all characters up to a newline.
-	LineLengthCounts valuecounts.ValueCounts `json:"line_length_counts"`
+	LineLengths valuecounts.ValueCounts `json:"line_lengths"`
 }
 
 func (bd BasicFileData) String() string {
-	// print line length counts in ascending order
-	lineLengths := maps.Keys(bd.LineLengthCounts)
-	slices.Sort(lineLengths)
-	lineLengthStrings := make([]string, 0, len(bd.LineLengthCounts))
-	for length := range lineLengths {
-		count := bd.LineLengthCounts[length]
-		lineLengthStrings = append(lineLengthStrings, fmt.Sprintf("length = %4d, count = %2d", length, count))
-	}
-
 	parts := []string{
 		fmt.Sprintf("file type: %v\n", bd.FileType),
 		fmt.Sprintf("size: %v\n", bd.Size),
 		fmt.Sprintf("hash: %v\n", bd.Hash),
-		fmt.Sprintf("line lengths:\n%s", strings.Join(lineLengthStrings, "\n")),
+		fmt.Sprintf("line lengths: %v\n", bd.LineLengths),
 	}
 	return strings.Join(parts, "\n")
 }
@@ -137,7 +125,6 @@ func GetBasicData(fileList []string, pathInArchive map[string]string) (*BasicPac
 
 	for index, filePath := range fileList {
 		archivePath := pathInArchive[filePath]
-
 		fileType := fileTypes[index]
 
 		var fileSize int64
@@ -156,19 +143,19 @@ func GetBasicData(fileList []string, pathInArchive map[string]string) (*BasicPac
 			fileHash = "sha256:" + hash
 		}
 
-		var lineLengthCounts valuecounts.ValueCounts
-		if lineLengths, err := linelengths.GetLineLengths(filePath, ""); err != nil {
-			log.Error("Error collecting line lengths", "path", archivePath, "error", err)
+		var lineLengths valuecounts.ValueCounts
+		if ll, err := linelengths.GetLineLengths(filePath, ""); err != nil {
+			log.Error("Error counting line lengths", "path", archivePath, "error", err)
 		} else {
-			lineLengthCounts = lineLengths
+			lineLengths = valuecounts.Count(ll)
 		}
 
 		result.Files = append(result.Files, BasicFileData{
-			Filename:         archivePath,
-			FileType:         fileType,
-			Size:             fileSize,
-			Hash:             fileHash,
-			LineLengthCounts: lineLengthCounts,
+			Filename:    archivePath,
+			FileType:    fileType,
+			Size:        fileSize,
+			Hash:        fileHash,
+			LineLengths: lineLengths,
 		})
 	}
 
