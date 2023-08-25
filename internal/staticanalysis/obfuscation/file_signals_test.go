@@ -2,20 +2,17 @@ package obfuscation
 
 import (
 	"reflect"
-	"strings"
 	"testing"
 
-	"github.com/ossf/package-analysis/internal/log"
-	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stats"
-	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stringentropy"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
-	"github.com/ossf/package-analysis/internal/utils"
+	"github.com/ossf/package-analysis/internal/utils/valuecounts"
 )
 
 type fileSignalsTestCase struct {
-	name      string
-	parseData parsing.SingleResult
+	name            string
+	parseData       parsing.SingleResult
+	expectedSignals FileSignals
 }
 
 var fileSignalsTestCases = []fileSignalsTestCase{
@@ -30,6 +27,17 @@ var fileSignalsTestCases = []fileSignalsTestCase{
 			},
 			IntLiterals:   []token.Int{},
 			FloatLiterals: []token.Float{},
+		},
+		expectedSignals: FileSignals{
+			StringLengths:         valuecounts.ValueCounts{5: 1},
+			IdentifierLengths:     valuecounts.ValueCounts{1: 1},
+			SuspiciousIdentifiers: []SuspiciousIdentifier{{Name: "a", Rule: "single"}},
+			EscapedStrings:        []EscapedString{},
+			Base64Strings:         []string{},
+			EmailAddresses:        []string{},
+			HexStrings:            []string{},
+			IPAddresses:           []string{},
+			URLs:                  []string{},
 		},
 	},
 	{
@@ -52,70 +60,32 @@ var fileSignalsTestCases = []fileSignalsTestCase{
 			},
 			FloatLiterals: []token.Float{},
 		},
+		expectedSignals: FileSignals{
+			StringLengths:     valuecounts.ValueCounts{5: 2},
+			IdentifierLengths: valuecounts.ValueCounts{1: 3, 4: 1},
+			SuspiciousIdentifiers: []SuspiciousIdentifier{
+				{Name: "a", Rule: "single"},
+				{Name: "b", Rule: "single"},
+				{Name: "c", Rule: "single"},
+			},
+			EscapedStrings: []EscapedString{},
+			Base64Strings:  []string{},
+			EmailAddresses: []string{},
+			HexStrings:     []string{},
+			IPAddresses:    []string{},
+			URLs:           []string{},
+		},
 	},
-}
-
-func symbolEntropySummary(symbols []string) stats.SampleStatistics {
-	probs := stringentropy.CharacterProbabilities(symbols)
-	entropies := utils.Transform(symbols, func(s string) float64 { return stringentropy.CalculateEntropy(s, probs) })
-	return stats.Summarise(entropies)
-}
-
-func symbolLengthCounts(symbols []string) map[int]int {
-	lengths := utils.Transform(symbols, func(s string) int { return len(s) })
-	return stats.CountDistinct(lengths)
-}
-
-func compareSummary(t *testing.T, name string, expected, actual stats.SampleStatistics) {
-	t.Helper()
-	if !expected.Equals(actual, 1e-4) {
-		t.Errorf("%s summary did not match.\nExpected: %v\nActual: %v\n", name, expected, actual)
-	}
-}
-
-func compareCounts(t *testing.T, name string, expected, actual map[int]int) {
-	t.Helper()
-	if !reflect.DeepEqual(expected, actual) {
-		t.Errorf("%s summary did not match.\nExpected: %v\nActual: %v\n", name, expected, actual)
-	}
-}
-
-func testSignals(t *testing.T, signals FileSignals, stringLiterals []token.String, identifiers []token.Identifier) {
-	t.Helper()
-	literals := utils.Transform(stringLiterals, func(s token.String) string { return s.Value })
-	identifierNames := utils.Transform(identifiers, func(i token.Identifier) string { return i.Name })
-	expectedStringEntropySummary := symbolEntropySummary(literals)
-	expectedStringLengthSummary := symbolLengthCounts(literals)
-	expectedIdentifierEntropySummary := symbolEntropySummary(identifierNames)
-	expectedIdentifierLengthSummary := symbolLengthCounts(identifierNames)
-
-	compareSummary(t, "String literal entropy", expectedStringEntropySummary, signals.StringEntropySummary)
-	compareCounts(t, "String literal lengths", expectedStringLengthSummary, signals.StringLengths)
-	compareSummary(t, "Identifier entropy", expectedIdentifierEntropySummary, signals.IdentifierEntropySummary)
-	compareCounts(t, "Identifier lengths", expectedIdentifierLengthSummary, signals.IdentifierLengths)
-
-	expectedStringCombinedEntropy := stringentropy.CalculateEntropy(strings.Join(literals, ""), nil)
-	if !utils.FloatEquals(expectedStringCombinedEntropy, signals.CombinedStringEntropy, 1e-4) {
-		t.Errorf("Combined string entropy: expected %.3f, actual %.3f",
-			expectedStringCombinedEntropy, signals.CombinedStringEntropy)
-	}
-
-	expectedIdentifierCombinedEntropy := stringentropy.CalculateEntropy(strings.Join(identifierNames, ""), nil)
-	if !utils.FloatEquals(expectedIdentifierCombinedEntropy, signals.CombinedIdentifierEntropy, 1e-4) {
-		t.Errorf("Combined identifier entropy: expected %.3f, actual %.3f",
-			expectedIdentifierCombinedEntropy, signals.CombinedIdentifierEntropy)
-	}
-}
-
-func init() {
-	log.Initialize("")
 }
 
 func TestComputeSignals(t *testing.T) {
 	for _, test := range fileSignalsTestCases {
 		t.Run(test.name, func(t *testing.T) {
 			signals := ComputeFileSignals(test.parseData)
-			testSignals(t, signals, test.parseData.StringLiterals, test.parseData.Identifiers)
+			if !reflect.DeepEqual(signals, test.expectedSignals) {
+				t.Errorf("actual signals did not match expected\n"+
+					"== want ==\n%v\n== got ==\n%v\n======", test.expectedSignals, signals)
+			}
 		})
 	}
 }

@@ -3,6 +3,7 @@ package valuecounts
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
@@ -24,6 +25,25 @@ type Pair struct {
 
 func New() ValueCounts {
 	return ValueCounts{}
+}
+
+// Count produces a new ValueCounts by counting repetitions of values in the input data
+func Count(data []int) ValueCounts {
+	vc := New()
+	for _, value := range data {
+		vc[value] += 1
+	}
+	return vc
+}
+
+// String() returns a string representation of this ValueCounts
+// with values sorted in ascending order
+func (vc ValueCounts) String() string {
+	pairStrings := make([]string, 0, len(vc))
+	for _, pair := range vc.ToPairs() {
+		pairStrings = append(pairStrings, fmt.Sprintf("%d: %d", pair.Value, pair.Count))
+	}
+	return "[" + strings.Join(pairStrings, ", ") + " ]"
 }
 
 // ToPairs converts this ValueCounts into a list of (value, count) pairs.
