@@ -25,8 +25,8 @@ type BasicFileData struct {
 	// Filename records the path to the file within the package archive
 	Filename string `json:"filename"`
 
-	// FileType records the output of the `file` command run on that file.
-	FileType string `json:"filetype"`
+	// Description records the output of the `file` command run on that file.
+	Description string `json:"filetype"`
 
 	// Size records the size of the file (as reported by the filesystem).
 	Size int64 `json:"size"`
@@ -41,7 +41,7 @@ type BasicFileData struct {
 
 func (bd BasicFileData) String() string {
 	parts := []string{
-		fmt.Sprintf("file type: %v\n", bd.FileType),
+		fmt.Sprintf("file type: %v\n", bd.Description),
 		fmt.Sprintf("size: %v\n", bd.Size),
 		fmt.Sprintf("hash: %v\n", bd.Hash),
 		fmt.Sprintf("line lengths: %v\n", bd.LineLengths),
@@ -65,7 +65,7 @@ func (h fileCmdArgsHandler) ReadStdinArg() []string {
 	return h.FileListArg("-")
 }
 
-func getFileTypes(fileList []string) ([]string, error) {
+func getFileDescriptions(fileList []string) ([]string, error) {
 	workingDir, err := os.MkdirTemp("", "package-analysis-basic-data-*")
 	if err != nil {
 		return nil, fmt.Errorf("error creating temp file for file type analysis: %w", err)
@@ -111,12 +111,12 @@ func GetBasicData(fileList []string, pathInArchive func(absolutePath string) str
 	// First, run file in batch processing mode to get all the file types at once.
 	// Then, file size, hash and line lengths can be done in a simple loop
 
-	fileTypes, err := getFileTypes(fileList)
+	fileDescriptions, err := getFileDescriptions(fileList)
 	if err != nil {
 		return nil, err
 	}
-	if len(fileTypes) != len(fileList) {
-		return nil, fmt.Errorf("file type analysis returned mismatched results")
+	if len(fileDescriptions) != len(fileList) {
+		return nil, fmt.Errorf("file type analysis returned mismatched number of results")
 	}
 
 	result := BasicPackageData{
@@ -125,7 +125,7 @@ func GetBasicData(fileList []string, pathInArchive func(absolutePath string) str
 
 	for index, filePath := range fileList {
 		archivePath := pathInArchive(filePath)
-		fileType := fileTypes[index]
+		description := fileDescriptions[index]
 
 		var fileSize int64
 		if fileInfo, err := os.Stat(filePath); err != nil {
@@ -152,7 +152,7 @@ func GetBasicData(fileList []string, pathInArchive func(absolutePath string) str
 
 		result.Files = append(result.Files, BasicFileData{
 			Filename:    archivePath,
-			FileType:    fileType,
+			Description: description,
 			Size:        fileSize,
 			Hash:        fileHash,
 			LineLengths: lineLengths,
