@@ -9,10 +9,12 @@ package log
 
 import (
 	golog "log"
+	"log/slog"
 	"strings"
 
 	"github.com/blendle/zapdriver"
 	"go.uber.org/zap"
+	"go.uber.org/zap/exp/zapslog"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -84,6 +86,12 @@ func Initialize(env string) *zap.SugaredLogger {
 		golog.Panic(err)
 	}
 	zap.RedirectStdLog(logger)
+	// Ensure slog.Default logs to the same destination as zap.
+	slogger := slog.New(NewContextLogHandler(zapslog.NewHandler(logger.Core(), &zapslog.HandlerOptions{
+		AddSource: true,
+	})))
+	slog.SetDefault(slogger)
+
 	logger = logger.WithOptions(zap.AddCallerSkip(1))
 	defaultLogger = logger.Sugar() // Set defaultLogger to provide legacy support
 	return defaultLogger

@@ -13,7 +13,7 @@ require (
 	go.uber.org/zap v1.25.0
 	gocloud.dev v0.33.1-0.20230808164326-dee61a596af0
 	gocloud.dev/pubsub/kafkapubsub v0.33.0
-	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
+	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53
 	google.golang.org/api v0.138.0
 	google.golang.org/grpc v1.57.0
 	google.golang.org/protobuf v1.31.0
@@ -84,6 +84,7 @@ require (
 	github.com/zeebo/xxh3 v1.0.2 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
+	go.uber.org/zap/exp v0.1.1-0.20230825131617-98e9c4fe632c // indirect
 	golang.org/x/crypto v0.12.0 // indirect
 	golang.org/x/mod v0.10.0 // indirect
 	golang.org/x/net v0.14.0 // indirect
