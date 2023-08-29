@@ -26,7 +26,7 @@ type BasicFileData struct {
 	Filename string `json:"filename"`
 
 	// Description records the output of the `file` command run on that file.
-	Description string `json:"filetype"`
+	Description string `json:"description"`
 
 	// Size records the size of the file (as reported by the filesystem).
 	Size int64 `json:"size"`
