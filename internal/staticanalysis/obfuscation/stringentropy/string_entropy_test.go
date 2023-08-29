@@ -24,7 +24,7 @@ func TestStringEntropy(t *testing.T) {
 		{"aaA", -2*2.0/3.0*math.Log(2.0/3.0) - math.Log(1.0/3.0)/3.0},
 	}
 	for index, test := range testCases {
-		actual := CalculateEntropy(test.s, nil)
+		actual := Calculate(test.s, nil)
 		if !utils.FloatEquals(test.expected, actual, tolerance) {
 			t.Errorf("Test case %d failed (str: %s, expected: %f, actual: %f\n",
 				index+1, test.s, test.expected, actual)
@@ -53,7 +53,7 @@ func TestStringEntropyWithFixedProbs(t *testing.T) {
 		{" a \n", -a * math.Log(a)},
 	}
 	for index, test := range testCases {
-		actual := CalculateEntropy(test.s, probs)
+		actual := Calculate(test.s, probs)
 		if !utils.FloatEquals(test.expected, actual, tolerance) {
 			t.Errorf("Test case %d failed (str: %s, expected: %f, actual: %f\n",
 				index+1, test.s, test.expected, actual)
@@ -73,7 +73,7 @@ func TestStringEntropyRatio(t *testing.T) {
 		{"aaA", (-2*2.0*math.Log(2.0/3.0) - math.Log(1.0/3.0)) / (3.0 * math.Log(3))},
 	}
 	for index, test := range testCases {
-		actual := CalculateNormalisedEntropy(test.s, nil)
+		actual := CalculateNormalised(test.s, nil)
 		if !utils.FloatEquals(test.expected, actual, tolerance) {
 			t.Errorf("Test case %d failed (str: %s, expected: %f, actual: %f\n",
 				index+1, test.s, test.expected, actual)

@@ -29,8 +29,8 @@ var fileSignalsTestCases = []fileSignalsTestCase{
 			FloatLiterals: []token.Float{},
 		},
 		expectedSignals: FileSignals{
-			StringLengths:         valuecounts.ValueCounts{5: 1},
-			IdentifierLengths:     valuecounts.ValueCounts{1: 1},
+			StringLengths:         valuecounts.Count([]int{5}),
+			IdentifierLengths:     valuecounts.Count([]int{1}),
 			SuspiciousIdentifiers: []SuspiciousIdentifier{{Name: "a", Rule: "single"}},
 			EscapedStrings:        []EscapedString{},
 			Base64Strings:         []string{},
@@ -61,8 +61,8 @@ var fileSignalsTestCases = []fileSignalsTestCase{
 			FloatLiterals: []token.Float{},
 		},
 		expectedSignals: FileSignals{
-			StringLengths:     valuecounts.ValueCounts{5: 2},
-			IdentifierLengths: valuecounts.ValueCounts{1: 3, 4: 1},
+			StringLengths:     valuecounts.Count([]int{5, 5}),
+			IdentifierLengths: valuecounts.Count([]int{4, 1, 1, 1}),
 			SuspiciousIdentifiers: []SuspiciousIdentifier{
 				{Name: "a", Rule: "single"},
 				{Name: "b", Rule: "single"},
@@ -74,6 +74,41 @@ var fileSignalsTestCases = []fileSignalsTestCase{
 			HexStrings:     []string{},
 			IPAddresses:    []string{},
 			URLs:           []string{},
+		},
+	},
+	{
+		name: "one of everything",
+		parseData: parsing.SingleResult{
+			Identifiers: []token.Identifier{
+				{Name: "_0x12414124", Type: token.Variable},
+				{Name: "a", Type: token.Parameter},
+				{Name: "d1912931", Type: token.Parameter},
+			},
+			StringLiterals: []token.String{
+				{Value: "hello@email.me", Raw: `"hello@email.me"`},
+				{Value: "https://this.is.a.website.com", Raw: `"https://this.is.a.website.com"`},
+				{Value: "aGVsbG8gd29ybGQK", Raw: `"aGVsbG8gd29ybGQK"`},
+				{Value: "8.8.8.8", Raw: `"8.8.8.8"`},
+				{Value: "e3fc:234a:2341::abcd", Raw: `"e3fc:234a:2341::abcd"`},
+				{Value: "0x21323492394", Raw: `"0x21323492394"`},
+			},
+			IntLiterals:   []token.Int{},
+			FloatLiterals: []token.Float{},
+		},
+		expectedSignals: FileSignals{
+			IdentifierLengths: valuecounts.Count([]int{11, 1, 8}),
+			StringLengths:     valuecounts.Count([]int{14, 29, 16, 7, 20, 13}),
+			SuspiciousIdentifiers: []SuspiciousIdentifier{
+				{Name: "_0x12414124", Rule: "hex"},
+				{Name: "a", Rule: "single"},
+				{Name: "d1912931", Rule: "numeric"},
+			},
+			EscapedStrings: []EscapedString{},
+			Base64Strings:  []string{"aGVsbG8gd29ybGQK"},
+			EmailAddresses: []string{"hello@email.me"},
+			HexStrings:     []string{"21323492394"},
+			IPAddresses:    []string{"8.8.8.8", "e3fc:234a:2341::abcd"},
+			URLs:           []string{"https://this.is.a.website.com"},
 		},
 	},
 }

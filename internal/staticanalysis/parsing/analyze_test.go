@@ -4,18 +4,27 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/staticanalysis/externalcmd"
+	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stringentropy"
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
 
-type collectDataTestCase struct {
+type analyzeTestcase struct {
 	name         string
 	jsSource     string
 	expectedData SingleResult
 }
 
-var collectDataTestCases = []collectDataTestCase{
+var literalCharProbs = []map[rune]float64{
+	stringentropy.CharacterProbabilities([]string{"hello"}),
+	stringentropy.CharacterProbabilities([]string{"hello", "apple"}),
+}
+var identifierCharProbs = []map[rune]float64{
+	stringentropy.CharacterProbabilities([]string{"a"}),
+	stringentropy.CharacterProbabilities([]string{"test", "a", "b", "c"}),
+}
+
+var analyzeTestcases = []analyzeTestcase{
 	{
 		name: "simple 1",
 		jsSource: `
@@ -23,10 +32,10 @@ var a = "hello"
 	`,
 		expectedData: SingleResult{
 			Identifiers: []token.Identifier{
-				{Name: "a", Type: token.Variable},
+				{Name: "a", Type: token.Variable, Entropy: stringentropy.Calculate("a", identifierCharProbs[0])},
 			},
 			StringLiterals: []token.String{
-				{Value: "hello", Raw: `"hello"`},
+				{Value: "hello", Raw: `"hello"`, Entropy: stringentropy.Calculate("hello", literalCharProbs[0])},
 			},
 			IntLiterals:   []token.Int{},
 			FloatLiterals: []token.Float{},
@@ -47,14 +56,14 @@ function test(a, b = 2) {
 	`,
 		expectedData: SingleResult{
 			Identifiers: []token.Identifier{
-				{Name: "test", Type: token.Function},
-				{Name: "a", Type: token.Parameter},
-				{Name: "b", Type: token.Parameter},
-				{Name: "c", Type: token.Variable},
+				{Name: "test", Type: token.Function, Entropy: stringentropy.Calculate("test", identifierCharProbs[1])},
+				{Name: "a", Type: token.Parameter, Entropy: stringentropy.Calculate("a", identifierCharProbs[1])},
+				{Name: "b", Type: token.Parameter, Entropy: stringentropy.Calculate("b", identifierCharProbs[1])},
+				{Name: "c", Type: token.Variable, Entropy: stringentropy.Calculate("c", identifierCharProbs[1])},
 			},
 			StringLiterals: []token.String{
-				{Value: "hello", Raw: `"hello"`},
-				{Value: "apple", Raw: `"apple"`},
+				{Value: "hello", Raw: `"hello"`, Entropy: stringentropy.Calculate("hello", literalCharProbs[1])},
+				{Value: "apple", Raw: `"apple"`, Entropy: stringentropy.Calculate("apple", literalCharProbs[1])},
 			},
 			IntLiterals: []token.Int{
 				{Value: 2, Raw: "2"},
@@ -66,17 +75,13 @@ function test(a, b = 2) {
 	},
 }
 
-func init() {
-	log.Initialize("")
-}
-
-func TestCollectData(t *testing.T) {
+func TestAnalyze(t *testing.T) {
 	parserConfig, err := InitParser(t.TempDir())
 	if err != nil {
 		t.Fatalf("failed to init parser: %v", err)
 	}
 
-	for _, tt := range collectDataTestCases {
+	for _, tt := range analyzeTestcases {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := Analyze(parserConfig, externalcmd.StringInput(tt.jsSource), false)
 			if err != nil {

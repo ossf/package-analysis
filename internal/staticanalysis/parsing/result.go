@@ -17,6 +17,7 @@ type SingleResult struct {
 	IntLiterals    []token.Int        `json:"int_literals"`
 	FloatLiterals  []token.Float      `json:"float_literals"`
 	Comments       []token.Comment    `json:"comments"`
+	// future: external function calls / references (e.g. eval)
 }
 
 func (r SingleResult) String() string {
