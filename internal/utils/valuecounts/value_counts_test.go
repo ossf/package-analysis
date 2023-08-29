@@ -7,7 +7,7 @@ import (
 	"github.com/ossf/package-analysis/internal/utils"
 )
 
-func TestCountData_ToValueCountPairs(t *testing.T) {
+func TestValueCounts_ToValueCountPairs(t *testing.T) {
 	tests := []struct {
 		name string
 		vc   ValueCounts
@@ -15,22 +15,22 @@ func TestCountData_ToValueCountPairs(t *testing.T) {
 	}{
 		{
 			"nil",
-			nil,
+			New(),
 			[]Pair{},
 		},
 		{
 			"empty",
-			ValueCounts{},
+			New(),
 			[]Pair{},
 		},
 		{
 			"single item",
-			ValueCounts{0: 1},
+			FromMap(map[int]int{0: 1}),
 			[]Pair{{0, 1}},
 		},
 		{
 			"multiple items",
-			ValueCounts{0: 1, 1: 2, 2: 3},
+			FromMap(map[int]int{0: 1, 1: 2, 2: 3}),
 			[]Pair{{0, 1}, {1, 2}, {2, 3}},
 		},
 	}
@@ -53,31 +53,31 @@ func TestFromValueCountPairs(t *testing.T) {
 		{
 			"nil",
 			nil,
-			ValueCounts{},
+			New(),
 			false,
 		},
 		{
 			"empty non-nil",
 			[]Pair{},
-			ValueCounts{},
+			New(),
 			false,
 		},
 		{
 			"single item",
 			[]Pair{{0, 1}},
-			ValueCounts{0: 1},
+			FromMap(map[int]int{0: 1}),
 			false,
 		},
 		{
 			"multiple items",
 			[]Pair{{0, 1}, {1, 2}},
-			ValueCounts{0: 1, 1: 2},
+			FromMap(map[int]int{0: 1, 1: 2}),
 			false,
 		},
 		{
 			"repeated items",
 			[]Pair{{0, 1}, {0, 1}},
-			nil,
+			New(),
 			true,
 		},
 	}
@@ -88,8 +88,11 @@ func TestFromValueCountPairs(t *testing.T) {
 				t.Errorf("FromPairs() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+			if err != nil {
+				return
+			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("FromPairs() got = %v, want %v", got, tt.want)
+				t.Errorf("FromPairs() got %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -104,25 +107,25 @@ func TestCountData_MarshalJSON(t *testing.T) {
 	}{
 		{
 			"nil",
-			nil,
-			"[]",
-			false,
-		},
-		{
-			"empty",
 			ValueCounts{},
 			"[]",
 			false,
 		},
 		{
+			"empty",
+			New(),
+			"[]",
+			false,
+		},
+		{
 			"single item",
-			ValueCounts{0: 1},
+			FromMap(map[int]int{0: 1}),
 			`[ {"value": 0, "count": 1} ]`,
 			false,
 		},
 		{
 			"multiple items",
-			ValueCounts{0: 1, 1: 2, 2: 3},
+			FromMap(map[int]int{0: 1, 1: 2, 2: 3}),
 			`[ {"value":0, "count": 1}, {"value": 1, "count": 2}, {"value": 2, "count": 3} ]`,
 			false,
 		},
@@ -139,7 +142,7 @@ func TestCountData_MarshalJSON(t *testing.T) {
 			if equal, err := utils.JSONEquals(gotBytes, []byte(tt.want)); err != nil {
 				t.Errorf("MarshalJSON() error decoding JSON: %v", err)
 			} else if !equal {
-				t.Errorf("MarshalJSON() got = %s, want %s", got, tt.want)
+				t.Errorf("MarshalJSON() got %s, want %s", got, tt.want)
 			}
 		})
 	}
@@ -155,25 +158,25 @@ func TestCountData_UnmarshalJSON(t *testing.T) {
 		{
 			"null",
 			"null",
-			ValueCounts{},
+			New(),
 			false,
 		},
 		{
 			"empty",
 			"[]",
-			ValueCounts{},
+			New(),
 			false,
 		},
 		{
 			"single item",
 			`[{"value": 0, "count": 1}]`,
-			ValueCounts{0: 1},
+			FromMap(map[int]int{0: 1}),
 			false,
 		},
 		{
 			"multiple items",
 			`[{"value":0,"count":1},{"value":1,"count":2},{"value":2,"count":3}]`,
-			ValueCounts{0: 1, 1: 2, 2: 3},
+			FromMap(map[int]int{0: 1, 1: 2, 2: 3}),
 			false,
 		},
 		// TODO: Add test cases.
@@ -188,6 +191,75 @@ func TestCountData_UnmarshalJSON(t *testing.T) {
 
 			if !reflect.DeepEqual(valueCounts, tt.want) {
 				t.Errorf("UnmarshalJSON(): got %v, want %v", valueCounts, tt.want)
+			}
+		})
+	}
+}
+
+func TestFromMap(t *testing.T) {
+	tests := []struct {
+		name string
+		data map[int]int
+		want ValueCounts
+	}{
+		{
+			"nil",
+			nil,
+			New(),
+		},
+		{
+			"empty",
+			map[int]int{},
+			New(),
+		},
+		{
+			"basic",
+			map[int]int{-1: 210, 10: 102, 0: 34, 3: 0},
+			ValueCounts{
+				data: map[int]int{-1: 210, 0: 34, 3: 0, 10: 102},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := FromMap(tt.data); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("FromMap() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCount(t *testing.T) {
+	tests := []struct {
+		name string
+		data []int
+		want ValueCounts
+	}{
+		{
+			"nil",
+			nil,
+			New(),
+		},
+		{
+			"empty",
+			[]int{},
+			New(),
+		},
+		{
+			"single",
+			[]int{1},
+			FromMap(map[int]int{1: 1}),
+		},
+		{
+			"multiple",
+			[]int{1, 2, 3, 4, 3, 2, 1, 2},
+			FromMap(map[int]int{1: 2, 2: 3, 3: 2, 4: 1}),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := Count(tt.data); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Count() = %v, want %v", got, tt.want)
 			}
 		})
 	}

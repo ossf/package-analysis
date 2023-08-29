@@ -8,7 +8,6 @@ import (
 	"golang.org/x/exp/slices"
 
 	"github.com/ossf/package-analysis/internal/utils"
-	"github.com/ossf/package-analysis/internal/utils/valuecounts"
 )
 
 type RealNumber interface {
@@ -208,12 +207,4 @@ func Summarise[T RealNumber](sample []T) SampleStatistics {
 	s := skewness(sample, m, v)
 	q := quartiles(sample)
 	return SampleStatistics{Size: l, Mean: m, Variance: v, Skewness: s, Quartiles: q}
-}
-
-func CountDistinct(sample []int) valuecounts.ValueCounts {
-	counts := valuecounts.New()
-	for _, t := range sample {
-		counts[t] += 1
-	}
-	return counts
 }

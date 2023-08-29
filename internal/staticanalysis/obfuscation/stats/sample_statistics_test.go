@@ -2,10 +2,7 @@ package stats
 
 import (
 	"math"
-	"reflect"
 	"testing"
-
-	"github.com/ossf/package-analysis/internal/utils/valuecounts"
 )
 
 func TestSummary(t *testing.T) {
@@ -113,32 +110,5 @@ func TestSummary7(t *testing.T) {
 	}
 	if !actual.Equals(expected, 1e-4) {
 		t.Errorf("Expected summary: %v\nactual summary %v\n", expected, actual)
-	}
-}
-
-func TestCountDistinct1(t *testing.T) {
-	data := []int{1, 2, 3, 4, 3, 2, 1, 2}
-	actual := CountDistinct(data)
-	expected := valuecounts.ValueCounts{1: 2, 2: 3, 3: 2, 4: 1}
-	if !reflect.DeepEqual(actual, expected) {
-		t.Errorf("Expected counts: %v\nactual counts %v\n", expected, actual)
-	}
-}
-
-func TestCountDistinct2(t *testing.T) {
-	data := []int{1}
-	actual := CountDistinct(data)
-	expected := valuecounts.ValueCounts{1: 1}
-	if !reflect.DeepEqual(actual, expected) {
-		t.Errorf("Expected counts: %v\nactual counts %v\n", expected, actual)
-	}
-}
-
-func TestCountDistinct3(t *testing.T) {
-	data := []int{}
-	actual := CountDistinct(data)
-	expected := valuecounts.ValueCounts{}
-	if !reflect.DeepEqual(actual, expected) {
-		t.Errorf("Expected counts: %v\nactual counts %v\n", expected, actual)
 	}
 }

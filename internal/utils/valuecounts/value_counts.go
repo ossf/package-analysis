@@ -12,7 +12,9 @@ import (
 // ValueCounts stores unordered counts of integer values as a map
 // from value (int) to count (int). It can be serialized to JSON
 // as an array of (value, count) pairs.
-type ValueCounts map[int]int
+type ValueCounts struct {
+	data map[int]int
+}
 
 // Aside: I know using 'value' to refer to map keys is not great, but the
 // other names I came up with like 'size' and 'length' were all usage-specific.
@@ -23,23 +25,41 @@ type Pair struct {
 	Count int `json:"count"`
 }
 
+// New creates a new empty ValueCounts object
 func New() ValueCounts {
-	return ValueCounts{}
+	return ValueCounts{
+		data: map[int]int{},
+	}
+}
+
+// FromMap creates a new ValueCounts object and initialises its counts from the given map
+func FromMap(data map[int]int) ValueCounts {
+	vc := New()
+	for value, count := range data {
+		vc.data[value] = count
+	}
+	return vc
 }
 
 // Count produces a new ValueCounts by counting repetitions of values in the input data
 func Count(data []int) ValueCounts {
 	vc := New()
 	for _, value := range data {
-		vc[value] += 1
+		vc.data[value] += 1
 	}
 	return vc
+}
+
+// Len returns the number of values stored by this ValueCounts.
+// It is equivalent to the length of the slice returned by ToPairs()
+func (vc ValueCounts) Len() int {
+	return len(vc.data)
 }
 
 // String() returns a string representation of this ValueCounts
 // with values sorted in ascending order
 func (vc ValueCounts) String() string {
-	pairStrings := make([]string, 0, len(vc))
+	pairStrings := make([]string, 0, len(vc.data))
 	for _, pair := range vc.ToPairs() {
 		pairStrings = append(pairStrings, fmt.Sprintf("%d: %d", pair.Value, pair.Count))
 	}
@@ -50,14 +70,14 @@ func (vc ValueCounts) String() string {
 // The values are sorted in increasing order so that the output is deterministic.
 // If this ValueCounts is empty, returns an empty slice.
 func (vc ValueCounts) ToPairs() []Pair {
-	pairs := make([]Pair, 0, len(vc))
+	pairs := make([]Pair, 0, len(vc.data))
 
 	// sort the values so that the output is in a deterministic order
-	values := maps.Keys(vc)
+	values := maps.Keys(vc.data)
 	slices.Sort(values)
 
 	for _, value := range values {
-		count := vc[value]
+		count := vc.data[value]
 		pairs = append(pairs, Pair{Value: value, Count: count})
 	}
 
@@ -71,10 +91,10 @@ func FromPairs(pairs []Pair) (ValueCounts, error) {
 	valueCounts := New()
 
 	for _, item := range pairs {
-		if _, seen := valueCounts[item.Value]; seen {
-			return nil, fmt.Errorf("value occurs multiple times: %d", item.Value)
+		if _, seen := valueCounts.data[item.Value]; seen {
+			return ValueCounts{}, fmt.Errorf("value occurs multiple times: %d", item.Value)
 		}
-		valueCounts[item.Value] = item.Count
+		valueCounts.data[item.Value] = item.Count
 	}
 
 	return valueCounts, nil
