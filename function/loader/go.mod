@@ -1,6 +1,6 @@
 module github.com/ossf/package-analysis/loader
 
-go 1.19
+go 1.21
 
 require cloud.google.com/go/bigquery v1.54.0
 
