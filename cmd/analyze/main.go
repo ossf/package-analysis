@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 
@@ -114,7 +115,7 @@ func makeSandboxOptions() []sandbox.Option {
 	return sbOpts
 }
 
-func dynamicAnalysis(pkg *pkgmanager.Pkg, resultStores *worker.ResultStores) {
+func dynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, resultStores *worker.ResultStores) {
 	if !*offline {
 		sandbox.InitNetwork()
 	}
@@ -127,24 +128,23 @@ func dynamicAnalysis(pkg *pkgmanager.Pkg, resultStores *worker.ResultStores) {
 
 	result, err := worker.RunDynamicAnalysis(pkg, sbOpts, *customAnalysisCmd)
 	if err != nil {
-		log.Error("Dynamic analysis aborted (run error)", "error", err)
+		slog.ErrorContext(ctx, "Dynamic analysis aborted (run error)", "error", err)
 		return
 	}
 
 	// this is only valid if RunDynamicAnalysis() returns nil err
 	if result.LastStatus != analysis.StatusCompleted {
-		log.Warn("Dynamic analysis phase did not complete successfully",
-			"lastRunPhase", result.LastRunPhase,
-			"status", result.LastStatus)
+		slog.WarnContext(ctx, "Dynamic analysis phase did not complete successfully",
+			"last_run_phase", string(result.LastRunPhase),
+			"status", string(result.LastStatus))
 	}
 
-	ctx := context.Background()
 	if err := worker.SaveDynamicAnalysisData(ctx, pkg, resultStores, result.AnalysisData); err != nil {
-		log.Error("Upload error", "error", err)
+		slog.ErrorContext(ctx, "Upload error", "error", err)
 	}
 }
 
-func staticAnalysis(pkg *pkgmanager.Pkg, resultStores *worker.ResultStores) {
+func staticAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, resultStores *worker.ResultStores) {
 	if !*offline {
 		sandbox.InitNetwork()
 	}
@@ -153,15 +153,14 @@ func staticAnalysis(pkg *pkgmanager.Pkg, resultStores *worker.ResultStores) {
 
 	data, status, err := worker.RunStaticAnalysis(pkg, sbOpts, staticanalysis.All)
 	if err != nil {
-		log.Error("Static analysis aborted", "error", err)
+		slog.ErrorContext(ctx, "Static analysis aborted", "error", err)
 		return
 	}
 
-	log.Info("Static analysis completed", "status", status)
+	slog.InfoContext(ctx, "Static analysis completed", "status", string(status))
 
-	ctx := context.Background()
 	if err := worker.SaveStaticAnalysisData(ctx, pkg, resultStores, data); err != nil {
-		log.Error("Upload error", "error", err)
+		slog.ErrorContext(ctx, "Upload error", "error", err)
 	}
 }
 
@@ -174,7 +173,7 @@ func main() {
 	flag.Parse()
 
 	if err := featureflags.Update(*features); err != nil {
-		log.Fatal("Failed to parse flags", "error", err)
+		slog.Error("Failed to parse flags", "error", err)
 		return
 	}
 
@@ -197,49 +196,49 @@ func main() {
 		flag.Usage()
 		return
 	}
+	ctx := log.ContextWithAttrs(context.Background(), slog.Any("ecosystem", ecosystem))
 
 	manager := pkgmanager.Manager(ecosystem)
 	if manager == nil {
-		log.Panic("Unsupported pkg manager",
-			log.Label("ecosystem", string(ecosystem)))
+		slog.ErrorContext(ctx, "Unsupported pkg manager")
+		os.Exit(1)
 	}
 
 	if *pkgName == "" {
 		flag.Usage()
 		return
 	}
+	ctx = log.ContextWithAttrs(ctx, slog.String("name", *pkgName), slog.String("version", *version))
 
 	runMode := make(map[analysis.Mode]bool)
 	for _, analysisName := range analysisMode.Values {
 		mode, ok := analysis.ModeFromString(strings.ToLower(analysisName))
 		if !ok {
-			log.Error("Unknown analysis mode: " + analysisName)
+			slog.ErrorContext(ctx, "Unknown analysis mode: "+analysisName)
 			printAnalysisModes()
 			return
 		}
 		runMode[mode] = true
 	}
 
-	worker.LogRequest(ecosystem, *pkgName, *version, *localPkg, "")
+	slog.InfoContext(ctx, "Processing package", "package_path", *localPkg)
 
 	pkg, err := worker.ResolvePkg(manager, *pkgName, *version, *localPkg)
 	if err != nil {
-		log.Panic("Error resolving package",
-			log.Label("ecosystem", ecosystem.String()),
-			"name", *pkgName,
-			"error", err)
+		slog.ErrorContext(ctx, "Error resolving package", "error", err)
+		os.Exit(1)
 	}
 
 	resultStores := makeResultStores()
 
 	if runMode[analysis.Static] {
-		log.Info("Starting static analysis")
-		staticAnalysis(pkg, &resultStores)
+		slog.InfoContext(ctx, "Starting static analysis")
+		staticAnalysis(ctx, pkg, &resultStores)
 	}
 
 	// dynamicAnalysis() currently panics on error, so it's last
 	if runMode[analysis.Dynamic] {
-		log.Info("Starting dynamic analysis")
-		dynamicAnalysis(pkg, &resultStores)
+		slog.InfoContext(ctx, "Starting dynamic analysis")
+		dynamicAnalysis(ctx, pkg, &resultStores)
 	}
 }

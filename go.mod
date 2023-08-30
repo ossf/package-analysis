@@ -11,6 +11,7 @@ require (
 	github.com/package-url/packageurl-go v0.1.1
 	github.com/texttheater/golang-levenshtein/levenshtein v0.0.0-20200805054039-cae8b0eaed6c
 	go.uber.org/zap v1.25.0
+	go.uber.org/zap/exp v0.1.1-0.20230825131617-98e9c4fe632c
 	gocloud.dev v0.33.1-0.20230808164326-dee61a596af0
 	gocloud.dev/pubsub/kafkapubsub v0.33.0
 	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53
@@ -84,7 +85,6 @@ require (
 	github.com/zeebo/xxh3 v1.0.2 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	go.uber.org/zap/exp v0.1.1-0.20230825131617-98e9c4fe632c // indirect
 	golang.org/x/crypto v0.12.0 // indirect
 	golang.org/x/mod v0.10.0 // indirect
 	golang.org/x/net v0.14.0 // indirect
