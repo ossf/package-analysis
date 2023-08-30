@@ -80,7 +80,7 @@ type EscapedString struct {
 // and Rule holds the rule that the identifier matched against.
 type SuspiciousIdentifier struct {
 	Name string `json:"name"`
-	Rule string `json:"reason"`
+	Rule string `json:"rule"`
 }
 
 // countLengths returns a map containing the aggregated lengths

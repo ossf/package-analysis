@@ -77,14 +77,14 @@ func TestGetBasicData(t *testing.T) {
 
 			got, err := GetBasicData(paths, getArchivePath)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("getFileTypes() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("getFileDescriptions() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
 			wantData := utils.Transform(tt.files, func(f testFile) BasicFileData {
 				return BasicFileData{
 					Filename:    f.filename,
-					FileType:    f.fileType,
+					Description: f.fileType,
 					Size:        int64(len(f.contents)),
 					Hash:        f.contentsHash,
 					LineLengths: f.lineLengths,
