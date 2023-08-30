@@ -16,11 +16,16 @@ ENV DEBIAN_FRONTEND noninteractive
 # Silence 'debconf: delaying package configuation, since apt-utils is not installed' warning
 # as it related to interactive configuration anyway
 ENV DEBCONF_NOWARNINGS="yes"
+# Define the major version of Node.js to use.
+ENV NODE_MAJOR=18
 
 # setup repo for kubectl
-RUN mkdir -m 0700 -p /etc/apt/keyrings && \
-	curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /etc/apt/trusted.gpg.d/kubernetes-archive-keyring.gpg && \
+RUN curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /etc/apt/trusted.gpg.d/kubernetes-archive-keyring.gpg && \
 	echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list
+
+# install repo for nodejs
+RUN curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/trusted.gpg.d/nodesource.gpg && \
+    echo "deb https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" > /etc/apt/sources.list.d/nodesource.list
 
 # install keys for powershell
 RUN curl -fsSL "https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb" -o /setup/packages-microsoft-prod.deb && \
@@ -75,10 +80,9 @@ RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" &&
 #
 # NPM setup
 #
+# Installs node and npm via the nodejs package, pulled from nodesource.com configured above.
 WORKDIR /setup/node
-RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
-	nodejs \
-	npm
+RUN apt-get update && apt-get install -y --no-install-recommends nodejs
 
 COPY bowerrc /app/.bowerrc
 
