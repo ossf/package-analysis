@@ -10,10 +10,11 @@ import (
 	"cloud.google.com/go/bigquery"
 )
 
-// TODO(ochang): Get this by using `bigquery.InferSchema` on the Go structure instead.
-//
-//go:embed schema.json
-var schemaEncoded []byte
+//go:embed dynamic-analysis-schema.json
+var dynamicAnalysisSchemaJSON []byte
+
+//go:embed static-analysis-schema.json
+var staticAnalysisSchemaJSON []byte
 
 type PubSubMessage struct {
 	Data []byte `json:"data"`
@@ -28,7 +29,7 @@ func Load(ctx context.Context, m PubSubMessage) error {
 		log.Panicf("Failed to create bq client: %v", err)
 	}
 
-	schema, err := bigquery.SchemaFromJSON(schemaEncoded)
+	schema, err := bigquery.SchemaFromJSON(dynamicAnalysisSchemaJSON)
 	if err != nil {
 		log.Panicf("Failed to decode schema: %v", err)
 	}

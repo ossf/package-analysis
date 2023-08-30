@@ -1,0 +1,311 @@
+[
+  {
+    "name": "Package",
+    "mode": "NULLABLE",
+    "type": "RECORD",
+    "fields": [
+      {
+        "name": "Ecosystem",
+        "mode": "NULLABLE",
+        "type": "STRING"
+      },
+      {
+        "name": "Name",
+        "mode": "NULLABLE",
+        "type": "STRING"
+      },
+      {
+        "name": "Version",
+        "mode": "NULLABLE",
+        "type": "STRING"
+      }
+    ]
+  },
+  {
+    "name": "CreatedTimestamp",
+    "mode": "NULLABLE",
+    "type": "TIMESTAMP"
+  },
+  {
+    "name": "Analysis",
+    "mode": "NULLABLE",
+    "type": "RECORD",
+    "fields": [
+      {
+        "name": "basic",
+        "mode": "NULLABLE",
+        "type": "RECORD",
+        "fields": [
+          {
+            "name": "files",
+            "mode": "REPEATED",
+            "type": "RECORD",
+            "fields": [
+              {
+                "name": "filename",
+                "mode": "REQUIRED",
+                "type": "STRING"
+              },
+              {
+                "name": "description",
+                "mode": "NULLABLE",
+                "type": "STRING"
+              },
+              {
+                "name": "size",
+                "mode": "NULLABLE",
+                "type": "INTEGER"
+              },
+              {
+                "name": "hash",
+                "mode": "NULLABLE",
+                "type": "STRING"
+              },
+              {
+                "name": "line_lengths",
+                "mode": "REPEATED",
+                "type": "RECORD",
+                "fields": [
+                  {
+                    "name": "value",
+                    "mode": "REQUIRED",
+                    "type": "INTEGER"
+                  },
+                  {
+                    "name": "count",
+                    "mode": "REQUIRED",
+                    "type": "INTEGER"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "parsing",
+        "mode": "NULLABLE",
+        "type": "RECORD",
+        "fields": [
+          {
+            "name": "filename",
+            "mode": "REQUIRED",
+            "type": "STRING"
+          },
+          {
+            "name": "language",
+            "mode": "REQUIRED",
+            "type": "STRING"
+          },
+          {
+            "name": "identifiers",
+            "mode": "REPEATED",
+            "type": "RECORD",
+            "fields": [
+              {
+                "name": "name",
+                "mode": "REQUIRED",
+                "type": "STRING"
+              },
+              {
+                "name": "type",
+                "mode": "NULLABLE",
+                "type": "STRING"
+              },
+              {
+                "name": "entropy",
+                "mode": "NULLABLE",
+                "type": "FLOAT64"
+              }
+            ]
+          },
+          {
+            "name": "string_literals",
+            "mode": "REPEATED",
+            "type": "RECORD",
+            "fields": [
+              {
+                "name": "Name",
+                "mode": "REQUIRED",
+                "type": "STRING"
+              },
+              {
+                "name": "Type",
+                "mode": "NULLABLE",
+                "type": "STRING"
+              },
+              {
+                "name": "Entropy",
+                "mode": "NULLABLE",
+                "type": "FLOAT64"
+              }
+            ]
+          },
+          {
+            "name": "int_literals",
+            "mode": "REPEATED",
+            "type": "RECORD",
+            "fields": [
+              {
+                "name": "value",
+                "mode": "REQUIRED",
+                "type": "INTEGER"
+              },
+              {
+                "name": "raw",
+                "mode": "NULLABLE",
+                "type": "STRING"
+              }
+            ]
+          },
+          {
+            "name": "float_literals",
+            "mode": "REPEATED",
+            "type": "RECORD",
+            "fields": [
+              {
+                "name": "value",
+                "mode": "REQUIRED",
+                "type": "FLOAT64"
+              },
+              {
+                "name": "raw",
+                "mode": "REQUIRED",
+                "type": "STRING"
+              }
+            ]
+          },
+          {
+            "name": "comments",
+            "mode": "REPEATED",
+            "type": "RECORD",
+            "fields": [
+              {
+                "name": "text",
+                "mode": "REQUIRED",
+                "type": "STRING"
+              }
+            ]
+          }
+          ]
+      },
+      {
+        "name": "obfuscation",
+        "mode": "NULLABLE",
+        "type": "RECORD",
+        "fields": [
+          {
+            "name": "excluded_files",
+            "mode": "REPEATED",
+            "type": "STRING"
+          },
+          {
+            "name": "signals",
+            "mode": "REPEATED",
+            "type": "RECORD",
+            "fields": [
+              {
+                "name": "filename",
+                "mode": "REQUIRED",
+                "type": "STRING"
+              },
+              {
+                "name": "identifier_lengths",
+                "mode": "REPEATED",
+                "type": "RECORD",
+                "fields": [
+                  {
+                    "name": "value",
+                    "mode": "REQUIRED",
+                    "type": "INTEGER"
+                  },
+                  {
+                    "name": "count",
+                    "mode": "REQUIRED",
+                    "type": "INTEGER"
+                  }
+                ]
+              },
+              {
+                "name": "string_lengths",
+                "mode": "REPEATED",
+                "type": "RECORD",
+                "fields": [
+                  {
+                    "name": "value",
+                    "mode": "REQUIRED",
+                    "type": "INTEGER"
+                  },
+                  {
+                    "name": "count",
+                    "mode": "REQUIRED",
+                    "type": "INTEGER"
+                  }
+                ]
+              },
+              {
+                "name": "suspicious_identifiers",
+                "mode": "REPEATED",
+                "type": "RECORD",
+                "fields": [
+                  {
+                    "name": "name",
+                    "mode": "REQUIRED",
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "rule",
+                    "mode": "NULLABLE",
+                    "type": "STRING"
+                  }
+                ]
+              },
+              {
+                "name": "escaped_strings",
+                "mode": "REPEATED",
+                "type": "RECORD",
+                "fields": [
+                  {
+                    "name": "raw_literal",
+                    "mode": "REQUIRED",
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "levenshtein_ratio",
+                    "mode": "NULLABLE",
+                    "type": "FLOAT64"
+                  }
+                ]
+              },
+              {
+                "name": "base64_strings",
+                "mode": "REPEATED",
+                "type": "STRING"
+              },
+              {
+                "name": "email_addresses",
+                "mode": "REPEATED",
+                "type": "STRING"
+              },
+              {
+                "name": "hex_strings",
+                "mode": "REPEATED",
+                "type": "STRING"
+              },
+              {
+                "name": "ip_addresses",
+                "mode": "REPEATED",
+                "type": "STRING"
+              },
+              {
+                "name": "urls",
+                "mode": "REPEATED",
+                "type": "STRING"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]
