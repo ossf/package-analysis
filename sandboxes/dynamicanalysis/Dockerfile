@@ -80,6 +80,7 @@ RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" &&
 #
 # NPM setup
 #
+# Installs node and npm via the nodejs package, pulled from nodesource.com configured above.
 WORKDIR /setup/node
 RUN apt-get update && apt-get install -y --no-install-recommends nodejs
 
