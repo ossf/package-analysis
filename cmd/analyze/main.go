@@ -126,7 +126,7 @@ func dynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, resultStores *wor
 		sbOpts = append(sbOpts, sandbox.Image(*customSandbox))
 	}
 
-	result, err := worker.RunDynamicAnalysis(pkg, sbOpts, *customAnalysisCmd)
+	result, err := worker.RunDynamicAnalysis(ctx, pkg, sbOpts, *customAnalysisCmd)
 	if err != nil {
 		slog.ErrorContext(ctx, "Dynamic analysis aborted (run error)", "error", err)
 		return
@@ -151,7 +151,7 @@ func staticAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, resultStores *work
 
 	sbOpts := append(worker.StaticSandboxOptions(), makeSandboxOptions()...)
 
-	data, status, err := worker.RunStaticAnalysis(pkg, sbOpts, staticanalysis.All)
+	data, status, err := worker.RunStaticAnalysis(ctx, pkg, sbOpts, staticanalysis.All)
 	if err != nil {
 		slog.ErrorContext(ctx, "Static analysis aborted", "error", err)
 		return

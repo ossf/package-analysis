@@ -1,7 +1,9 @@
 package worker
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -134,13 +136,12 @@ The returned error holds any error that occurred in the runtime/sandbox infrastr
 excluding from within the analysis itself. In other words, it does not include errors
 produced by the package under analysis.
 */
-func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option, analysisCmd string) (DynamicAnalysisResult, error) {
+func RunDynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandbox.Option, analysisCmd string) (DynamicAnalysisResult, error) {
+	ctx = log.ContextWithAttrs(ctx, slog.String("mode", "dynamic"))
+
 	var beforeDynamic runtime.MemStats
 	runtime.ReadMemStats(&beforeDynamic)
-	log.Info("Memory Stats, heap usage before dynamic analysis",
-		log.Label("ecosystem", pkg.EcosystemName()),
-		"name", pkg.Name(),
-		"version", pkg.Version(),
+	slog.InfoContext(ctx, "Memory Stats, heap usage before dynamic analysis",
 		"heap_usage_before_dynamic_analysis", strconv.FormatUint(beforeDynamic.Alloc, 10),
 	)
 
@@ -152,20 +153,20 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option, analysisCm
 
 	defer func() {
 		if err := sb.Clean(); err != nil {
-			log.Error("error cleaning up sandbox", "error", err)
+			slog.ErrorContext(ctx, "Error cleaning up sandbox", "error", err)
 		}
 	}()
 
 	// initialise sandbox before copy/run
 	if err := sb.Init(); err != nil {
-		LogDynamicAnalysisError(pkg, "", err)
+		LogDynamicAnalysisError(ctx, pkg, "", err)
 		return DynamicAnalysisResult{}, err
 	}
 
 	codeExecutionEnabled := false
 	if shouldEnableCodeExecution(pkg.Ecosystem()) {
 		if err := enableCodeExecution(sb); err != nil {
-			log.Error("code execution disabled due to error", "error", err)
+			slog.ErrorContext(ctx, "Code execution disabled due to error", "error", err)
 		} else {
 			codeExecutionEnabled = true
 		}
@@ -185,17 +186,14 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option, analysisCm
 	var lastError error
 
 	for _, phase := range analysisrun.DefaultDynamicPhases() {
+		phaseCtx := log.ContextWithAttrs(ctx, log.LabelAttr("phase", string(phase)))
 		startTime := time.Now()
 		args := dynamicanalysis.MakeAnalysisArgs(pkg, phase)
 		phaseResult, err := dynamicanalysis.Run(sb, analysisCmd, args, log.GetDefaultLogger())
 		result.LastRunPhase = phase
 
 		runDuration := time.Since(startTime)
-		log.Info("Dynamic analysis phase finished",
-			log.Label("ecosystem", pkg.EcosystemName()),
-			"name", pkg.Name(),
-			"version", pkg.Version(),
-			log.Label("phase", string(phase)),
+		slog.InfoContext(phaseCtx, "Dynamic analysis phase finished",
 			"error", err,
 			"dynamic_analysis_phase_duration", runDuration,
 		)
@@ -222,18 +220,15 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option, analysisCm
 
 	var afterDynamic runtime.MemStats
 	runtime.ReadMemStats(&afterDynamic)
-	log.Info("Memory Stats, heap usage after dynamic analysis",
-		log.Label("ecosystem", pkg.EcosystemName()),
-		"name", pkg.Name(),
-		"version", pkg.Version(),
+	slog.InfoContext(ctx, "Memory Stats, heap usage after dynamic analysis",
 		"heap_usage_after_dynamic_analysis", strconv.FormatUint(afterDynamic.Alloc, 10))
 
 	if lastError != nil {
-		LogDynamicAnalysisError(pkg, result.LastRunPhase, lastError)
+		LogDynamicAnalysisError(ctx, pkg, result.LastRunPhase, lastError)
 		return result, lastError
 	}
 
-	LogDynamicAnalysisResult(pkg, result.LastRunPhase, result.LastStatus)
+	LogDynamicAnalysisResult(ctx, pkg, result.LastRunPhase, result.LastStatus)
 
 	if !codeExecutionEnabled {
 		// nothing more to do
@@ -243,7 +238,7 @@ func RunDynamicAnalysis(pkg *pkgmanager.Pkg, sbOpts []sandbox.Option, analysisCm
 	executionLog, err := retrieveExecutionLog(sb)
 	if err != nil {
 		// don't return this error, just log it
-		log.Error("Error retrieving execution log", "error", err)
+		slog.ErrorContext(ctx, "Error retrieving execution log", "error", err)
 	} else {
 		result.AnalysisData.ExecutionLog = analysisrun.DynamicAnalysisExecutionLog(executionLog)
 	}
