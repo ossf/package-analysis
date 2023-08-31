@@ -2,11 +2,14 @@ package strace
 
 import (
 	"bufio"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
+	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -14,10 +17,7 @@ import (
 	"strings"
 	"unicode"
 
-	"go.uber.org/zap"
-
 	"github.com/ossf/package-analysis/internal/featureflags"
-	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/utils"
 )
 
@@ -153,7 +153,7 @@ func (r *Result) recordFileAccess(file string, read, write, del bool) {
 	r.files[file].Delete = r.files[file].Delete || del
 }
 
-func (r *Result) recordFileWrite(file string, writeBuffer []byte, bytesWritten int64) {
+func (r *Result) recordFileWrite(ctx context.Context, file string, writeBuffer []byte, bytesWritten int64) {
 	r.recordFileAccess(file, false, true, false)
 	if !featureflags.WriteFileContents.Enabled() {
 		// Abort writing file contents when feature is disabled.
@@ -166,7 +166,9 @@ func (r *Result) recordFileWrite(file string, writeBuffer []byte, bytesWritten i
 	r.files[file].WriteInfo = append(r.files[file].WriteInfo, writeContentsAndBytes)
 	if _, exists := r.allWriteBufferId[writeID]; !exists {
 		if err := utils.CreateAndWriteTempFile(writeID, writeBuffer); err != nil {
-			log.Fatal("Could not create and write temp file", "error", err)
+			// TODO: push this error up to be handled by the caller.
+			slog.ErrorContext(ctx, "Could not create and write temp file", "error", err)
+			os.Exit(1)
 		}
 		r.allWriteBufferId[writeID] = struct{}{}
 	}
@@ -194,7 +196,7 @@ func (r *Result) recordCommand(cmd, env []string) {
 	}
 }
 
-func (r *Result) parseEnterSyscall(syscall, args string, logger *zap.SugaredLogger) error {
+func (r *Result) parseEnterSyscall(ctx context.Context, syscall, args string) error {
 	switch syscall {
 	case "write":
 		// The index of the start of bytes written. Bytes written is expected to be in hex.
@@ -217,13 +219,13 @@ func (r *Result) parseEnterSyscall(syscall, args string, logger *zap.SugaredLogg
 			// Save the contents between the first and last quote.
 			writeBuffer = args[firstQuoteIndex+1 : lastQuoteIndex]
 		}
-		logger.Debugw("write", "path", path, "size", bytesWritten)
-		r.recordFileWrite(path, []byte(writeBuffer), bytesWritten)
+		slog.DebugContext(ctx, "write", "path", path, "size", bytesWritten)
+		r.recordFileWrite(ctx, path, []byte(writeBuffer), bytesWritten)
 	}
 	return nil
 }
 
-func (r *Result) parseExitSyscall(syscall, args string, logger *zap.SugaredLogger) error {
+func (r *Result) parseExitSyscall(ctx context.Context, syscall, args string) error {
 	switch syscall {
 	case "creat":
 		match := creatPattern.FindStringSubmatch(args)
@@ -232,7 +234,7 @@ func (r *Result) parseExitSyscall(syscall, args string, logger *zap.SugaredLogge
 		}
 
 		path := match[1]
-		logger.Debugw("creat", "path", path)
+		slog.DebugContext(ctx, "creat", "path", path)
 		r.recordFileAccess(path, false, true, false)
 	case "open":
 		match := openPattern.FindStringSubmatch(args)
@@ -242,7 +244,7 @@ func (r *Result) parseExitSyscall(syscall, args string, logger *zap.SugaredLogge
 
 		path := match[1]
 		read, write := parseOpenFlags(match[2])
-		logger.Debugw("open", "path", path, "read", read, "write", write)
+		slog.DebugContext(ctx, "open", "path", path, "read", read, "write", write)
 		r.recordFileAccess(path, read, write, false)
 	case "openat":
 		match := openatPattern.FindStringSubmatch(args)
@@ -252,7 +254,7 @@ func (r *Result) parseExitSyscall(syscall, args string, logger *zap.SugaredLogge
 
 		path := joinPaths(match[1], match[2])
 		read, write := parseOpenFlags(match[3])
-		logger.Debugw("openat", "path", path, "read", read, "write", write)
+		slog.DebugContext(ctx, "openat", "path", path, "read", read, "write", write)
 		r.recordFileAccess(path, read, write, false)
 	case "execve":
 		match := execvePattern.FindStringSubmatch(args)
@@ -260,7 +262,7 @@ func (r *Result) parseExitSyscall(syscall, args string, logger *zap.SugaredLogge
 			return fmt.Errorf("failed to parse execve args: %s", args)
 		}
 
-		logger.Debugw("execve", "cmdAndEnv", match[1])
+		slog.DebugContext(ctx, "execve", "cmdAndEnv", match[1])
 		cmd, env, err := parseCmdAndEnv(match[1])
 		if err != nil {
 			return err
@@ -273,7 +275,7 @@ func (r *Result) parseExitSyscall(syscall, args string, logger *zap.SugaredLogge
 		}
 		family := match[1]
 		if family != "AF_INET" && family != "AF_INET6" {
-			log.Debug("Ignoring socket",
+			slog.DebugContext(ctx, "Ignoring socket",
 				"family", family,
 				"socket", match[2])
 			return nil
@@ -283,7 +285,7 @@ func (r *Result) parseExitSyscall(syscall, args string, logger *zap.SugaredLogge
 		if err != nil {
 			return err
 		}
-		logger.Debugw("socket", "address", address, "port", port)
+		slog.DebugContext(ctx, "socket", "address", address, "port", port)
 		r.recordSocket(address, port)
 	case "stat", "fstat", "lstat":
 		match := statPattern.FindStringSubmatch(args)
@@ -291,7 +293,7 @@ func (r *Result) parseExitSyscall(syscall, args string, logger *zap.SugaredLogge
 			return fmt.Errorf("failed to parse stat args: %s", args)
 		}
 		path := match[1]
-		logger.Debugw("stat", "path", path)
+		slog.DebugContext(ctx, "stat", "path", path)
 		r.recordFileAccess(path, true, false, false)
 	case "newfstatat":
 		match := newfstatatPattern.FindStringSubmatch(args)
@@ -299,7 +301,7 @@ func (r *Result) parseExitSyscall(syscall, args string, logger *zap.SugaredLogge
 			return fmt.Errorf("failed to parse newfstatat args: %s", args)
 		}
 		path := joinPaths(match[1], match[2])
-		logger.Debugw("newfstatat", "path", path)
+		slog.DebugContext(ctx, "newfstatat", "path", path)
 		r.recordFileAccess(path, true, false, false)
 	case "unlink":
 		match := unlinkPatten.FindStringSubmatch(args)
@@ -307,7 +309,7 @@ func (r *Result) parseExitSyscall(syscall, args string, logger *zap.SugaredLogge
 			return fmt.Errorf("failed to parse unlink args: %s", args)
 		}
 		path := match[1]
-		logger.Infow("unlink", "path", path)
+		slog.DebugContext(ctx, "unlink", "path", path)
 		r.recordFileAccess(path, false, false, true)
 	case "unlinkat":
 		match := unlinkatPattern.FindStringSubmatch(args)
@@ -315,7 +317,7 @@ func (r *Result) parseExitSyscall(syscall, args string, logger *zap.SugaredLogge
 			return fmt.Errorf("failed to parse unlinkat args: %s", args)
 		}
 		path := joinPaths(match[1], match[2])
-		logger.Debugw("unlinkat", "path", path)
+		slog.DebugContext(ctx, "unlinkat", "path", path)
 		r.recordFileAccess(path, false, false, true)
 	}
 	return nil
@@ -323,7 +325,7 @@ func (r *Result) parseExitSyscall(syscall, args string, logger *zap.SugaredLogge
 
 // Parse reads an strace and collects the files, sockets and commands that were
 // accessed.
-func Parse(r io.Reader, logger *zap.SugaredLogger) (*Result, error) {
+func Parse(ctx context.Context, r io.Reader) (*Result, error) {
 	result := &Result{
 		files:            make(map[string]*FileInfo),
 		sockets:          make(map[string]*SocketInfo),
@@ -343,16 +345,16 @@ func Parse(r io.Reader, logger *zap.SugaredLogger) (*Result, error) {
 		if match != nil {
 			if match[2] == "E" {
 				// Analyze entry events.
-				if err := result.parseEnterSyscall(match[3], match[4], logger); err != nil {
+				if err := result.parseEnterSyscall(ctx, match[3], match[4]); err != nil {
 					// Log errors and continue.
-					log.Warn("Failed to parse entry syscall", "error", err)
+					slog.WarnContext(ctx, "Failed to parse entry syscall", "error", err)
 				}
 			}
 			if match[2] == "X" {
 				// Analyze exit events.
-				if err := result.parseExitSyscall(match[3], match[4], logger); err != nil {
+				if err := result.parseExitSyscall(ctx, match[3], match[4]); err != nil {
 					// Log errors and continue.
-					log.Warn("Failed to parse exit syscall", "error", err)
+					slog.WarnContext(ctx, "Failed to parse exit syscall", "error", err)
 				}
 			}
 		}

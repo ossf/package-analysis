@@ -92,7 +92,7 @@ func enableCodeExecution(sb sandbox.Sandbox) error {
 // to the host, so it can be included in the dynamic analysis results.
 // To mitigate tampering of the file, all control characters except tab
 // and newline are stripped from the file.
-func retrieveExecutionLog(sb sandbox.Sandbox) (string, error) {
+func retrieveExecutionLog(ctx context.Context, sb sandbox.Sandbox) (string, error) {
 	executionLogDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return "", err
@@ -104,7 +104,7 @@ func retrieveExecutionLog(sb sandbox.Sandbox) (string, error) {
 	// if the copy fails, it could be that the execution log is not actually present.
 	// For now, we'll just log the error and otherwise ignore it
 	if err := sb.CopyBackToHost(hostExecutionLogPath, sandboxExecutionLogPath); err != nil {
-		log.Warn("Could not retrieve execution log from sandbox", "error", err)
+		slog.WarnContext(ctx, "Could not retrieve execution log from sandbox", "error", err)
 		return "", nil
 	}
 
@@ -115,7 +115,7 @@ func retrieveExecutionLog(sb sandbox.Sandbox) (string, error) {
 
 	// remove control characters except tab (\x09) and newline (\x0A)
 	processedLog := nonSpaceControlChars.ReplaceAllLiteral(logData, []byte{})
-	log.Info("Read execution log", "rawLength", len(logData), "processedLength", len(processedLog))
+	slog.InfoContext(ctx, "Read execution log", "rawLength", len(logData), "processedLength", len(processedLog))
 
 	return string(processedLog), nil
 }
@@ -189,7 +189,7 @@ func RunDynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandb
 		phaseCtx := log.ContextWithAttrs(ctx, log.LabelAttr("phase", string(phase)))
 		startTime := time.Now()
 		args := dynamicanalysis.MakeAnalysisArgs(pkg, phase)
-		phaseResult, err := dynamicanalysis.Run(sb, analysisCmd, args, log.GetDefaultLogger())
+		phaseResult, err := dynamicanalysis.Run(ctx, sb, analysisCmd, args)
 		result.LastRunPhase = phase
 
 		runDuration := time.Since(startTime)
@@ -235,7 +235,7 @@ func RunDynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandb
 		return result, nil
 	}
 
-	executionLog, err := retrieveExecutionLog(sb)
+	executionLog, err := retrieveExecutionLog(ctx, sb)
 	if err != nil {
 		// don't return this error, just log it
 		slog.ErrorContext(ctx, "Error retrieving execution log", "error", err)
