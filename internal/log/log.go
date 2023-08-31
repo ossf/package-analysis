@@ -148,10 +148,22 @@ func Fatal(msg string, keysAndValues ...interface{}) {
 
 // Label is a convenience wrapper for zapdriver.Label if the LoggingEnv used
 // is LoggingEnvProd. Otherwise it will wrap zap.String.
+//
+// Deprecated: Call LabelAttr instead.
 func Label(key, value string) zap.Field {
 	if defaultLoggingEnv == LoggingEnvProd {
 		return zapdriver.Label(key, value)
 	} else {
 		return zap.String(key, value)
+	}
+}
+
+// LabelAttr causes attributes written by zapdriver to be marked as labels inside
+// StackDriver when LoggingEnv is LoggingEnvProd. Otherwise it wraps slog.String.
+func LabelAttr(key, value string) slog.Attr {
+	if defaultLoggingEnv == LoggingEnvProd {
+		return slog.String("labels."+key, value)
+	} else {
+		return slog.String(key, value)
 	}
 }

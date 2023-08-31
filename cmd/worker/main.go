@@ -5,12 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"path"
 
-	"go.uber.org/zap"
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/fileblob"
 	_ "gocloud.dev/blob/gcsblob"
@@ -96,22 +96,23 @@ func makeResultStores(dest resultBucketPaths) worker.ResultStores {
 func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blob.Bucket, resultStores *worker.ResultStores, imageSpec sandboxImageSpec, notificationTopic *pubsub.Topic) error {
 	name := msg.Metadata["name"]
 	if name == "" {
-		log.Warn("name is empty")
+		slog.WarnContext(ctx, "name is empty")
 		return nil
 	}
 
 	ecosystem := pkgecosystem.Ecosystem(msg.Metadata["ecosystem"])
 	if ecosystem == "" {
-		log.Warn("ecosystem is empty",
-			"name", name)
+		slog.WarnContext(ctx, "ecosystem is empty", "name", name)
 		return nil
 	}
 
+	ctx = log.ContextWithAttrs(ctx,
+		log.LabelAttr("ecosystem", ecosystem.String()),
+		slog.String("name", name))
+
 	manager := pkgmanager.Manager(ecosystem)
 	if manager == nil {
-		log.Warn("Unsupported pkg manager",
-			log.Label("ecosystem", ecosystem.String()),
-			"name", name)
+		slog.WarnContext(ctx, "Unsupported pkg manager")
 		return nil
 	}
 
@@ -123,7 +124,12 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		resultStores.DynamicAnalysis = resultstore.New(resultsBucketOverride, resultstore.ConstructPath())
 	}
 
-	worker.LogRequest(ecosystem, name, version, remotePkgPath, resultsBucketOverride)
+	ctx = log.ContextWithAttrs(ctx, slog.String("version", version))
+
+	slog.InfoContext(ctx, "Got request",
+		"package_path", remotePkgPath,
+		"results_bucket_override", resultsBucketOverride,
+	)
 
 	localPkgPath := ""
 	sandboxOpts := []sandbox.Option{sandbox.Tag(imageSpec.tag)}
@@ -146,15 +152,12 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 
 	pkg, err := worker.ResolvePkg(manager, name, version, localPkgPath)
 	if err != nil {
-		log.Error("Error resolving package",
-			log.Label("ecosystem", ecosystem.String()),
-			log.Label("name", name),
-			"error", err)
+		slog.ErrorContext(ctx, "Error resolving package", "error", err)
 		return err
 	}
 
 	dynamicSandboxOpts := append(worker.DynamicSandboxOptions(), sandboxOpts...)
-	result, err := worker.RunDynamicAnalysis(pkg, dynamicSandboxOpts, "")
+	result, err := worker.RunDynamicAnalysis(ctx, pkg, dynamicSandboxOpts, "")
 	if err != nil {
 		return err
 	}
@@ -163,7 +166,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	var staticResults analysisrun.StaticAnalysisResults
 	// TODO run static analysis first and remove the if statement below
 	if resultStores.StaticAnalysis != nil {
-		staticResults, _, err = worker.RunStaticAnalysis(pkg, staticSandboxOpts, staticanalysis.All)
+		staticResults, _, err = worker.RunStaticAnalysis(ctx, pkg, staticSandboxOpts, staticanalysis.All)
 		if err != nil {
 			return err
 		}
@@ -197,7 +200,9 @@ func messageLoop(ctx context.Context, subURL, packagesBucket, notificationTopicU
 	if err != nil {
 		return err
 	}
-	log.Info("Subscription deadline extender", "deadline", extender.Deadline, "grace_period", extender.GracePeriod)
+	slog.InfoContext(ctx, "Subscription deadline extender",
+		"deadline", extender.Deadline,
+		"grace_period", extender.GracePeriod)
 
 	// the default value of the notificationTopic object is nil
 	// if no environment variable for a notification topic is set,
@@ -222,15 +227,19 @@ func messageLoop(ctx context.Context, subURL, packagesBucket, notificationTopicU
 		defer pkgsBkt.Close()
 	}
 
-	log.Info("Listening for messages to process...")
+	slog.InfoContext(ctx, "Listening for messages to process...")
 	for {
 		msg, err := sub.Receive(ctx)
 		if err != nil {
 			// All subsequent receive calls will return the same error, so we bail out.
 			return fmt.Errorf("error receiving message: %w", err)
 		}
-		me, err := extender.Start(ctx, msg, func() {
-			log.Info("Message Ack deadline extended", "message_id", msg.LoggableID, "message_meta", msg.Metadata)
+
+		// Create a message context to wrap the message_id that we are currently processing.
+		msgCtx := log.ContextWithAttrs(ctx, slog.String("message_id", msg.LoggableID))
+
+		me, err := extender.Start(msgCtx, msg, func() {
+			slog.InfoContext(msgCtx, "Message Ack deadline extended", "message_meta", msg.Metadata)
 		})
 		if err != nil {
 			// If Start fails it will always fail, so we bail out.
@@ -241,17 +250,17 @@ func messageLoop(ctx context.Context, subURL, packagesBucket, notificationTopicU
 			return fmt.Errorf("error starting message ack deadline extender: %w", err)
 		}
 
-		if err := handleMessage(ctx, msg, pkgsBkt, resultsBuckets, imageSpec, notificationTopic); err != nil {
-			log.Error("Failed to process message", "error", err)
+		if err := handleMessage(msgCtx, msg, pkgsBkt, resultsBuckets, imageSpec, notificationTopic); err != nil {
+			slog.ErrorContext(msgCtx, "Failed to process message", "error", err)
 			if err := me.Stop(); err != nil {
-				log.Error("Extender failed", "error", err)
+				slog.ErrorContext(msgCtx, "Extender failed", "error", err)
 			}
 			if msg.Nackable() {
 				msg.Nack()
 			}
 		} else {
 			if err := me.Stop(); err != nil {
-				log.Error("Extender failed", "error", err)
+				slog.ErrorContext(msgCtx, "Extender failed", "error", err)
 			}
 			msg.Ack()
 		}
@@ -259,7 +268,7 @@ func messageLoop(ctx context.Context, subURL, packagesBucket, notificationTopicU
 }
 
 func main() {
-	logger := log.Initialize(os.Getenv("LOGGER_ENV"))
+	log.Initialize(os.Getenv("LOGGER_ENV"))
 
 	ctx := context.Background()
 	subURL := os.Getenv("OSSMALWARE_WORKER_SUBSCRIPTION")
@@ -268,7 +277,8 @@ func main() {
 	enableProfiler := os.Getenv("OSSF_MALWARE_ANALYSIS_ENABLE_PROFILER")
 
 	if err := featureflags.Update(os.Getenv("OSSF_MALWARE_FEATURE_FLAGS")); err != nil {
-		logger.Fatal("Failed to parse feature flags", zap.Error(err))
+		slog.Error("Failed to parse feature flags", "error", err)
+		os.Exit(1)
 	}
 
 	resultsBuckets := resultBucketPaths{
@@ -290,27 +300,27 @@ func main() {
 	// debugging and profiling.
 	if enableProfiler != "" {
 		go func() {
-			logger.Info("Starting profiler")
+			slog.Info("Starting profiler")
 			http.ListenAndServe(":6060", nil)
 		}()
 	}
 
 	// Log the configuration of the worker at startup so we can observe it.
-	logger.With(
-		zap.String("subscription", subURL),
-		zap.String("package_bucket", packagesBucket),
-		zap.String("results_bucket", resultsBuckets.dynamicAnalysis),
-		zap.String("static_results_bucket", resultsBuckets.staticAnalysis),
-		zap.String("file_write_results_bucket", resultsBuckets.fileWrites),
-		zap.String("analyzed_packages_bucket", resultsBuckets.analyzedPkg),
-		zap.String("image_tag", imageSpec.tag),
-		zap.Bool("image_nopull", imageSpec.noPull),
-		zap.String("topic_notification", notificationTopicURL),
-		zap.Reflect("feature_flags", featureflags.State()),
-	).Info("Starting worker")
+	slog.InfoContext(ctx, "Starting worker",
+		"subscription", subURL,
+		"package_bucket", packagesBucket,
+		"results_bucket", resultsBuckets.dynamicAnalysis,
+		"static_results_bucket", resultsBuckets.staticAnalysis,
+		"file_write_results_bucket", resultsBuckets.fileWrites,
+		"analyzed_packages_bucket", resultsBuckets.analyzedPkg,
+		"image_tag", imageSpec.tag,
+		"image_nopull", imageSpec.noPull,
+		"topic_notification", notificationTopicURL,
+		"feature_flags", featureflags.State(),
+	)
 
 	err := messageLoop(ctx, subURL, packagesBucket, notificationTopicURL, imageSpec, &resultStores)
 	if err != nil {
-		logger.Errorw("Error encountered", "error", err)
+		slog.ErrorContext(ctx, "Error encountered", "error", err)
 	}
 }
