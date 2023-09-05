@@ -29,11 +29,20 @@ type tokenType string
 type statusType string
 
 const (
-	identifier tokenType  = "Identifier" // source code identifier (variable, class, function name)
-	literal    tokenType  = "Literal"    // source code data (string, integer, floating point literals)
-	comment    tokenType  = "Comment"    // source code comments
-	parseInfo  statusType = "Info"       // information about the parsing (e.g. number of bytes read by parser)
-	parseError statusType = "Error"      // any error encountered by parser; some are recoverable and some are not
+	// identifier means a name, e.g. variable, class, function name
+	identifier tokenType = "Identifier"
+
+	// literal means data, e.g. string, integer, floating point literals.
+	literal tokenType = "Literal"
+
+	// comment means any comment in the source code
+	comment tokenType = "Comment"
+
+	// parseInfo means any metadata about the parsing, e.g. number of bytes read by parser.
+	parseInfo statusType = "Info"
+
+	// parseError means any error encountered during parsing. It may be recoverable from, or may not
+	parseError statusType = "Error"
 )
 
 type parsedIdentifier struct {
