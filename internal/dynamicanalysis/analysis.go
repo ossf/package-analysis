@@ -7,7 +7,6 @@ import (
 
 	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/dnsanalyzer"
-	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/packetcapture"
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/internal/strace"
@@ -32,7 +31,7 @@ var resultError = &Result{
 	},
 }
 
-func Run(ctx context.Context, sb sandbox.Sandbox, command string, args []string) (*Result, error) {
+func Run(ctx context.Context, sb sandbox.Sandbox, command string, args []string, straceLogger *slog.Logger) (*Result, error) {
 	slog.InfoContext(ctx, "Running dynamic analysis", "args", args)
 
 	slog.DebugContext(ctx, "Preparing packet capture")
@@ -65,7 +64,7 @@ func Run(ctx context.Context, sb sandbox.Sandbox, command string, args []string)
 	}
 	defer l.Close()
 
-	straceResult, err := strace.Parse(l, log.LoggerWithContext(slog.Default(), ctx))
+	straceResult, err := strace.Parse(l, straceLogger)
 	if err != nil {
 		return resultError, fmt.Errorf("strace parsing failed (%w)", err)
 	}

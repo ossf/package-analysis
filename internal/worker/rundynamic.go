@@ -189,7 +189,7 @@ func RunDynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandb
 		phaseCtx := log.ContextWithAttrs(ctx, log.LabelAttr("phase", string(phase)))
 		startTime := time.Now()
 		args := dynamicanalysis.MakeAnalysisArgs(pkg, phase)
-		phaseResult, err := dynamicanalysis.Run(ctx, sb, analysisCmd, args)
+		phaseResult, err := dynamicanalysis.Run(ctx, sb, analysisCmd, args, log.LoggerWithContext(slog.Default(), ctx))
 		result.LastRunPhase = phase
 
 		runDuration := time.Since(startTime)
