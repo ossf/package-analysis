@@ -20,8 +20,7 @@ func ContextWithAttrs(ctx context.Context, attr ...slog.Attr) context.Context {
 	if len(attr) == 0 {
 		return ctx
 	}
-	attrSlice := attrSliceFromContext(ctx)
-	attrSlice = append(attrSlice, attr...)
+	attrSlice := append(attrSliceFromContext(ctx), attr...)
 	return context.WithValue(ctx, attrSliceContextKey{}, attrSlice)
 }
 
