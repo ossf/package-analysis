@@ -84,7 +84,7 @@
       },
       {
         "name": "parsing",
-        "mode": "NULLABLE",
+        "mode": "REPEATED",
         "type": "RECORD",
         "fields": [
           {
@@ -125,17 +125,17 @@
             "type": "RECORD",
             "fields": [
               {
-                "name": "Name",
+                "name": "value",
                 "mode": "REQUIRED",
                 "type": "STRING"
               },
               {
-                "name": "Type",
+                "name": "raw",
                 "mode": "NULLABLE",
                 "type": "STRING"
               },
               {
-                "name": "Entropy",
+                "name": "entropy",
                 "mode": "NULLABLE",
                 "type": "FLOAT64"
               }
