@@ -25,22 +25,60 @@ func ContextWithAttrs(ctx context.Context, attr ...slog.Attr) context.Context {
 	return context.WithValue(ctx, contextAttrSliceKey, attrSlice)
 }
 
+func ClearContextAttrs(ctx context.Context) context.Context {
+	attrSlice := attrSliceFromContext(ctx)
+	if attrSlice == nil {
+		return ctx
+	}
+	return context.WithValue(ctx, contextAttrSliceKey, nil)
+}
+
+// LoggerWithContext returns a logger with any attrs in the context passed to
+// the logger.
+//
+// Note: duplicate attributes may be logged if ctx, or a descendent, is used
+// later in a call to (Debug|Info|Warn|Error)Context on the returned slog.Logger.
+//
+// If the same context is needed, call ClearContextAttrs on the context to avoid
+// logging the attrs again.
+func LoggerWithContext(logger *slog.Logger, ctx context.Context) *slog.Logger {
+	attrSlice := attrSliceFromContext(ctx)
+	if len(attrSlice) == 0 {
+		return logger
+	}
+	return slog.New(logger.Handler().WithAttrs(attrSlice))
+}
+
 type contextLogHandler struct {
-	slog.Handler
+	handler slog.Handler
 }
 
 func (h *contextLogHandler) Handle(ctx context.Context, r slog.Record) error {
 	attrSlice := attrSliceFromContext(ctx)
-	if attrSlice != nil {
+	if len(attrSlice) > 0 {
 		r.AddAttrs(attrSlice...)
 	}
-	return h.Handler.Handle(ctx, r)
+	return h.handler.Handle(ctx, r)
 }
 
-// NewContextLogHandler returns a new slog.Handler that will pass the attrs set
-// using ContextWithAttrs to handler when Handle is called.
+func (h *contextLogHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &contextLogHandler{
+		handler: h.handler.WithAttrs(attrs),
+	}
+}
+
+func (h *contextLogHandler) WithGroup(name string) slog.Handler {
+	return &contextLogHandler{
+		handler: h.handler.WithGroup(name),
+	}
+}
+
+func (h *contextLogHandler) Enabled(ctx context.Context, l slog.Level) bool {
+	return h.handler.Enabled(ctx, l)
+}
+
 func NewContextLogHandler(handler slog.Handler) slog.Handler {
 	return &contextLogHandler{
-		Handler: handler,
+		handler: handler,
 	}
 }
