@@ -167,7 +167,6 @@ func (r *Result) recordFileWrite(file string, writeBuffer []byte, bytesWritten i
 	r.files[file].WriteInfo = append(r.files[file].WriteInfo, writeContentsAndBytes)
 	if _, exists := r.allWriteBufferId[writeID]; !exists {
 		if err := utils.CreateAndWriteTempFile(writeID, writeBuffer); err != nil {
-			// ....
 			return fmt.Errorf("failed to create and write temp file: %w", err)
 		}
 		r.allWriteBufferId[writeID] = struct{}{}
