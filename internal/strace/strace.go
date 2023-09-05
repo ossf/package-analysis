@@ -218,7 +218,7 @@ func (r *Result) parseEnterSyscall(syscall, args string, logger *slog.Logger) er
 			// Save the contents between the first and last quote.
 			writeBuffer = args[firstQuoteIndex+1 : lastQuoteIndex]
 		}
-		slog.Debug("write", "path", path, "size", bytesWritten)
+		logger.Debug("write", "path", path, "size", bytesWritten)
 		r.recordFileWrite(path, []byte(writeBuffer), bytesWritten, logger)
 	}
 	return nil

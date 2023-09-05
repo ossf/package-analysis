@@ -5,10 +5,10 @@ import (
 	"log/slog"
 )
 
-var contextAttrSliceKey = struct{}{}
+type attrSliceContextKey struct{}
 
 func attrSliceFromContext(ctx context.Context) []slog.Attr {
-	if v := ctx.Value(contextAttrSliceKey); v != nil {
+	if v := ctx.Value(attrSliceContextKey{}); v != nil {
 		return v.([]slog.Attr)
 	}
 	return nil
@@ -22,7 +22,7 @@ func ContextWithAttrs(ctx context.Context, attr ...slog.Attr) context.Context {
 	}
 	attrSlice := attrSliceFromContext(ctx)
 	attrSlice = append(attrSlice, attr...)
-	return context.WithValue(ctx, contextAttrSliceKey, attrSlice)
+	return context.WithValue(ctx, attrSliceContextKey{}, attrSlice)
 }
 
 func ClearContextAttrs(ctx context.Context) context.Context {
@@ -30,7 +30,7 @@ func ClearContextAttrs(ctx context.Context) context.Context {
 	if attrSlice == nil {
 		return ctx
 	}
-	return context.WithValue(ctx, contextAttrSliceKey, nil)
+	return context.WithValue(ctx, attrSliceContextKey{}, nil)
 }
 
 // LoggerWithContext returns a logger with any attrs in the context passed to
