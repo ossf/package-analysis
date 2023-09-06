@@ -67,7 +67,7 @@ func shouldEnableCodeExecution(ecosystem pkgecosystem.Ecosystem) bool {
 	}
 }
 
-func enableCodeExecution(sb sandbox.Sandbox) error {
+func enableCodeExecution(ctx context.Context, sb sandbox.Sandbox) error {
 	// Create empty execution log file and copy to sandbox, to enable code execution feature
 	tempFile, err := os.CreateTemp("", "")
 	if err != nil {
@@ -78,7 +78,7 @@ func enableCodeExecution(sb sandbox.Sandbox) error {
 	_ = tempFile.Close()
 	tempPath := tempFile.Name()
 
-	if err := sb.CopyIntoSandbox(tempPath, sandboxExecutionLogPath); err != nil {
+	if err := sb.CopyIntoSandbox(ctx, tempPath, sandboxExecutionLogPath); err != nil {
 		return fmt.Errorf("could not copy execution log file to sandbox: %w", err)
 	}
 
@@ -92,7 +92,7 @@ func enableCodeExecution(sb sandbox.Sandbox) error {
 // to the host, so it can be included in the dynamic analysis results.
 // To mitigate tampering of the file, all control characters except tab
 // and newline are stripped from the file.
-func retrieveExecutionLog(sb sandbox.Sandbox) (string, error) {
+func retrieveExecutionLog(ctx context.Context, sb sandbox.Sandbox) (string, error) {
 	executionLogDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return "", err
@@ -103,8 +103,8 @@ func retrieveExecutionLog(sb sandbox.Sandbox) (string, error) {
 
 	// if the copy fails, it could be that the execution log is not actually present.
 	// For now, we'll just log the error and otherwise ignore it
-	if err := sb.CopyBackToHost(hostExecutionLogPath, sandboxExecutionLogPath); err != nil {
-		log.Warn("Could not retrieve execution log from sandbox", "error", err)
+	if err := sb.CopyBackToHost(ctx, hostExecutionLogPath, sandboxExecutionLogPath); err != nil {
+		slog.WarnContext(ctx, "Could not retrieve execution log from sandbox", "error", err)
 		return "", nil
 	}
 
@@ -115,7 +115,7 @@ func retrieveExecutionLog(sb sandbox.Sandbox) (string, error) {
 
 	// remove control characters except tab (\x09) and newline (\x0A)
 	processedLog := nonSpaceControlChars.ReplaceAllLiteral(logData, []byte{})
-	log.Info("Read execution log", "rawLength", len(logData), "processedLength", len(processedLog))
+	slog.InfoContext(ctx, "Read execution log", "rawLength", len(logData), "processedLength", len(processedLog))
 
 	return string(processedLog), nil
 }
@@ -152,20 +152,20 @@ func RunDynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandb
 	sb := sandbox.New(sbOpts...)
 
 	defer func() {
-		if err := sb.Clean(); err != nil {
+		if err := sb.Clean(ctx); err != nil {
 			slog.ErrorContext(ctx, "Error cleaning up sandbox", "error", err)
 		}
 	}()
 
 	// initialise sandbox before copy/run
-	if err := sb.Init(); err != nil {
+	if err := sb.Init(ctx); err != nil {
 		LogDynamicAnalysisError(ctx, pkg, "", err)
 		return DynamicAnalysisResult{}, err
 	}
 
 	codeExecutionEnabled := false
 	if shouldEnableCodeExecution(pkg.Ecosystem()) {
-		if err := enableCodeExecution(sb); err != nil {
+		if err := enableCodeExecution(ctx, sb); err != nil {
 			slog.ErrorContext(ctx, "Code execution disabled due to error", "error", err)
 		} else {
 			codeExecutionEnabled = true
@@ -189,7 +189,7 @@ func RunDynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandb
 		phaseCtx := log.ContextWithAttrs(ctx, log.LabelAttr("phase", string(phase)))
 		startTime := time.Now()
 		args := dynamicanalysis.MakeAnalysisArgs(pkg, phase)
-		phaseResult, err := dynamicanalysis.Run(sb, analysisCmd, args, log.GetDefaultLogger())
+		phaseResult, err := dynamicanalysis.Run(ctx, sb, analysisCmd, args, log.LoggerWithContext(slog.Default(), ctx))
 		result.LastRunPhase = phase
 
 		runDuration := time.Since(startTime)
@@ -235,7 +235,7 @@ func RunDynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandb
 		return result, nil
 	}
 
-	executionLog, err := retrieveExecutionLog(sb)
+	executionLog, err := retrieveExecutionLog(ctx, sb)
 	if err != nil {
 		// don't return this error, just log it
 		slog.ErrorContext(ctx, "Error retrieving execution log", "error", err)

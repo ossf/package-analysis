@@ -3,10 +3,10 @@ package worker
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/ossf/package-analysis/internal/featureflags"
-	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgmanager"
 	"github.com/ossf/package-analysis/internal/resultstore"
 	"github.com/ossf/package-analysis/pkg/api/analysisrun"
@@ -116,12 +116,8 @@ func SaveFileWritesData(ctx context.Context, pkg *pkgmanager.Pkg, dest *ResultSt
 	}
 	fileWriteDataDuration := time.Since(fileWriteDataUploadStart)
 
-	log.Info("Write data upload duration",
-		log.Label("ecosystem", pkg.EcosystemName()),
-		"name", pkg.Name(),
-		"version", pkg.Version(),
-		"write_data_upload_duration", fileWriteDataDuration,
-	)
+	slog.InfoContext(ctx, "Write data upload duration",
+		"write_data_upload_duration", fileWriteDataDuration)
 
 	return nil
 }

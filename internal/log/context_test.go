@@ -12,7 +12,16 @@ import (
 type testHandler struct {
 	slog.Handler
 
-	r slog.Record
+	root  *testHandler
+	r     slog.Record
+	attrs []slog.Attr
+}
+
+func (h *testHandler) getRoot() *testHandler {
+	if h.root == nil {
+		return h
+	}
+	return h.root
 }
 
 func (h *testHandler) Enabled(_ context.Context, _ slog.Level) bool {
@@ -20,8 +29,16 @@ func (h *testHandler) Enabled(_ context.Context, _ slog.Level) bool {
 }
 
 func (h *testHandler) Handle(ctx context.Context, r slog.Record) error {
-	h.r = r
+	r.AddAttrs(h.attrs...)
+	h.getRoot().r = r
 	return nil
+}
+
+func (h *testHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &testHandler{
+		root:  h.getRoot(),
+		attrs: append(h.attrs, attrs...),
+	}
 }
 
 func assertRecordAttrs(t *testing.T, r slog.Record, attrs []slog.Attr) {
@@ -105,4 +122,22 @@ func TestContextWithAttrs_NoAttrs(t *testing.T) {
 
 	logger.InfoContext(ctx, "test", "a", "b")
 	assertRecordAttrs(t, h.r, []slog.Attr{attr1})
+}
+
+func TestLoggerWithContext(t *testing.T) {
+	attr1 := slog.Any("hello", "world")
+	attr2 := slog.Int("meaning", 42)
+	attr3 := slog.String("a", "b")
+
+	h := &testHandler{}
+	logger := slog.New(log.NewContextLogHandler(h))
+
+	ctx := context.Background()
+	ctx = log.ContextWithAttrs(ctx, attr1)
+	logger = log.LoggerWithContext(logger, ctx)
+
+	ctx = log.ContextWithAttrs(log.ClearContextAttrs(ctx), attr2)
+
+	logger.InfoContext(ctx, "test", "a", "b")
+	assertRecordAttrs(t, h.r, []slog.Attr{attr1, attr2, attr3})
 }

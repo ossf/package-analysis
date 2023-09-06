@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log/slog"
 	"net/url"
 	"os"
 	"path"
@@ -16,7 +17,6 @@ import (
 	_ "gocloud.dev/blob/gcsblob"
 	_ "gocloud.dev/blob/s3blob"
 
-	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgmanager"
 	"github.com/ossf/package-analysis/internal/utils"
 )
@@ -107,7 +107,7 @@ func (rs *ResultStore) SaveTempFilesToZip(ctx context.Context, p Pkg, zipName st
 	defer bkt.Close()
 
 	uploadPath := rs.generateKey(p, zipName+".zip")
-	log.Info("Uploading results", "bucket", rs.bucket.String(), "path", uploadPath)
+	slog.InfoContext(ctx, "Uploading results", "bucket", rs.bucket.String(), "path", uploadPath)
 
 	bucketWriter, err := bkt.NewWriter(ctx, uploadPath, nil)
 	if err != nil {
@@ -148,7 +148,7 @@ func (rs *ResultStore) SaveAnalyzedPackage(ctx context.Context, manager *pkgmana
 
 	defer func() {
 		if err := os.Remove(archivePath); err != nil {
-			log.Error("could not clean up downloaded archive", "error", err)
+			slog.ErrorContext(ctx, "could not clean up downloaded archive", "error", err)
 		}
 	}()
 
@@ -164,7 +164,7 @@ func (rs *ResultStore) SaveAnalyzedPackage(ctx context.Context, manager *pkgmana
 	defer bkt.Close()
 
 	uploadPath := rs.generateKey(pkg, pkg.Version()+"-"+hash)
-	log.Info("Uploading analyzed package", "bucket", rs.bucket.String(), "path", uploadPath)
+	slog.InfoContext(ctx, "Uploading analyzed package", "bucket", rs.bucket.String(), "path", uploadPath)
 
 	f, err := os.Open(archivePath)
 	if err != nil {
@@ -210,7 +210,7 @@ func (rs *ResultStore) saveWithFilename(ctx context.Context, p Pkg, data any, fi
 	defer bkt.Close()
 
 	uploadPath := rs.generateKey(p, filename)
-	log.Info("Uploading results", "bucket", rs.bucket.String(), "path", uploadPath)
+	slog.InfoContext(ctx, "Uploading results", "bucket", rs.bucket.String(), "path", uploadPath)
 
 	w, err := bkt.NewWriter(ctx, uploadPath, nil)
 	if err != nil {

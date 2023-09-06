@@ -83,6 +83,26 @@ class ParseData {
         extra.array = inArray;
         this.tokens.push(ParseData.makeOutputDict("Literal", literalType, value, pos, extra));
     }
+
+    logTemplate(literal, pos, inArray) {
+        // template info contains list of strings in between templated parts, plus list of template expressions.
+        // We only log the string parts, concatenated together. Expressions are logged elsewhere (as literals)
+        const cookedStrings = [];
+        const rawStrings = [];
+        for (let element of literal.quasis) {
+            const cooked = element.value.cooked;
+            cookedStrings.push((cooked !== null) ? cooked : "");
+            rawStrings.push(element.value.raw);
+        }
+        const sep = "${}";
+        const rawString = "`" + rawStrings.join(sep) + "`";
+        const extra = {
+            raw: rawString,
+            numExpressions: literal.expressions.length,
+        };
+
+        this.logLiteral("StringTemplate", cookedStrings.join(sep), pos, inArray, extra);
+    }
 }
 
 function visitIdentifierOrPrivateName(path, parseData) {
@@ -187,9 +207,9 @@ function traverseAst(ast, parseData, disableScope) {
             const loc = position(path.node);
             this.parseData.logLiteral("Regexp", path.node.pattern, loc, true, path.node.extra);
         },
-        TemplateElement: function(path) {
+        TemplateLiteral: function(path) {
             const loc = position(path.node);
-            this.parseData.logLiteral("StringTemplate", path.node.value.raw, loc, true, path.node.value);
+            this.parseData.logTemplate(path.node, loc, true);
         }
     };
 
@@ -226,9 +246,9 @@ function traverseAst(ast, parseData, disableScope) {
             path.traverse(arrayVisitor, { parseData });
             path.skip();
         },
-        TemplateElement: function (path) {
+        TemplateLiteral: function(path) {
             const loc = position(path.node);
-            this.parseData.logLiteral("StringTemplate", path.node.value.raw, loc, false, path.node.value);
+            this.parseData.logTemplate(path.node, loc, false);
         }
     };
 

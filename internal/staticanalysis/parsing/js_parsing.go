@@ -118,13 +118,20 @@ func (pd parseDataJSON) process() singleParseData {
 			})
 		case literal:
 			literal := parsedLiteral[any]{
-				Type:     t.TokenSubType,
-				GoType:   fmt.Sprintf("%T", t.Data),
-				Value:    t.Data,
-				RawValue: t.Extra["raw"].(string),
-				InArray:  t.Extra["array"] == true,
-				Pos:      t.Pos,
+				Type:    t.TokenSubType,
+				GoType:  fmt.Sprintf("%T", t.Data),
+				Value:   t.Data,
+				InArray: t.Extra["array"] == true,
+				Pos:     t.Pos,
 			}
+
+			// Since t.Extra is a map[string]any, t.Extra["raw"].(string) will panic
+			// if "raw" is not present in the map, due to nil -> string conversion.
+			// Therefore we need the conditional type assertion as below.
+			if rawValue, ok := t.Extra["raw"].(string); ok {
+				literal.RawValue = rawValue
+			}
+
 			// check for BigInteger types which have to be represented as strings in JSON
 			if literal.Type == "Numeric" && literal.GoType == "string" {
 				if intAsString, ok := literal.Value.(string); ok {
@@ -188,9 +195,9 @@ func parseJS(parserConfig ParserConfig, input externalcmd.Input) (map[string]sin
 	}
 
 	decoder := json.NewDecoder(strings.NewReader(rawOutput))
+
 	var parseOutput parseOutputJSON
-	err = decoder.Decode(&parseOutput)
-	if err != nil {
+	if err := decoder.Decode(&parseOutput); err != nil {
 		return nil, rawOutput, err
 	}
 
