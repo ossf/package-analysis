@@ -1,33 +1,38 @@
 [
   {
-    "name": "Package",
-    "mode": "NULLABLE",
+    "name": "schema_version",
+    "mode": "REQUIRED",
+    "type": "STRING"
+  },
+  {
+    "name": "key",
+    "mode": "REQUIRED",
     "type": "RECORD",
     "fields": [
       {
-        "name": "Ecosystem",
-        "mode": "NULLABLE",
+        "name": "ecosystem",
+        "mode": "REQUIRED",
         "type": "STRING"
       },
       {
-        "name": "Name",
-        "mode": "NULLABLE",
+        "name": "name",
+        "mode": "REQUIRED",
         "type": "STRING"
       },
       {
-        "name": "Version",
-        "mode": "NULLABLE",
+        "name": "version",
+        "mode": "REQUIRED",
         "type": "STRING"
+      },
+      {
+        "name": "created",
+        "mode": "REQUIRED",
+        "type": "TIMESTAMP"
       }
     ]
   },
   {
-    "name": "CreatedTimestamp",
-    "mode": "NULLABLE",
-    "type": "TIMESTAMP"
-  },
-  {
-    "name": "Analysis",
+    "name": "results",
     "mode": "NULLABLE",
     "type": "RECORD",
     "fields": [
