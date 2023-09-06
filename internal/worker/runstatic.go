@@ -33,7 +33,7 @@ const resultsJSONFile = "/results.json"
 //
 // To run all available static analyses, pass staticanalysis.All as tasks.
 // Use sbOpts to customise sandbox behaviour.
-func RunStaticAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandbox.Option, tasks ...staticanalysis.Task) (analysisrun.StaticAnalysisResults, analysis.Status, error) {
+func RunStaticAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandbox.Option, tasks ...staticanalysis.Task) (analysisrun.StaticAnalysisData, analysis.Status, error) {
 	ctx = log.ContextWithAttrs(ctx, slog.String("mode", "static"))
 
 	slog.InfoContext(ctx, "Running static analysis", "tasks", tasks)

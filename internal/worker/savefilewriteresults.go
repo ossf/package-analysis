@@ -17,7 +17,7 @@ func saveFileWriteResults(rs *resultstore.ResultStore, ctx context.Context, pkg 
 		return errors.New("resultstore is nil")
 	}
 
-	if err := rs.Save(ctx, pkg, dynamicResults.FileWritesSummary); err != nil {
+	if err := rs.SaveAnalysis(ctx, pkg, dynamicResults.FileWritesSummary, ""); err != nil {
 		return fmt.Errorf("failed to upload file write analysis to blobstore = %w", err)
 	}
 	var allPhasesWriteBufferIdsArray []string
