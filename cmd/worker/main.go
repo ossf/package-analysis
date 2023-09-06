@@ -294,7 +294,7 @@ func main() {
 		noPull: os.Getenv("OSSF_SANDBOX_NOPULL") != "",
 	}
 
-	sandbox.InitNetwork()
+	sandbox.InitNetwork(ctx)
 
 	// If configured, start a webserver so that Go's pprof can be accessed for
 	// debugging and profiling.

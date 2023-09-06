@@ -2,11 +2,13 @@ package log_test
 
 import (
 	"bytes"
+	"context"
 	"io"
+	"log/slog"
 	"strings"
 	"testing"
 
-	"go.uber.org/zap"
+	"go.uber.org/zap/exp/zapslog"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
 	"golang.org/x/exp/slices"
@@ -14,15 +16,17 @@ import (
 	"github.com/ossf/package-analysis/internal/log"
 )
 
-func initLogs(t *testing.T, l zapcore.Level) (*zap.Logger, *observer.ObservedLogs) {
+func initLogs(t *testing.T, l zapcore.Level) (*slog.Logger, *observer.ObservedLogs) {
 	t.Helper()
 	core, obs := observer.New(l)
-	return zap.New(core), obs
+
+	// Ensure slog.Default logs to the same destination as zap.
+	return slog.New(log.NewContextLogHandler(zapslog.NewHandler(core, &zapslog.HandlerOptions{}))), obs
 }
 
 func TestNewWriter_SingleLine(t *testing.T) {
 	logger, obs := initLogs(t, zapcore.DebugLevel)
-	w := log.NewWriter(logger, zapcore.InfoLevel)
+	w := log.NewWriter(context.Background(), logger, slog.LevelInfo)
 
 	want := "this is the log message"
 
@@ -43,7 +47,7 @@ func TestNewWriter_SingleLine(t *testing.T) {
 
 func TestNewWriter_MultiLine(t *testing.T) {
 	logger, obs := initLogs(t, zapcore.DebugLevel)
-	w := log.NewWriter(logger, zapcore.InfoLevel)
+	w := log.NewWriter(context.Background(), logger, slog.LevelInfo)
 
 	want := []string{
 		"one",
@@ -70,7 +74,7 @@ func TestNewWriter_MultiLine(t *testing.T) {
 
 func TestNewWriter_LevelSuppress(t *testing.T) {
 	logger, obs := initLogs(t, zapcore.WarnLevel)
-	w := log.NewWriter(logger, zapcore.InfoLevel)
+	w := log.NewWriter(context.Background(), logger, slog.LevelInfo)
 
 	want := "this is the log message"
 
@@ -87,7 +91,7 @@ func TestNewWriter_LevelSuppress(t *testing.T) {
 
 func TestNewWriter_MultiWithEmptyLine(t *testing.T) {
 	logger, obs := initLogs(t, zapcore.DebugLevel)
-	w := log.NewWriter(logger, zapcore.InfoLevel)
+	w := log.NewWriter(context.Background(), logger, slog.LevelInfo)
 
 	in := []string{"one", "two", "", "four"}
 	want := []string{"one", "two", "four"}
@@ -110,7 +114,7 @@ func TestNewWriter_MultiWithEmptyLine(t *testing.T) {
 
 func TestNewWriter_MultiWithTrailingSpaces(t *testing.T) {
 	logger, obs := initLogs(t, zapcore.DebugLevel)
-	w := log.NewWriter(logger, zapcore.InfoLevel)
+	w := log.NewWriter(context.Background(), logger, slog.LevelInfo)
 
 	in := []string{"one    ", "two \t \f \v \r", "\t\t\t\t", "four"}
 	want := []string{"one", "two", "four"}
@@ -133,7 +137,7 @@ func TestNewWriter_MultiWithTrailingSpaces(t *testing.T) {
 
 func TestNewWriter_Empty(t *testing.T) {
 	logger, obs := initLogs(t, zapcore.DebugLevel)
-	w := log.NewWriter(logger, zapcore.InfoLevel)
+	w := log.NewWriter(context.Background(), logger, slog.LevelInfo)
 
 	_, err := io.Copy(w, &bytes.Buffer{})
 	w.Close()
@@ -148,7 +152,7 @@ func TestNewWriter_Empty(t *testing.T) {
 
 func TestNewWriter_TrailingNewline(t *testing.T) {
 	logger, obs := initLogs(t, zapcore.DebugLevel)
-	w := log.NewWriter(logger, zapcore.InfoLevel)
+	w := log.NewWriter(context.Background(), logger, slog.LevelInfo)
 
 	want := "this is the log message"
 
@@ -169,7 +173,7 @@ func TestNewWriter_TrailingNewline(t *testing.T) {
 
 func TestNewWriter_MultiWrites(t *testing.T) {
 	logger, obs := initLogs(t, zapcore.DebugLevel)
-	w := log.NewWriter(logger, zapcore.InfoLevel)
+	w := log.NewWriter(context.Background(), logger, slog.LevelInfo)
 
 	in1 := []string{"one", "two", "", "fourty "}
 	in2 := []string{"two", "...", "done"}
