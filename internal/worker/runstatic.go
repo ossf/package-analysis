@@ -66,12 +66,12 @@ func RunStaticAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandbo
 
 	sb := sandbox.New(sbOpts...)
 	defer func() {
-		if err := sb.Clean(); err != nil {
+		if err := sb.Clean(ctx); err != nil {
 			slog.ErrorContext(ctx, "Error cleaning up sandbox", "error", err)
 		}
 	}()
 
-	runResult, err := sb.Run(staticAnalyzeBinary, args...)
+	runResult, err := sb.Run(ctx, staticAnalyzeBinary, args...)
 	if err != nil {
 		return nil, "", fmt.Errorf("sandbox failed (%w)", err)
 	}

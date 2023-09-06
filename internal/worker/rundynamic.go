@@ -67,7 +67,7 @@ func shouldEnableCodeExecution(ecosystem pkgecosystem.Ecosystem) bool {
 	}
 }
 
-func enableCodeExecution(sb sandbox.Sandbox) error {
+func enableCodeExecution(ctx context.Context, sb sandbox.Sandbox) error {
 	// Create empty execution log file and copy to sandbox, to enable code execution feature
 	tempFile, err := os.CreateTemp("", "")
 	if err != nil {
@@ -78,7 +78,7 @@ func enableCodeExecution(sb sandbox.Sandbox) error {
 	_ = tempFile.Close()
 	tempPath := tempFile.Name()
 
-	if err := sb.CopyIntoSandbox(tempPath, sandboxExecutionLogPath); err != nil {
+	if err := sb.CopyIntoSandbox(ctx, tempPath, sandboxExecutionLogPath); err != nil {
 		return fmt.Errorf("could not copy execution log file to sandbox: %w", err)
 	}
 
@@ -103,7 +103,7 @@ func retrieveExecutionLog(ctx context.Context, sb sandbox.Sandbox) (string, erro
 
 	// if the copy fails, it could be that the execution log is not actually present.
 	// For now, we'll just log the error and otherwise ignore it
-	if err := sb.CopyBackToHost(hostExecutionLogPath, sandboxExecutionLogPath); err != nil {
+	if err := sb.CopyBackToHost(ctx, hostExecutionLogPath, sandboxExecutionLogPath); err != nil {
 		slog.WarnContext(ctx, "Could not retrieve execution log from sandbox", "error", err)
 		return "", nil
 	}
@@ -152,20 +152,20 @@ func RunDynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandb
 	sb := sandbox.New(sbOpts...)
 
 	defer func() {
-		if err := sb.Clean(); err != nil {
+		if err := sb.Clean(ctx); err != nil {
 			slog.ErrorContext(ctx, "Error cleaning up sandbox", "error", err)
 		}
 	}()
 
 	// initialise sandbox before copy/run
-	if err := sb.Init(); err != nil {
+	if err := sb.Init(ctx); err != nil {
 		LogDynamicAnalysisError(ctx, pkg, "", err)
 		return DynamicAnalysisResult{}, err
 	}
 
 	codeExecutionEnabled := false
 	if shouldEnableCodeExecution(pkg.Ecosystem()) {
-		if err := enableCodeExecution(sb); err != nil {
+		if err := enableCodeExecution(ctx, sb); err != nil {
 			slog.ErrorContext(ctx, "Code execution disabled due to error", "error", err)
 		} else {
 			codeExecutionEnabled = true

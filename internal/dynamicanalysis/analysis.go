@@ -48,7 +48,7 @@ func Run(ctx context.Context, sb sandbox.Sandbox, command string, args []string,
 	slog.DebugContext(ctx, "Running dynamic analysis command",
 		"command", command,
 		"args", args)
-	r, err := sb.Run(command, args...)
+	r, err := sb.Run(ctx, command, args...)
 	if err != nil {
 		return resultError, fmt.Errorf("sandbox failed (%w)", err)
 	}
