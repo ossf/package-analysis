@@ -60,7 +60,7 @@ var supportedPkgManagers = map[string]*ManagerConfig{
 func main() {
 	subscriptionURL := os.Getenv("OSSMALWARE_SUBSCRIPTION_URL")
 	topicURL := os.Getenv("OSSMALWARE_WORKER_TOPIC")
-	log.Initialize(os.Getenv("LOGGER_ENV")).Desugar()
+	log.Initialize(os.Getenv("LOGGER_ENV"))
 
 	err := listenLoop(subscriptionURL, topicURL)
 	if err != nil {

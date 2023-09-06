@@ -1,13 +1,12 @@
 package dynamicanalysis
 
 import (
+	"context"
 	"fmt"
-
-	"go.uber.org/zap"
+	"log/slog"
 
 	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/dnsanalyzer"
-	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/packetcapture"
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/internal/strace"
@@ -32,11 +31,10 @@ var resultError = &Result{
 	},
 }
 
-func Run(sb sandbox.Sandbox, command string, args []string, straceLogger *zap.SugaredLogger) (*Result, error) {
-	log.Info("Running dynamic analysis",
-		"args", args)
+func Run(ctx context.Context, sb sandbox.Sandbox, command string, args []string, straceLogger *slog.Logger) (*Result, error) {
+	slog.InfoContext(ctx, "Running dynamic analysis", "args", args)
 
-	log.Debug("Preparing packet capture")
+	slog.DebugContext(ctx, "Preparing packet capture")
 	pcap := packetcapture.New(sandbox.NetworkInterface)
 
 	dns := dnsanalyzer.New()
@@ -47,18 +45,19 @@ func Run(sb sandbox.Sandbox, command string, args []string, straceLogger *zap.Su
 	defer pcap.Close()
 
 	// Run the command
-	log.Debug("Running dynamic analysis command",
-		"command", command, "args", args)
+	slog.DebugContext(ctx, "Running dynamic analysis command",
+		"command", command,
+		"args", args)
 	r, err := sb.Run(command, args...)
 	if err != nil {
 		return resultError, fmt.Errorf("sandbox failed (%w)", err)
 	}
 
-	log.Debug("Stop the packet capture")
+	slog.DebugContext(ctx, "Stop the packet capture")
 	pcap.Close()
 
 	// Grab the log file
-	log.Debug("Parsing the strace log")
+	slog.DebugContext(ctx, "Parsing the strace log")
 	l, err := r.Log()
 	if err != nil {
 		return resultError, fmt.Errorf("failed to open strace log (%w)", err)

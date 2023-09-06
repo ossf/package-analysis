@@ -2,22 +2,17 @@ package strace_test
 
 import (
 	"fmt"
+	"io"
+	"log/slog"
 	"reflect"
 	"strings"
 	"testing"
 
-	"go.uber.org/zap"
-
-	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/strace"
 	"github.com/ossf/package-analysis/internal/utils"
 )
 
-var nopLogger = zap.NewNop().Sugar()
-
-func init() {
-	log.Initialize("")
-}
+var nopLogger = slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
 
 func TestIgnoreEntryLogs(t *testing.T) {
 	input := "I1203 05:29:21.585712     173 strace.go:625] [   2] python3 E creat(0x7f015d7865d0 /tmp/abctest, 0o600)"
