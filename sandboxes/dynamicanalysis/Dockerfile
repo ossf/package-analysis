@@ -56,6 +56,7 @@ RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-reco
 	telnet \
 	tshark \
 	software-properties-common \
+	xxd \
 	zip
 
 # Configure sudo for passwordless execution
