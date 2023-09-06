@@ -89,6 +89,9 @@ func makeResultStores(dest resultBucketPaths) worker.ResultStores {
 	if dest.fileWrites != "" {
 		resultStores.FileWrites = resultstore.New(dest.fileWrites, resultstore.ConstructPath())
 	}
+	if dest.analyzedPkg != "" {
+		resultStores.AnalyzedPackage = resultstore.New(dest.analyzedPkg, resultstore.ConstructPath())
+	}
 
 	return resultStores
 }
