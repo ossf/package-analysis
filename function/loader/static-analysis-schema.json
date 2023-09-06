@@ -28,7 +28,7 @@
         "name": "version",
         "mode": "REQUIRED",
         "type": "STRING"
-      },
+      }
     ]
   },
   {
