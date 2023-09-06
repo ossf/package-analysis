@@ -31,7 +31,7 @@ func SaveDynamicAnalysisData(ctx context.Context, pkg *pkgmanager.Pkg, dest *Res
 		return nil
 	}
 
-	if err := dest.DynamicAnalysis.SaveAnalysis(ctx, pkg, data.StraceSummary, ""); err != nil {
+	if err := dest.DynamicAnalysis.SaveDynamicAnalysis(ctx, pkg, data.StraceSummary, ""); err != nil {
 		return fmt.Errorf("failed to save strace data to %s: %w", dest.DynamicAnalysis, err)
 	}
 	if err := saveExecutionLog(ctx, pkg, dest, data); err != nil {
@@ -71,7 +71,7 @@ func saveExecutionLog(ctx context.Context, pkg *pkgmanager.Pkg, dest *ResultStor
 		execLogFilename = fmt.Sprintf("execution-log-%s.json", pkg.Version())
 	}
 
-	if err := dest.DynamicAnalysis.SaveAnalysis(ctx, pkg, data.ExecutionLog, execLogFilename); err != nil {
+	if err := dest.DynamicAnalysis.SaveDynamicAnalysis(ctx, pkg, data.ExecutionLog, execLogFilename); err != nil {
 		return fmt.Errorf("failed to save execution log to %s: %w", dest.DynamicAnalysis, err)
 	}
 

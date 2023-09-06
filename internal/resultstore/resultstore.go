@@ -237,9 +237,9 @@ func DefaultFilename(p Pkg) string {
 	return "results.json"
 }
 
-// SaveAnalysis wraps the analysis object with the DynamicAnalysisRecord struct and saves it to the bucket
+// SaveDynamicAnalysis wraps the analysis object with the DynamicAnalysisRecord struct and saves it to the bucket
 // using saveWithFilename. If filename is empty, a default filename (chosen using DefaultFilename) is used.
-func (rs *ResultStore) SaveAnalysis(ctx context.Context, p Pkg, analysis any, filename string) error {
+func (rs *ResultStore) SaveDynamicAnalysis(ctx context.Context, p Pkg, analysis any, filename string) error {
 	if filename == "" {
 		filename = DefaultFilename(p)
 	}
