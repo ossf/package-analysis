@@ -62,7 +62,9 @@ func RunStaticAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandbo
 	_ = resultsFile.Close()
 
 	// for saving static analysis results inside the sandbox
-	sbOpts = append(sbOpts, sandbox.Volume(resultsJSONFile, resultsJSONFile))
+	sbOpts = append(sbOpts,
+		sandbox.Volume(resultsJSONFile, resultsJSONFile),
+		sandbox.SetEnv("LOGGER_ENV", log.DefaultLoggingEnv().String()))
 
 	sb := sandbox.New(sbOpts...)
 	defer func() {
