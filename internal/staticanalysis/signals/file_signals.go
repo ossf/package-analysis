@@ -71,8 +71,9 @@ func (s FileSignals) String() string {
 }
 
 type EscapedString struct {
-	RawLiteral       string  `json:"raw_literal"`
-	LevenshteinRatio float64 `json:"levenshtein_ratio"`
+	Value           string `json:"value"`
+	Raw             string `json:"raw"`
+	LevenshteinDist int    `json:"levenshtein_dist"`
 }
 
 // SuspiciousIdentifier is an identifier that matches a specific rule intended
@@ -132,8 +133,9 @@ func ComputeFileSignals(parseData parsing.SingleResult) FileSignals {
 		signals.EmailAddresses = append(signals.EmailAddresses, detections.FindEmailAddresses(sl.Value)...)
 		if detections.IsHighlyEscaped(sl, 8, 0.25) {
 			escapedString := EscapedString{
-				RawLiteral:       sl.Raw,
-				LevenshteinRatio: detections.LevenshteinRatio(sl),
+				Value:           sl.Value,
+				Raw:             sl.Raw,
+				LevenshteinDist: sl.LevenshteinDist(),
 			}
 			signals.EscapedStrings = append(signals.EscapedStrings, escapedString)
 		}

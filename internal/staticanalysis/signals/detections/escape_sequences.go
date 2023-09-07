@@ -3,8 +3,6 @@ package detections
 import (
 	"regexp"
 
-	"github.com/texttheater/golang-levenshtein/levenshtein"
-
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
 
@@ -44,19 +42,4 @@ func IsHighlyEscaped(s token.String, thresholdCount int, thresholdFrequency floa
 
 	length := float64(len([]rune(s.Value))) // convert to rune slice first to count codepoints, not bytes
 	return escapeCount >= thresholdCount || float64(escapeCount)/length >= thresholdFrequency
-}
-
-/*
-LevenshteinRatio returns the Levenshtein ratio between the parsed and raw versions
-of a string literal. This quantity is defined for two strings 'source' and 'target' as
-
-(sourceLength + targetLength - distance) / (sourceLength + targetLength)
-
-where 'distance' refers to Levenshtein (edit) distance. The particular version of
-Levenshtein distance used counts substitution as 2 operations (deletion and addition).
-*/
-func LevenshteinRatio(s token.String) float64 {
-	source := []rune(s.Raw)
-	target := []rune(s.Value)
-	return levenshtein.RatioForStrings(source, target, levenshtein.DefaultOptions)
 }

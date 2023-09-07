@@ -271,14 +271,19 @@
                 "type": "RECORD",
                 "fields": [
                   {
-                    "name": "raw_literal",
+                    "name": "value",
                     "mode": "REQUIRED",
                     "type": "STRING"
                   },
                   {
-                    "name": "levenshtein_ratio",
+                    "name": "raw",
+                    "mode": "REQUIRED",
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "levenshtein_dist",
                     "mode": "NULLABLE",
-                    "type": "FLOAT64"
+                    "type": "INTT64"
                   }
                 ]
               },
