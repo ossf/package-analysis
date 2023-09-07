@@ -14,9 +14,9 @@ const (
 	// source code information from the file.
 	Parsing Task = "parsing"
 
-	// Signals analysis involves using certain rules to detect the presence of
-	// obfuscated code. It depends on the output of the Parsing task, but does not
-	// require reading files directly.
+	// Signals analysis involves using applying certain detection rules to extract
+	// signals of interest from the code. It depends on the output of the Parsing task,
+	// and does not require reading files directly.
 	Signals Task = "signals"
 
 	// All is not a task itself, but represents/'depends on' all other tasks.
