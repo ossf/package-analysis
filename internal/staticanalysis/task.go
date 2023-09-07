@@ -27,7 +27,6 @@ var allTasks = []Task{
 	Basic,
 	Parsing,
 	Signals,
-	All,
 }
 
 func AllTasks() []Task {

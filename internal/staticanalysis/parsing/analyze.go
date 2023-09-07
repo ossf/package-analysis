@@ -20,6 +20,7 @@ func processJsData(fileData singleParseData) SingleResult {
 		FloatLiterals:  []token.Float{},
 		Comments:       []token.Comment{},
 	}
+
 	if !fileData.ValidInput {
 		return result
 	}
@@ -41,6 +42,7 @@ func processJsData(fileData singleParseData) SingleResult {
 
 	for _, ident := range fileData.Identifiers {
 		switch ident.Type {
+		// token.Member is not included as it's too noisy (e.g. console.log)
 		case token.Function, token.Class, token.Parameter, token.Property, token.Variable:
 			result.Identifiers = append(result.Identifiers, token.Identifier{Name: ident.Name, Type: ident.Type})
 		}
@@ -55,18 +57,16 @@ func processJsData(fileData singleParseData) SingleResult {
 // computeCharacterDistributions estimates the probabilities for characters in
 // identifiers and string literals respectively, by aggregating character counts
 // across all symbols of each type in the package.
-func computeCharacterDistributions(parseResults map[string][]SingleResult) (map[rune]float64, map[rune]float64) {
+func computeCharacterDistributions(parseResults map[string]SingleResult) (map[rune]float64, map[rune]float64) {
 	var identifiers []string
 	var strings []string
 
-	for _, fileResults := range parseResults {
-		for _, singleResult := range fileResults {
-			for _, str := range singleResult.StringLiterals {
-				strings = append(strings, str.Value)
-			}
-			for _, ident := range singleResult.Identifiers {
-				identifiers = append(identifiers, ident.Name)
-			}
+	for _, r := range parseResults {
+		for _, str := range r.StringLiterals {
+			strings = append(strings, str.Value)
+		}
+		for _, ident := range r.Identifiers {
+			identifiers = append(identifiers, ident.Name)
 		}
 	}
 
@@ -95,7 +95,7 @@ they are normally both parsed as floating point. This function records a numeric
 as an integer if it can be converted using strconv.Atoi(), otherwise it is recorded as
 floating point.
 */
-func Analyze(parserConfig ParserConfig, input externalcmd.Input, printDebug bool) (map[string][]SingleResult, error) {
+func Analyze(parserConfig ParserConfig, input externalcmd.Input, printDebug bool) (map[string]SingleResult, error) {
 	// JavaScript parsing
 	jsResults, rawOutput, err := parseJS(parserConfig, input)
 	if printDebug {
@@ -105,9 +105,9 @@ func Analyze(parserConfig ParserConfig, input externalcmd.Input, printDebug bool
 		return nil, err
 	}
 
-	resultsByFile := make(map[string][]SingleResult, len(jsResults))
+	resultsByFile := make(map[string]SingleResult)
 	for filename, jsData := range jsResults {
-		resultsByFile[filename] = append(resultsByFile[filename], processJsData(jsData))
+		resultsByFile[filename] = processJsData(jsData)
 	}
 
 	// TODO replace this with a global count across many packages from an ecosystem.
@@ -116,14 +116,12 @@ func Analyze(parserConfig ParserConfig, input externalcmd.Input, printDebug bool
 	identifierProbs, stringProbs := computeCharacterDistributions(resultsByFile)
 
 	// populate entropy values for identifiers and string literals.
-	for _, fileResults := range resultsByFile {
-		for _, singleResult := range fileResults {
-			for i := range singleResult.Identifiers {
-				singleResult.Identifiers[i].ComputeEntropy(identifierProbs)
-			}
-			for i := range singleResult.StringLiterals {
-				singleResult.StringLiterals[i].ComputeEntropy(stringProbs)
-			}
+	for _, r := range resultsByFile {
+		for i := range r.Identifiers {
+			r.Identifiers[i].ComputeEntropy(identifierProbs)
+		}
+		for i := range r.StringLiterals {
+			r.StringLiterals[i].ComputeEntropy(stringProbs)
 		}
 	}
 

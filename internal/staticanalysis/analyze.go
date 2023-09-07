@@ -1,6 +1,7 @@
 package staticanalysis
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -60,7 +61,7 @@ func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig,
 			runTask[Parsing] = true
 			runTask[Signals] = true
 		case All:
-			// ignore
+			return nil, errors.New("staticanalysis.All should not be passed in directly, use staticanalysis.AllTasks() instead")
 		default:
 			return nil, fmt.Errorf("static analysis task not implemented: %s", task)
 		}
@@ -74,8 +75,12 @@ func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig,
 	getPathInArchive := func(absolutePath string) string {
 		return strings.TrimPrefix(absolutePath, extractDir+string(os.PathSeparator))
 	}
+	// inverse of above function
+	getAbsolutePath := func(packagePath string) string {
+		return filepath.Join(extractDir, packagePath)
+	}
 
-	fileResults := make([]SingleResult, len(paths), 0)
+	fileResults := make([]SingleResult, 0, len(paths))
 	for _, path := range paths {
 		fileResults = append(fileResults, SingleResult{Filename: getPathInArchive(path)})
 	}
@@ -90,7 +95,7 @@ func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig,
 				len(basicData), len(fileResults)), log.Label("task", string(Basic)))
 		} else {
 			for i := range fileResults {
-				fileResults[i].Basic = basicData[i]
+				fileResults[i].Basic = &basicData[i]
 			}
 		}
 	}
@@ -108,7 +113,8 @@ func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig,
 				len(parsingResults), len(fileResults)), log.Label("task", string(Basic)))
 		} else {
 			for i, r := range fileResults {
-				fileResults[i].Parsing = parsingResults[r.Filename]
+				fileParseResult := parsingResults[getAbsolutePath(r.Filename)]
+				fileResults[i].Parsing = &fileParseResult
 			}
 		}
 	}
@@ -116,17 +122,11 @@ func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig,
 	if runTask[Signals] {
 		log.Info("run signals analysis")
 		for i, r := range fileResults {
-			parseData := r.Parsing
-			switch len(parseData) {
-			case 1:
-				fileResults[i].Signals = signals.AnalyzeSingle(parseData[0])
-			case 0:
+			if r.Parsing != nil {
+				singleData := signals.AnalyzeSingle(*r.Parsing)
+				fileResults[i].Signals = &singleData
+			} else {
 				log.Warn("skipped signals analysis due to no parsing data", "filename", r.Filename)
-			default:
-				// this case shouldn't occur since the only supported language is JavaScript
-				log.Error(fmt.Sprintf("len(parseData) == %d, only analyzing parseData[0] (language: %s)",
-					len(parseData), parseData[0].Language), "filename", r.Filename)
-				fileResults[i].Signals = signals.AnalyzeSingle(parseData[0])
 			}
 		}
 	}

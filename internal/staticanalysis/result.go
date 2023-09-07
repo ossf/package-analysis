@@ -7,7 +7,6 @@ import (
 	"github.com/ossf/package-analysis/internal/staticanalysis/basicdata"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"github.com/ossf/package-analysis/internal/staticanalysis/signals"
-	"github.com/ossf/package-analysis/internal/utils"
 )
 
 /*
@@ -31,18 +30,16 @@ type SingleResult struct {
 
 	// NOTE: the JSON names below should match the values in task.go
 
-	Basic   basicdata.FileData     `json:"basic,omitempty"`
-	Parsing []parsing.SingleResult `json:"parsing,omitempty"`
-	Signals signals.FileSignals    `json:"signals,omitempty"`
+	Basic   *basicdata.FileData   `json:"basic,omitempty"`
+	Parsing *parsing.SingleResult `json:"parsing,omitempty"`
+	Signals *signals.FileSignals  `json:"signals,omitempty"`
 }
 
 func (r SingleResult) String() string {
-	parsingDataStrings := utils.Transform(r.Parsing, func(d parsing.SingleResult) string { return d.String() })
-
 	parts := []string{
 		fmt.Sprintf("==== SingleResult: %s ====\n", r.Filename),
 		fmt.Sprintf("== basic data == \n%v", r.Basic),
-		fmt.Sprintf("== parse data ==\n%s", strings.Join(parsingDataStrings, "\n")),
+		fmt.Sprintf("== parse data ==\n%v", r.Parsing),
 		fmt.Sprintf("== signals == \n%s", r.Signals),
 	}
 
