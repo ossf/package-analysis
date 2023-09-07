@@ -1,4 +1,4 @@
-package staticanalysis
+package basicdata
 
 import (
 	"os"
@@ -23,14 +23,14 @@ var testFiles = []testFile{
 	{
 		filename:     "test1.txt",
 		contents:     []byte("hello test 1!\n"),
-		contentsHash: "sha256:bd96959573979235b87180b0b7513c7f1d5cbf046b263f366f2f10fe1b966494",
+		contentsHash: "bd96959573979235b87180b0b7513c7f1d5cbf046b263f366f2f10fe1b966494",
 		fileType:     "ASCII text",
 		lineLengths:  valuecounts.Count([]int{13}),
 	},
 	{
 		filename:     "test2.txt",
 		contents:     []byte("#! /bin/bash\necho 'Hello test 2'\n"),
-		contentsHash: "sha256:6179db3c673ceddcdbd384116ae4d301d64e65fc2686db9ba64945677a5a893c",
+		contentsHash: "6179db3c673ceddcdbd384116ae4d301d64e65fc2686db9ba64945677a5a893c",
 		fileType:     "Bourne-Again shell script, ASCII text executable",
 		lineLengths:  valuecounts.Count([]int{12, 19}),
 	},
@@ -75,18 +75,18 @@ func TestGetBasicData(t *testing.T) {
 				return strings.TrimPrefix(absolutePath, testDir+string(os.PathSeparator))
 			}
 
-			got, err := GetBasicData(paths, getArchivePath)
+			got, err := Analyze(paths, getArchivePath)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("getFileDescriptions() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("describeFiles() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
-			wantData := utils.Transform(tt.files, func(f testFile) BasicFileData {
-				return BasicFileData{
+			wantData := utils.Transform(tt.files, func(f testFile) FileData {
+				return FileData{
 					Filename:    f.filename,
 					Description: f.fileType,
 					Size:        int64(len(f.contents)),
-					Hash:        f.contentsHash,
+					SHA256:      f.contentsHash,
 					LineLengths: f.lineLengths,
 				}
 			})
