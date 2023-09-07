@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/ossf/package-analysis/internal/log"
+	"github.com/ossf/package-analysis/internal/staticanalysis/basicdata"
 	"github.com/ossf/package-analysis/internal/staticanalysis/externalcmd"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
@@ -78,7 +79,7 @@ func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig,
 
 	if runTask[Basic] {
 		log.Info("run basic analysis")
-		basicData, err := GetBasicData(fileList, getPathInArchive)
+		basicData, err := basicdata.Analyze(fileList, getPathInArchive)
 		if err != nil {
 			log.Error("static analysis error", log.Label("task", string(Basic)), "error", err)
 		} else {
