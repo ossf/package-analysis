@@ -5,6 +5,11 @@
     "type": "STRING"
   },
   {
+    "name": "created",
+    "mode": "REQUIRED",
+    "type": "TIMESTAMP"
+  },
+  {
     "name": "key",
     "mode": "REQUIRED",
     "type": "RECORD",
@@ -23,11 +28,6 @@
         "name": "version",
         "mode": "REQUIRED",
         "type": "STRING"
-      },
-      {
-        "name": "created",
-        "mode": "REQUIRED",
-        "type": "TIMESTAMP"
       }
     ]
   },

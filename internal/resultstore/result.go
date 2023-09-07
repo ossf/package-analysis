@@ -19,12 +19,11 @@ type pkg struct {
 	Version   string `json:"Version"`
 }
 
-// Key is a new version of analysisrun.Key with more fields and is serialised with different JSON keys
+// Key is a new version of analysisrun.Key which is serialised with different JSON key names.
 type Key struct {
-	Ecosystem string    `json:"ecosystem"`
-	Name      string    `json:"name"`
-	Version   string    `json:"version"`
-	Created   time.Time `json:"created"`
+	Ecosystem string `json:"ecosystem"`
+	Name      string `json:"name"`
+	Version   string `json:"version"`
 }
 
 // DynamicAnalysisRecord is the top-level struct which is serialised to produce JSON results files
@@ -38,7 +37,8 @@ type DynamicAnalysisRecord struct {
 // StaticAnalysisRecord is the top-level struct which is serialised to produce JSON results files
 // for static analysis
 type StaticAnalysisRecord struct {
-	SchemaVersion string `json:"schema_version"`
-	Key           Key    `json:"key"`
-	Results       any    `json:"results"`
+	SchemaVersion string    `json:"schema_version"`
+	Created       time.Time `json:"created"`
+	Key           Key       `json:"key"`
+	Results       any       `json:"results"`
 }
