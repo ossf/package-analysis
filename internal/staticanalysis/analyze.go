@@ -10,8 +10,8 @@ import (
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/staticanalysis/basicdata"
 	"github.com/ossf/package-analysis/internal/staticanalysis/externalcmd"
-	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
+	"github.com/ossf/package-analysis/internal/staticanalysis/signals"
 )
 
 // enumeratePackageFiles returns a list of absolute paths to all (regular) files
@@ -35,7 +35,7 @@ func enumeratePackageFiles(extractDir string) ([]string, error) {
 AnalyzePackageFiles walks a tree of extracted package files and runs the analysis tasks
 listed in analysisTasks to produce the result data.
 
-Note that to some tasks depend on the data from other tasks; for example, 'obfuscation'
+Note that to some tasks depend on the data from other tasks; for example, 'signals'
 depends on 'parsing'. If a task listed in analysisTasks depends on a task not listed
 in analysisTasks, then both tasks are performed.
 
@@ -53,12 +53,12 @@ func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig,
 			runTask[Basic] = true
 		case Parsing:
 			runTask[Parsing] = true
-		case Obfuscation:
+		case Signals:
 			if !runTask[Parsing] {
-				log.Info("adding staticanalysis.Parsing to task list (needed by staticanalysis.Obfuscation)")
+				log.Info("adding staticanalysis.Parsing to task list (needed by staticanalysis.Signals)")
 			}
 			runTask[Parsing] = true
-			runTask[Obfuscation] = true
+			runTask[Signals] = true
 		case All:
 			// ignore
 		default:
@@ -104,14 +104,14 @@ func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig,
 		}
 	}
 
-	if runTask[Obfuscation] {
+	if runTask[Signals] {
 		if len(result.ParsingData) > 0 {
-			log.Info("run obfuscation analysis")
+			log.Info("run signals analysis")
 
-			obfuscationData := obfuscation.Analyze(result.ParsingData)
-			result.ObfuscationData = &obfuscationData
+			signalsData := signals.Analyze(result.ParsingData)
+			result.SignalsData = &signalsData
 		} else {
-			log.Warn("skipped obfuscation analysis due to no parsing data")
+			log.Warn("skipped signals analysis due to no parsing data")
 		}
 	}
 

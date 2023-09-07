@@ -1,6 +1,6 @@
 package token
 
-import "github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stringentropy"
+import "github.com/ossf/package-analysis/internal/staticanalysis/signals/stringentropy"
 
 type Identifier struct {
 	Name    string         `json:"name"`

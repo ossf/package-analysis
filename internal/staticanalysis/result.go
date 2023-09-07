@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/ossf/package-analysis/internal/staticanalysis/basicdata"
-	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
+	"github.com/ossf/package-analysis/internal/staticanalysis/signals"
 	"github.com/ossf/package-analysis/internal/utils"
 )
 
@@ -22,7 +22,7 @@ type Result struct {
 
 	ParsingData []parsing.SingleResult `json:"parsing,omitempty"`
 
-	ObfuscationData *obfuscation.Result `json:"obfuscation,omitempty"`
+	SignalsData *signals.Result `json:"signals,omitempty"`
 }
 
 func (ar Result) String() string {
@@ -31,7 +31,7 @@ func (ar Result) String() string {
 	parts := []string{
 		fmt.Sprintf("File basic data\n%v", ar.BasicData),
 		fmt.Sprintf("File parse data\n%s", strings.Join(parsingDataStrings, "\n\n")),
-		fmt.Sprintf("File obfuscation data\n%s", ar.ObfuscationData),
+		fmt.Sprintf("File signals data\n%s", ar.SignalsData),
 	}
 
 	return strings.Join(parts, "\n\n########################\n\n")

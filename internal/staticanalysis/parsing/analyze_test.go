@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/ossf/package-analysis/internal/staticanalysis/externalcmd"
-	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stringentropy"
+	"github.com/ossf/package-analysis/internal/staticanalysis/signals/stringentropy"
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
 
