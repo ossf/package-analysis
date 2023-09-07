@@ -266,10 +266,10 @@ func (rs *ResultStore) SaveStaticAnalysis(ctx context.Context, p Pkg, analysis a
 
 	data := &StaticAnalysisRecord{
 		SchemaVersion: "1",
-		Created:       time.Now().UTC(),
 		Ecosystem:     p.EcosystemName(),
 		Name:          p.Name(),
 		Version:       p.Version(),
+		Created:       time.Now().UTC(),
 		Results:       analysis,
 	}
 
