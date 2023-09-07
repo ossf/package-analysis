@@ -143,6 +143,7 @@ type podmanSandbox struct {
 	initialised bool
 	volumes     []volume
 	copies      []copySpec
+	environment map[string]string
 	logger      *slog.Logger
 }
 
@@ -155,7 +156,8 @@ func (o option) set(sb *podmanSandbox) { o(sb) }
 
 func New(options ...Option) Sandbox {
 	sb := &podmanSandbox{
-		logger: slog.Default(),
+		logger:      slog.Default(),
+		environment: make(map[string]string),
 	}
 	for _, o := range options {
 		o.set(sb)
@@ -247,6 +249,10 @@ func Logger(logger *slog.Logger) Option {
 	return option(func(sb *podmanSandbox) { sb.logger = logger })
 }
 
+func SetEnv(key, value string) Option {
+	return option(func(sb *podmanSandbox) { sb.environment[key] = value })
+}
+
 func removeAllLogs() error {
 	matches, err := filepath.Glob(filepath.Join(os.TempDir(), logDirPattern+"*"))
 	if err != nil {
@@ -304,6 +310,10 @@ func (s *podmanSandbox) createContainer(ctx context.Context) (string, error) {
 		args = append(args, "--network=none")
 	} else {
 		args = append(args, networkArgs...)
+	}
+
+	for k, v := range s.environment {
+		args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
 	}
 
 	args = append(args, s.extraArgs()...)
