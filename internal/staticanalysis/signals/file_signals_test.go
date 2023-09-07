@@ -1,4 +1,4 @@
-package obfuscation
+package signals
 
 import (
 	"reflect"

@@ -1,12 +1,12 @@
-package obfuscation
+package signals
 
 import (
 	"fmt"
 	"strings"
 	"unicode/utf8"
 
-	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/detections"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
+	"github.com/ossf/package-analysis/internal/staticanalysis/signals/detections"
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 	"github.com/ossf/package-analysis/internal/utils"
 	"github.com/ossf/package-analysis/internal/utils/valuecounts"
