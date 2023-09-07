@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/ossf/package-analysis/internal/staticanalysis/basicdata"
 	"github.com/ossf/package-analysis/internal/staticanalysis/obfuscation"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"github.com/ossf/package-analysis/internal/utils"
@@ -17,7 +18,7 @@ is sent across a sandbox boundary, so all nested structs must be JSON serialisab
 */
 type Result struct {
 	// NOTE: the JSON names below should match the values in task.go
-	BasicData *BasicPackageData `json:"basic,omitempty"`
+	BasicData *basicdata.PackageData `json:"basic,omitempty"`
 
 	ParsingData []parsing.SingleResult `json:"parsing,omitempty"`
 
