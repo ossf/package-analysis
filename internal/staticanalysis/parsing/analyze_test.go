@@ -31,7 +31,6 @@ var analyzeTestcases = []analyzeTestcase{
 var a = "hello"
 	`,
 		expectedData: SingleResult{
-			Filename: "stdin",
 			Language: JavaScript,
 			Identifiers: []token.Identifier{
 				{Name: "a", Type: token.Variable, Entropy: stringentropy.Calculate("a", identifierCharProbs[0])},
@@ -57,7 +56,6 @@ function test(a, b = 2) {
 }
 	`,
 		expectedData: SingleResult{
-			Filename: "stdin",
 			Language: JavaScript,
 			Identifiers: []token.Identifier{
 				{Name: "test", Type: token.Function, Entropy: stringentropy.Calculate("test", identifierCharProbs[1])},
@@ -81,7 +79,6 @@ function test(a, b = 2) {
 		name:     "invalid 1",
 		jsSource: "this is not JavaScript",
 		expectedData: SingleResult{
-			Filename:       "stdin",
 			Language:       NoLanguage,
 			Identifiers:    []token.Identifier{},
 			StringLiterals: []token.String{},
@@ -104,11 +101,8 @@ func TestAnalyze(t *testing.T) {
 				t.Errorf("%v", err)
 				return
 			}
-			got := result[0]
+			got := result["stdin"][0]
 
-			if got.Filename != tt.expectedData.Filename {
-				t.Errorf("Filename mismatch: got %s, want %s", got.Filename, tt.expectedData.Filename)
-			}
 			if got.Language != tt.expectedData.Language {
 				t.Errorf("Filename mismatch: got %s, want %s", got.Language, tt.expectedData.Language)
 			}
