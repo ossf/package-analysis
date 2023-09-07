@@ -5,31 +5,24 @@
     "type": "STRING"
   },
   {
+    "name": "ecosystem",
+    "mode": "REQUIRED",
+    "type": "STRING"
+  },
+  {
+    "name": "name",
+    "mode": "REQUIRED",
+    "type": "STRING"
+  },
+  {
+    "name": "version",
+    "mode": "REQUIRED",
+    "type": "STRING"
+  },
+  {
     "name": "created",
     "mode": "REQUIRED",
     "type": "TIMESTAMP"
-  },
-  {
-    "name": "key",
-    "mode": "REQUIRED",
-    "type": "RECORD",
-    "fields": [
-      {
-        "name": "ecosystem",
-        "mode": "REQUIRED",
-        "type": "STRING"
-      },
-      {
-        "name": "name",
-        "mode": "REQUIRED",
-        "type": "STRING"
-      },
-      {
-        "name": "version",
-        "mode": "REQUIRED",
-        "type": "STRING"
-      }
-    ]
   },
   {
     "name": "results",
