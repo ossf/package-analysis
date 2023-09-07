@@ -19,13 +19,13 @@ type Result struct {
 	// NOTE: the JSON names below should match the values in task.go
 	BasicData *BasicPackageData `json:"basic,omitempty"`
 
-	ParsingData []*parsing.SingleResult `json:"parsing,omitempty"`
+	ParsingData []parsing.SingleResult `json:"parsing,omitempty"`
 
 	ObfuscationData *obfuscation.Result `json:"obfuscation,omitempty"`
 }
 
 func (ar Result) String() string {
-	parsingDataStrings := utils.Transform(ar.ParsingData, func(d *parsing.SingleResult) string { return d.String() })
+	parsingDataStrings := utils.Transform(ar.ParsingData, func(d parsing.SingleResult) string { return d.String() })
 
 	parts := []string{
 		fmt.Sprintf("File basic data\n%v", ar.BasicData),
