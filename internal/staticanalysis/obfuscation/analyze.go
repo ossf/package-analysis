@@ -8,7 +8,7 @@ obtained from parsing each file in the package.
 If Language is empty (== NoLanguage), it means that the file could not be
 parsed with any parser.
 */
-func Analyze(parseData []*parsing.SingleResult) Result {
+func Analyze(parseData []parsing.SingleResult) Result {
 	result := Result{
 		ExcludedFiles: []string{},
 		Signals:       []FileSignals{},
@@ -20,7 +20,7 @@ func Analyze(parseData []*parsing.SingleResult) Result {
 			// couldn't be parsed
 			result.ExcludedFiles = append(result.ExcludedFiles, fileData.Filename)
 		case parsing.JavaScript:
-			signals := ComputeFileSignals(*fileData)
+			signals := ComputeFileSignals(fileData)
 			signals.Filename = fileData.Filename
 			result.Signals = append(result.Signals, signals)
 		}

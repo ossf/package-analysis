@@ -31,6 +31,8 @@ var analyzeTestcases = []analyzeTestcase{
 var a = "hello"
 	`,
 		expectedData: SingleResult{
+			Filename: "stdin",
+			Language: JavaScript,
 			Identifiers: []token.Identifier{
 				{Name: "a", Type: token.Variable, Entropy: stringentropy.Calculate("a", identifierCharProbs[0])},
 			},
@@ -55,6 +57,8 @@ function test(a, b = 2) {
 }
 	`,
 		expectedData: SingleResult{
+			Filename: "stdin",
+			Language: JavaScript,
 			Identifiers: []token.Identifier{
 				{Name: "test", Type: token.Function, Entropy: stringentropy.Calculate("test", identifierCharProbs[1])},
 				{Name: "a", Type: token.Parameter, Entropy: stringentropy.Calculate("a", identifierCharProbs[1])},
@@ -71,6 +75,18 @@ function test(a, b = 2) {
 				{Value: 4, Raw: "4"},
 			},
 			FloatLiterals: []token.Float{},
+		},
+	},
+	{
+		name:     "invalid 1",
+		jsSource: "this is not JavaScript",
+		expectedData: SingleResult{
+			Filename:       "stdin",
+			Language:       NoLanguage,
+			Identifiers:    []token.Identifier{},
+			StringLiterals: []token.String{},
+			IntLiterals:    []token.Int{},
+			FloatLiterals:  []token.Float{},
 		},
 	},
 }
@@ -90,17 +106,24 @@ func TestAnalyze(t *testing.T) {
 			}
 			got := result[0]
 
+			if got.Filename != tt.expectedData.Filename {
+				t.Errorf("Filename mismatch: got %s, want %s", got.Filename, tt.expectedData.Filename)
+			}
+			if got.Language != tt.expectedData.Language {
+				t.Errorf("Filename mismatch: got %s, want %s", got.Language, tt.expectedData.Language)
+			}
+
 			if !reflect.DeepEqual(got.Identifiers, tt.expectedData.Identifiers) {
-				t.Errorf("Identifiers mismatch: got %v, want %v", got.Identifiers, tt.expectedData.Identifiers)
+				t.Errorf("Identifiers mismatch: got %#v, want %v", got.Identifiers, tt.expectedData.Identifiers)
 			}
 			if !reflect.DeepEqual(got.StringLiterals, tt.expectedData.StringLiterals) {
-				t.Errorf("String literals mismatch: got %v, want %v", got.StringLiterals, tt.expectedData.StringLiterals)
+				t.Errorf("String literals mismatch: got %#v, want %v", got.StringLiterals, tt.expectedData.StringLiterals)
 			}
 			if !reflect.DeepEqual(got.IntLiterals, tt.expectedData.IntLiterals) {
-				t.Errorf("Int literals mismatch: got %v, want %v", got.IntLiterals, tt.expectedData.IntLiterals)
+				t.Errorf("Int literals mismatch: got %#v, want %v", got.IntLiterals, tt.expectedData.IntLiterals)
 			}
 			if !reflect.DeepEqual(got.FloatLiterals, tt.expectedData.FloatLiterals) {
-				t.Errorf("Float literals mismatch: got %v, want %v", got.FloatLiterals, tt.expectedData.FloatLiterals)
+				t.Errorf("Float literals mismatch: got %#v, want %v", got.FloatLiterals, tt.expectedData.FloatLiterals)
 			}
 		})
 	}

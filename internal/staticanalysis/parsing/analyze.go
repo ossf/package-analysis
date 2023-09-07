@@ -10,17 +10,10 @@ import (
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
 
-func processJsData(filename string, fileData singleParseData) *SingleResult {
-	if !fileData.ValidInput {
-		return &SingleResult{
-			Filename: filename,
-			Language: NoLanguage,
-		}
-	}
-
-	result := &SingleResult{
+func processJsData(filename string, fileData singleParseData) SingleResult {
+	result := SingleResult{
 		Filename: filename,
-		Language: JavaScript,
+		Language: NoLanguage,
 		// Initialise with empty slices to avoid null values in JSON
 		Identifiers:    []token.Identifier{},
 		StringLiterals: []token.String{},
@@ -28,6 +21,12 @@ func processJsData(filename string, fileData singleParseData) *SingleResult {
 		FloatLiterals:  []token.Float{},
 		Comments:       []token.Comment{},
 	}
+	if !fileData.ValidInput {
+		return result
+	}
+
+	// JavaScript is the only currently supported / valid language
+	result.Language = JavaScript
 
 	for _, d := range fileData.Literals {
 		if d.GoType == "string" {
@@ -54,12 +53,12 @@ func processJsData(filename string, fileData singleParseData) *SingleResult {
 	return result
 }
 
-// computeEntropy populates entropy values for identifiers and string literals.
-// Character frequency distribution is estimated by aggregating character counts
-// in across all identifiers and string literals respectively in the package.
-func computeEntropy(parseResults []*SingleResult) {
-	var strings []string
+// computeCharacterDistributions estimates the probabilities for characters in
+// identifiers and string literals respectively, by aggregating character counts
+// across all symbols of each type in the package.
+func computeCharacterDistributions(parseResults []SingleResult) (map[rune]float64, map[rune]float64) {
 	var identifiers []string
+	var strings []string
 
 	for _, result := range parseResults {
 		for _, str := range result.StringLiterals {
@@ -70,17 +69,7 @@ func computeEntropy(parseResults []*SingleResult) {
 		}
 	}
 
-	stringLiteralCharDistribution := stringentropy.CharacterProbabilities(strings)
-	identifierCharDistribution := stringentropy.CharacterProbabilities(identifiers)
-
-	for _, result := range parseResults {
-		for i := range result.StringLiterals {
-			result.StringLiterals[i].ComputeEntropy(stringLiteralCharDistribution)
-		}
-		for i := range result.Identifiers {
-			result.Identifiers[i].ComputeEntropy(identifierCharDistribution)
-		}
-	}
+	return stringentropy.CharacterProbabilities(identifiers), stringentropy.CharacterProbabilities(strings)
 }
 
 /*
@@ -105,7 +94,7 @@ they are normally both parsed as floating point. This function records a numeric
 as an integer if it can be converted using strconv.Atoi(), otherwise it is recorded as
 floating point.
 */
-func Analyze(parserConfig ParserConfig, input externalcmd.Input, printDebug bool) ([]*SingleResult, error) {
+func Analyze(parserConfig ParserConfig, input externalcmd.Input, printDebug bool) ([]SingleResult, error) {
 	// JavaScript parsing
 	jsResults, rawOutput, err := parseJS(parserConfig, input)
 	if printDebug {
@@ -115,12 +104,23 @@ func Analyze(parserConfig ParserConfig, input externalcmd.Input, printDebug bool
 		return nil, err
 	}
 
-	packageResult := make([]*SingleResult, 0, len(jsResults))
+	allResults := make([]SingleResult, 0, len(jsResults))
 	for filename, jsData := range jsResults {
-		packageResult = append(packageResult, processJsData(filename, jsData))
+		allResults = append(allResults, processJsData(filename, jsData))
 	}
 
-	computeEntropy(packageResult)
+	// TODO replace this with a global count across many packages from an ecosystem.
+	identifierProbs, stringProbs := computeCharacterDistributions(allResults)
 
-	return packageResult, nil
+	// populate entropy values for identifiers and string literals.
+	for _, result := range allResults {
+		for i := range result.Identifiers {
+			result.Identifiers[i].ComputeEntropy(identifierProbs)
+		}
+		for i := range result.StringLiterals {
+			result.StringLiterals[i].ComputeEntropy(stringProbs)
+		}
+	}
+
+	return allResults, nil
 }
