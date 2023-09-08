@@ -1,12 +1,13 @@
 package basicdata
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"strings"
 
-	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/staticanalysis/externalcmd"
 )
 
@@ -26,18 +27,18 @@ func (h fileCmdArgsHandler) ReadStdinArg() []string {
 	return h.FileListArg("-")
 }
 
-func describeFiles(paths []string) ([]string, error) {
+func describeFiles(ctx context.Context, paths []string) ([]string, error) {
 	workingDir, err := os.MkdirTemp("", "package-analysis-basic-data-*")
 	if err != nil {
 		return nil, fmt.Errorf("error creating temp file: %w", err)
 	}
 	defer func() {
 		if err := os.RemoveAll(workingDir); err != nil {
-			log.Error("could not remove working directory", "path", workingDir, "error", err)
+			slog.ErrorContext(ctx, "could not remove working directory", "path", workingDir, "error", err)
 		}
 	}()
 
-	cmd := exec.Command("file", "--brief")
+	cmd := exec.CommandContext(ctx, "file", "--brief")
 	input := externalcmd.MultipleFileInput(paths)
 
 	if err := input.SendTo(cmd, fileCmdArgsHandler{}, workingDir); err != nil {

@@ -1,8 +1,10 @@
 package staticanalysis
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -44,7 +46,7 @@ If staticanalysis.Parsing is not in the list of analysisTasks, jsParserConfig ma
 If an error occurs while traversing the extracted package directory tree, or an invalid
 task is requested, a nil result is returned along with the corresponding error object.
 */
-func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig, analysisTasks []Task) (*Result, error) {
+func AnalyzePackageFiles(ctx context.Context, extractDir string, jsParserConfig parsing.ParserConfig, analysisTasks []Task) (*Result, error) {
 	runTask := map[Task]bool{}
 
 	for _, task := range analysisTasks {
@@ -55,7 +57,7 @@ func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig,
 			runTask[Parsing] = true
 		case Signals:
 			if !runTask[Parsing] {
-				log.Info("adding staticanalysis.Parsing to task list (needed by staticanalysis.Signals)")
+				slog.InfoContext(ctx, "adding staticanalysis.Parsing to task list (needed by staticanalysis.Signals)")
 			}
 			runTask[Parsing] = true
 			runTask[Signals] = true
@@ -78,23 +80,23 @@ func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig,
 	}
 
 	if runTask[Basic] {
-		log.Info("run basic analysis")
-		basicData, err := basicdata.Analyze(fileList, getPathInArchive)
+		slog.InfoContext(ctx, "run basic analysis")
+		basicData, err := basicdata.Analyze(ctx, fileList, getPathInArchive)
 		if err != nil {
-			log.Error("static analysis error", log.Label("task", string(Basic)), "error", err)
+			slog.ErrorContext(ctx, "static analysis error", log.LabelAttr("task", string(Basic)), "error", err)
 		} else {
 			result.BasicData = basicData
 		}
 	}
 
 	if runTask[Parsing] {
-		log.Info("run parsing analysis")
+		slog.InfoContext(ctx, "run parsing analysis")
 
 		input := externalcmd.MultipleFileInput(fileList)
-		parsingResults, err := parsing.Analyze(jsParserConfig, input, false)
+		parsingResults, err := parsing.Analyze(ctx, jsParserConfig, input, false)
 
 		if err != nil {
-			log.Error("static analysis error", log.Label("task", string(Parsing)), "error", err)
+			slog.ErrorContext(ctx, "static analysis error", log.LabelAttr("task", string(Parsing)), "error", err)
 		} else {
 			// change absolute path in parsingResults to package-relative path
 			for i, r := range parsingResults {
@@ -106,12 +108,12 @@ func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig,
 
 	if runTask[Signals] {
 		if len(result.ParsingData) > 0 {
-			log.Info("run signals analysis")
+			slog.InfoContext(ctx, "run signals analysis")
 
 			signalsData := signals.Analyze(result.ParsingData)
 			result.SignalsData = &signalsData
 		} else {
-			log.Warn("skipped signals analysis due to no parsing data")
+			slog.WarnContext(ctx, "skipped signals analysis due to no parsing data")
 		}
 	}
 

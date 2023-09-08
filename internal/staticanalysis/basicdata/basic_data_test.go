@@ -1,6 +1,7 @@
 package basicdata
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -75,7 +76,7 @@ func TestGetBasicData(t *testing.T) {
 				return strings.TrimPrefix(absolutePath, testDir+string(os.PathSeparator))
 			}
 
-			got, err := Analyze(paths, getArchivePath)
+			got, err := Analyze(context.Background(), paths, getArchivePath)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("describeFiles() error = %v, wantErr %v", err, tt.wantErr)
 				return

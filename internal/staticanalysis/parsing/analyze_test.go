@@ -1,6 +1,7 @@
 package parsing
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
@@ -92,14 +93,14 @@ function test(a, b = 2) {
 }
 
 func TestAnalyze(t *testing.T) {
-	parserConfig, err := InitParser(t.TempDir())
+	parserConfig, err := InitParser(context.Background(), t.TempDir())
 	if err != nil {
 		t.Fatalf("failed to init parser: %v", err)
 	}
 
 	for _, tt := range analyzeTestcases {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := Analyze(parserConfig, externalcmd.StringInput(tt.jsSource), false)
+			result, err := Analyze(context.Background(), parserConfig, externalcmd.StringInput(tt.jsSource), false)
 			if err != nil {
 				t.Errorf("%v", err)
 				return
