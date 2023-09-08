@@ -257,9 +257,9 @@ func (rs *ResultStore) SaveDynamicAnalysis(ctx context.Context, p Pkg, analysis 
 	return rs.saveWithFilename(ctx, p, data, filename)
 }
 
-// SaveStaticAnalysis wraps the analysis object with the result struct and saves it to the bucket
+// SaveStaticAnalysis wraps the results object with the StaticAnalysisRecord struct and saves it to the bucket
 // using saveWithFilename. If filename is empty, a default filename (chosen using DefaultFilename) is used.
-func (rs *ResultStore) SaveStaticAnalysis(ctx context.Context, p Pkg, analysis any, filename string) error {
+func (rs *ResultStore) SaveStaticAnalysis(ctx context.Context, p Pkg, results any, filename string) error {
 	if filename == "" {
 		filename = DefaultFilename(p)
 	}
@@ -270,7 +270,7 @@ func (rs *ResultStore) SaveStaticAnalysis(ctx context.Context, p Pkg, analysis a
 		Name:          p.Name(),
 		Version:       p.Version(),
 		Created:       time.Now().UTC(),
-		Results:       analysis,
+		Results:       results,
 	}
 
 	return rs.saveWithFilename(ctx, p, data, filename)

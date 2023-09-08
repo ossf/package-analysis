@@ -1,6 +1,7 @@
 package staticanalysis
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -60,60 +61,75 @@ func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig,
 			runTask[Parsing] = true
 			runTask[Signals] = true
 		case All:
-			// ignore
+			return nil, errors.New("staticanalysis.All should not be passed in directly, use staticanalysis.AllTasks() instead")
 		default:
 			return nil, fmt.Errorf("static analysis task not implemented: %s", task)
 		}
 	}
 
-	fileList, err := enumeratePackageFiles(extractDir)
+	paths, err := enumeratePackageFiles(extractDir)
 	if err != nil {
 		return nil, fmt.Errorf("error enumerating package files: %w", err)
 	}
 
-	result := Result{}
-
 	getPathInArchive := func(absolutePath string) string {
 		return strings.TrimPrefix(absolutePath, extractDir+string(os.PathSeparator))
+	}
+	// inverse of above function
+	getAbsolutePath := func(packagePath string) string {
+		return filepath.Join(extractDir, packagePath)
+	}
+
+	fileResults := make([]SingleResult, 0, len(paths))
+	for _, path := range paths {
+		fileResults = append(fileResults, SingleResult{Filename: getPathInArchive(path)})
 	}
 
 	if runTask[Basic] {
 		log.Info("run basic analysis")
-		basicData, err := basicdata.Analyze(fileList, getPathInArchive)
+		basicData, err := basicdata.Analyze(paths, getPathInArchive)
 		if err != nil {
-			log.Error("static analysis error", log.Label("task", string(Basic)), "error", err)
+			log.Error("static analysis basic data error", "error", err)
+		} else if len(basicData) != len(fileResults) {
+			log.Error(fmt.Sprintf("basicdata.Analyze() returned %d results, expecting %d",
+				len(basicData), len(fileResults)), log.Label("task", string(Basic)))
 		} else {
-			result.BasicData = basicData
+			for i := range fileResults {
+				fileResults[i].Basic = &basicData[i]
+			}
 		}
 	}
 
 	if runTask[Parsing] {
 		log.Info("run parsing analysis")
 
-		input := externalcmd.MultipleFileInput(fileList)
+		input := externalcmd.MultipleFileInput(paths)
 		parsingResults, err := parsing.Analyze(jsParserConfig, input, false)
 
 		if err != nil {
-			log.Error("static analysis error", log.Label("task", string(Parsing)), "error", err)
+			log.Error("static analysis parsing error", "error", err)
+		} else if len(parsingResults) != len(fileResults) {
+			log.Error(fmt.Sprintf("parsing.Analyze() returned %d results, expecting %d",
+				len(parsingResults), len(fileResults)), log.Label("task", string(Basic)))
 		} else {
-			// change absolute path in parsingResults to package-relative path
-			for i, r := range parsingResults {
-				parsingResults[i].Filename = getPathInArchive(r.Filename)
+			for i, r := range fileResults {
+				fileParseResult := parsingResults[getAbsolutePath(r.Filename)]
+				fileResults[i].Parsing = &fileParseResult
 			}
-			result.ParsingData = parsingResults
 		}
 	}
 
 	if runTask[Signals] {
-		if len(result.ParsingData) > 0 {
-			log.Info("run signals analysis")
-
-			signalsData := signals.Analyze(result.ParsingData)
-			result.SignalsData = &signalsData
-		} else {
-			log.Warn("skipped signals analysis due to no parsing data")
+		log.Info("run signals analysis")
+		for i, r := range fileResults {
+			if r.Parsing != nil {
+				singleData := signals.AnalyzeSingle(*r.Parsing)
+				fileResults[i].Signals = &singleData
+			} else {
+				log.Warn("skipped signals analysis due to no parsing data", "filename", r.Filename)
+			}
 		}
 	}
 
-	return &result, nil
+	return &Result{Files: fileResults}, nil
 }

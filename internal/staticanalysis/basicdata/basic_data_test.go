@@ -83,7 +83,6 @@ func TestGetBasicData(t *testing.T) {
 
 			wantData := utils.Transform(tt.files, func(f testFile) FileData {
 				return FileData{
-					Filename:    f.filename,
 					Description: f.fileType,
 					Size:        int64(len(f.contents)),
 					SHA256:      f.contentsHash,
@@ -91,9 +90,7 @@ func TestGetBasicData(t *testing.T) {
 				}
 			})
 
-			gotData := got.Files
-
-			if !reflect.DeepEqual(gotData, wantData) {
+			if !reflect.DeepEqual(got, wantData) {
 				t.Errorf("TestGetBasicData() data mismatch:\n"+
 					"== got == \n%v\n== want ==\n%v", got, wantData)
 			}
