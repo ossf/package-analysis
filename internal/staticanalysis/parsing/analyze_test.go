@@ -2,6 +2,7 @@ package parsing
 
 import (
 	"context"
+	"math"
 	"reflect"
 	"testing"
 
@@ -27,12 +28,28 @@ var identifierCharProbs = []map[rune]float64{
 
 var analyzeTestcases = []analyzeTestcase{
 	{
+		name:     "console log hi",
+		jsSource: `console.log("hi");`,
+		expectedData: SingleResult{
+			Language:    JavaScript,
+			Identifiers: []token.Identifier{
+				// Members excluded
+				//{Name: "log", Type: token.Member, Entropy: math.Log(3)},
+			},
+			StringLiterals: []token.String{
+				{Value: "hi", Raw: `"hi"`, Entropy: math.Log(2)},
+			},
+			IntLiterals:   []token.Int{},
+			FloatLiterals: []token.Float{},
+			Comments:      []token.Comment{},
+		},
+	},
+	{
 		name: "simple 1",
 		jsSource: `
 var a = "hello"
 	`,
 		expectedData: SingleResult{
-			Filename: "stdin",
 			Language: JavaScript,
 			Identifiers: []token.Identifier{
 				{Name: "a", Type: token.Variable, Entropy: stringentropy.Calculate("a", identifierCharProbs[0])},
@@ -42,6 +59,7 @@ var a = "hello"
 			},
 			IntLiterals:   []token.Int{},
 			FloatLiterals: []token.Float{},
+			Comments:      []token.Comment{},
 		},
 	},
 	{
@@ -58,7 +76,6 @@ function test(a, b = 2) {
 }
 	`,
 		expectedData: SingleResult{
-			Filename: "stdin",
 			Language: JavaScript,
 			Identifiers: []token.Identifier{
 				{Name: "test", Type: token.Function, Entropy: stringentropy.Calculate("test", identifierCharProbs[1])},
@@ -76,18 +93,19 @@ function test(a, b = 2) {
 				{Value: 4, Raw: "4"},
 			},
 			FloatLiterals: []token.Float{},
+			Comments:      []token.Comment{},
 		},
 	},
 	{
 		name:     "invalid 1",
 		jsSource: "this is not JavaScript",
 		expectedData: SingleResult{
-			Filename:       "stdin",
 			Language:       NoLanguage,
 			Identifiers:    []token.Identifier{},
 			StringLiterals: []token.String{},
 			IntLiterals:    []token.Int{},
 			FloatLiterals:  []token.Float{},
+			Comments:       []token.Comment{},
 		},
 	},
 }
@@ -105,11 +123,8 @@ func TestAnalyze(t *testing.T) {
 				t.Errorf("%v", err)
 				return
 			}
-			got := result[0]
+			got := result["stdin"]
 
-			if got.Filename != tt.expectedData.Filename {
-				t.Errorf("Filename mismatch: got %s, want %s", got.Filename, tt.expectedData.Filename)
-			}
 			if got.Language != tt.expectedData.Language {
 				t.Errorf("Filename mismatch: got %s, want %s", got.Language, tt.expectedData.Language)
 			}
@@ -125,6 +140,9 @@ func TestAnalyze(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got.FloatLiterals, tt.expectedData.FloatLiterals) {
 				t.Errorf("Float literals mismatch: got %#v, want %v", got.FloatLiterals, tt.expectedData.FloatLiterals)
+			}
+			if !reflect.DeepEqual(got.Comments, tt.expectedData.Comments) {
+				t.Errorf("Comments mismatch: got %#v, want %v", got.Comments, tt.expectedData.Comments)
 			}
 		})
 	}

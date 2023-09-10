@@ -158,7 +158,7 @@ var fileSignalsTestCases = []fileSignalsTestCase{
 func TestComputeSignals(t *testing.T) {
 	for _, test := range fileSignalsTestCases {
 		t.Run(test.name, func(t *testing.T) {
-			signals := ComputeFileSignals(test.parseData)
+			signals := AnalyzeSingle(test.parseData)
 			if !reflect.DeepEqual(signals, test.expectedSignals) {
 				t.Errorf("actual signals did not match expected\n"+
 					"== want ==\n%v\n== got ==\n%#v\n======", test.expectedSignals, signals)

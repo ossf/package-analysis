@@ -11,9 +11,8 @@ import (
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
 
-func processJsData(filename string, fileData singleParseData) SingleResult {
+func processJsData(fileData singleParseData) SingleResult {
 	result := SingleResult{
-		Filename: filename,
 		Language: NoLanguage,
 		// Initialise with empty slices to avoid null values in JSON
 		Identifiers:    []token.Identifier{},
@@ -22,6 +21,7 @@ func processJsData(filename string, fileData singleParseData) SingleResult {
 		FloatLiterals:  []token.Float{},
 		Comments:       []token.Comment{},
 	}
+
 	if !fileData.ValidInput {
 		return result
 	}
@@ -43,6 +43,7 @@ func processJsData(filename string, fileData singleParseData) SingleResult {
 
 	for _, ident := range fileData.Identifiers {
 		switch ident.Type {
+		// token.Member is not included as it's too noisy (e.g. console.log)
 		case token.Function, token.Class, token.Parameter, token.Property, token.Variable:
 			result.Identifiers = append(result.Identifiers, token.Identifier{Name: ident.Name, Type: ident.Type})
 		}
@@ -57,15 +58,15 @@ func processJsData(filename string, fileData singleParseData) SingleResult {
 // computeCharacterDistributions estimates the probabilities for characters in
 // identifiers and string literals respectively, by aggregating character counts
 // across all symbols of each type in the package.
-func computeCharacterDistributions(parseResults []SingleResult) (map[rune]float64, map[rune]float64) {
+func computeCharacterDistributions(parseResults map[string]SingleResult) (map[rune]float64, map[rune]float64) {
 	var identifiers []string
 	var strings []string
 
-	for _, result := range parseResults {
-		for _, str := range result.StringLiterals {
+	for _, r := range parseResults {
+		for _, str := range r.StringLiterals {
 			strings = append(strings, str.Value)
 		}
-		for _, ident := range result.Identifiers {
+		for _, ident := range r.Identifiers {
 			identifiers = append(identifiers, ident.Name)
 		}
 	}
@@ -75,8 +76,8 @@ func computeCharacterDistributions(parseResults []SingleResult) (map[rune]float6
 
 /*
 Analyze (parsing.Analyze) parses the specified list of files using all supported parsers
-and returns a list of parsing.SingleResult, each of which holds information about source code
-tokens found for a given file and langauge parser combination.
+and returns a map of filename to slice of parsing.SingleResult. Each slice holds information
+about source code tokens found for that file for each supported langauge parser.
 
 Currently, the only supported language is JavaScript, however more language parsers will
 be added in the future.
@@ -95,7 +96,7 @@ they are normally both parsed as floating point. This function records a numeric
 as an integer if it can be converted using strconv.Atoi(), otherwise it is recorded as
 floating point.
 */
-func Analyze(ctx context.Context, parserConfig ParserConfig, input externalcmd.Input, printDebug bool) ([]SingleResult, error) {
+func Analyze(ctx context.Context, parserConfig ParserConfig, input externalcmd.Input, printDebug bool) (map[string]SingleResult, error) {
 	// JavaScript parsing
 	jsResults, rawOutput, err := parseJS(ctx, parserConfig, input)
 	if printDebug {
@@ -105,23 +106,25 @@ func Analyze(ctx context.Context, parserConfig ParserConfig, input externalcmd.I
 		return nil, err
 	}
 
-	allResults := make([]SingleResult, 0, len(jsResults))
+	resultsByFile := make(map[string]SingleResult)
 	for filename, jsData := range jsResults {
-		allResults = append(allResults, processJsData(filename, jsData))
+		resultsByFile[filename] = processJsData(jsData)
 	}
 
 	// TODO replace this with a global count across many packages from an ecosystem.
-	identifierProbs, stringProbs := computeCharacterDistributions(allResults)
+	//  If more languages are added before this is done, the function below should be
+	//  modified to compute a separate distribution for identifiers each language.
+	identifierProbs, stringProbs := computeCharacterDistributions(resultsByFile)
 
 	// populate entropy values for identifiers and string literals.
-	for _, result := range allResults {
-		for i := range result.Identifiers {
-			result.Identifiers[i].ComputeEntropy(identifierProbs)
+	for _, r := range resultsByFile {
+		for i := range r.Identifiers {
+			r.Identifiers[i].ComputeEntropy(identifierProbs)
 		}
-		for i := range result.StringLiterals {
-			result.StringLiterals[i].ComputeEntropy(stringProbs)
+		for i := range r.StringLiterals {
+			r.StringLiterals[i].ComputeEntropy(stringProbs)
 		}
 	}
 
-	return allResults, nil
+	return resultsByFile, nil
 }

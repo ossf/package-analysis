@@ -12,18 +12,9 @@ import (
 	"github.com/ossf/package-analysis/internal/utils/valuecounts"
 )
 
-// PackageData records basic information about files in a package,
-// mapping file path within the archive to FileData about that file.
-type PackageData struct {
-	Files []FileData `json:"files"`
-}
-
 // FileData records various information about a file that can be determined
 // without parsing it using a programming language parser.
 type FileData struct {
-	// Filename records the path to the file within the package archive
-	Filename string `json:"filename"`
-
 	// Description records the output of the `file` command run on that file.
 	Description string `json:"description"`
 
@@ -40,7 +31,6 @@ type FileData struct {
 
 func (bd FileData) String() string {
 	parts := []string{
-		fmt.Sprintf("filename: %v\n", bd.Filename),
 		fmt.Sprintf("description: %v\n", bd.Description),
 		fmt.Sprintf("size: %v\n", bd.Size),
 		fmt.Sprintf("sha256: %v\n", bd.SHA256),
@@ -55,9 +45,9 @@ rather than returned where possible, to maximise the amount of data collected.
 pathInArchive should return the relative path in the package archive, given an absolute
 path to a file in the package. The relative path is used for the result data.
 */
-func Analyze(ctx context.Context, paths []string, pathInArchive func(absolutePath string) string) (*PackageData, error) {
+func Analyze(ctx context.Context, paths []string, pathInArchive func(absolutePath string) string) ([]FileData, error) {
 	if len(paths) == 0 {
-		return &PackageData{Files: []FileData{}}, nil
+		return []FileData{}, nil
 	}
 
 	descriptions, err := describeFiles(ctx, paths)
@@ -71,9 +61,7 @@ func Analyze(ctx context.Context, paths []string, pathInArchive func(absolutePat
 		haveDescriptions = false
 	}
 
-	result := PackageData{
-		Files: []FileData{},
-	}
+	var result []FileData
 
 	for index, filePath := range paths {
 		archivePath := pathInArchive(filePath)
@@ -104,8 +92,7 @@ func Analyze(ctx context.Context, paths []string, pathInArchive func(absolutePat
 			lineLengths = valuecounts.Count(ll)
 		}
 
-		result.Files = append(result.Files, FileData{
-			Filename:    archivePath,
+		result = append(result, FileData{
 			Description: description,
 			Size:        fileSize,
 			SHA256:      sha265Sum,
@@ -113,5 +100,5 @@ func Analyze(ctx context.Context, paths []string, pathInArchive func(absolutePat
 		})
 	}
 
-	return &result, nil
+	return result, nil
 }
