@@ -1,6 +1,7 @@
 package parsing
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"reflect"
@@ -397,14 +398,14 @@ a = w w;
 func TestParseJS(t *testing.T) {
 	const printAllJSON = false
 
-	jsParserConfig, err := InitParser(t.TempDir())
+	jsParserConfig, err := InitParser(context.Background(), t.TempDir())
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
 
 	for _, tt := range jsTestCases {
 		t.Run(tt.name, func(t *testing.T) {
-			result, rawOutput, err := parseJS(jsParserConfig, externalcmd.StringInput(tt.inputJS))
+			result, rawOutput, err := parseJS(context.Background(), jsParserConfig, externalcmd.StringInput(tt.inputJS))
 			got := result["stdin"]
 			if err != nil {
 				t.Errorf("parseJS() error = %v", err)

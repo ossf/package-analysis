@@ -1,9 +1,11 @@
 package staticanalysis
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -45,7 +47,7 @@ If staticanalysis.Parsing is not in the list of analysisTasks, jsParserConfig ma
 If an error occurs while traversing the extracted package directory tree, or an invalid
 task is requested, a nil result is returned along with the corresponding error object.
 */
-func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig, analysisTasks []Task) (*Result, error) {
+func AnalyzePackageFiles(ctx context.Context, extractDir string, jsParserConfig parsing.ParserConfig, analysisTasks []Task) (*Result, error) {
 	runTask := map[Task]bool{}
 
 	for _, task := range analysisTasks {
@@ -56,7 +58,7 @@ func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig,
 			runTask[Parsing] = true
 		case Signals:
 			if !runTask[Parsing] {
-				log.Info("adding staticanalysis.Parsing to task list (needed by staticanalysis.Signals)")
+				slog.InfoContext(ctx, "adding staticanalysis.Parsing to task list (needed by staticanalysis.Signals)")
 			}
 			runTask[Parsing] = true
 			runTask[Signals] = true
@@ -86,13 +88,13 @@ func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig,
 	}
 
 	if runTask[Basic] {
-		log.Info("run basic analysis")
-		basicData, err := basicdata.Analyze(paths, getPathInArchive)
+		slog.InfoContext(ctx, "run basic analysis")
+		basicData, err := basicdata.Analyze(ctx, paths, getPathInArchive)
 		if err != nil {
-			log.Error("static analysis basic data error", "error", err)
+			slog.ErrorContext(ctx, "static analysis basic data error", "error", err)
 		} else if len(basicData) != len(fileResults) {
-			log.Error(fmt.Sprintf("basicdata.Analyze() returned %d results, expecting %d",
-				len(basicData), len(fileResults)), log.Label("task", string(Basic)))
+			slog.ErrorContext(ctx, fmt.Sprintf("basicdata.Analyze() returned %d results, expecting %d",
+				len(basicData), len(fileResults)), log.LabelAttr("task", string(Basic)))
 		} else {
 			for i := range fileResults {
 				fileResults[i].Basic = &basicData[i]
@@ -101,16 +103,16 @@ func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig,
 	}
 
 	if runTask[Parsing] {
-		log.Info("run parsing analysis")
+		slog.InfoContext(ctx, "run parsing analysis")
 
 		input := externalcmd.MultipleFileInput(paths)
-		parsingResults, err := parsing.Analyze(jsParserConfig, input, false)
+		parsingResults, err := parsing.Analyze(ctx, jsParserConfig, input, false)
 
 		if err != nil {
-			log.Error("static analysis parsing error", "error", err)
+			slog.ErrorContext(ctx, "static analysis parsing error", "error", err)
 		} else if len(parsingResults) != len(fileResults) {
-			log.Error(fmt.Sprintf("parsing.Analyze() returned %d results, expecting %d",
-				len(parsingResults), len(fileResults)), log.Label("task", string(Basic)))
+			slog.ErrorContext(ctx, fmt.Sprintf("parsing.Analyze() returned %d results, expecting %d",
+				len(parsingResults), len(fileResults)), log.LabelAttr("task", string(Basic)))
 		} else {
 			for i, r := range fileResults {
 				fileParseResult := parsingResults[getAbsolutePath(r.Filename)]
@@ -120,13 +122,13 @@ func AnalyzePackageFiles(extractDir string, jsParserConfig parsing.ParserConfig,
 	}
 
 	if runTask[Signals] {
-		log.Info("run signals analysis")
+		slog.InfoContext(ctx, "run signals analysis")
 		for i, r := range fileResults {
 			if r.Parsing != nil {
 				singleData := signals.AnalyzeSingle(*r.Parsing)
 				fileResults[i].Signals = &singleData
 			} else {
-				log.Warn("skipped signals analysis due to no parsing data", "filename", r.Filename)
+				slog.WarnContext(ctx, "skipped signals analysis due to no parsing data", "filename", r.Filename)
 			}
 		}
 	}

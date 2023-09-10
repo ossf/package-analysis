@@ -1,6 +1,7 @@
 package staticanalysis
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"os"
@@ -87,7 +88,7 @@ func TestAnalyzePackageFiles(t *testing.T) {
 		},
 	}
 	parserDir := t.TempDir()
-	jsParserConfig, err := parsing.InitParser(parserDir)
+	jsParserConfig, err := parsing.InitParser(context.Background(), parserDir)
 	if err != nil {
 		t.Errorf("failed to init parser: %v", err)
 		return
@@ -105,7 +106,7 @@ func TestAnalyzePackageFiles(t *testing.T) {
 					return
 				}
 			}
-			got, err := AnalyzePackageFiles(extractDir, jsParserConfig, AllTasks())
+			got, err := AnalyzePackageFiles(context.Background(), extractDir, jsParserConfig, AllTasks())
 			if (err != nil) != tt.wantErr {
 				t.Errorf("AnalyzePackageFiles() error = %v, wantErr %v", err, tt.wantErr)
 				return

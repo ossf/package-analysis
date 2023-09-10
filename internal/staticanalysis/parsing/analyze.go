@@ -1,6 +1,7 @@
 package parsing
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strconv"
@@ -95,9 +96,9 @@ they are normally both parsed as floating point. This function records a numeric
 as an integer if it can be converted using strconv.Atoi(), otherwise it is recorded as
 floating point.
 */
-func Analyze(parserConfig ParserConfig, input externalcmd.Input, printDebug bool) (map[string]SingleResult, error) {
+func Analyze(ctx context.Context, parserConfig ParserConfig, input externalcmd.Input, printDebug bool) (map[string]SingleResult, error) {
 	// JavaScript parsing
-	jsResults, rawOutput, err := parseJS(parserConfig, input)
+	jsResults, rawOutput, err := parseJS(ctx, parserConfig, input)
 	if printDebug {
 		fmt.Fprintf(os.Stderr, "\nRaw JSON:\n%s\n", rawOutput)
 	}

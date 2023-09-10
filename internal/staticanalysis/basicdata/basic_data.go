@@ -1,11 +1,12 @@
 package basicdata
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 
-	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/staticanalysis/linelengths"
 	"github.com/ossf/package-analysis/internal/utils"
 	"github.com/ossf/package-analysis/internal/utils/valuecounts"
@@ -44,19 +45,19 @@ rather than returned where possible, to maximise the amount of data collected.
 pathInArchive should return the relative path in the package archive, given an absolute
 path to a file in the package. The relative path is used for the result data.
 */
-func Analyze(paths []string, pathInArchive func(absolutePath string) string) ([]FileData, error) {
+func Analyze(ctx context.Context, paths []string, pathInArchive func(absolutePath string) string) ([]FileData, error) {
 	if len(paths) == 0 {
 		return []FileData{}, nil
 	}
 
-	descriptions, err := describeFiles(paths)
+	descriptions, err := describeFiles(ctx, paths)
 	haveDescriptions := true
 	if err != nil {
-		log.Error("failed to get file descriptions", "error", err)
+		slog.ErrorContext(ctx, "failed to get file descriptions", "error", err)
 		haveDescriptions = false
 	}
 	if len(descriptions) != len(paths) {
-		log.Error(fmt.Sprintf("describeFiles() returned %d results, expecting %d", len(descriptions), len(paths)))
+		slog.ErrorContext(ctx, fmt.Sprintf("describeFiles() returned %d results, expecting %d", len(descriptions), len(paths)))
 		haveDescriptions = false
 	}
 
@@ -72,21 +73,21 @@ func Analyze(paths []string, pathInArchive func(absolutePath string) string) ([]
 		var fileSize int64
 		if fileInfo, err := os.Stat(filePath); err != nil {
 			fileSize = -1 // error value
-			log.Error("Error during stat file", "path", archivePath, "error", err)
+			slog.ErrorContext(ctx, "Error during stat file", "path", archivePath, "error", err)
 		} else {
 			fileSize = fileInfo.Size()
 		}
 
 		var sha265Sum string
 		if hash, err := utils.SHA256Hash(filePath); err != nil {
-			log.Error("Error hashing file", "path", archivePath, "error", err)
+			slog.ErrorContext(ctx, "Error hashing file", "path", archivePath, "error", err)
 		} else {
 			sha265Sum = hash
 		}
 
 		var lineLengths valuecounts.ValueCounts
 		if ll, err := linelengths.GetLineLengths(filePath, ""); err != nil {
-			log.Error("Error counting line lengths", "path", archivePath, "error", err)
+			slog.ErrorContext(ctx, "Error counting line lengths", "path", archivePath, "error", err)
 		} else {
 			lineLengths = valuecounts.Count(ll)
 		}
