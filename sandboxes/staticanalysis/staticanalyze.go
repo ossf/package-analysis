@@ -223,8 +223,7 @@ func run() (err error) {
 }
 
 func main() {
-	err := run()
-	if err != nil {
+	if err := run(); err != nil {
 		slog.Error("static analysis failed", "error", err)
 		os.Exit(1)
 	}
