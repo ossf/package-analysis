@@ -1,7 +1,7 @@
 package staticanalysis
 
 // A Task (static analysis task) refers to a particular type of static analysis to be performed.
-// Some tasks may depend on other tasks, for example Obfuscation depends on Parsing.
+// Some tasks may depend on other tasks, for example Signals depends on Parsing.
 type Task string
 
 // NOTE: the string values below should match the JSON field names in result.go.
@@ -14,10 +14,10 @@ const (
 	// source code information from the file.
 	Parsing Task = "parsing"
 
-	// Obfuscation analysis involves using certain rules to detect the presence of
-	// obfuscated code. It depends on the output of the Parsing task, but does not
-	// require reading files directly.
-	Obfuscation Task = "obfuscation"
+	// Signals analysis involves using applying certain detection rules to extract
+	// signals of interest from the code. It depends on the output of the Parsing task,
+	// and does not require reading files directly.
+	Signals Task = "signals"
 
 	// All is not a task itself, but represents/'depends on' all other tasks.
 	All Task = "all"
@@ -26,8 +26,7 @@ const (
 var allTasks = []Task{
 	Basic,
 	Parsing,
-	Obfuscation,
-	All,
+	Signals,
 }
 
 func AllTasks() []Task {
@@ -40,8 +39,8 @@ func TaskFromString(s string) (Task, bool) {
 		return Basic, true
 	case Parsing:
 		return Parsing, true
-	case Obfuscation:
-		return Obfuscation, true
+	case Signals:
+		return Signals, true
 	case All:
 		return All, true
 	default:

@@ -1,15 +1,16 @@
 package parsing
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
-	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/staticanalysis/externalcmd"
 	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 )
@@ -63,14 +64,14 @@ either by filename (jsFilePath) or piping jsSource to the program's stdin.
 
 If sourcePath is empty, sourceString will be parsed as JS code.
 */
-func runParser(parserPath string, input externalcmd.Input, extraArgs ...string) (string, error) {
+func runParser(ctx context.Context, parserPath string, input externalcmd.Input, extraArgs ...string) (string, error) {
 	workingDir, err := os.MkdirTemp("", "package-analysis-run-parser-*")
 	if err != nil {
 		return "", fmt.Errorf("runParser failed to create temp working directory: %w", err)
 	}
 	defer func() {
 		if err := os.RemoveAll(workingDir); err != nil {
-			log.Error("could not remove working directory", "path", workingDir, "error", err)
+			slog.ErrorContext(ctx, "could not remove working directory", "path", workingDir, "error", err)
 		}
 	}()
 
@@ -81,7 +82,7 @@ func runParser(parserPath string, input externalcmd.Input, extraArgs ...string) 
 		nodeArgs = append(nodeArgs, extraArgs...)
 	}
 
-	cmd := exec.Command("node", nodeArgs...)
+	cmd := exec.CommandContext(ctx, "node", nodeArgs...)
 
 	if err := input.SendTo(cmd, parserArgsHandler{}, workingDir); err != nil {
 		return "", fmt.Errorf("runParser failed to prepare parsing input: %w", err)
@@ -98,7 +99,7 @@ func runParser(parserPath string, input externalcmd.Input, extraArgs ...string) 
 	}
 }
 
-func (pd parseDataJSON) process() singleParseData {
+func (pd parseDataJSON) process(ctx context.Context) singleParseData {
 	processed := singleParseData{
 		ValidInput: true,
 	}
@@ -150,7 +151,7 @@ func (pd parseDataJSON) process() singleParseData {
 				Pos:  t.Pos,
 			})
 		default:
-			log.Warn(fmt.Sprintf("parseJS: unrecognised token type %s", t.TokenType))
+			slog.WarnContext(ctx, fmt.Sprintf("parseJS: unrecognised token type %s", t.TokenType))
 		}
 	}
 	// process parser status (info/errors)
@@ -185,8 +186,8 @@ The other two return values are the raw parser output and the error respectively
 Otherwise, the first return value points to the parsing result object while the second
 contains the raw JSON output from the parser.
 */
-func parseJS(parserConfig ParserConfig, input externalcmd.Input) (map[string]singleParseData, string, error) {
-	rawOutput, err := runParser(parserConfig.ParserPath, input)
+func parseJS(ctx context.Context, parserConfig ParserConfig, input externalcmd.Input) (map[string]singleParseData, string, error) {
+	rawOutput, err := runParser(ctx, parserConfig.ParserPath, input)
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			rawOutput = string(exitErr.Stderr)
@@ -204,14 +205,14 @@ func parseJS(parserConfig ParserConfig, input externalcmd.Input) (map[string]sin
 	// convert the elements into more natural data structure
 	result := map[string]singleParseData{}
 	for filename, data := range parseOutput {
-		result[filename] = data.process()
+		result[filename] = data.process(ctx)
 	}
 
 	return result, rawOutput, nil
 }
 
-func RunExampleParsing(config ParserConfig, input externalcmd.Input) {
-	parseResult, rawOutput, err := parseJS(config, input)
+func RunExampleParsing(ctx context.Context, config ParserConfig, input externalcmd.Input) {
+	parseResult, rawOutput, err := parseJS(ctx, config, input)
 
 	fmt.Println("\nRaw JSON:\n", rawOutput)
 

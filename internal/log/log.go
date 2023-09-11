@@ -15,20 +15,6 @@ import (
 	"github.com/blendle/zapdriver"
 	"go.uber.org/zap"
 	"go.uber.org/zap/exp/zapslog"
-	"go.uber.org/zap/zapcore"
-)
-
-// Level represents a specific logging level. It wraps zapcore.Level.
-//
-// Deprecated: use zapcore.Level directly.
-type Level zapcore.Level
-
-const (
-	DebugLevel Level = Level(zapcore.DebugLevel)
-	InfoLevel  Level = Level(zapcore.InfoLevel)
-	WarnLevel  Level = Level(zapcore.WarnLevel)
-	ErrorLevel Level = Level(zapcore.ErrorLevel)
-	FatalLevel Level = Level(zapcore.FatalLevel)
 )
 
 // LoggingEnv is used to represent a specific configuration used by a given
@@ -46,15 +32,11 @@ const (
 )
 
 var (
-	// Default logger is the legacy global logger for package analysis
-	// Deprecated: do not use global logger
-	defaultLogger     *zap.SugaredLogger
 	defaultLoggingEnv LoggingEnv = LoggingEnvDev
 )
 
-// Deprecated: do not use global logger
-func GetDefaultLogger() *zap.SugaredLogger {
-	return defaultLogger
+func DefaultLoggingEnv() LoggingEnv {
+	return defaultLoggingEnv
 }
 
 // Initialize the logger for logging.
@@ -63,7 +45,7 @@ func GetDefaultLogger() *zap.SugaredLogger {
 // "false" will use the default development configuration.
 //
 // Note: this method MUST be called before any other method in this package.
-func Initialize(env string) *zap.SugaredLogger {
+func Initialize(env string) {
 	var err error
 	var logger *zap.Logger
 	switch strings.ToLower(env) {
@@ -89,73 +71,6 @@ func Initialize(env string) *zap.SugaredLogger {
 		AddSource: true,
 	})))
 	slog.SetDefault(slogger)
-
-	logger = logger.WithOptions(zap.AddCallerSkip(1))
-	defaultLogger = logger.Sugar() // Set defaultLogger to provide legacy support
-	return defaultLogger
-}
-
-func checkInit() {
-	if defaultLogger == nil {
-		golog.Panic("Must call log.Initialize(...) before logging.")
-	}
-}
-
-// Debug is a convenience wrapper for calling Debugw on the default
-// zap.SugaredLogger instance.
-//
-// Deprecated: Call slog.DebugContext instead.
-func Debug(msg string, keysAndValues ...interface{}) {
-	checkInit()
-	defaultLogger.Debugw(msg, keysAndValues...)
-}
-
-// Info is a convenience wrapper for calling Infow on the default
-// zap.SugaredLogger instance.
-//
-// Deprecated: Call slog.InfoContext instead.
-func Info(msg string, keysAndValues ...interface{}) {
-	checkInit()
-	defaultLogger.Infow(msg, keysAndValues...)
-}
-
-// Warn is a convenience wrapper for calling Warnw on the default
-// zap.SugaredLogger instance.
-//
-// Deprecated: Call slog.WarnContext instead.
-func Warn(msg string, keysAndValues ...interface{}) {
-	checkInit()
-	defaultLogger.Warnw(msg, keysAndValues...)
-}
-
-// Error is a convenience wrapper for calling Errorw on the default
-// zap.SugaredLogger instance.
-//
-// Deprecated: Call slog.ErrorContext instead.
-func Error(msg string, keysAndValues ...interface{}) {
-	checkInit()
-	defaultLogger.Errorw(msg, keysAndValues...)
-}
-
-// Fatal is a convenience wrapper for calling Fatalw on the default
-// zap.SugaredLogger instance.
-//
-// Deprecated: Call slog.ErrorContext, followed by os.Exit instead.
-func Fatal(msg string, keysAndValues ...interface{}) {
-	checkInit()
-	defaultLogger.Fatalw(msg, keysAndValues...)
-}
-
-// Label is a convenience wrapper for zapdriver.Label if the LoggingEnv used
-// is LoggingEnvProd. Otherwise it will wrap zap.String.
-//
-// Deprecated: Call LabelAttr instead.
-func Label(key, value string) zap.Field {
-	if defaultLoggingEnv == LoggingEnvProd {
-		return zapdriver.Label(key, value)
-	} else {
-		return zap.String(key, value)
-	}
 }
 
 // LabelAttr causes attributes written by zapdriver to be marked as labels inside

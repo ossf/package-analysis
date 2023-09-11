@@ -1,8 +1,6 @@
 package resultstore
 
-import (
-	"time"
-)
+import "time"
 
 // Pkg describes the various package details used to populate the package part
 // of the analysis results.
@@ -19,14 +17,6 @@ type pkg struct {
 	Version   string `json:"Version"`
 }
 
-// Key is a new version of analysisrun.Key with more fields and is serialised with different JSON keys
-type Key struct {
-	Ecosystem string    `json:"ecosystem"`
-	Name      string    `json:"name"`
-	Version   string    `json:"version"`
-	Created   time.Time `json:"created"`
-}
-
 // DynamicAnalysisRecord is the top-level struct which is serialised to produce JSON results files
 // for dynamic analysis
 type DynamicAnalysisRecord struct {
@@ -38,7 +28,10 @@ type DynamicAnalysisRecord struct {
 // StaticAnalysisRecord is the top-level struct which is serialised to produce JSON results files
 // for static analysis
 type StaticAnalysisRecord struct {
-	SchemaVersion string `json:"schema_version"`
-	Key           Key    `json:"key"`
-	Results       any    `json:"results"`
+	SchemaVersion string    `json:"schema_version"`
+	Ecosystem     string    `json:"ecosystem"`
+	Name          string    `json:"name"`
+	Version       string    `json:"version"`
+	Created       time.Time `json:"created"`
+	Results       any       `json:"results"`
 }

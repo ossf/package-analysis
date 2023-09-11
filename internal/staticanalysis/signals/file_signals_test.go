@@ -1,4 +1,4 @@
-package obfuscation
+package signals
 
 import (
 	"reflect"
@@ -16,6 +16,21 @@ type fileSignalsTestCase struct {
 }
 
 var fileSignalsTestCases = []fileSignalsTestCase{
+	{
+		name:      "empty",
+		parseData: parsing.SingleResult{},
+		expectedSignals: FileSignals{
+			StringLengths:         valuecounts.New(),
+			IdentifierLengths:     valuecounts.New(),
+			SuspiciousIdentifiers: []SuspiciousIdentifier{},
+			EscapedStrings:        []EscapedString{},
+			Base64Strings:         []string{},
+			EmailAddresses:        []string{},
+			HexStrings:            []string{},
+			IPAddresses:           []string{},
+			URLs:                  []string{},
+		},
+	},
 	{
 		name: "simple 1",
 		parseData: parsing.SingleResult{
@@ -111,15 +126,42 @@ var fileSignalsTestCases = []fileSignalsTestCase{
 			URLs:           []string{"https://this.is.a.website.com"},
 		},
 	},
+	{
+		name: "escaped strings",
+		parseData: parsing.SingleResult{
+			StringLiterals: []token.String{
+				{Value: "@ABCD", Raw: "\\100\\101\\102\\103\\104"},
+				{Value: "@ABCD", Raw: "\\x40\\x41\\x42\\x43\\x44"},
+				{Value: "@ABCD", Raw: "\\u0040\\u0041\\u0042\\u0043\\u0044"},
+				{Value: "@ABCD", Raw: "\\U00000040\\U00000041\\U00000042\\U00000043\\U00000044"},
+			},
+		},
+		expectedSignals: FileSignals{
+			StringLengths:         valuecounts.Count([]int{5, 5, 5, 5}),
+			IdentifierLengths:     valuecounts.New(),
+			SuspiciousIdentifiers: []SuspiciousIdentifier{},
+			Base64Strings:         []string{},
+			EmailAddresses:        []string{},
+			HexStrings:            []string{},
+			IPAddresses:           []string{},
+			URLs:                  []string{},
+			EscapedStrings: []EscapedString{
+				{Value: "@ABCD", Raw: "\\100\\101\\102\\103\\104", LevenshteinDist: 25},
+				{Value: "@ABCD", Raw: "\\x40\\x41\\x42\\x43\\x44", LevenshteinDist: 25},
+				{Value: "@ABCD", Raw: "\\u0040\\u0041\\u0042\\u0043\\u0044", LevenshteinDist: 35},
+				{Value: "@ABCD", Raw: "\\U00000040\\U00000041\\U00000042\\U00000043\\U00000044", LevenshteinDist: 55},
+			},
+		},
+	},
 }
 
 func TestComputeSignals(t *testing.T) {
 	for _, test := range fileSignalsTestCases {
 		t.Run(test.name, func(t *testing.T) {
-			signals := ComputeFileSignals(test.parseData)
+			signals := AnalyzeSingle(test.parseData)
 			if !reflect.DeepEqual(signals, test.expectedSignals) {
 				t.Errorf("actual signals did not match expected\n"+
-					"== want ==\n%v\n== got ==\n%v\n======", test.expectedSignals, signals)
+					"== want ==\n%v\n== got ==\n%#v\n======", test.expectedSignals, signals)
 			}
 		})
 	}
