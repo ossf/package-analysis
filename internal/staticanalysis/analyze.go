@@ -94,7 +94,7 @@ func AnalyzePackageFiles(ctx context.Context, extractDir string, jsParserConfig 
 			slog.ErrorContext(ctx, "static analysis basic data error", "error", err)
 		} else if len(basicData) != len(fileResults) {
 			slog.ErrorContext(ctx, fmt.Sprintf("basicdata.Analyze() returned %d results, expecting %d",
-				len(basicData), len(fileResults)), log.LabelAttr("task", string(Basic)))
+				len(basicData), len(fileResults)), log.Label("task", string(Basic)))
 		} else {
 			for i := range fileResults {
 				fileResults[i].Basic = &basicData[i]
@@ -112,7 +112,7 @@ func AnalyzePackageFiles(ctx context.Context, extractDir string, jsParserConfig 
 			slog.ErrorContext(ctx, "static analysis parsing error", "error", err)
 		} else if len(parsingResults) != len(fileResults) {
 			slog.ErrorContext(ctx, fmt.Sprintf("parsing.Analyze() returned %d results, expecting %d",
-				len(parsingResults), len(fileResults)), log.LabelAttr("task", string(Basic)))
+				len(parsingResults), len(fileResults)), log.Label("task", string(Basic)))
 		} else {
 			for i, r := range fileResults {
 				fileParseResult := parsingResults[getAbsolutePath(r.Filename)]

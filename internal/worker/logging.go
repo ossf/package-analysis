@@ -31,7 +31,7 @@ const (
 // not possible to analyse the package properly, and the results are invalid.
 func LogDynamicAnalysisError(ctx context.Context, pkg *pkgmanager.Pkg, errorPhase analysisrun.DynamicPhase, err error) {
 	slog.ErrorContext(ctx, runErrorLogMsg,
-		log.LabelAttr("phase", string(errorPhase)),
+		log.Label("phase", string(errorPhase)),
 		"error", err)
 
 	var exitErr *exec.ExitError
@@ -45,7 +45,7 @@ func LogDynamicAnalysisError(ctx context.Context, pkg *pkgmanager.Pkg, errorPhas
 // of the package, but not errors in the running itself.
 func LogDynamicAnalysisResult(ctx context.Context, pkg *pkgmanager.Pkg, finalPhase analysisrun.DynamicPhase, finalStatus analysis.Status) {
 	labels := []interface{}{
-		log.LabelAttr("last_phase", string(finalPhase)),
+		log.Label("last_phase", string(finalPhase)),
 	}
 
 	switch finalStatus {
