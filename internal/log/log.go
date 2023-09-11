@@ -48,9 +48,9 @@ func DefaultLoggingEnv() LoggingEnv {
 func Initialize(env string) {
 	// TODO: replace zap entirely with native slog.
 	// Note that zap currently provides some useful features, such as prod and
-	// dev environments, standard logger replacement, testing support and GCP
-	// StackDriver integration. Since log/slog is so new, many of the same
-	// capabilities are yet to receive good support in third-party libraries.
+	// dev environments, standard logger replacement, and GCP StackDriver
+	// integration. Since log/slog is so new, many of the same capabilities are
+	// yet to receive good support in third-party libraries.
 	var err error
 	var logger *zap.Logger
 	switch strings.ToLower(env) {
