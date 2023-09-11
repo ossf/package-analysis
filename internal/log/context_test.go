@@ -9,21 +9,6 @@ import (
 	"github.com/ossf/package-analysis/internal/log"
 )
 
-type testHandler struct {
-	slog.Handler
-
-	r slog.Record
-}
-
-func (h *testHandler) Enabled(_ context.Context, _ slog.Level) bool {
-	return true
-}
-
-func (h *testHandler) Handle(ctx context.Context, r slog.Record) error {
-	h.r = r
-	return nil
-}
-
 func assertRecordAttrs(t *testing.T, r slog.Record, attrs []slog.Attr) {
 	t.Helper()
 
@@ -57,7 +42,7 @@ func TestContextWithAttrs(t *testing.T) {
 	// Add attrs to the context and ensure they are used.
 	ctx = log.ContextWithAttrs(ctx, attr1, attr2)
 	logger.InfoContext(ctx, "test", "a", "b")
-	assertRecordAttrs(t, h.r, []slog.Attr{attr1, attr2, attr3})
+	assertRecordAttrs(t, h.LastRecord(), []slog.Attr{attr1, attr2, attr3})
 }
 
 func TestContextWithAttrs_InnerCtx(t *testing.T) {
@@ -74,7 +59,7 @@ func TestContextWithAttrs_InnerCtx(t *testing.T) {
 	// Add more attrs to the context and ensure they are used.
 	innerCtx := log.ContextWithAttrs(ctx, attr3)
 	logger.InfoContext(innerCtx, "test")
-	assertRecordAttrs(t, h.r, []slog.Attr{attr1, attr2, attr3})
+	assertRecordAttrs(t, h.LastRecord(), []slog.Attr{attr1, attr2, attr3})
 }
 
 func TestContextWithAttrs_OuterAfterInnerCtx(t *testing.T) {
@@ -91,7 +76,7 @@ func TestContextWithAttrs_OuterAfterInnerCtx(t *testing.T) {
 
 	// Use the earlier context to ensure the innerCtx attrs are not included.
 	logger.InfoContext(ctx, "test")
-	assertRecordAttrs(t, h.r, []slog.Attr{attr1, attr2})
+	assertRecordAttrs(t, h.LastRecord(), []slog.Attr{attr1, attr2})
 }
 
 func TestContextWithAttrs_NoAttrs(t *testing.T) {
@@ -104,5 +89,23 @@ func TestContextWithAttrs_NoAttrs(t *testing.T) {
 	ctx = log.ContextWithAttrs(ctx)
 
 	logger.InfoContext(ctx, "test", "a", "b")
-	assertRecordAttrs(t, h.r, []slog.Attr{attr1})
+	assertRecordAttrs(t, h.LastRecord(), []slog.Attr{attr1})
+}
+
+func TestLoggerWithContext(t *testing.T) {
+	attr1 := slog.Any("hello", "world")
+	attr2 := slog.Int("meaning", 42)
+	attr3 := slog.String("a", "b")
+
+	h := &testHandler{}
+	logger := slog.New(log.NewContextLogHandler(h))
+
+	ctx := context.Background()
+	ctx = log.ContextWithAttrs(ctx, attr1)
+	logger = log.LoggerWithContext(logger, ctx)
+
+	ctx = log.ContextWithAttrs(log.ClearContextAttrs(ctx), attr2)
+
+	logger.InfoContext(ctx, "test", "a", "b")
+	assertRecordAttrs(t, h.LastRecord(), []slog.Attr{attr1, attr2, attr3})
 }

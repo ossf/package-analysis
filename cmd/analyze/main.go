@@ -117,7 +117,7 @@ func makeSandboxOptions() []sandbox.Option {
 
 func dynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, resultStores *worker.ResultStores) {
 	if !*offline {
-		sandbox.InitNetwork()
+		sandbox.InitNetwork(ctx)
 	}
 
 	sbOpts := append(worker.DynamicSandboxOptions(), makeSandboxOptions()...)
@@ -146,7 +146,7 @@ func dynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, resultStores *wor
 
 func staticAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, resultStores *worker.ResultStores) {
 	if !*offline {
-		sandbox.InitNetwork()
+		sandbox.InitNetwork(ctx)
 	}
 
 	sbOpts := append(worker.StaticSandboxOptions(), makeSandboxOptions()...)

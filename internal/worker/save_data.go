@@ -3,10 +3,10 @@ package worker
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/ossf/package-analysis/internal/featureflags"
-	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgmanager"
 	"github.com/ossf/package-analysis/internal/resultstore"
 	"github.com/ossf/package-analysis/pkg/api/analysisrun"
@@ -31,7 +31,7 @@ func SaveDynamicAnalysisData(ctx context.Context, pkg *pkgmanager.Pkg, dest *Res
 		return nil
 	}
 
-	if err := dest.DynamicAnalysis.Save(ctx, pkg, data.StraceSummary); err != nil {
+	if err := dest.DynamicAnalysis.SaveDynamicAnalysis(ctx, pkg, data.StraceSummary, ""); err != nil {
 		return fmt.Errorf("failed to save strace data to %s: %w", dest.DynamicAnalysis, err)
 	}
 	if err := saveExecutionLog(ctx, pkg, dest, data); err != nil {
@@ -71,7 +71,7 @@ func saveExecutionLog(ctx context.Context, pkg *pkgmanager.Pkg, dest *ResultStor
 		execLogFilename = fmt.Sprintf("execution-log-%s.json", pkg.Version())
 	}
 
-	if err := dest.DynamicAnalysis.SaveWithFilename(ctx, pkg, execLogFilename, data.ExecutionLog); err != nil {
+	if err := dest.DynamicAnalysis.SaveDynamicAnalysis(ctx, pkg, data.ExecutionLog, execLogFilename); err != nil {
 		return fmt.Errorf("failed to save execution log to %s: %w", dest.DynamicAnalysis, err)
 	}
 
@@ -84,7 +84,7 @@ func SaveStaticAnalysisData(ctx context.Context, pkg *pkgmanager.Pkg, dest *Resu
 		return nil
 	}
 
-	if err := dest.StaticAnalysis.Save(ctx, pkg, data); err != nil {
+	if err := dest.StaticAnalysis.SaveStaticAnalysis(ctx, pkg, data, ""); err != nil {
 		return fmt.Errorf("failed to save static analysis results to %s: %w", dest.StaticAnalysis, err)
 	}
 
@@ -116,12 +116,8 @@ func SaveFileWritesData(ctx context.Context, pkg *pkgmanager.Pkg, dest *ResultSt
 	}
 	fileWriteDataDuration := time.Since(fileWriteDataUploadStart)
 
-	log.Info("Write data upload duration",
-		log.Label("ecosystem", pkg.EcosystemName()),
-		"name", pkg.Name(),
-		"version", pkg.Version(),
-		"write_data_upload_duration", fileWriteDataDuration,
-	)
+	slog.InfoContext(ctx, "Write data upload duration",
+		"write_data_upload_duration", fileWriteDataDuration)
 
 	return nil
 }

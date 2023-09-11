@@ -89,6 +89,9 @@ func makeResultStores(dest resultBucketPaths) worker.ResultStores {
 	if dest.fileWrites != "" {
 		resultStores.FileWrites = resultstore.New(dest.fileWrites, resultstore.ConstructPath())
 	}
+	if dest.analyzedPkg != "" {
+		resultStores.AnalyzedPackage = resultstore.New(dest.analyzedPkg, resultstore.ConstructPath())
+	}
 
 	return resultStores
 }
@@ -107,7 +110,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	}
 
 	ctx = log.ContextWithAttrs(ctx,
-		log.LabelAttr("ecosystem", ecosystem.String()),
+		log.Label("ecosystem", ecosystem.String()),
 		slog.String("name", name))
 
 	manager := pkgmanager.Manager(ecosystem)
@@ -294,7 +297,7 @@ func main() {
 		noPull: os.Getenv("OSSF_SANDBOX_NOPULL") != "",
 	}
 
-	sandbox.InitNetwork()
+	sandbox.InitNetwork(ctx)
 
 	// If configured, start a webserver so that Go's pprof can be accessed for
 	// debugging and profiling.

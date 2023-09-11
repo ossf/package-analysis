@@ -2,10 +2,12 @@ package sandbox
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"io/fs"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -81,24 +83,24 @@ func (r *RunResult) Stderr() []byte {
 type Sandbox interface {
 	// Init prepares the sandbox for run and copy commands. The sandbox is
 	// only properly initialised if this function returns nil.
-	Init() error
+	Init(ctx context.Context) error
 
 	// Run executes the supplied command and args in the sandbox.
 	// Multiple calls to Run will reuse the same container state,
 	// until Clean() is called.
 	// The returned RunResult stores information about the execution.
 	// If any error occurs, it is returned with a partial RunResult.
-	Run(command string, args ...string) (*RunResult, error)
+	Run(ctx context.Context, command string, args ...string) (*RunResult, error)
 
 	// Clean cleans up the Sandbox. Once called, the Sandbox cannot be used again.
-	Clean() error
+	Clean(ctx context.Context) error
 
 	// CopyIntoSandbox copies a path in the host to one in the sandbox. The paths
 	// may be files or directories. The copy fails if the host path does not exist.
 	// See https://docs.podman.io/en/latest/markdown/podman-cp.1.html for details
 	// on specifying paths.
 	// The sandbox must be initialised using Init() before calling this function.
-	CopyIntoSandbox(hostPath, sandboxPath string) error
+	CopyIntoSandbox(ctx context.Context, hostPath, sandboxPath string) error
 
 	// CopyBackToHost copies a path in the sandbox to one in the host. The paths
 	// may be files or directories. The copy fails if the sandbox path does not exist.
@@ -107,7 +109,7 @@ type Sandbox interface {
 	// Caution: files coming out of the sandbox are untrusted and proper validation
 	// should be performed on the file before use.
 	// The sandbox must be initialised using Init() before calling this function.
-	CopyBackToHost(hostPath, sandboxPath string) error
+	CopyBackToHost(ctx context.Context, hostPath, sandboxPath string) error
 }
 
 // volume represents a volume mapping between a host src and a container dest.
@@ -141,6 +143,8 @@ type podmanSandbox struct {
 	initialised bool
 	volumes     []volume
 	copies      []copySpec
+	environment map[string]string
+	logger      *slog.Logger
 }
 
 type (
@@ -151,13 +155,17 @@ type (
 func (o option) set(sb *podmanSandbox) { o(sb) }
 
 func New(options ...Option) Sandbox {
-	sb := &podmanSandbox{}
+	sb := &podmanSandbox{
+		logger:      slog.Default(),
+		environment: make(map[string]string),
+	}
 	for _, o := range options {
 		o.set(sb)
 	}
 
 	if sb.image == "" {
-		log.Fatal("image is required")
+		sb.logger.Error("image is required")
+		os.Exit(1)
 	}
 	return sb
 }
@@ -237,6 +245,14 @@ func Tag(tag string) Option {
 	return option(func(sb *podmanSandbox) { sb.tag = tag })
 }
 
+func Logger(logger *slog.Logger) Option {
+	return option(func(sb *podmanSandbox) { sb.logger = logger })
+}
+
+func SetEnv(key, value string) Option {
+	return option(func(sb *podmanSandbox) { sb.environment[key] = value })
+}
+
 func removeAllLogs() error {
 	matches, err := filepath.Glob(filepath.Join(os.TempDir(), logDirPattern+"*"))
 	if err != nil {
@@ -250,33 +266,33 @@ func removeAllLogs() error {
 	return nil
 }
 
-func podman(args ...string) *exec.Cmd {
+func podman(ctx context.Context, args ...string) *exec.Cmd {
 	args = append([]string{
 		"--cgroup-manager=cgroupfs",
 		"--events-backend=file",
 	}, args...)
-	log.Debug("podman", "args", args)
-	return exec.Command(podmanBin, args...)
+	slog.DebugContext(ctx, "podman", "args", args)
+	return exec.CommandContext(ctx, podmanBin, args...)
 }
 
-func podmanRun(args ...string) error {
-	cmd := podman(args...)
+func podmanRun(ctx context.Context, args ...string) error {
+	cmd := podman(ctx, args...)
 	return cmd.Run()
 }
 
-func podmanPrune() error {
-	return podmanRun("image", "prune", "-f")
+func podmanPrune(ctx context.Context) error {
+	return podmanRun(ctx, "image", "prune", "-f")
 }
 
-func podmanCleanContainers() error {
-	return podmanRun("rm", "--all", "--force")
+func podmanCleanContainers(ctx context.Context) error {
+	return podmanRun(ctx, "rm", "--all", "--force")
 }
 
-func (s *podmanSandbox) pullImage() error {
-	return podmanRun("pull", s.imageWithTag())
+func (s *podmanSandbox) pullImage(ctx context.Context) error {
+	return podmanRun(ctx, "pull", s.imageWithTag())
 }
 
-func (s *podmanSandbox) createContainer() (string, error) {
+func (s *podmanSandbox) createContainer(ctx context.Context) (string, error) {
 	args := []string{
 		"create",
 		"--runtime=" + runtimeBin,
@@ -296,9 +312,13 @@ func (s *podmanSandbox) createContainer() (string, error) {
 		args = append(args, networkArgs...)
 	}
 
+	for k, v := range s.environment {
+		args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
+	}
+
 	args = append(args, s.extraArgs()...)
 	args = append(args, s.imageWithTag())
-	cmd := podman(args...)
+	cmd := podman(ctx, args...)
 	var buf bytes.Buffer
 	cmd.Stdout = &buf
 	if err := cmd.Run(); err != nil {
@@ -307,7 +327,7 @@ func (s *podmanSandbox) createContainer() (string, error) {
 	return string(bytes.TrimSpace(buf.Bytes())), nil
 }
 
-func (s *podmanSandbox) startContainerCmd(logDir string) *exec.Cmd {
+func (s *podmanSandbox) startContainerCmd(ctx context.Context, logDir string) *exec.Cmd {
 	args := []string{
 		"start",
 		"--runtime=" + runtimeBin,
@@ -325,24 +345,25 @@ func (s *podmanSandbox) startContainerCmd(logDir string) *exec.Cmd {
 	}
 	args = append(args, s.container)
 
-	return podman(args...)
+	return podman(ctx, args...)
 }
 
-func (s *podmanSandbox) stopContainerCmd() *exec.Cmd {
-	return podman("stop", s.container)
+func (s *podmanSandbox) stopContainerCmd(ctx context.Context) *exec.Cmd {
+	return podman(ctx, "stop", s.container)
 }
 
-func (s *podmanSandbox) forceStopContainer() error {
+func (s *podmanSandbox) forceStopContainer(ctx context.Context) error {
 	return podmanRun(
+		ctx,
 		"stop",
 		"-t=5", // Wait a max of 5 seconds for a graceful stop.
 		"-i",   // Ignore any errors of the specified container not being in the store.
 		s.container)
 }
 
-func (s *podmanSandbox) execContainerCmd(execCmd string, execArgs []string) *exec.Cmd {
+func (s *podmanSandbox) execContainerCmd(ctx context.Context, execCmd string, execArgs []string) *exec.Cmd {
 	args := append([]string{"exec", s.container, execCmd}, execArgs...)
-	return podman(args...)
+	return podman(ctx, args...)
 }
 
 func (s *podmanSandbox) extraArgs() []string {
@@ -364,7 +385,7 @@ func (s *podmanSandbox) imageWithTag() string {
 // Init initializes the sandbox, including creating the container and pulling the image.
 // The sandbox is marked as initialised if the function completes with no errors.
 // If the sandbox has already been marked as initialised, this function simply returns nil.
-func (s *podmanSandbox) Init() error {
+func (s *podmanSandbox) Init(ctx context.Context) error {
 	if s.initialised {
 		return nil
 	}
@@ -376,15 +397,15 @@ func (s *podmanSandbox) Init() error {
 	if err := removeAllLogs(); err != nil {
 		return fmt.Errorf("failed removing all logs: %w", err)
 	}
-	if err := podmanPrune(); err != nil {
+	if err := podmanPrune(ctx); err != nil {
 		return fmt.Errorf("error pruning images: %w", err)
 	}
 	if !s.noPull {
-		if err := s.pullImage(); err != nil {
+		if err := s.pullImage(ctx); err != nil {
 			return fmt.Errorf("error pulling image: %w", err)
 		}
 	}
-	if id, err := s.createContainer(); err != nil {
+	if id, err := s.createContainer(ctx); err != nil {
 		return fmt.Errorf("error creating container: %w", err)
 	} else {
 		s.container = id
@@ -393,8 +414,8 @@ func (s *podmanSandbox) Init() error {
 	// run each copy command separately
 	for _, copyOp := range s.copies {
 		copyOp.containerId = s.container
-		log.Info("podman " + copyOp.String())
-		if err := podmanRun(copyOp.Args()...); err != nil {
+		s.logger.InfoContext(ctx, "podman "+copyOp.String())
+		if err := podmanRun(ctx, copyOp.Args()...); err != nil {
 			return fmt.Errorf("copy into sandbox [%s]  failed: %w", copyOp, err)
 		}
 	}
@@ -406,8 +427,8 @@ func (s *podmanSandbox) Init() error {
 
 // Run implements the Sandbox interface.
 // If Init() has not yet been run, it will be called automatically before running
-func (s *podmanSandbox) Run(command string, args ...string) (*RunResult, error) {
-	if err := s.Init(); err != nil {
+func (s *podmanSandbox) Run(ctx context.Context, command string, args ...string) (*RunResult, error) {
+	if err := s.Init(ctx); err != nil {
 		return &RunResult{}, err
 	}
 
@@ -436,11 +457,13 @@ func (s *podmanSandbox) Run(command string, args ...string) (*RunResult, error) 
 	}
 
 	// Prepare stdout and stderr writers
-	logOut := log.Writer(log.InfoLevel,
-		"command", command, "args", args)
+	logOut := log.NewWriter(ctx,
+		s.logger.With("command", command, "args", args),
+		slog.LevelInfo)
 	defer logOut.Close()
-	logErr := log.Writer(log.WarnLevel,
-		"command", command, "args", args)
+	logErr := log.NewWriter(ctx,
+		s.logger.With("command", command, "args", args),
+		slog.LevelWarn)
 	defer logErr.Close()
 
 	outWriters := []io.Writer{&stdout}
@@ -462,7 +485,7 @@ func (s *podmanSandbox) Run(command string, args ...string) (*RunResult, error) 
 	errWriter := io.MultiWriter(errWriters...)
 
 	// Start the container
-	startCmd := s.startContainerCmd(logDir)
+	startCmd := s.startContainerCmd(ctx, logDir)
 	startCmd.Stdout = logOut
 	startCmd.Stderr = logErr
 	if err := startCmd.Run(); err != nil {
@@ -470,7 +493,7 @@ func (s *podmanSandbox) Run(command string, args ...string) (*RunResult, error) 
 	}
 
 	// Run the command in the sandbox
-	cmd := s.execContainerCmd(command, args)
+	cmd := s.execContainerCmd(ctx, command, args)
 	cmd.Stdout = outWriter
 	cmd.Stderr = errWriter
 
@@ -487,14 +510,14 @@ func (s *podmanSandbox) Run(command string, args ...string) (*RunResult, error) 
 	}
 
 	// Stop the container
-	stopCmd := s.stopContainerCmd()
+	stopCmd := s.stopContainerCmd(ctx)
 	var stopStderr bytes.Buffer
 	stopCmd.Stdout = logOut
 	stopCmd.Stderr = io.MultiWriter(&stopStderr, logErr)
 	if stopErr := stopCmd.Run(); stopErr != nil {
 		if strings.Contains(stopStderr.String(), "gofer is still running") {
 			// Ignore the error if stderr contains "gofer is still running"
-			log.Debug("ignoring 'stop' error - gofer still running")
+			s.logger.DebugContext(ctx, "ignoring 'stop' error - gofer still running")
 		} else if err == nil {
 			// Don't overwrite the earlier error
 			err = fmt.Errorf("error stopping container: %w", stopErr)
@@ -505,19 +528,19 @@ func (s *podmanSandbox) Run(command string, args ...string) (*RunResult, error) 
 }
 
 // Clean implements the Sandbox interface.
-func (s *podmanSandbox) Clean() error {
+func (s *podmanSandbox) Clean(ctx context.Context) error {
 	if s.container == "" {
 		return nil
 	}
-	if err := s.forceStopContainer(); err != nil {
+	if err := s.forceStopContainer(ctx); err != nil {
 		return err
 	}
-	return podmanCleanContainers()
+	return podmanCleanContainers(ctx)
 }
 
 // CopyIntoSandbox copies a path from the host into the sandbox.
 // If the source path does not exist, the command will fail with exit status 125.
-func (s *podmanSandbox) CopyIntoSandbox(hostPath, sandboxPath string) error {
+func (s *podmanSandbox) CopyIntoSandbox(ctx context.Context, hostPath, sandboxPath string) error {
 	if !s.initialised {
 		return errors.New("sandbox not initialised")
 	}
@@ -526,13 +549,13 @@ func (s *podmanSandbox) CopyIntoSandbox(hostPath, sandboxPath string) error {
 	}
 
 	copyCmd := hostToContainerCopyCmd(hostPath, sandboxPath, s.container)
-	log.Info("podman " + copyCmd.String())
-	return podmanRun(copyCmd.Args()...)
+	s.logger.InfoContext(ctx, "podman "+copyCmd.String())
+	return podmanRun(ctx, copyCmd.Args()...)
 }
 
 // CopyBackToHost copies a path from the sandbox back to the host (after it has run).
 // If the source path does not exist, the command will fail with exit status 125.
-func (s *podmanSandbox) CopyBackToHost(hostPath, sandboxPath string) error {
+func (s *podmanSandbox) CopyBackToHost(ctx context.Context, hostPath, sandboxPath string) error {
 	if !s.initialised {
 		return errors.New("sandbox not initialised")
 	}
@@ -541,6 +564,6 @@ func (s *podmanSandbox) CopyBackToHost(hostPath, sandboxPath string) error {
 	}
 
 	copyCmd := containerToHostCopyCmd(hostPath, sandboxPath, s.container)
-	log.Info("podman " + copyCmd.String())
-	return podmanRun(copyCmd.Args()...)
+	s.logger.InfoContext(ctx, "podman "+copyCmd.String())
+	return podmanRun(ctx, copyCmd.Args()...)
 }

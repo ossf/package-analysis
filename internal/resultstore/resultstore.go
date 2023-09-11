@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log/slog"
 	"net/url"
 	"os"
 	"path"
@@ -16,7 +17,6 @@ import (
 	_ "gocloud.dev/blob/gcsblob"
 	_ "gocloud.dev/blob/s3blob"
 
-	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgmanager"
 	"github.com/ossf/package-analysis/internal/utils"
 )
@@ -107,7 +107,7 @@ func (rs *ResultStore) SaveTempFilesToZip(ctx context.Context, p Pkg, zipName st
 	defer bkt.Close()
 
 	uploadPath := rs.generateKey(p, zipName+".zip")
-	log.Info("Uploading results", "bucket", rs.bucket.String(), "path", uploadPath)
+	slog.InfoContext(ctx, "Uploading results", "bucket", rs.bucket.String(), "path", uploadPath)
 
 	bucketWriter, err := bkt.NewWriter(ctx, uploadPath, nil)
 	if err != nil {
@@ -148,7 +148,7 @@ func (rs *ResultStore) SaveAnalyzedPackage(ctx context.Context, manager *pkgmana
 
 	defer func() {
 		if err := os.Remove(archivePath); err != nil {
-			log.Error("could not clean up downloaded archive", "error", err)
+			slog.ErrorContext(ctx, "could not clean up downloaded archive", "error", err)
 		}
 	}()
 
@@ -164,7 +164,7 @@ func (rs *ResultStore) SaveAnalyzedPackage(ctx context.Context, manager *pkgmana
 	defer bkt.Close()
 
 	uploadPath := rs.generateKey(pkg, pkg.Version()+"-"+hash)
-	log.Info("Uploading analyzed package", "bucket", rs.bucket.String(), "path", uploadPath)
+	slog.InfoContext(ctx, "Uploading analyzed package", "bucket", rs.bucket.String(), "path", uploadPath)
 
 	f, err := os.Open(archivePath)
 	if err != nil {
@@ -191,23 +191,14 @@ func (rs *ResultStore) SaveAnalyzedPackage(ctx context.Context, manager *pkgmana
 	return nil
 }
 
-// SaveWithFilename saves results to the bucket with the given filename
-func (rs *ResultStore) SaveWithFilename(ctx context.Context, p Pkg, filename string, analysis any) error {
+// saveWithFilename marshals the given data to JSON and saves the marshalled data to the bucket,
+// with the given filename / key. No processing is done on the data object.
+func (rs *ResultStore) saveWithFilename(ctx context.Context, p Pkg, data any, filename string) error {
 	if filename == "" {
 		return errors.New("filename cannot be empty")
 	}
 
-	result := &result{
-		Package: pkg{
-			Name:      p.Name(),
-			Ecosystem: p.EcosystemName(),
-			Version:   p.Version(),
-		},
-		CreatedTimestamp: time.Now().UTC().Unix(),
-		Analysis:         analysis,
-	}
-
-	b, err := json.Marshal(result)
+	b, err := json.Marshal(data)
 	if err != nil {
 		return err
 	}
@@ -219,7 +210,7 @@ func (rs *ResultStore) SaveWithFilename(ctx context.Context, p Pkg, filename str
 	defer bkt.Close()
 
 	uploadPath := rs.generateKey(p, filename)
-	log.Info("Uploading results", "bucket", rs.bucket.String(), "path", uploadPath)
+	slog.InfoContext(ctx, "Uploading results", "bucket", rs.bucket.String(), "path", uploadPath)
 
 	w, err := bkt.NewWriter(ctx, uploadPath, nil)
 	if err != nil {
@@ -233,17 +224,54 @@ func (rs *ResultStore) SaveWithFilename(ctx context.Context, p Pkg, filename str
 	}
 
 	return nil
+
 }
 
-// Save marshals the given analysis results to JSON and writes them to
-// the bucket with a default filename (key). If p is non-nil and has a
-// version specified, the default filename is <version>.json.
+// DefaultFilename returns the basename (i.e. without directory-like prefixes) of the default filename (key)
+// used to store results. If p is non-nil and has a version specified, the default filename is <version>.json.
 // Otherwise, it is "results.json".
-func (rs *ResultStore) Save(ctx context.Context, p Pkg, analysis interface{}) error {
-	filename := "results.json"
+func DefaultFilename(p Pkg) string {
 	if p != nil && p.Version() != "" {
-		filename = p.Version() + ".json"
+		return p.Version() + ".json"
+	}
+	return "results.json"
+}
+
+// SaveDynamicAnalysis wraps the analysis object with the DynamicAnalysisRecord struct and saves it to the bucket
+// using saveWithFilename. If filename is empty, a default filename (chosen using DefaultFilename) is used.
+func (rs *ResultStore) SaveDynamicAnalysis(ctx context.Context, p Pkg, analysis any, filename string) error {
+	if filename == "" {
+		filename = DefaultFilename(p)
 	}
 
-	return rs.SaveWithFilename(ctx, p, filename, analysis)
+	data := &DynamicAnalysisRecord{
+		Package: pkg{
+			Ecosystem: p.EcosystemName(),
+			Name:      p.Name(),
+			Version:   p.Version(),
+		},
+		CreatedTimestamp: time.Now().UTC().Unix(),
+		Analysis:         analysis,
+	}
+
+	return rs.saveWithFilename(ctx, p, data, filename)
+}
+
+// SaveStaticAnalysis wraps the results object with the StaticAnalysisRecord struct and saves it to the bucket
+// using saveWithFilename. If filename is empty, a default filename (chosen using DefaultFilename) is used.
+func (rs *ResultStore) SaveStaticAnalysis(ctx context.Context, p Pkg, results any, filename string) error {
+	if filename == "" {
+		filename = DefaultFilename(p)
+	}
+
+	data := &StaticAnalysisRecord{
+		SchemaVersion: "1",
+		Ecosystem:     p.EcosystemName(),
+		Name:          p.Name(),
+		Version:       p.Version(),
+		Created:       time.Now().UTC(),
+		Results:       results,
+	}
+
+	return rs.saveWithFilename(ctx, p, data, filename)
 }

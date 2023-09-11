@@ -1,6 +1,10 @@
 package token
 
-import "github.com/ossf/package-analysis/internal/staticanalysis/obfuscation/stringentropy"
+import (
+	"github.com/texttheater/golang-levenshtein/levenshtein"
+
+	"github.com/ossf/package-analysis/internal/staticanalysis/signals/stringentropy"
+)
 
 type Identifier struct {
 	Name    string         `json:"name"`
@@ -24,6 +28,12 @@ type String struct {
 // character distribution and sets its Entropy field to the result value
 func (s *String) ComputeEntropy(probs map[rune]float64) {
 	s.Entropy = stringentropy.Calculate(s.Value, probs)
+}
+
+// LevenshteinDist computes the Levenshtein distance between the parsed and raw versions of
+// this literal. A character substitution is treated as deletion and insertion (2 operations).
+func (s *String) LevenshteinDist() int {
+	return levenshtein.DistanceForStrings([]rune(s.Raw), []rune(s.Value), levenshtein.DefaultOptions)
 }
 
 type Int struct {

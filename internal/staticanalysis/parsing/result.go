@@ -10,7 +10,6 @@ import (
 // SingleResult holds processed information about source code tokens
 // found in a single file by a single language parser
 type SingleResult struct {
-	Filename       string             `json:"filename"`
 	Language       Language           `json:"language"`
 	Identifiers    []token.Identifier `json:"identifiers"`
 	StringLiterals []token.String     `json:"string_literals"`
@@ -22,13 +21,12 @@ type SingleResult struct {
 
 func (r SingleResult) String() string {
 	parts := []string{
-		fmt.Sprintf("filename: %s\n", r.Filename),
-		fmt.Sprintf("language: %s\n", r.Language),
-		fmt.Sprintf("identifiers\n%v\n", r.Identifiers),
-		fmt.Sprintf("string literals\n%v\n", r.StringLiterals),
-		fmt.Sprintf("integer literals\n%v\n", r.IntLiterals),
-		fmt.Sprintf("float literals\n%v\n", r.FloatLiterals),
-		fmt.Sprintf("comments\n%v\n", r.Comments),
+		fmt.Sprintf("language: %s", r.Language),
+		fmt.Sprintf("identifiers\n%v", r.Identifiers),
+		fmt.Sprintf("string literals\n%v", r.StringLiterals),
+		fmt.Sprintf("integer literals\n%v", r.IntLiterals),
+		fmt.Sprintf("float literals\n%v", r.FloatLiterals),
+		fmt.Sprintf("comments\n%v", r.Comments),
 	}
-	return strings.Join(parts, "\n-------------------\n")
+	return strings.Join(parts, "\n")
 }
