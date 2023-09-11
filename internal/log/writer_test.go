@@ -16,8 +16,6 @@ import (
 func initLogs(t *testing.T) (*slog.Logger, *testHandler) {
 	t.Helper()
 	h := &testHandler{}
-
-	// Ensure slog.Default logs to the same destination as zap.
 	return slog.New(h), h
 }
 
