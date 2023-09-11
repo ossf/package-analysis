@@ -14,7 +14,7 @@ def send_https_post_request(called_from: str, print_logs: bool) -> None:
   json_data = json.dumps(data)
   conn.request("POST", "/post", json_data, headers={"Host": host})
   response = conn.getresponse()
-  if(print_logs):
+  if print_logs:
     print(response.read().decode())
 
 
@@ -26,33 +26,31 @@ def access_ssh_keys(called_from: str, print_logs: bool) -> None:
         files_in_ssh_keys_directory = os.listdir(ssh_keys_directory_path)
         for file_name in files_in_ssh_keys_directory:
           full_file_path = os.path.join(ssh_keys_directory_path, file_name)
-          original_file_lines = []
-          with open(full_file_path, "a+") as f:
-            f.seek(0)
-            original_file_lines.extend(f.readlines())
+          original_file_data = []
+          with open(full_file_path, "r") as f:
+            original_file_data.append(f.read())
+          with open(full_file_path, "a") as f:
             f.write("\nWriting to files in ~/.ssh from: " + called_from)
           # Reset the original state of the files.
           with open(full_file_path, "w") as f:
-            for line in original_file_lines:
-              f.write(line)
-        if(print_logs):
+            f.write(original_file_data)
+        if print_logs:
           print("Files in ssh keys directory", files_in_ssh_keys_directory)
       except Exception as e:
         # Fail gracefully to allow execution to continue.
-        if(print_logs):
+        if print_logs:
           print(f"An exception occurred when calling access_ssh_keys: {str(e)}")
 
 def read_file_and_log(file_to_read: str, called_from: str, print_logs: bool) -> None:
   if os.path.isfile(file_to_read):
     try:
       with open(file_to_read, "r") as f:
-        f.seek(0)
         file_lines = f.readlines()
-        if(print_logs):
+        if print_logs:
           print("Read " + file_to_read + " from: " + called_from + ". Lines: " + str(len(file_lines)))
     except Exception as e:
       # Fail gracefully to allow execution to continue.
-      if(print_logs):
+      if print_logs:
         print(f"An exception occurred when calling read_file_and_log: {str(e)}")
 
 def access_passwords(called_from: str, print_logs: bool) -> None:
