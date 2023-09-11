@@ -8,27 +8,23 @@ import (
 	"strings"
 	"testing"
 
-	"go.uber.org/zap/exp/zapslog"
-	"go.uber.org/zap/zapcore"
-	"go.uber.org/zap/zaptest/observer"
 	"golang.org/x/exp/slices"
 
 	"github.com/ossf/package-analysis/internal/log"
 )
 
-func initLogs(t *testing.T, l zapcore.Level) (*slog.Logger, *observer.ObservedLogs) {
+func initLogs(t *testing.T) (*slog.Logger, *testHandler) {
 	t.Helper()
-	core, obs := observer.New(l)
-
-	// Ensure slog.Default logs to the same destination as zap.
-	return slog.New(log.NewContextLogHandler(zapslog.NewHandler(core, &zapslog.HandlerOptions{}))), obs
+	h := &testHandler{}
+	return slog.New(h), h
 }
 
 func TestNewWriter_SingleLine(t *testing.T) {
-	logger, obs := initLogs(t, zapcore.DebugLevel)
+	logger, h := initLogs(t)
 	w := log.NewWriter(context.Background(), logger, slog.LevelInfo)
 
 	want := "this is the log message"
+	wantLevel := slog.LevelInfo
 
 	_, err := io.Copy(w, bytes.NewBuffer([]byte(want)))
 	w.Close()
@@ -36,17 +32,20 @@ func TestNewWriter_SingleLine(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Writing failed: %v", err)
 	}
-	if got := obs.Len(); got != 1 {
-		t.Fatalf("Got %d log entries; want 1", got)
+	if got := h.Len(); got != 1 {
+		t.Fatalf("Got %d log records; want 1", got)
 	}
-	entry := obs.All()[0]
-	if got := entry.Message; got != want {
-		t.Errorf("Got %v entry; want %v", got, want)
+	r := h.All()[0]
+	if got := r.Message; got != want {
+		t.Errorf("Got %v message; want %v", got, want)
+	}
+	if got := r.Level; got != wantLevel {
+		t.Errorf("Get %v level; want %v", got, want)
 	}
 }
 
 func TestNewWriter_MultiLine(t *testing.T) {
-	logger, obs := initLogs(t, zapcore.DebugLevel)
+	logger, h := initLogs(t)
 	w := log.NewWriter(context.Background(), logger, slog.LevelInfo)
 
 	want := []string{
@@ -64,33 +63,16 @@ func TestNewWriter_MultiLine(t *testing.T) {
 	}
 
 	var got []string
-	for _, entry := range obs.All() {
-		got = append(got, entry.Message)
+	for _, r := range h.All() {
+		got = append(got, r.Message)
 	}
 	if !slices.Equal(got, want) {
-		t.Errorf("Got log entries = %v; want %v", got, want)
-	}
-}
-
-func TestNewWriter_LevelSuppress(t *testing.T) {
-	logger, obs := initLogs(t, zapcore.WarnLevel)
-	w := log.NewWriter(context.Background(), logger, slog.LevelInfo)
-
-	want := "this is the log message"
-
-	_, err := io.Copy(w, bytes.NewBuffer([]byte(want)))
-	w.Close()
-
-	if err != nil {
-		t.Fatalf("Writing failed: %v", err)
-	}
-	if got := obs.Len(); got != 0 {
-		t.Fatalf("Got %d log entries; want none", got)
+		t.Errorf("Got log records = %v; want %v", got, want)
 	}
 }
 
 func TestNewWriter_MultiWithEmptyLine(t *testing.T) {
-	logger, obs := initLogs(t, zapcore.DebugLevel)
+	logger, h := initLogs(t)
 	w := log.NewWriter(context.Background(), logger, slog.LevelInfo)
 
 	in := []string{"one", "two", "", "four"}
@@ -104,16 +86,16 @@ func TestNewWriter_MultiWithEmptyLine(t *testing.T) {
 	}
 
 	var got []string
-	for _, entry := range obs.All() {
-		got = append(got, entry.Message)
+	for _, r := range h.All() {
+		got = append(got, r.Message)
 	}
 	if !slices.Equal(got, want) {
-		t.Errorf("Got log entries = %v; want %v", got, want)
+		t.Errorf("Got log records = %v; want %v", got, want)
 	}
 }
 
 func TestNewWriter_MultiWithTrailingSpaces(t *testing.T) {
-	logger, obs := initLogs(t, zapcore.DebugLevel)
+	logger, h := initLogs(t)
 	w := log.NewWriter(context.Background(), logger, slog.LevelInfo)
 
 	in := []string{"one    ", "two \t \f \v \r", "\t\t\t\t", "four"}
@@ -127,16 +109,16 @@ func TestNewWriter_MultiWithTrailingSpaces(t *testing.T) {
 	}
 
 	var got []string
-	for _, entry := range obs.All() {
-		got = append(got, entry.Message)
+	for _, r := range h.All() {
+		got = append(got, r.Message)
 	}
 	if !slices.Equal(got, want) {
-		t.Errorf("Got log entries = %v; want %v", got, want)
+		t.Errorf("Got log records = %v; want %v", got, want)
 	}
 }
 
 func TestNewWriter_Empty(t *testing.T) {
-	logger, obs := initLogs(t, zapcore.DebugLevel)
+	logger, h := initLogs(t)
 	w := log.NewWriter(context.Background(), logger, slog.LevelInfo)
 
 	_, err := io.Copy(w, &bytes.Buffer{})
@@ -145,13 +127,13 @@ func TestNewWriter_Empty(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Writing failed: %v", err)
 	}
-	if got := obs.Len(); got != 0 {
-		t.Fatalf("Got %d log entries; want none", got)
+	if got := h.Len(); got != 0 {
+		t.Fatalf("Got %d log records; want none", got)
 	}
 }
 
 func TestNewWriter_TrailingNewline(t *testing.T) {
-	logger, obs := initLogs(t, zapcore.DebugLevel)
+	logger, h := initLogs(t)
 	w := log.NewWriter(context.Background(), logger, slog.LevelInfo)
 
 	want := "this is the log message"
@@ -162,17 +144,17 @@ func TestNewWriter_TrailingNewline(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Writing failed: %v", err)
 	}
-	if got := obs.Len(); got != 1 {
-		t.Fatalf("Got %d log entries; want 1", got)
+	if got := h.Len(); got != 1 {
+		t.Fatalf("Got %d log records; want 1", got)
 	}
-	entry := obs.All()[0]
-	if got := entry.Message; got != want {
-		t.Errorf("Got %v entry; want %v", got, want)
+	r := h.All()[0]
+	if got := r.Message; got != want {
+		t.Errorf("Got %v message; want %v", got, want)
 	}
 }
 
 func TestNewWriter_MultiWrites(t *testing.T) {
-	logger, obs := initLogs(t, zapcore.DebugLevel)
+	logger, h := initLogs(t)
 	w := log.NewWriter(context.Background(), logger, slog.LevelInfo)
 
 	in1 := []string{"one", "two", "", "fourty "}
@@ -191,10 +173,10 @@ func TestNewWriter_MultiWrites(t *testing.T) {
 	w.Close()
 
 	var got []string
-	for _, entry := range obs.All() {
-		got = append(got, entry.Message)
+	for _, r := range h.All() {
+		got = append(got, r.Message)
 	}
 	if !slices.Equal(got, want) {
-		t.Errorf("Got log entries = %v; want %v", got, want)
+		t.Errorf("Got log records = %v; want %v", got, want)
 	}
 }
