@@ -3,22 +3,17 @@ updates:
 - package-ecosystem: gomod
   directory: "/"
   schedule:
-    interval: daily
+    interval: "daily"
   open-pull-requests-limit: 10
 - package-ecosystem: gomod
   directory: "/function/loader"
   schedule:
-    interval: daily
-  open-pull-requests-limit: 10
-- package-ecosystem: gomod
-  directory: "/sandboxes/staticanalysis"
-  schedule:
-    interval: daily
+    interval: "daily"
   open-pull-requests-limit: 10
 - package-ecosystem: "github-actions"
   directory: "/"
   schedule:
-    interval: "daily"
+    interval: "weekly"
   groups:
     actions-minor-updates:
       update-types:
