@@ -9,6 +9,10 @@ import (
 	"github.com/ossf/package-analysis/internal/staticanalysis/signals"
 )
 
+// SchemaVersion identifies the data format version of the results output by static
+// analysis.
+const SchemaVersion = "1.0"
+
 /*
 Result (staticanalysis.Result) is the top-level data structure that stores all data
 produced by static analysis performed on a package / artifact. Each element

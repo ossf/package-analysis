@@ -18,6 +18,7 @@ import (
 	_ "gocloud.dev/blob/s3blob"
 
 	"github.com/ossf/package-analysis/internal/pkgmanager"
+	"github.com/ossf/package-analysis/internal/staticanalysis"
 	"github.com/ossf/package-analysis/internal/utils"
 )
 
@@ -265,7 +266,7 @@ func (rs *ResultStore) SaveStaticAnalysis(ctx context.Context, p Pkg, results an
 	}
 
 	data := &StaticAnalysisRecord{
-		SchemaVersion: "1",
+		SchemaVersion: staticanalysis.SchemaVersion,
 		Ecosystem:     p.EcosystemName(),
 		Name:          p.Name(),
 		Version:       p.Version(),
