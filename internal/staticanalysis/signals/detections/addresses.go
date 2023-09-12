@@ -61,9 +61,6 @@ var urlPathAndQuery = regexp.MustCompile(`(?:/(?:[^.]\S*)?)?(?:\?\S*)?`)
 // urlRegex is a fairly permissive url regex. Parts: scheme, subdomains, TLD, port, url query
 var urlRegexp = regexp.MustCompile(fmt.Sprintf(`%s:(?://%s)%s`, urlSchemes, urlAuthority, urlPathAndQuery))
 
-var emailUsername = regexp.MustCompile(`[^\s@]{1,64}`)
-var emailRegexp = regexp.MustCompile(fmt.Sprintf(`(?:mailto)?%s@[^\s@]{1,255}`, emailUsername))
-
 var ipv4URLRegexp = regexp.MustCompile(fmt.Sprintf(`%s://(?:%s)%s?%s`, urlSchemes, ipv4Regexp, port, urlPathAndQuery))
 var ipv6URLRegexp = regexp.MustCompile(fmt.Sprintf(`%s://\[(?:%s)]%s?%s`, urlSchemes, ipv6Regexp, port, urlPathAndQuery))
 
@@ -73,10 +70,6 @@ func FindURLs(s string) []string {
 	urls = append(urls, ipv4URLRegexp.FindAllString(s, -1)...)
 	urls = append(urls, ipv6URLRegexp.FindAllString(s, -1)...)
 	return urls
-}
-
-func FindEmailAddresses(s string) []string {
-	return emailRegexp.FindAllString(s, -1)
 }
 
 func findIPv4Addresses(s string) []string {

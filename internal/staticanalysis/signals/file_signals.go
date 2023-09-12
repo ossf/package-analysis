@@ -30,9 +30,6 @@ type FileSignals struct {
 	// length in order to reduce the number of false positives.
 	Base64Strings []string `json:"base64_strings"`
 
-	// EmailAddresses contains any email addresses found in string literals
-	EmailAddresses []string `json:"email_addresses"`
-
 	// HexStrings holds a list of (substrings of) string literals found in the
 	// file that contain long (>8 digits) hexadecimal digit sequences.
 	HexStrings []string `json:"hex_strings"`
@@ -53,7 +50,6 @@ func (s FileSignals) String() string {
 		fmt.Sprintf("escaped strings: %v", s.EscapedStrings),
 		fmt.Sprintf("potential base64 strings: %v", s.Base64Strings),
 		fmt.Sprintf("hex strings: %v", s.HexStrings),
-		fmt.Sprintf("email addresses: %v", s.EmailAddresses),
 		fmt.Sprintf("hex strings: %v", s.HexStrings),
 		fmt.Sprintf("IP addresses: %v", s.IPAddresses),
 		fmt.Sprintf("URLs: %v", s.URLs),
