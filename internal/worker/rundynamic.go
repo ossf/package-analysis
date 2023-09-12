@@ -186,7 +186,7 @@ func RunDynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandb
 	var lastError error
 
 	for _, phase := range analysisrun.DefaultDynamicPhases() {
-		phaseCtx := log.ContextWithAttrs(ctx, log.LabelAttr("phase", string(phase)))
+		phaseCtx := log.ContextWithAttrs(ctx, log.Label("phase", string(phase)))
 		startTime := time.Now()
 		args := dynamicanalysis.MakeAnalysisArgs(pkg, phase)
 		phaseResult, err := dynamicanalysis.Run(ctx, sb, analysisCmd, args, log.LoggerWithContext(slog.Default(), ctx))

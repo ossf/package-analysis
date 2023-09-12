@@ -135,7 +135,7 @@ func run() (err error) {
 	}
 
 	ctx := log.ContextWithAttrs(context.Background(),
-		log.LabelAttr("ecosystem", ecosystem.String()),
+		log.Label("ecosystem", ecosystem.String()),
 		slog.String("package", *packageName),
 		slog.String("version", *version),
 	)

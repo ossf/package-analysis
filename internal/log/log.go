@@ -46,6 +46,11 @@ func DefaultLoggingEnv() LoggingEnv {
 //
 // Note: this method MUST be called before any other method in this package.
 func Initialize(env string) {
+	// TODO: replace zap entirely with native slog.
+	// Note that zap currently provides some useful features, such as prod and
+	// dev environments, standard logger replacement, and GCP StackDriver
+	// integration. Since log/slog is so new, many of the same capabilities are
+	// yet to receive good support in third-party libraries.
 	var err error
 	var logger *zap.Logger
 	switch strings.ToLower(env) {
@@ -73,9 +78,9 @@ func Initialize(env string) {
 	slog.SetDefault(slogger)
 }
 
-// LabelAttr causes attributes written by zapdriver to be marked as labels inside
+// Label causes attributes written by zapdriver to be marked as labels inside
 // StackDriver when LoggingEnv is LoggingEnvProd. Otherwise it wraps slog.String.
-func LabelAttr(key, value string) slog.Attr {
+func Label(key, value string) slog.Attr {
 	if defaultLoggingEnv == LoggingEnvProd {
 		return slog.String("labels."+key, value)
 	} else {

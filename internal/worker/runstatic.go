@@ -89,7 +89,7 @@ func RunStaticAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandbo
 
 	totalTime := time.Since(startTime)
 	slog.InfoContext(ctx, "Static analysis finished",
-		log.LabelAttr("result_status", string(status)),
+		log.Label("result_status", string(status)),
 		"static_analysis_duration", totalTime,
 	)
 

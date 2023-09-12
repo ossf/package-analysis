@@ -110,7 +110,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	}
 
 	ctx = log.ContextWithAttrs(ctx,
-		log.LabelAttr("ecosystem", ecosystem.String()),
+		log.Label("ecosystem", ecosystem.String()),
 		slog.String("name", name))
 
 	manager := pkgmanager.Manager(ecosystem)
