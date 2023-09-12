@@ -162,8 +162,7 @@ func run() (err error) {
 		}
 	}
 
-	err = manager.ExtractArchive(archivePath, workDirs.extractDir)
-	if err != nil {
+	if err := manager.ExtractArchive(archivePath, workDirs.extractDir); err != nil {
 		return fmt.Errorf("archive extraction failed: %w", err)
 	}
 
