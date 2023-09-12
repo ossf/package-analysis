@@ -285,21 +285,3 @@ func TestIPv6Regexp(t *testing.T) {
 		}
 	}
 }
-
-// TestEmailRegexp tests exact matching on single email addresses
-// The regexp is fairly lenient so some technically invalid email addresses
-// may get picked up as valid.
-func TestEmailRegexp(t *testing.T) {
-	for _, addr := range validEmailAddresses {
-		result := FindEmailAddresses(addr)
-		if !(len(result) == 1 && addr == result[0]) {
-			t.Errorf("expected to detect valid email address %s, got %v", addr, result)
-		}
-	}
-	for _, addr := range invalidEmailAddresses {
-		result := FindEmailAddresses(addr)
-		if len(result) == 1 && addr == result[0] {
-			t.Errorf("expected not to detect invalid email address %s, got %v", addr, result)
-		}
-	}
-}

@@ -40,7 +40,6 @@ func AnalyzeSingle(parseData parsing.SingleResult) FileSignals {
 		SuspiciousIdentifiers: []SuspiciousIdentifier{},
 		URLs:                  []string{},
 		IPAddresses:           []string{},
-		EmailAddresses:        []string{},
 	}
 
 	for _, name := range identifierNames {
@@ -57,7 +56,6 @@ func AnalyzeSingle(parseData parsing.SingleResult) FileSignals {
 		signals.HexStrings = append(signals.HexStrings, detections.FindHexSubstrings(sl.Value)...)
 		signals.URLs = append(signals.URLs, detections.FindURLs(sl.Value)...)
 		signals.IPAddresses = append(signals.IPAddresses, detections.FindIPAddresses(sl.Value)...)
-		signals.EmailAddresses = append(signals.EmailAddresses, detections.FindEmailAddresses(sl.Value)...)
 		if detections.IsHighlyEscaped(sl, 8, 0.25) {
 			escapedString := EscapedString{
 				Value:           sl.Value,
