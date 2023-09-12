@@ -185,7 +185,7 @@ func run() (err error) {
 
 	jsonResult, err := json.Marshal(results)
 	if err != nil {
-		slog.DebugContext(ctx, fmt.Sprintf("unserialisable JSON: %v", results))
+		slog.WarnContext(ctx, fmt.Sprintf("unserialisable JSON: %v", results))
 		return fmt.Errorf("JSON marshal error: %w", err)
 	}
 

@@ -119,7 +119,10 @@ func (p *PkgManager) DownloadArchive(name, version, directory string) (string, e
 }
 
 func (p *PkgManager) ExtractArchive(archivePath, outputDir string) error {
-	return p.extractArchive(archivePath, outputDir)
+	if p.extractArchive != nil {
+		return p.extractArchive(archivePath, outputDir)
+	}
+	return fmt.Errorf("archive extraction not implemented for %s", p.Ecosystem())
 }
 
 func normalizePkgName(pkg string) string {
