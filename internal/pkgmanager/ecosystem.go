@@ -10,7 +10,7 @@ import (
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
-var ErrNoArchiveURL = errors.New("no archive url found")
+var ErrNoArchiveURL = errors.New("archive URL not found")
 
 // PkgManager represents how packages from a common ecosystem are accessed.
 type PkgManager struct {

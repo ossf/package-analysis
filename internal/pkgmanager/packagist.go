@@ -21,10 +21,11 @@ func (d *packagistDistJSON) UnmarshalJSON(data []byte) error {
 	switch string(data) {
 	case "null":
 		return nil
-	case "\"__unset\"":
+	case `"__unset"`:
 		return nil
 	}
-	return json.Unmarshal(data, &d)
+	type raw packagistDistJSON
+	return json.Unmarshal(data, (*raw)(d))
 }
 
 type packagistJSON struct {
