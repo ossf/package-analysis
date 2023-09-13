@@ -279,11 +279,6 @@
                     "type": "STRING"
                   },
                   {
-                    "name": "email_addresses",
-                    "mode": "REPEATED",
-                    "type": "STRING"
-                  },
-                  {
                     "name": "hex_strings",
                     "mode": "REPEATED",
                     "type": "STRING"
