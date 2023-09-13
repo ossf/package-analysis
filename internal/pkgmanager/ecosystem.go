@@ -1,6 +1,7 @@
 package pkgmanager
 
 import (
+	"errors"
 	"fmt"
 	"path"
 	"path/filepath"
@@ -8,6 +9,8 @@ import (
 
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
+
+var ErrNoArchiveURL = errors.New("archive URL not found")
 
 // PkgManager represents how packages from a common ecosystem are accessed.
 type PkgManager struct {
@@ -102,7 +105,7 @@ func (p *PkgManager) DownloadArchive(name, version, directory string) (string, e
 		return "", err
 	}
 	if downloadURL == "" {
-		return "", fmt.Errorf("no url found for package %s, version %s", name, version)
+		return "", fmt.Errorf("%w: package %s @ %s", ErrNoArchiveURL, name, version)
 	}
 
 	baseFilename := p.archiveFilename(name, version, downloadURL)

@@ -10,19 +10,32 @@ import (
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
+type packagistDistJSON struct {
+	URL       string `json:"url"`
+	Type      string `json:"type"`
+	Shasum    string `json:"shasum,omitempty"`
+	Reference string `json:"reference"`
+}
+
+func (d *packagistDistJSON) UnmarshalJSON(data []byte) error {
+	switch string(data) {
+	case "null":
+		return nil
+	case `"__unset"`:
+		return nil
+	}
+	type raw packagistDistJSON
+	return json.Unmarshal(data, (*raw)(d))
+}
+
 type packagistJSON struct {
 	Packages map[string][]struct {
-		Version           string    `json:"version"`
-		VersionNormalized string    `json:"version_normalized"`
-		License           []string  `json:"license,omitempty"`
-		Time              time.Time `json:"time"`
-		Name              string    `json:"name,omitempty"`
-		Dist              struct {
-			URL       string `json:"url"`
-			Type      string `json:"type"`
-			Shasum    string `json:"shasum,omitempty"`
-			Reference string `json:"reference"`
-		} `json:"dist"`
+		Version           string            `json:"version"`
+		VersionNormalized string            `json:"version_normalized"`
+		License           []string          `json:"license,omitempty"`
+		Time              time.Time         `json:"time"`
+		Name              string            `json:"name,omitempty"`
+		Dist              packagistDistJSON `json:"dist"`
 	} `json:"packages"`
 }
 

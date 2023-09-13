@@ -143,7 +143,10 @@ func (rs *ResultStore) SaveTempFilesToZip(ctx context.Context, p Pkg, zipName st
 
 func (rs *ResultStore) SaveAnalyzedPackage(ctx context.Context, manager *pkgmanager.PkgManager, pkg Pkg) error {
 	archivePath, err := manager.DownloadArchive(pkg.Name(), pkg.Version(), "")
-	if err != nil {
+	if errors.Is(err, pkgmanager.ErrNoArchiveURL) {
+		slog.WarnContext(ctx, "unable to download archive", "error", err)
+		return nil
+	} else if err != nil {
 		return err
 	}
 
