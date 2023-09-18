@@ -9,7 +9,7 @@ require (
 	github.com/ossf/package-feeds v0.0.0-20211108050428-2ce6d6de33c8
 	github.com/package-url/packageurl-go v0.1.1
 	github.com/texttheater/golang-levenshtein/levenshtein v0.0.0-20200805054039-cae8b0eaed6c
-	go.uber.org/zap v1.25.0
+	go.uber.org/zap v1.26.0
 	go.uber.org/zap/exp v0.1.1-0.20230825131617-98e9c4fe632c
 	gocloud.dev v0.33.1-0.20230808164326-dee61a596af0
 	gocloud.dev/pubsub/kafkapubsub v0.33.0
