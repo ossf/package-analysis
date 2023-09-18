@@ -428,8 +428,8 @@ go.uber.org/multierr v1.11.0/go.mod h1:20+QtiLqy0Nd6FdQB9TLXag12DsQkrbs3htMFfDN8
 go.uber.org/zap v1.10.0/go.mod h1:vwi/ZaCAaUcBkycHslxD9B2zi4UTXhF60s6SWpuDF0Q=
 go.uber.org/zap v1.25.0 h1:4Hvk6GtkucQ790dqmj7l1eEnRdKm3k3ZUrUMS2d5+5c=
 go.uber.org/zap v1.25.0/go.mod h1:JIAUzQIH94IC4fOJQm7gMmBJP5k7wQfdcnYdPoEXJYk=
-go.uber.org/zap/exp v0.1.1-0.20230825131617-98e9c4fe632c h1:GIiV03MzB73EsQ7Hj8et4lHV+98RplF4tLznIqsmeIc=
-go.uber.org/zap/exp v0.1.1-0.20230825131617-98e9c4fe632c/go.mod h1:t0gqAIdh1MfKv9EwN/dLwfZnJxe9ITAZN78HEWPFWDQ=
+go.uber.org/zap/exp v0.2.0 h1:FtGenNNeCATRB3CmB/yEUnjEFeJWpB/pMcy7e2bKPYs=
+go.uber.org/zap/exp v0.2.0/go.mod h1:t0gqAIdh1MfKv9EwN/dLwfZnJxe9ITAZN78HEWPFWDQ=
 gocloud.dev v0.22.0/go.mod h1:z3jKIQ0Es9LALVZFQ3wOvwqAsSLq1R5c/2RdmghDucw=
 gocloud.dev v0.33.1-0.20230808164326-dee61a596af0 h1://FYsd3KnVdEJOVT6JaWvAKvUjvKnDnnovQnuwc33Ec=
 gocloud.dev v0.33.1-0.20230808164326-dee61a596af0/go.mod h1:z6W8qorjrfM09H8t1MDk8KLPj3Xi26aFBzDKAHWIgLU=
