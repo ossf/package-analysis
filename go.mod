@@ -11,8 +11,8 @@ require (
 	github.com/texttheater/golang-levenshtein/levenshtein v0.0.0-20200805054039-cae8b0eaed6c
 	go.uber.org/zap v1.25.0
 	go.uber.org/zap/exp v0.1.1-0.20230825131617-98e9c4fe632c
-	gocloud.dev v0.33.1-0.20230808164326-dee61a596af0
-	gocloud.dev/pubsub/kafkapubsub v0.33.0
+	gocloud.dev v0.34.0
+	gocloud.dev/pubsub/kafkapubsub v0.34.0
 	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53
 	google.golang.org/api v0.138.0
 	google.golang.org/grpc v1.57.0
