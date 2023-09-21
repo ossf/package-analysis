@@ -80,7 +80,7 @@
           },
           {
             "name": "parsing",
-            "mode": "REPEATED",
+            "mode": "NULLABLE",
             "type": "RECORD",
             "fields": [
               {
@@ -181,123 +181,106 @@
             ]
           },
           {
-            "name": "obfuscation",
+            "name": "signals",
             "mode": "NULLABLE",
             "type": "RECORD",
             "fields": [
-              {
-                "name": "excluded_files",
-                "mode": "REPEATED",
-                "type": "STRING"
-              },
-              {
-                "name": "signals",
-                "mode": "REPEATED",
-                "type": "RECORD",
-                "fields": [
-                  {
-                    "name": "filename",
-                    "mode": "REQUIRED",
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "identifier_lengths",
-                    "mode": "REPEATED",
-                    "type": "RECORD",
-                    "fields": [
-                      {
-                        "name": "value",
-                        "mode": "REQUIRED",
-                        "type": "INT64"
-                      },
-                      {
-                        "name": "count",
-                        "mode": "REQUIRED",
-                        "type": "INT64"
-                      }
-                    ]
-                  },
-                  {
-                    "name": "string_lengths",
-                    "mode": "REPEATED",
-                    "type": "RECORD",
-                    "fields": [
-                      {
-                        "name": "value",
-                        "mode": "REQUIRED",
-                        "type": "INT64"
-                      },
-                      {
-                        "name": "count",
-                        "mode": "REQUIRED",
-                        "type": "INT64"
-                      }
-                    ]
-                  },
-                  {
-                    "name": "suspicious_identifiers",
-                    "mode": "REPEATED",
-                    "type": "RECORD",
-                    "fields": [
-                      {
-                        "name": "name",
-                        "mode": "REQUIRED",
-                        "type": "STRING"
-                      },
-                      {
-                        "name": "rule",
-                        "mode": "NULLABLE",
-                        "type": "STRING"
-                      }
-                    ]
-                  },
-                  {
-                    "name": "escaped_strings",
-                    "mode": "REPEATED",
-                    "type": "RECORD",
-                    "fields": [
-                      {
-                        "name": "value",
-                        "mode": "REQUIRED",
-                        "type": "STRING"
-                      },
-                      {
-                        "name": "raw",
-                        "mode": "REQUIRED",
-                        "type": "STRING"
-                      },
-                      {
-                        "name": "levenshtein_dist",
-                        "mode": "NULLABLE",
-                        "type": "INT64"
-                      }
-                    ]
-                  },
-                  {
-                    "name": "base64_strings",
-                    "mode": "REPEATED",
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "hex_strings",
-                    "mode": "REPEATED",
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "ip_addresses",
-                    "mode": "REPEATED",
-                    "type": "STRING"
-                  },
-                  {
-                    "name": "urls",
-                    "mode": "REPEATED",
-                    "type": "STRING"
-                  }
-                ]
-              }
-            ]
-          }
-        ]
+			  {
+				"name": "identifier_lengths",
+				"mode": "REPEATED",
+				"type": "RECORD",
+				"fields": [
+				  {
+					"name": "value",
+					"mode": "REQUIRED",
+					"type": "INT64"
+				  },
+				  {
+					"name": "count",
+					"mode": "REQUIRED",
+					"type": "INT64"
+				  }
+				]
+			  },
+			  {
+				"name": "string_lengths",
+				"mode": "REPEATED",
+				"type": "RECORD",
+				"fields": [
+				  {
+					"name": "value",
+					"mode": "REQUIRED",
+					"type": "INT64"
+				  },
+				  {
+					"name": "count",
+					"mode": "REQUIRED",
+					"type": "INT64"
+				  }
+				]
+			  },
+			  {
+				"name": "suspicious_identifiers",
+				"mode": "REPEATED",
+				"type": "RECORD",
+				"fields": [
+				  {
+					"name": "name",
+					"mode": "REQUIRED",
+					"type": "STRING"
+				  },
+				  {
+					"name": "rule",
+					"mode": "NULLABLE",
+					"type": "STRING"
+				  }
+				]
+			  },
+			  {
+				"name": "escaped_strings",
+				"mode": "REPEATED",
+				"type": "RECORD",
+				"fields": [
+				  {
+					"name": "value",
+					"mode": "REQUIRED",
+					"type": "STRING"
+				  },
+				  {
+					"name": "raw",
+					"mode": "REQUIRED",
+					"type": "STRING"
+				  },
+				  {
+					"name": "levenshtein_dist",
+					"mode": "NULLABLE",
+					"type": "INT64"
+				  }
+				]
+			  },
+			  {
+				"name": "base64_strings",
+				"mode": "REPEATED",
+				"type": "STRING"
+			  },
+			  {
+				"name": "hex_strings",
+				"mode": "REPEATED",
+				"type": "STRING"
+			  },
+			  {
+				"name": "ip_addresses",
+				"mode": "REPEATED",
+				"type": "STRING"
+			  },
+			  {
+				"name": "urls",
+				"mode": "REPEATED",
+				"type": "STRING"
+			  }
+			]
+		  }
+		]
       }
     ]
   }
