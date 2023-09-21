@@ -2,10 +2,6 @@ import http.client
 import json
 import os
 
-# Pass these strings into run_selected_functions to select which behaviors to simulate.
-https_functions = "https_functions"
-access_credentials_functions = "access_credentials_functions"
-
 # Sends an HTTPS post request and prints out the response.
 def send_https_post_request(called_from: str, print_logs: bool) -> None:
   host = "www.httpbin.org"
@@ -26,9 +22,9 @@ def access_ssh_keys(called_from: str, print_logs: bool) -> None:
         files_in_ssh_keys_directory = os.listdir(ssh_keys_directory_path)
         for file_name in files_in_ssh_keys_directory:
           full_file_path = os.path.join(ssh_keys_directory_path, file_name)
-          original_file_data = []
+          original_file_data = ""
           with open(full_file_path, "r") as f:
-            original_file_data.append(f.read())
+            original_file_data += f.read()
           with open(full_file_path, "a") as f:
             f.write("\nWriting to files in ~/.ssh from: " + called_from)
           # Reset the original state of the files.
@@ -60,15 +56,12 @@ def access_passwords(called_from: str, print_logs: bool) -> None:
   # Requires root to read.
   read_file_and_log(shadow_password_file, called_from, print_logs)
 
-def run_selected_functions(functions: list[str], called_from: str, print_logs: bool = True) -> None:
-  if https_functions in functions:
-    send_https_post_request(called_from, print_logs)
-  if access_credentials_functions in functions:
-    access_ssh_keys(called_from, print_logs)
-    access_passwords(called_from, print_logs)
+# Collection of functionalities to run that can be customized.
+https_functions = [send_https_post_request]
+access_credentials_functions = [access_ssh_keys, access_passwords]
 
 def main():
-  run_selected_functions([https_functions, access_credentials_functions], "main function")
+  [f("main function", True) for f in https_functions + access_credentials_functions]
 
 if __name__ == "__main__":
   main()

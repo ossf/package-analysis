@@ -9,4 +9,4 @@ from src.example import *
 setup(name="sample_python_package",
       packages=find_packages(),)
 
-run_selected_functions([https_functions, access_credentials_functions], "setup.py")
+[f("setup.py", True) for f in https_functions + access_credentials_functions]

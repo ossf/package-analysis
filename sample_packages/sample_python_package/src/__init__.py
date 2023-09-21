@@ -5,4 +5,4 @@ sys.path.append(SCRIPT_DIR)
 
 from example import *
 
-run_selected_functions([https_functions, access_credentials_functions], "__init__.py")
+[f("__init__.py", True) for f in https_functions + access_credentials_functions]

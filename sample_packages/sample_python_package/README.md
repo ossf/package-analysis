@@ -6,6 +6,6 @@ To use this package for local analysis, build this package by running
 `python3 -m build` in this directory. The package will be located in the dist/
 folder.
 
-Developers can modify the parameters to the run_selected_functions calls. Note, however, that at this time package analysis does not output logs from all phases.
+Developers can modify which behaviors they want to simulate. (Collection of functionalities listed above main function in example.py) Note, however, that at this time output logging may not be comprehensive.
 
 The same license for the rest of the package analysis project applies to this package.
