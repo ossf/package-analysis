@@ -63,6 +63,9 @@ RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-reco
 # Configure sudo for passwordless execution
 RUN echo "ALL ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
+# Create ssh directory for root
+RUN mkdir /root/.ssh
+
 #
 # PHP setup
 #
