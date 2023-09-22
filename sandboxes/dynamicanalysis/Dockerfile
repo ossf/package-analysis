@@ -39,6 +39,7 @@ RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-reco
 	build-essential \
 	cmake \
 	clang \
+	dnsutils \
 	golang \
 	iproute2 \
 	iputils-ping \
@@ -66,7 +67,7 @@ RUN echo "ALL ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 # PHP setup
 #
 WORKDIR /setup/php
-RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
 	php \
 	php-zip \
 	php-gd
@@ -83,7 +84,8 @@ RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" &&
 #
 # Installs node and npm via the nodejs package, pulled from nodesource.com configured above.
 WORKDIR /setup/node
-RUN apt-get update && apt-get install -y --no-install-recommends nodejs
+RUN apt-get update && apt-get install -y --no-install-recommends \
+	nodejs
 
 COPY bowerrc /app/.bowerrc
 
@@ -92,7 +94,7 @@ COPY bowerrc /app/.bowerrc
 # Python setup
 #
 WORKDIR /setup/python
-RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
 	python3 \
 	python3-pip
 
@@ -105,7 +107,7 @@ RUN pip install --require-hashes --requirement pypi-packages.txt
 # Rubygems setup
 #
 WORKDIR /setup/ruby
-RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
 	ruby \
 	ruby-rubygems
 
@@ -113,7 +115,7 @@ RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-reco
 # Rust setup
 #
 WORKDIR /setup/rust
-RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
 	rust-all
 
 

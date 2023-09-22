@@ -18,6 +18,7 @@ import (
 	_ "gocloud.dev/blob/s3blob"
 
 	"github.com/ossf/package-analysis/internal/pkgmanager"
+	"github.com/ossf/package-analysis/internal/staticanalysis"
 	"github.com/ossf/package-analysis/internal/utils"
 )
 
@@ -142,7 +143,10 @@ func (rs *ResultStore) SaveTempFilesToZip(ctx context.Context, p Pkg, zipName st
 
 func (rs *ResultStore) SaveAnalyzedPackage(ctx context.Context, manager *pkgmanager.PkgManager, pkg Pkg) error {
 	archivePath, err := manager.DownloadArchive(pkg.Name(), pkg.Version(), "")
-	if err != nil {
+	if errors.Is(err, pkgmanager.ErrNoArchiveURL) {
+		slog.WarnContext(ctx, "unable to download archive", "error", err)
+		return nil
+	} else if err != nil {
 		return err
 	}
 
@@ -265,7 +269,7 @@ func (rs *ResultStore) SaveStaticAnalysis(ctx context.Context, p Pkg, results an
 	}
 
 	data := &StaticAnalysisRecord{
-		SchemaVersion: "1",
+		SchemaVersion: staticanalysis.SchemaVersion,
 		Ecosystem:     p.EcosystemName(),
 		Name:          p.Name(),
 		Version:       p.Version(),

@@ -62,7 +62,6 @@ func makeDesiredResult(files ...testFile) *Result {
 				SuspiciousIdentifiers: []signals.SuspiciousIdentifier{},
 				EscapedStrings:        []signals.EscapedString{},
 				Base64Strings:         []string{},
-				EmailAddresses:        []string{},
 				HexStrings:            []string{},
 				IPAddresses:           []string{},
 				URLs:                  []string{},

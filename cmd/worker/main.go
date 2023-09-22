@@ -122,16 +122,10 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	version := msg.Metadata["version"]
 	remotePkgPath := msg.Metadata["package_path"]
 
-	resultsBucketOverride := msg.Metadata["results_bucket_override"]
-	if resultsBucketOverride != "" {
-		resultStores.DynamicAnalysis = resultstore.New(resultsBucketOverride, resultstore.ConstructPath())
-	}
-
 	ctx = log.ContextWithAttrs(ctx, slog.String("version", version))
 
 	slog.InfoContext(ctx, "Got request",
 		"package_path", remotePkgPath,
-		"results_bucket_override", resultsBucketOverride,
 	)
 
 	localPkgPath := ""

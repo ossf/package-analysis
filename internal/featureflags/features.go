@@ -7,7 +7,7 @@ var (
 
 	// SaveAnalyzedPackages downloads the package archive and saves it
 	// to the analyzed packages bucket (if configured) after analysis completes
-	SaveAnalyzedPackages = new("SaveAnalyzedPackages", false)
+	SaveAnalyzedPackages = new("SaveAnalyzedPackages", true)
 
 	// PubSubExtender determines whether the worker uses a real GCP extender
 	// for keeping messages alive during long-running processing.

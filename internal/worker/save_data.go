@@ -82,6 +82,9 @@ func saveExecutionLog(ctx context.Context, pkg *pkgmanager.Pkg, dest *ResultStor
 func SaveStaticAnalysisData(ctx context.Context, pkg *pkgmanager.Pkg, dest *ResultStores, data analysisrun.StaticAnalysisResults) error {
 	if dest.StaticAnalysis == nil {
 		return nil
+	} else if len(data) == 0 {
+		slog.WarnContext(ctx, "static analysis data is empty")
+		return nil
 	}
 
 	if err := dest.StaticAnalysis.SaveStaticAnalysis(ctx, pkg, data, ""); err != nil {
