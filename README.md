@@ -149,7 +149,7 @@ allows caching the sandbox images and supports local developement.
 
 ### Required Dependencies
 
-- Go v1.19
+- Go v1.21
 - Docker
 
 # Contributing
