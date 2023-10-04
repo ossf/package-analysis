@@ -26,7 +26,7 @@ spec:
         - name: OSSF_MALWARE_ANALYSIS_RESULTS
           value: gs://ossf-malware-analysis-results
         - name: OSSF_MALWARE_STATIC_ANALYSIS_RESULTS
-          value: gs://ossf-malware-static-analysis-results
+          value: gs://ossf-malware-static-analysis-results-v1
         - name: OSSF_MALWARE_ANALYSIS_FILE_WRITE_RESULTS
           value: gs://ossf-malware-analysis-file-write-results
         - name: OSSF_MALWARE_ANALYZED_PACKAGES
