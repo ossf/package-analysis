@@ -14,7 +14,7 @@ require (
 	gocloud.dev v0.34.0
 	gocloud.dev/pubsub/kafkapubsub v0.34.0
 	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53
-	google.golang.org/api v0.143.0
+	google.golang.org/api v0.144.0
 	google.golang.org/grpc v1.58.2
 	google.golang.org/protobuf v1.31.0
 )
