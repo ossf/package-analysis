@@ -2,6 +2,9 @@ package worker
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"encoding/pem"
 	"fmt"
 	"log/slog"
 	"os"
@@ -19,6 +22,7 @@ import (
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
+	"golang.org/x/crypto/ssh"
 )
 
 // defaultDynamicAnalysisImage is container image name of the default dynamic analysis sandbox
@@ -120,6 +124,37 @@ func retrieveExecutionLog(ctx context.Context, sb sandbox.Sandbox) (string, erro
 	return string(processedLog), nil
 }
 
+func addSSHKeysToSandbox(sb sandbox.Sandbox, ctx context.Context) error {
+	generatedPrivateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	generatedPublicKey := generatedPrivateKey.PublicKey
+	if err != nil {
+		return err
+	}
+
+	os.Mkdir("temp_ssh_dir", 0750)
+	privateKeyFile, err := os.Create("temp_ssh_dir/id_rsa")
+	if err != nil {
+		return err
+	}
+	defer privateKeyFile.Close()
+	pubKeyFile, err := os.Create("temp_ssh_dir/id_rsa.pub")
+	if err != nil {
+		return err
+	}
+	defer pubKeyFile.Close()
+
+	openSSHPrivateKeyBlock, err := ssh.MarshalPrivateKey(generatedPrivateKey, "")
+	if err = pem.Encode(privateKeyFile, openSSHPrivateKeyBlock); err != nil {
+		return err
+	}
+	publicKey, err := ssh.NewPublicKey(&generatedPublicKey)
+	if err != nil {
+		return err
+	}
+	pubKeyFile.Write(ssh.MarshalAuthorizedKey(publicKey))
+	return sb.CopyIntoSandbox(ctx, "temp_ssh_dir/.", "/root/.ssh")
+}
+
 /*
 RunDynamicAnalysis runs dynamic analysis on the given package across the phases
 valid in the package ecosystem (e.g. import, install), in a sandbox created
@@ -160,6 +195,10 @@ func RunDynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandb
 	// initialise sandbox before copy/run
 	if err := sb.Init(ctx); err != nil {
 		LogDynamicAnalysisError(ctx, pkg, "", err)
+		return DynamicAnalysisResult{}, err
+	}
+
+	if err := addSSHKeysToSandbox(sb, ctx); err != nil {
 		return DynamicAnalysisResult{}, err
 	}
 
