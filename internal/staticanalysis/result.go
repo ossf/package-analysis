@@ -7,17 +7,11 @@ import (
 	"github.com/ossf/package-analysis/internal/staticanalysis/basicdata"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"github.com/ossf/package-analysis/internal/staticanalysis/signals"
+	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 )
 
-// SchemaVersion identifies the data format version of the results output by static
-// analysis.
-const SchemaVersion = "1.0"
-
-/*
-Result (staticanalysis.Result) is the top-level data structure that stores all data
-produced by static analysis performed on a package / artifact. Each element
-corresponds to an individual static analysis task (see Task).
-*/
+// Result (staticanalysis.Result) is the top-level internal data structure
+// that stores all data produced by static analysis performed on a package artifact.
 type Result struct {
 	Files []SingleResult `json:"files"`
 }
@@ -30,13 +24,11 @@ sent across the sandbox boundary.
 */
 type SingleResult struct {
 	// Filename is the relative path to the file within the package
-	Filename string `json:"filename"`
+	Filename string
 
-	// NOTE: the JSON names below should match the values in task.go
-
-	Basic   *basicdata.FileData   `json:"basic,omitempty"`
-	Parsing *parsing.SingleResult `json:"parsing,omitempty"`
-	Signals *signals.FileSignals  `json:"signals,omitempty"`
+	Basic   *basicdata.FileData
+	Parsing *parsing.SingleResult
+	Signals *signals.FileSignals
 }
 
 func (r SingleResult) String() string {
@@ -48,4 +40,37 @@ func (r SingleResult) String() string {
 	}
 
 	return strings.Join(parts, "\n\n")
+}
+
+// ProduceSerialisableResult converts the data in this Result object to the public API struct form
+// analysisrun.StaticAnalysisResults.
+// TODO unit test
+func (r *Result) ProduceSerialisableResult() *analysisrun.StaticAnalysisResults {
+	results := &analysisrun.StaticAnalysisResults{}
+
+	for _, f := range r.Files {
+		fr := analysisrun.StaticAnalysisFileResult{
+			Filename: f.Filename,
+		}
+		if f.Basic != nil {
+			fr.DetectedType = f.Basic.DetectedType
+			fr.Size = f.Basic.Size
+			fr.Sha256 = f.Basic.SHA256
+			fr.LineLengths = f.Basic.LineLengths
+		}
+		if f.Parsing != nil && f.Parsing.Language == parsing.JavaScript {
+			fr.Js = analysisrun.StaticAnalysisJsData{
+				Identifiers:    f.Parsing.Identifiers,
+				StringLiterals: f.Parsing.StringLiterals,
+				IntLiterals:    f.Parsing.IntLiterals,
+				FloatLiterals:  f.Parsing.FloatLiterals,
+				Comments:       f.Parsing.Comments,
+			}
+		}
+		if f.Signals != nil {
+
+		}
+	}
+
+	return results
 }

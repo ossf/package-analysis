@@ -13,32 +13,32 @@ type FileSignals struct {
 	// and identifiers in the file have a given length. The absence of a count
 	// for a particular lengths means that there were no symbols of that length
 	// in the file.
-	IdentifierLengths valuecounts.ValueCounts `json:"identifier_lengths"`
-	StringLengths     valuecounts.ValueCounts `json:"string_lengths"`
+	IdentifierLengths valuecounts.ValueCounts
+	StringLengths     valuecounts.ValueCounts
 
 	// SuspiciousIdentifiers holds identifiers that are deemed 'suspicious' (i.e.
 	// indicative of obfuscation) according to certain rules. Each entry contains
 	// the identifier name and the name of the first rule it was matched against.
-	SuspiciousIdentifiers []SuspiciousIdentifier `json:"suspicious_identifiers"`
+	SuspiciousIdentifiers []SuspiciousIdentifier
 
 	// EscapedStrings contain string literals that contain large amount of escape
 	// characters, which may indicate obfuscation.
-	EscapedStrings []EscapedString `json:"escaped_strings"`
+	EscapedStrings []EscapedString
 
 	// Base64Strings holds a list of (substrings of) string literals found in the
 	// file that match a base64 regex pattern. This patten has a minimum matching
 	// length in order to reduce the number of false positives.
-	Base64Strings []string `json:"base64_strings"`
+	Base64Strings []string
 
 	// HexStrings holds a list of (substrings of) string literals found in the
 	// file that contain long (>8 digits) hexadecimal digit sequences.
-	HexStrings []string `json:"hex_strings"`
+	HexStrings []string
 
 	// IPAddresses contains any IP addresses found in string literals
-	IPAddresses []string `json:"ip_addresses"`
+	IPAddresses []string
 
 	// URLs contains any urls (http or https) found in string literals
-	URLs []string `json:"urls"`
+	URLs []string
 }
 
 func (s FileSignals) String() string {

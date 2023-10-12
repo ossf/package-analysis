@@ -1,8 +1,6 @@
 package analysisrun
 
 import (
-	"encoding/json"
-
 	"github.com/ossf/package-analysis/internal/analysis"
 )
 
@@ -13,8 +11,6 @@ type (
 	DynamicAnalysisExecutionLog       string
 )
 
-// TODO rename to DynamicAnalysisData
-
 type DynamicAnalysisResults struct {
 	StraceSummary     DynamicAnalysisStraceSummary
 	FileWritesSummary DynamicAnalysisFileWritesSummary
@@ -22,8 +18,6 @@ type DynamicAnalysisResults struct {
 	FileWriteBufferIds DynamicAnalysisFileWriteBufferIds
 	ExecutionLog       DynamicAnalysisExecutionLog
 }
-
-type StaticAnalysisResults = json.RawMessage
 
 type StraceSummary struct {
 	Status   analysis.Status

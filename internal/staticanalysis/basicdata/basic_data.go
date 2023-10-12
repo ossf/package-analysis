@@ -16,17 +16,17 @@ import (
 // without parsing it using a programming language parser.
 type FileData struct {
 	// DetectedType records the output of the `file` command run on that file.
-	DetectedType string `json:"detected_type"`
+	DetectedType string
 
 	// Size records the size of the file (as reported by the filesystem).
-	Size int64 `json:"size"`
+	Size int64
 
 	// SHA256 records the SHA256 hashsum of the file.
-	SHA256 string `json:"sha256"`
+	SHA256 string
 
 	// LineLengths records the counts of line lengths in the file,
 	// where a line is defined as all characters up to a newline.
-	LineLengths valuecounts.ValueCounts `json:"line_lengths"`
+	LineLengths valuecounts.ValueCounts
 }
 
 func (bd FileData) String() string {
