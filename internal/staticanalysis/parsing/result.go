@@ -7,7 +7,7 @@ import (
 	"github.com/ossf/package-analysis/pkg/api/staticanalysis/token"
 )
 
-// SingleResult holds processed information about source code tokens
+// SingleResult holds processed information about source code token
 // found in a single file by a single language parser
 type SingleResult struct {
 	Language       Language           `json:"language"`
