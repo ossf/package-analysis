@@ -14,7 +14,7 @@ import (
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/internal/staticanalysis"
 	"github.com/ossf/package-analysis/internal/utils"
-	"github.com/ossf/package-analysis/pkg/api/analysisrun"
+	api "github.com/ossf/package-analysis/pkg/api/staticanalysis"
 )
 
 // defaultStaticAnalysisImage is the default Docker image for the static analysis sandbox.
@@ -33,7 +33,7 @@ const resultsJSONFile = "/results.json"
 //
 // To run all available static analyses, pass staticanalysis.All as tasks.
 // Use sbOpts to customise sandbox behaviour.
-func RunStaticAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandbox.Option, tasks ...staticanalysis.Task) (analysisrun.StaticAnalysisData, analysis.Status, error) {
+func RunStaticAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandbox.Option, tasks ...staticanalysis.Task) (api.SandboxData, analysis.Status, error) {
 	ctx = log.ContextWithAttrs(ctx, slog.String("mode", "static"))
 
 	slog.InfoContext(ctx, "Running static analysis", "tasks", tasks)

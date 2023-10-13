@@ -5,8 +5,9 @@ import (
 	"testing"
 
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
-	"github.com/ossf/package-analysis/internal/staticanalysis/token"
-	"github.com/ossf/package-analysis/internal/utils/valuecounts"
+	"github.com/ossf/package-analysis/pkg/api/staticanalysis"
+	"github.com/ossf/package-analysis/pkg/api/staticanalysis/token"
+	"github.com/ossf/package-analysis/pkg/valuecounts"
 )
 
 type fileSignalsTestCase struct {
@@ -22,8 +23,8 @@ var fileSignalsTestCases = []fileSignalsTestCase{
 		expectedSignals: FileSignals{
 			StringLengths:         valuecounts.New(),
 			IdentifierLengths:     valuecounts.New(),
-			SuspiciousIdentifiers: []SuspiciousIdentifier{},
-			EscapedStrings:        []EscapedString{},
+			SuspiciousIdentifiers: []staticanalysis.SuspiciousIdentifier{},
+			EscapedStrings:        []staticanalysis.EscapedString{},
 			Base64Strings:         []string{},
 			HexStrings:            []string{},
 			IPAddresses:           []string{},
@@ -45,8 +46,8 @@ var fileSignalsTestCases = []fileSignalsTestCase{
 		expectedSignals: FileSignals{
 			StringLengths:         valuecounts.Count([]int{5}),
 			IdentifierLengths:     valuecounts.Count([]int{1}),
-			SuspiciousIdentifiers: []SuspiciousIdentifier{{Name: "a", Rule: "single"}},
-			EscapedStrings:        []EscapedString{},
+			SuspiciousIdentifiers: []staticanalysis.SuspiciousIdentifier{{Name: "a", Rule: "single"}},
+			EscapedStrings:        []staticanalysis.EscapedString{},
 			Base64Strings:         []string{},
 			HexStrings:            []string{},
 			IPAddresses:           []string{},
@@ -76,12 +77,12 @@ var fileSignalsTestCases = []fileSignalsTestCase{
 		expectedSignals: FileSignals{
 			StringLengths:     valuecounts.Count([]int{5, 5}),
 			IdentifierLengths: valuecounts.Count([]int{4, 1, 1, 1}),
-			SuspiciousIdentifiers: []SuspiciousIdentifier{
+			SuspiciousIdentifiers: []staticanalysis.SuspiciousIdentifier{
 				{Name: "a", Rule: "single"},
 				{Name: "b", Rule: "single"},
 				{Name: "c", Rule: "single"},
 			},
-			EscapedStrings: []EscapedString{},
+			EscapedStrings: []staticanalysis.EscapedString{},
 			Base64Strings:  []string{},
 			HexStrings:     []string{},
 			IPAddresses:    []string{},
@@ -110,12 +111,12 @@ var fileSignalsTestCases = []fileSignalsTestCase{
 		expectedSignals: FileSignals{
 			IdentifierLengths: valuecounts.Count([]int{11, 1, 8}),
 			StringLengths:     valuecounts.Count([]int{14, 29, 16, 7, 20, 13}),
-			SuspiciousIdentifiers: []SuspiciousIdentifier{
+			SuspiciousIdentifiers: []staticanalysis.SuspiciousIdentifier{
 				{Name: "_0x12414124", Rule: "hex"},
 				{Name: "a", Rule: "single"},
 				{Name: "d1912931", Rule: "numeric"},
 			},
-			EscapedStrings: []EscapedString{},
+			EscapedStrings: []staticanalysis.EscapedString{},
 			Base64Strings:  []string{"aGVsbG8gd29ybGQK"},
 			HexStrings:     []string{"21323492394"},
 			IPAddresses:    []string{"8.8.8.8", "e3fc:234a:2341::abcd"},
@@ -135,12 +136,12 @@ var fileSignalsTestCases = []fileSignalsTestCase{
 		expectedSignals: FileSignals{
 			StringLengths:         valuecounts.Count([]int{5, 5, 5, 5}),
 			IdentifierLengths:     valuecounts.New(),
-			SuspiciousIdentifiers: []SuspiciousIdentifier{},
+			SuspiciousIdentifiers: []staticanalysis.SuspiciousIdentifier{},
 			Base64Strings:         []string{},
 			HexStrings:            []string{},
 			IPAddresses:           []string{},
 			URLs:                  []string{},
-			EscapedStrings: []EscapedString{
+			EscapedStrings: []staticanalysis.EscapedString{
 				{Value: "@ABCD", Raw: "\\100\\101\\102\\103\\104", LevenshteinDist: 25},
 				{Value: "@ABCD", Raw: "\\x40\\x41\\x42\\x43\\x44", LevenshteinDist: 25},
 				{Value: "@ABCD", Raw: "\\u0040\\u0041\\u0042\\u0043\\u0044", LevenshteinDist: 35},

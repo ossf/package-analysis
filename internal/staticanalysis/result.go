@@ -7,7 +7,7 @@ import (
 	"github.com/ossf/package-analysis/internal/staticanalysis/basicdata"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"github.com/ossf/package-analysis/internal/staticanalysis/signals"
-	"github.com/ossf/package-analysis/pkg/api/analysisrun"
+	"github.com/ossf/package-analysis/pkg/api/staticanalysis"
 )
 
 // Result (staticanalysis.Result) is the top-level internal data structure
@@ -42,24 +42,23 @@ func (r SingleResult) String() string {
 	return strings.Join(parts, "\n\n")
 }
 
-// ProduceSerialisableResult converts the data in this Result object to the public API struct form
-// analysisrun.StaticAnalysisResults.
-// TODO unit test
-func (r *Result) ProduceSerialisableResult() *analysisrun.StaticAnalysisResults {
-	results := &analysisrun.StaticAnalysisResults{}
+// ProduceSerializableResult converts the data in this Result object into the
+// public staticanalysis.Results format defined in pkg/api/staticanalysis.
+func (r *Result) ProduceSerializableResult() *staticanalysis.Results {
+	results := &staticanalysis.Results{}
 
 	for _, f := range r.Files {
-		fr := analysisrun.StaticAnalysisFileResult{
+		fr := staticanalysis.FileResult{
 			Filename: f.Filename,
 		}
 		if f.Basic != nil {
 			fr.DetectedType = f.Basic.DetectedType
 			fr.Size = f.Basic.Size
-			fr.Sha256 = f.Basic.SHA256
+			fr.SHA256 = f.Basic.SHA256
 			fr.LineLengths = f.Basic.LineLengths
 		}
 		if f.Parsing != nil && f.Parsing.Language == parsing.JavaScript {
-			fr.Js = analysisrun.StaticAnalysisJsData{
+			fr.Js = staticanalysis.JsData{
 				Identifiers:    f.Parsing.Identifiers,
 				StringLiterals: f.Parsing.StringLiterals,
 				IntLiterals:    f.Parsing.IntLiterals,
@@ -68,8 +67,17 @@ func (r *Result) ProduceSerialisableResult() *analysisrun.StaticAnalysisResults 
 			}
 		}
 		if f.Signals != nil {
-
+			fr.IdentifierLengths = f.Signals.IdentifierLengths
+			fr.StringLengths = f.Signals.StringLengths
+			fr.Base64Strings = f.Signals.Base64Strings
+			fr.HexStrings = f.Signals.HexStrings
+			fr.IPAddresses = f.Signals.IPAddresses
+			fr.URLs = f.Signals.URLs
+			fr.EscapedStrings = f.Signals.EscapedStrings
+			fr.SuspiciousIdentifiers = f.Signals.SuspiciousIdentifiers
 		}
+
+		results.Files = append(results.Files, fr)
 	}
 
 	return results

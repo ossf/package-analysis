@@ -8,7 +8,7 @@ import (
 
 	"github.com/ossf/package-analysis/internal/staticanalysis/externalcmd"
 	"github.com/ossf/package-analysis/internal/staticanalysis/signals/stringentropy"
-	"github.com/ossf/package-analysis/internal/staticanalysis/token"
+	"github.com/ossf/package-analysis/pkg/api/staticanalysis/token"
 )
 
 func processJsData(fileData singleParseData) SingleResult {
@@ -77,7 +77,7 @@ func computeCharacterDistributions(parseResults map[string]SingleResult) (map[ru
 /*
 Analyze (parsing.Analyze) parses the specified list of files using all supported parsers
 and returns a map of filename to slice of parsing.SingleResult. Each slice holds information
-about source code tokens found for that file for each supported langauge parser.
+about source code token found for that file for each supported langauge parser.
 
 Currently, the only supported language is JavaScript, however more language parsers will
 be added in the future.

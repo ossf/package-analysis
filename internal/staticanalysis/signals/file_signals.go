@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ossf/package-analysis/internal/utils/valuecounts"
+	"github.com/ossf/package-analysis/pkg/api/staticanalysis"
+	"github.com/ossf/package-analysis/pkg/valuecounts"
 )
 
 // FileSignals holds information related to the presence of obfuscated code in a single file.
@@ -19,11 +20,11 @@ type FileSignals struct {
 	// SuspiciousIdentifiers holds identifiers that are deemed 'suspicious' (i.e.
 	// indicative of obfuscation) according to certain rules. Each entry contains
 	// the identifier name and the name of the first rule it was matched against.
-	SuspiciousIdentifiers []SuspiciousIdentifier
+	SuspiciousIdentifiers []staticanalysis.SuspiciousIdentifier
 
 	// EscapedStrings contain string literals that contain large amount of escape
 	// characters, which may indicate obfuscation.
-	EscapedStrings []EscapedString
+	EscapedStrings []staticanalysis.EscapedString
 
 	// Base64Strings holds a list of (substrings of) string literals found in the
 	// file that match a base64 regex pattern. This patten has a minimum matching
@@ -50,23 +51,8 @@ func (s FileSignals) String() string {
 		fmt.Sprintf("escaped strings: %v", s.EscapedStrings),
 		fmt.Sprintf("potential base64 strings: %v", s.Base64Strings),
 		fmt.Sprintf("hex strings: %v", s.HexStrings),
-		fmt.Sprintf("hex strings: %v", s.HexStrings),
 		fmt.Sprintf("IP addresses: %v", s.IPAddresses),
 		fmt.Sprintf("URLs: %v", s.URLs),
 	}
 	return strings.Join(parts, "\n")
-}
-
-type EscapedString struct {
-	Value           string `json:"value"`
-	Raw             string `json:"raw"`
-	LevenshteinDist int    `json:"levenshtein_dist"`
-}
-
-// SuspiciousIdentifier is an identifier that matches a specific rule intended
-// to pick out (potentially) suspicious names. Name stores the actual identifier,
-// and Rule holds the rule that the identifier matched against.
-type SuspiciousIdentifier struct {
-	Name string `json:"name"`
-	Rule string `json:"rule"`
 }

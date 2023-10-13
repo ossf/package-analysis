@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 	"github.com/ossf/package-analysis/internal/utils"
+	"github.com/ossf/package-analysis/pkg/api/staticanalysis/token"
 )
 
 // Language represents a programming language used for parsing.
@@ -22,7 +22,7 @@ func SupportedLanguages() []Language {
 	return allLanguages[:]
 }
 
-// tokenType denotes types of source code tokens collected during parsing (see token package).
+// tokenType denotes types of source code token collected during parsing (see token package).
 type tokenType string
 
 // statusType denotes a type of status reported by the parser about the parsing process.

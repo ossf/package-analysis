@@ -13,8 +13,9 @@ import (
 	"github.com/ossf/package-analysis/internal/staticanalysis/basicdata"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"github.com/ossf/package-analysis/internal/staticanalysis/signals"
-	"github.com/ossf/package-analysis/internal/staticanalysis/token"
-	"github.com/ossf/package-analysis/internal/utils/valuecounts"
+	"github.com/ossf/package-analysis/pkg/api/staticanalysis"
+	"github.com/ossf/package-analysis/pkg/api/staticanalysis/token"
+	"github.com/ossf/package-analysis/pkg/valuecounts"
 )
 
 type testFile struct {
@@ -59,8 +60,8 @@ func makeDesiredResult(files ...testFile) *Result {
 			Signals: &signals.FileSignals{
 				IdentifierLengths:     valuecounts.New(),
 				StringLengths:         valuecounts.Count([]int{2}),
-				SuspiciousIdentifiers: []signals.SuspiciousIdentifier{},
-				EscapedStrings:        []signals.EscapedString{},
+				SuspiciousIdentifiers: []staticanalysis.SuspiciousIdentifier{},
+				EscapedStrings:        []staticanalysis.EscapedString{},
 				Base64Strings:         []string{},
 				HexStrings:            []string{},
 				IPAddresses:           []string{},

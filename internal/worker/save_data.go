@@ -12,6 +12,7 @@ import (
 	"github.com/ossf/package-analysis/internal/resultstore"
 	"github.com/ossf/package-analysis/internal/staticanalysis"
 	"github.com/ossf/package-analysis/pkg/api/analysisrun"
+	staticapi "github.com/ossf/package-analysis/pkg/api/staticanalysis"
 )
 
 // ResultStores holds ResultStore instances for saving each kind of analysis data.
@@ -81,7 +82,7 @@ func saveExecutionLog(ctx context.Context, pkg *pkgmanager.Pkg, dest *ResultStor
 }
 
 // SaveStaticAnalysisData saves the data from static analysis to the corresponding bucket in the ResultStores
-func SaveStaticAnalysisData(ctx context.Context, pkg *pkgmanager.Pkg, dest *ResultStores, data analysisrun.StaticAnalysisData) error {
+func SaveStaticAnalysisData(ctx context.Context, pkg *pkgmanager.Pkg, dest *ResultStores, data staticapi.SandboxData) error {
 	if dest.StaticAnalysis == nil {
 		return nil
 	} else if len(data) == 0 {
@@ -99,8 +100,8 @@ func SaveStaticAnalysisData(ctx context.Context, pkg *pkgmanager.Pkg, dest *Resu
 		Name:      pkg.Name(),
 		Version:   pkg.Version(),
 	}
-	serialisableResult := internalResult.ProduceSerialisableResult()
-	record := serialisableResult.CreateRecord(key)
+	serializableResult := internalResult.ProduceSerializableResult()
+	record := staticapi.CreateRecord(serializableResult, key)
 
 	if err := dest.StaticAnalysis.SaveStaticAnalysis(ctx, pkg, record, ""); err != nil {
 		return fmt.Errorf("failed to save static analysis results to %s: %w", dest.StaticAnalysis, err)

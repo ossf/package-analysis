@@ -9,7 +9,7 @@ import (
 
 	"github.com/ossf/package-analysis/internal/staticanalysis/linelengths"
 	"github.com/ossf/package-analysis/internal/utils"
-	"github.com/ossf/package-analysis/internal/utils/valuecounts"
+	"github.com/ossf/package-analysis/pkg/valuecounts"
 )
 
 // FileData records various information about a file that can be determined

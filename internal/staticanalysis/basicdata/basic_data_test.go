@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/ossf/package-analysis/internal/utils"
-	"github.com/ossf/package-analysis/internal/utils/valuecounts"
+	"github.com/ossf/package-analysis/pkg/valuecounts"
 )
 
 type testFile struct {
