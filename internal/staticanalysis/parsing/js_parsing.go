@@ -104,7 +104,7 @@ func (pd parseDataJSON) process(ctx context.Context) singleParseData {
 		ValidInput: true,
 	}
 
-	// process source code token
+	// process source code tokens
 	for _, t := range pd.Tokens {
 		switch t.TokenType {
 		case identifier:

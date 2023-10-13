@@ -22,7 +22,7 @@ func SupportedLanguages() []Language {
 	return allLanguages[:]
 }
 
-// tokenType denotes types of source code token collected during parsing (see token package).
+// tokenType denotes types of source code tokens collected during parsing (see token package).
 type tokenType string
 
 // statusType denotes a type of status reported by the parser about the parsing process.
