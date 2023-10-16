@@ -15,8 +15,8 @@ import (
 // FileData records various information about a file that can be determined
 // without parsing it using a programming language parser.
 type FileData struct {
-	// Description records the output of the `file` command run on that file.
-	Description string `json:"description"`
+	// DetectedType records the output of the `file` command run on that file.
+	DetectedType string `json:"detected_type"`
 
 	// Size records the size of the file (as reported by the filesystem).
 	Size int64 `json:"size"`
@@ -31,7 +31,7 @@ type FileData struct {
 
 func (bd FileData) String() string {
 	parts := []string{
-		fmt.Sprintf("description: %v\n", bd.Description),
+		fmt.Sprintf("detected type: %v\n", bd.DetectedType),
 		fmt.Sprintf("size: %v\n", bd.Size),
 		fmt.Sprintf("sha256: %v\n", bd.SHA256),
 		fmt.Sprintf("line lengths: %v\n", bd.LineLengths),
@@ -50,24 +50,24 @@ func Analyze(ctx context.Context, paths []string, pathInArchive func(absolutePat
 		return []FileData{}, nil
 	}
 
-	descriptions, err := describeFiles(ctx, paths)
-	haveDescriptions := true
+	detectedTypes, err := detectFileTypes(ctx, paths)
+	haveDetectedTypes := true
 	if err != nil {
-		slog.ErrorContext(ctx, "failed to get file descriptions", "error", err)
-		haveDescriptions = false
+		slog.ErrorContext(ctx, "failed to run file type detection", "error", err)
+		haveDetectedTypes = false
 	}
-	if len(descriptions) != len(paths) {
-		slog.ErrorContext(ctx, fmt.Sprintf("describeFiles() returned %d results, expecting %d", len(descriptions), len(paths)))
-		haveDescriptions = false
+	if len(detectedTypes) != len(paths) {
+		slog.ErrorContext(ctx, fmt.Sprintf("detectFileTypes() returned %d results, expecting %d", len(detectedTypes), len(paths)))
+		haveDetectedTypes = false
 	}
 
 	var result []FileData
 
 	for index, filePath := range paths {
 		archivePath := pathInArchive(filePath)
-		description := ""
-		if haveDescriptions {
-			description = descriptions[index]
+		detectedType := ""
+		if haveDetectedTypes {
+			detectedType = detectedTypes[index]
 		}
 
 		var fileSize int64
@@ -93,10 +93,10 @@ func Analyze(ctx context.Context, paths []string, pathInArchive func(absolutePat
 		}
 
 		result = append(result, FileData{
-			Description: description,
-			Size:        fileSize,
-			SHA256:      sha265Sum,
-			LineLengths: lineLengths,
+			DetectedType: detectedType,
+			Size:         fileSize,
+			SHA256:       sha265Sum,
+			LineLengths:  lineLengths,
 		})
 	}
 
