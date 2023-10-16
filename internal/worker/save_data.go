@@ -92,7 +92,7 @@ func SaveStaticAnalysisData(ctx context.Context, pkg *pkgmanager.Pkg, dest *Resu
 
 	var internalResult staticanalysis.Result
 	if err := json.Unmarshal(data, &internalResult); err != nil {
-		return fmt.Errorf("failed to unmarshal data from sandbox into staticanalysis.Result: %w", err)
+		return fmt.Errorf("failed to unmarshal JSON data from sandbox into staticanalysis.Result: %w", err)
 	}
 
 	key := analysisrun.Key{
