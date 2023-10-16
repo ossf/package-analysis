@@ -52,7 +52,7 @@ type parsedIdentifier struct {
 }
 
 func (i parsedIdentifier) String() string {
-	return fmt.Sprintf("%s %s [pos %d:%d]", i.Type, i.Name, i.Pos.Row(), i.Pos.Col())
+	return fmt.Sprintf("%s %s [pos %d:%d]", i.Type.String(), i.Name, i.Pos.Row(), i.Pos.Col())
 }
 
 type parsedLiteral[T any] struct {
