@@ -152,19 +152,19 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		return err
 	}
 
-	dynamicSandboxOpts := append(worker.DynamicSandboxOptions(), sandboxOpts...)
 	staticSandboxOpts := append(worker.StaticSandboxOptions(), sandboxOpts...)
+	dynamicSandboxOpts := append(worker.DynamicSandboxOptions(), sandboxOpts...)
 
 	// run both dynamic and static analysis regardless of error status of either
 	// and return combined error(s) afterwards, if applicable
-	result, dynamicAnalysisErr := worker.RunDynamicAnalysis(ctx, pkg, dynamicSandboxOpts, "")
-	if dynamicAnalysisErr == nil {
-		dynamicAnalysisErr = worker.SaveDynamicAnalysisData(ctx, pkg, resultStores, result.AnalysisData)
-	}
-
 	staticResults, _, staticAnalysisErr := worker.RunStaticAnalysis(ctx, pkg, staticSandboxOpts, staticanalysis.All)
 	if staticAnalysisErr == nil {
 		staticAnalysisErr = worker.SaveStaticAnalysisData(ctx, pkg, resultStores, staticResults)
+	}
+
+	result, dynamicAnalysisErr := worker.RunDynamicAnalysis(ctx, pkg, dynamicSandboxOpts, "")
+	if dynamicAnalysisErr == nil {
+		dynamicAnalysisErr = worker.SaveDynamicAnalysisData(ctx, pkg, resultStores, result.AnalysisData)
 	}
 
 	resultStores.AnalyzedPackageSaved = false
