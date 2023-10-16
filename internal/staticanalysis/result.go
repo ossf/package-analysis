@@ -55,10 +55,13 @@ func (r *Result) ToAPIResults() *staticanalysis.Results {
 			fr.DetectedType = f.Basic.DetectedType
 			fr.Size = f.Basic.Size
 			fr.SHA256 = f.Basic.SHA256
-			fr.LineLengths = f.Basic.LineLengths
+			// only populate value counts if nonempty
+			if f.Basic.LineLengths.Len() > 0 {
+				fr.LineLengths = &f.Basic.LineLengths
+			}
 		}
 		if f.Parsing != nil && f.Parsing.Language == parsing.JavaScript {
-			fr.Js = staticanalysis.JsData{
+			fr.Js = &staticanalysis.JsData{
 				Identifiers:    f.Parsing.Identifiers,
 				StringLiterals: f.Parsing.StringLiterals,
 				IntLiterals:    f.Parsing.IntLiterals,
@@ -67,8 +70,13 @@ func (r *Result) ToAPIResults() *staticanalysis.Results {
 			}
 		}
 		if f.Signals != nil {
-			fr.IdentifierLengths = f.Signals.IdentifierLengths
-			fr.StringLengths = f.Signals.StringLengths
+			// only populate value counts if nonempty
+			if f.Signals.IdentifierLengths.Len() > 0 {
+				fr.IdentifierLengths = &f.Signals.IdentifierLengths
+			}
+			if f.Signals.StringLengths.Len() > 0 {
+				fr.StringLengths = &f.Signals.StringLengths
+			}
 			fr.Base64Strings = f.Signals.Base64Strings
 			fr.HexStrings = f.Signals.HexStrings
 			fr.IPAddresses = f.Signals.IPAddresses

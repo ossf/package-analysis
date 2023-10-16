@@ -50,6 +50,13 @@ func Count(data []int) ValueCounts {
 	return vc
 }
 
+// Ptr returns a pointer to this ValueCounts. This function is useful
+// constructing a ValueCounts using one of the above functions and the
+// result needs to be assigned directly to a pointer variable.
+func (vc ValueCounts) Ptr() *ValueCounts {
+	return &vc
+}
+
 // Len returns the number of values stored by this ValueCounts.
 // It is equivalent to the length of the slice returned by ToPairs()
 func (vc ValueCounts) Len() int {

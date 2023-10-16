@@ -55,7 +55,7 @@ func TestResult_ToAPIResults(t *testing.T) {
 					DetectedType: "plain text",
 					Size:         10,
 					SHA256:       "aabbbcc",
-					LineLengths:  valuecounts.Count([]int{1, 2, 3, 4}),
+					LineLengths:  valuecounts.Count([]int{1, 2, 3, 4}).Ptr(),
 				},
 			}},
 		},
@@ -153,8 +153,8 @@ func TestResult_ToAPIResults(t *testing.T) {
 					DetectedType: "javascript source file",
 					Size:         100,
 					SHA256:       "abc123def456",
-					LineLengths:  valuecounts.Count([]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}),
-					Js: staticanalysis.JsData{
+					LineLengths:  valuecounts.Count([]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}).Ptr(),
+					Js: &staticanalysis.JsData{
 						Identifiers: []token.Identifier{
 							{
 								Name:    "myvar",
@@ -207,8 +207,8 @@ func TestResult_ToAPIResults(t *testing.T) {
 							},
 						},
 					},
-					IdentifierLengths: valuecounts.Count([]int{5}),
-					StringLengths:     valuecounts.Count([]int{5}),
+					IdentifierLengths: valuecounts.Count([]int{5}).Ptr(),
+					StringLengths:     valuecounts.Count([]int{5}).Ptr(),
 					SuspiciousIdentifiers: []staticanalysis.SuspiciousIdentifier{
 						{
 							Name: "a",
