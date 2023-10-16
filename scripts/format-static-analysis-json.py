@@ -14,6 +14,17 @@ import sys
 
 # Changes JSON structs that are formatted like:
 #     {
+#         "key1": ...
+#     }
+# into ones like
+#     { "key1": ... }
+struct_single_key_substitution = (
+    re.compile('{$\\n^\\s*"(.+)": ?(.*)$\\n^\\s*}', re.MULTILINE),
+    '{ "\\1": \\2 }'
+)
+
+# Changes JSON structs that are formatted like:
+#     {
 #         "key1": ...,
 #         "key2": ...
 #     }
@@ -37,7 +48,7 @@ struct_triple_substitution = (
     '{ "\\1": \\2, "\\3": \\4, "\\5": \\6 }'
 )
 
-all_substitutions = (struct_pair_substitution, struct_triple_substitution)
+all_substitutions = (struct_single_key_substitution, struct_pair_substitution, struct_triple_substitution)
 
 
 # Pretty prints a JSON object with newlines and indentation, then applies
