@@ -108,12 +108,12 @@ func (pd parseDataJSON) process(ctx context.Context) singleParseData {
 	for _, t := range pd.Tokens {
 		switch t.TokenType {
 		case identifier:
-			symbolSubtype := token.CheckIdentifierType(t.TokenSubType)
+			symbolSubtype := token.ParseIdentifierType(t.TokenSubType)
 			if symbolSubtype == token.Other || symbolSubtype == token.Unknown {
 				break
 			}
 			processed.Identifiers = append(processed.Identifiers, parsedIdentifier{
-				Type: token.CheckIdentifierType(t.TokenSubType),
+				Type: token.ParseIdentifierType(t.TokenSubType),
 				Name: t.Data.(string),
 				Pos:  t.Pos,
 			})

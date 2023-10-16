@@ -378,8 +378,8 @@ a = w w;
 		want: singleParseData{
 			ValidInput: true,
 			Identifiers: []parsedIdentifier{
-				{"Member", "log", token.Position{1, 8}},
-				{"Member", "log", token.Position{2, 8}},
+				{token.Member, "log", token.Position{1, 8}},
+				{token.Member, "log", token.Position{2, 8}},
 			},
 			Literals: []parsedLiteral[any]{
 				{"StringTemplate", "string", "the operation ${} ⊗ ${} equals ${}",
