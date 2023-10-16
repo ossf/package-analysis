@@ -28,7 +28,6 @@ import (
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/internal/staticanalysis"
 	"github.com/ossf/package-analysis/internal/worker"
-	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
@@ -153,34 +152,30 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		return err
 	}
 
-	dynamicSandboxOpts := append(worker.DynamicSandboxOptions(), sandboxOpts...)
-	result, err := worker.RunDynamicAnalysis(ctx, pkg, dynamicSandboxOpts, "")
-	if err != nil {
-		return err
-	}
-
 	staticSandboxOpts := append(worker.StaticSandboxOptions(), sandboxOpts...)
-	var staticResults analysisrun.StaticAnalysisResults
-	// TODO run static analysis first and remove the if statement below
-	if resultStores.StaticAnalysis != nil {
-		staticResults, _, err = worker.RunStaticAnalysis(ctx, pkg, staticSandboxOpts, staticanalysis.All)
-		if err != nil {
-			return err
-		}
+	dynamicSandboxOpts := append(worker.DynamicSandboxOptions(), sandboxOpts...)
+
+	// run both dynamic and static analysis regardless of error status of either
+	// and return combined error(s) afterwards, if applicable
+	staticResults, _, staticAnalysisErr := worker.RunStaticAnalysis(ctx, pkg, staticSandboxOpts, staticanalysis.All)
+	if staticAnalysisErr == nil {
+		staticAnalysisErr = worker.SaveStaticAnalysisData(ctx, pkg, resultStores, staticResults)
 	}
 
-	if err := worker.SaveStaticAnalysisData(ctx, pkg, resultStores, staticResults); err != nil {
-		return err
-	}
-	if err := worker.SaveDynamicAnalysisData(ctx, pkg, resultStores, result.AnalysisData); err != nil {
-		return err
+	result, dynamicAnalysisErr := worker.RunDynamicAnalysis(ctx, pkg, dynamicSandboxOpts, "")
+	if dynamicAnalysisErr == nil {
+		dynamicAnalysisErr = worker.SaveDynamicAnalysisData(ctx, pkg, resultStores, result.AnalysisData)
 	}
 
 	resultStores.AnalyzedPackageSaved = false
 
+	// combine errors
+	if analysisErr := errors.Join(dynamicAnalysisErr, staticAnalysisErr); analysisErr != nil {
+		return analysisErr
+	}
+
 	if notificationTopic != nil {
-		err := notification.PublishAnalysisCompletion(ctx, notificationTopic, name, version, ecosystem)
-		if err != nil {
+		if err := notification.PublishAnalysisCompletion(ctx, notificationTopic, name, version, ecosystem); err != nil {
 			return err
 		}
 	}
