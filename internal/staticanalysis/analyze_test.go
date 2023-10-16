@@ -41,10 +41,10 @@ func makeDesiredResult(files ...testFile) *Result {
 		result.Files = append(result.Files, SingleResult{
 			Filename: file.filename,
 			Basic: &basicdata.FileData{
-				Description: file.description,
-				Size:        int64(len(file.contents)),
-				SHA256:      file.sha256,
-				LineLengths: file.lineLengths,
+				DetectedType: file.description,
+				Size:         int64(len(file.contents)),
+				SHA256:       file.sha256,
+				LineLengths:  file.lineLengths,
 			},
 			Parsing: &parsing.SingleResult{
 				Language:    parsing.JavaScript,

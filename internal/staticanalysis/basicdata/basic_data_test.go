@@ -78,16 +78,16 @@ func TestGetBasicData(t *testing.T) {
 
 			got, err := Analyze(context.Background(), paths, getArchivePath)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("describeFiles() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("detectFileTypes() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
 			wantData := utils.Transform(tt.files, func(f testFile) FileData {
 				return FileData{
-					Description: f.fileType,
-					Size:        int64(len(f.contents)),
-					SHA256:      f.contentsHash,
-					LineLengths: f.lineLengths,
+					DetectedType: f.fileType,
+					Size:         int64(len(f.contents)),
+					SHA256:       f.contentsHash,
+					LineLengths:  f.lineLengths,
 				}
 			})
 

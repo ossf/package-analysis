@@ -27,7 +27,7 @@ func (h fileCmdArgsHandler) ReadStdinArg() []string {
 	return h.FileListArg("-")
 }
 
-func describeFiles(ctx context.Context, paths []string) ([]string, error) {
+func detectFileTypes(ctx context.Context, paths []string) ([]string, error) {
 	workingDir, err := os.MkdirTemp("", "package-analysis-basic-data-*")
 	if err != nil {
 		return nil, fmt.Errorf("error creating temp file: %w", err)
