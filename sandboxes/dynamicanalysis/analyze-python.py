@@ -17,6 +17,7 @@ PY_EXTENSION = '.py'
 EXECUTION_LOG_PATH = '/execution.log'
 EXECUTION_TIMEOUT_SECONDS = 10
 
+
 @dataclass
 class Package:
     """Class for tracking a package."""
@@ -85,13 +86,16 @@ def import_single_module(import_path):
 
 def import_module(import_path):
     print('Importing', import_path)
+    # noinspection PyBroadException
     try:
         module = importlib.import_module(import_path)
-    except:
+    except Exception:
         print('Failed to import', import_path)
         traceback.print_exc()
         return
 
+
+def execute_module(import_path):
     # only run package execution if the log file exists
     if not os.path.exists(EXECUTION_LOG_PATH):
         return
@@ -101,9 +105,13 @@ def import_module(import_path):
     # 2. redirect stdout and stderr to execution log file
     signal.signal(signal.SIGALRM, handler=alarm_handler)
     with open(EXECUTION_LOG_PATH, 'at') as log, redirect_stdout(log), redirect_stderr(log):
+        # noinspection PyBroadException
         try:
-            execute_module(module)
-        except:
+            # if we're here, importing should have already worked during import phase
+            module = importlib.import_module(import_path)
+            do_execute(module)
+        # want to catch everything since code execution may cause some weird behaviour
+        except BaseException:
             print('Failed to execute code for module', import_path)
             traceback.print_exc()
 
@@ -111,7 +119,7 @@ def import_module(import_path):
     signal.signal(signal.SIGALRM, signal.SIG_DFL)
 
 
-def execute_module(module):
+def do_execute(module):
     """Best-effort execution of code in a module"""
     print('[module]', module)
 
@@ -242,9 +250,10 @@ def try_call_methods(instance, class_name, should_investigate, mark_seen):
 
 
 PHASES = {
-    'all': [install, import_package],
+    'all': [install, import_package, execute_module],
     'install': [install],
-    'import': [import_package]
+    'import': [import_package],
+    'execute': [execute_module],
 }
 
 
