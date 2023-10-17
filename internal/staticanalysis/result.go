@@ -42,9 +42,9 @@ func (r SingleResult) String() string {
 	return strings.Join(parts, "\n\n")
 }
 
-// ProduceSerializableResult converts the data in this Result object into the
+// ToAPIResults converts the data in this Result object into the
 // public staticanalysis.Results format defined in pkg/api/staticanalysis.
-func (r *Result) ProduceSerializableResult() *staticanalysis.Results {
+func (r *Result) ToAPIResults() *staticanalysis.Results {
 	results := &staticanalysis.Results{}
 
 	for _, f := range r.Files {

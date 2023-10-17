@@ -100,7 +100,7 @@ func SaveStaticAnalysisData(ctx context.Context, pkg *pkgmanager.Pkg, dest *Resu
 		Name:      pkg.Name(),
 		Version:   pkg.Version(),
 	}
-	serializableResult := internalResult.ProduceSerializableResult()
+	serializableResult := internalResult.ToAPIResults()
 	record := staticapi.CreateRecord(serializableResult, key)
 
 	if err := dest.StaticAnalysis.SaveStaticAnalysis(ctx, pkg, record, ""); err != nil {

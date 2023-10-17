@@ -12,7 +12,7 @@ import (
 	"github.com/ossf/package-analysis/pkg/valuecounts"
 )
 
-func TestResult_ProduceSerializableResult(t *testing.T) {
+func TestResult_ToAPIResults(t *testing.T) {
 	tests := []struct {
 		name   string
 		result Result
@@ -233,18 +233,9 @@ func TestResult_ProduceSerializableResult(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := tt.result
-			got := r.ProduceSerializableResult()
-			if !reflect.DeepEqual(got.Files[0].Base64Strings, tt.want.Files[0].Base64Strings) {
-				t.Errorf("ProduceSerializableResult() base64 strings mismatch\n"+
-					"got\n%v\nwant\n%v", got.Files[0].Base64Strings, tt.want.Files[0].Base64Strings)
-			}
-			if !reflect.DeepEqual(got.Files[0].HexStrings, tt.want.Files[0].HexStrings) {
-				t.Errorf("ProduceSerializableResult() hex strings mismatch\n"+
-					"got\n%v\nwant\n%v", got.Files[0].HexStrings, tt.want.Files[0].HexStrings)
-			}
+			got := r.ToAPIResults()
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ProduceSerializableResult() mismatch\n"+
-					"got\n%v\nwant\n%v", got, tt.want)
+				t.Errorf("ToAPIResults() mismatch\ngot\n%v\nwant\n%v", got, tt.want)
 			}
 		})
 	}

@@ -6,6 +6,8 @@ import (
 	"golang.org/x/exp/maps"
 )
 
+// IdentifierType enumerates the possible types of a source code identifier,
+// encountered during static analysis.
 type IdentifierType int
 
 const (
