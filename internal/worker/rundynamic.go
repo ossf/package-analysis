@@ -124,20 +124,27 @@ func retrieveExecutionLog(ctx context.Context, sb sandbox.Sandbox) (string, erro
 	return string(processedLog), nil
 }
 
-func addSSHKeysToSandbox(sb sandbox.Sandbox, ctx context.Context) error {
+// addSSHKeysToSandbox generates a new rsa private and public keypair
+// and copies them into the ~/.ssh directory of the sandbox with the
+// default file names.
+func addSSHKeysToSandbox(ctx context.Context, sb sandbox.Sandbox) error {
 	generatedPrivateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	generatedPublicKey := generatedPrivateKey.PublicKey
 	if err != nil {
 		return err
 	}
 
-	os.Mkdir("temp_ssh_dir", 0750)
-	privateKeyFile, err := os.Create("temp_ssh_dir/id_rsa")
+	tempdir, err := os.MkdirTemp(".", "temp_ssh_dir")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tempdir)
+	privateKeyFile, err := os.Create(filepath.Join(tempdir, "id_rsa"))
 	if err != nil {
 		return err
 	}
 	defer privateKeyFile.Close()
-	pubKeyFile, err := os.Create("temp_ssh_dir/id_rsa.pub")
+	pubKeyFile, err := os.Create(filepath.Join(tempdir, "id_rsa.pub"))
 	if err != nil {
 		return err
 	}
@@ -152,7 +159,7 @@ func addSSHKeysToSandbox(sb sandbox.Sandbox, ctx context.Context) error {
 		return err
 	}
 	pubKeyFile.Write(ssh.MarshalAuthorizedKey(publicKey))
-	return sb.CopyIntoSandbox(ctx, "temp_ssh_dir/.", "/root/.ssh")
+	return sb.CopyIntoSandbox(ctx, tempdir+"/.", "/root/.ssh")
 }
 
 /*
@@ -198,7 +205,7 @@ func RunDynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandb
 		return DynamicAnalysisResult{}, err
 	}
 
-	if err := addSSHKeysToSandbox(sb, ctx); err != nil {
+	if err := addSSHKeysToSandbox(ctx, sb); err != nil {
 		return DynamicAnalysisResult{}, err
 	}
 
