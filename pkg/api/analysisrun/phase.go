@@ -5,10 +5,12 @@ package analysisrun
 type DynamicPhase string
 
 const (
+	DynamicPhaseExecute DynamicPhase = "execute"
 	DynamicPhaseImport  DynamicPhase = "import"
 	DynamicPhaseInstall DynamicPhase = "install"
 )
 
 func DefaultDynamicPhases() []DynamicPhase {
-	return []DynamicPhase{DynamicPhaseInstall, DynamicPhaseImport}
+	// ordered in sequence of operation
+	return []DynamicPhase{DynamicPhaseInstall, DynamicPhaseImport, DynamicPhaseExecute}
 }
