@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ossf/package-analysis/internal/utils/valuecounts"
+	"github.com/ossf/package-analysis/pkg/api/staticanalysis"
+	"github.com/ossf/package-analysis/pkg/valuecounts"
 )
 
 // FileSignals holds information related to the presence of obfuscated code in a single file.
@@ -13,32 +14,32 @@ type FileSignals struct {
 	// and identifiers in the file have a given length. The absence of a count
 	// for a particular lengths means that there were no symbols of that length
 	// in the file.
-	IdentifierLengths valuecounts.ValueCounts `json:"identifier_lengths"`
-	StringLengths     valuecounts.ValueCounts `json:"string_lengths"`
+	IdentifierLengths valuecounts.ValueCounts
+	StringLengths     valuecounts.ValueCounts
 
 	// SuspiciousIdentifiers holds identifiers that are deemed 'suspicious' (i.e.
 	// indicative of obfuscation) according to certain rules. Each entry contains
 	// the identifier name and the name of the first rule it was matched against.
-	SuspiciousIdentifiers []SuspiciousIdentifier `json:"suspicious_identifiers"`
+	SuspiciousIdentifiers []staticanalysis.SuspiciousIdentifier
 
 	// EscapedStrings contain string literals that contain large amount of escape
 	// characters, which may indicate obfuscation.
-	EscapedStrings []EscapedString `json:"escaped_strings"`
+	EscapedStrings []staticanalysis.EscapedString
 
 	// Base64Strings holds a list of (substrings of) string literals found in the
 	// file that match a base64 regex pattern. This patten has a minimum matching
 	// length in order to reduce the number of false positives.
-	Base64Strings []string `json:"base64_strings"`
+	Base64Strings []string
 
 	// HexStrings holds a list of (substrings of) string literals found in the
 	// file that contain long (>8 digits) hexadecimal digit sequences.
-	HexStrings []string `json:"hex_strings"`
+	HexStrings []string
 
 	// IPAddresses contains any IP addresses found in string literals
-	IPAddresses []string `json:"ip_addresses"`
+	IPAddresses []string
 
 	// URLs contains any urls (http or https) found in string literals
-	URLs []string `json:"urls"`
+	URLs []string
 }
 
 func (s FileSignals) String() string {
@@ -50,23 +51,8 @@ func (s FileSignals) String() string {
 		fmt.Sprintf("escaped strings: %v", s.EscapedStrings),
 		fmt.Sprintf("potential base64 strings: %v", s.Base64Strings),
 		fmt.Sprintf("hex strings: %v", s.HexStrings),
-		fmt.Sprintf("hex strings: %v", s.HexStrings),
 		fmt.Sprintf("IP addresses: %v", s.IPAddresses),
 		fmt.Sprintf("URLs: %v", s.URLs),
 	}
 	return strings.Join(parts, "\n")
-}
-
-type EscapedString struct {
-	Value           string `json:"value"`
-	Raw             string `json:"raw"`
-	LevenshteinDist int    `json:"levenshtein_dist"`
-}
-
-// SuspiciousIdentifier is an identifier that matches a specific rule intended
-// to pick out (potentially) suspicious names. Name stores the actual identifier,
-// and Rule holds the rule that the identifier matched against.
-type SuspiciousIdentifier struct {
-	Name string `json:"name"`
-	Rule string `json:"rule"`
 }

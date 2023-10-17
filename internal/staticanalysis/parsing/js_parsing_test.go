@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/ossf/package-analysis/internal/staticanalysis/externalcmd"
-	"github.com/ossf/package-analysis/internal/staticanalysis/token"
+	"github.com/ossf/package-analysis/pkg/api/staticanalysis/token"
 )
 
 type jsTestCase struct {

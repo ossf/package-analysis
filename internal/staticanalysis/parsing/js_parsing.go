@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/ossf/package-analysis/internal/staticanalysis/externalcmd"
-	"github.com/ossf/package-analysis/internal/staticanalysis/token"
+	"github.com/ossf/package-analysis/pkg/api/staticanalysis/token"
 )
 
 // parseOutputJSON represents the output JSON format of the JS parser

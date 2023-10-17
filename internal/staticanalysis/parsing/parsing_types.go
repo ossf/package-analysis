@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 	"github.com/ossf/package-analysis/internal/utils"
+	"github.com/ossf/package-analysis/pkg/api/staticanalysis/token"
 )
 
 // Language represents a programming language used for parsing.
