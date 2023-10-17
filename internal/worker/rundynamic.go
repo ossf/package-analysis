@@ -124,7 +124,7 @@ func retrieveExecutionLog(ctx context.Context, sb sandbox.Sandbox) (string, erro
 	return string(processedLog), nil
 }
 
-// addSSHKeysToSandbox generates a new rsa private and public keypair
+// addSSHKeysToSandbox generates a new rsa private and public key pair
 // and copies them into the ~/.ssh directory of the sandbox with the
 // default file names.
 func addSSHKeysToSandbox(ctx context.Context, sb sandbox.Sandbox) error {
