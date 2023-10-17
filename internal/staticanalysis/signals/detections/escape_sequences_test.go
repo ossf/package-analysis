@@ -3,7 +3,7 @@ package detections
 import (
 	"testing"
 
-	"github.com/ossf/package-analysis/internal/staticanalysis/token"
+	"github.com/ossf/package-analysis/pkg/api/staticanalysis/token"
 )
 
 func TestIsHighlyEscaped(t *testing.T) {

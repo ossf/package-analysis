@@ -5,9 +5,10 @@ import (
 
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"github.com/ossf/package-analysis/internal/staticanalysis/signals/detections"
-	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 	"github.com/ossf/package-analysis/internal/utils"
-	"github.com/ossf/package-analysis/internal/utils/valuecounts"
+	"github.com/ossf/package-analysis/pkg/api/staticanalysis"
+	"github.com/ossf/package-analysis/pkg/api/staticanalysis/token"
+	"github.com/ossf/package-analysis/pkg/valuecounts"
 )
 
 // countLengths returns a map containing the aggregated lengths
@@ -36,8 +37,8 @@ func AnalyzeSingle(parseData parsing.SingleResult) FileSignals {
 		StringLengths:         stringLengths,
 		Base64Strings:         []string{},
 		HexStrings:            []string{},
-		EscapedStrings:        []EscapedString{},
-		SuspiciousIdentifiers: []SuspiciousIdentifier{},
+		EscapedStrings:        []staticanalysis.EscapedString{},
+		SuspiciousIdentifiers: []staticanalysis.SuspiciousIdentifier{},
 		URLs:                  []string{},
 		IPAddresses:           []string{},
 	}
@@ -45,7 +46,7 @@ func AnalyzeSingle(parseData parsing.SingleResult) FileSignals {
 	for _, name := range identifierNames {
 		for rule, pattern := range detections.SuspiciousIdentifierPatterns {
 			if pattern.MatchString(name) {
-				signals.SuspiciousIdentifiers = append(signals.SuspiciousIdentifiers, SuspiciousIdentifier{name, rule})
+				signals.SuspiciousIdentifiers = append(signals.SuspiciousIdentifiers, staticanalysis.SuspiciousIdentifier{name, rule})
 				break // don't bother searching for multiple matching rules
 			}
 		}
@@ -57,7 +58,7 @@ func AnalyzeSingle(parseData parsing.SingleResult) FileSignals {
 		signals.URLs = append(signals.URLs, detections.FindURLs(sl.Value)...)
 		signals.IPAddresses = append(signals.IPAddresses, detections.FindIPAddresses(sl.Value)...)
 		if detections.IsHighlyEscaped(sl, 8, 0.25) {
-			escapedString := EscapedString{
+			escapedString := staticanalysis.EscapedString{
 				Value:           sl.Value,
 				Raw:             sl.Raw,
 				LevenshteinDist: sl.LevenshteinDist(),

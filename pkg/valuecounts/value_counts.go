@@ -16,8 +16,8 @@ type ValueCounts struct {
 	data map[int]int
 }
 
-// Aside: I know using 'value' to refer to map keys is not great, but the
-// other names I came up with like 'size' and 'length' were all usage-specific.
+// Aside: using 'value' to refer to map keys is not great,
+// but names like 'size' and 'length' are all usage-specific.
 
 // Pair stores a single value and associated count pair
 type Pair struct {

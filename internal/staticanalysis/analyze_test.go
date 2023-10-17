@@ -13,15 +13,16 @@ import (
 	"github.com/ossf/package-analysis/internal/staticanalysis/basicdata"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"github.com/ossf/package-analysis/internal/staticanalysis/signals"
-	"github.com/ossf/package-analysis/internal/staticanalysis/token"
-	"github.com/ossf/package-analysis/internal/utils/valuecounts"
+	"github.com/ossf/package-analysis/pkg/api/staticanalysis"
+	"github.com/ossf/package-analysis/pkg/api/staticanalysis/token"
+	"github.com/ossf/package-analysis/pkg/valuecounts"
 )
 
 type testFile struct {
 	filename    string
 	contents    []byte
 	sha256      string
-	description string
+	fileType    string
 	lineLengths valuecounts.ValueCounts
 }
 
@@ -29,7 +30,7 @@ var helloWorldJs = testFile{
 	filename:    "hi.js",
 	contents:    []byte(`console.log("hi");` + "\n"),
 	sha256:      "2bf8b125d15a71b5fa79fe710cae0db911a71e65891e270bca1d4eb5dd785288",
-	description: "ASCII text",
+	fileType:    "ASCII text",
 	lineLengths: valuecounts.Count([]int{18}),
 }
 
@@ -41,10 +42,10 @@ func makeDesiredResult(files ...testFile) *Result {
 		result.Files = append(result.Files, SingleResult{
 			Filename: file.filename,
 			Basic: &basicdata.FileData{
-				Description: file.description,
-				Size:        int64(len(file.contents)),
-				SHA256:      file.sha256,
-				LineLengths: file.lineLengths,
+				DetectedType: file.fileType,
+				Size:         int64(len(file.contents)),
+				SHA256:       file.sha256,
+				LineLengths:  file.lineLengths,
 			},
 			Parsing: &parsing.SingleResult{
 				Language:    parsing.JavaScript,
@@ -59,8 +60,8 @@ func makeDesiredResult(files ...testFile) *Result {
 			Signals: &signals.FileSignals{
 				IdentifierLengths:     valuecounts.New(),
 				StringLengths:         valuecounts.Count([]int{2}),
-				SuspiciousIdentifiers: []signals.SuspiciousIdentifier{},
-				EscapedStrings:        []signals.EscapedString{},
+				SuspiciousIdentifiers: []staticanalysis.SuspiciousIdentifier{},
+				EscapedStrings:        []staticanalysis.EscapedString{},
 				Base64Strings:         []string{},
 				HexStrings:            []string{},
 				IPAddresses:           []string{},
