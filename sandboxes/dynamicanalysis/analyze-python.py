@@ -88,14 +88,14 @@ def import_module(import_path):
     print('Importing', import_path)
     # noinspection PyBroadException
     try:
-        module = importlib.import_module(import_path)
+        importlib.import_module(import_path)
     except Exception:
         print('Failed to import', import_path)
         traceback.print_exc()
         return
 
 
-def execute_package(import_path):
+def execute_package(package):
     """Execute phase for analyzing the package."""
     for path in files(package.name):
         # TODO: pyc, C extensions?
@@ -122,7 +122,7 @@ def execute_module(module):
             do_execute(module)
         # want to catch everything since code execution may cause some weird behaviour
         except BaseException:
-            print('Failed to execute code for module', import_path)
+            print('Failed to execute code for module', module)
             traceback.print_exc()
 
     # restore default signal handler for SIGALRM
@@ -316,5 +316,4 @@ def main() -> int:
 
 
 if __name__ == '__main__':
-    ret = main()
-    exit(ret)
+    exit(main())
