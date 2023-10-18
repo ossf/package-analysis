@@ -1,6 +1,6 @@
 version: 2
 updates:
-- package-ecosystem: gomod
+- package-ecosystem: "gomod"
   directory: "/"
   schedule:
     interval: "daily"
@@ -10,7 +10,7 @@ updates:
       update-types:
         - "minor"
         - "patch"
-- package-ecosystem: gomod
+- package-ecosystem: "gomod"
   directory: "/function/loader"
   schedule:
     interval: "daily"
@@ -29,4 +29,7 @@ updates:
       update-types:
         - "minor"
         - "patch"
-
+- package-ecosystem: "npm"
+  directory: "/internal/staticanalysis/parsing"
+  schedule:
+    interval: "weekly"
