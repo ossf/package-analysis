@@ -95,7 +95,19 @@ def import_module(import_path):
         return
 
 
-def execute_module(import_path):
+def execute_package(import_path)
+    """Execute phase for analyzing the package."""
+    for path in files(package.name):
+        # TODO: pyc, C extensions?
+        if path.suffix != PY_EXTENSION:
+            continue
+        import_path = path_to_import(path)
+        # if we're here, importing should have already worked during import phase
+        module = importlib.import_module(import_path)
+        execute_module(module)
+
+
+def execute_module(module):
     # only run package execution if the log file exists
     if not os.path.exists(EXECUTION_LOG_PATH):
         return
@@ -107,8 +119,6 @@ def execute_module(import_path):
     with open(EXECUTION_LOG_PATH, 'at') as log, redirect_stdout(log), redirect_stderr(log):
         # noinspection PyBroadException
         try:
-            # if we're here, importing should have already worked during import phase
-            module = importlib.import_module(import_path)
             do_execute(module)
         # want to catch everything since code execution may cause some weird behaviour
         except BaseException:
@@ -253,7 +263,7 @@ PHASES = {
     'all': [install, import_package, execute_module],
     'install': [install],
     'import': [import_package],
-    'execute': [execute_module],
+    'execute': [execute_package],
 }
 
 
