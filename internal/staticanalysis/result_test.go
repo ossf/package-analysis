@@ -12,6 +12,13 @@ import (
 	"github.com/ossf/package-analysis/pkg/valuecounts"
 )
 
+// ptr returns a pointer to a copy of its argument. This is useful
+// for e.g. inline initialisation of a struct field that takes a pointer,
+// with an object constructed from a function that returns a value.
+func ptr[T any](x T) *T {
+	return &x
+}
+
 func TestResult_ToAPIResults(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -55,7 +62,7 @@ func TestResult_ToAPIResults(t *testing.T) {
 					DetectedType: "plain text",
 					Size:         10,
 					SHA256:       "aabbbcc",
-					LineLengths:  valuecounts.Count([]int{1, 2, 3, 4}),
+					LineLengths:  ptr(valuecounts.Count([]int{1, 2, 3, 4})),
 				},
 			}},
 		},
@@ -153,8 +160,8 @@ func TestResult_ToAPIResults(t *testing.T) {
 					DetectedType: "javascript source file",
 					Size:         100,
 					SHA256:       "abc123def456",
-					LineLengths:  valuecounts.Count([]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}),
-					Js: staticanalysis.JsData{
+					LineLengths:  ptr(valuecounts.Count([]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10})),
+					Js: &staticanalysis.JsData{
 						Identifiers: []token.Identifier{
 							{
 								Name:    "myvar",
@@ -207,8 +214,8 @@ func TestResult_ToAPIResults(t *testing.T) {
 							},
 						},
 					},
-					IdentifierLengths: valuecounts.Count([]int{5}),
-					StringLengths:     valuecounts.Count([]int{5}),
+					IdentifierLengths: ptr(valuecounts.Count([]int{5})),
+					StringLengths:     ptr(valuecounts.Count([]int{5})),
 					SuspiciousIdentifiers: []staticanalysis.SuspiciousIdentifier{
 						{
 							Name: "a",
