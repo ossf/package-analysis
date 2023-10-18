@@ -95,7 +95,7 @@ def import_module(import_path):
         return
 
 
-def execute_package(import_path)
+def execute_package(import_path):
     """Execute phase for analyzing the package."""
     for path in files(package.name):
         # TODO: pyc, C extensions?
@@ -267,12 +267,13 @@ PHASES = {
 }
 
 
-def main():
+def main() -> int:
     args = list(sys.argv)
     script = args.pop(0)
 
     if len(args) < 2 or len(args) > 4:
-        raise ValueError(f'Usage: {script} [--local file | --version version] phase package_name')
+        print(f'Usage: {script} [--local file | --version version] phase package_name')
+        return -1
 
     # Parse the arguments manually to avoid introducing unnecessary dependencies
     # and side effects that add noise to the strace output.
@@ -294,16 +295,16 @@ def main():
 
     if phase not in PHASES:
         print(f'Unknown phase {phase} specified.')
-        exit(1)
+        return 1
 
     if package_name is None:
         # single module mode
         if phase == 'import' and local_path is not None:
             import_single_module(local_path)
-            return
+            return 0
         else:
             print('install requested but no package name given, or local file missing for single module import')
-            exit(1)
+            return 1
 
     package = Package(name=package_name, version=version, local_path=local_path)
 
@@ -311,6 +312,9 @@ def main():
     for phase in PHASES[phase]:
         phase(package)
 
+    return 0
+
 
 if __name__ == '__main__':
-    main()
+    ret = main()
+    exit(ret)
