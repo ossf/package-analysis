@@ -154,7 +154,7 @@ func (r *Result) recordFileAccess(file string, read, write, del bool) {
 	r.files[file].Delete = r.files[file].Delete || del
 }
 
-func (r *Result) recordFileWrite(file string, writeBuffer []byte, bytesWritten int64, logger *slog.Logger) error {
+func (r *Result) recordFileWrite(file string, writeBuffer []byte, bytesWritten int64) error {
 	r.recordFileAccess(file, false, true, false)
 	if !featureflags.WriteFileContents.Enabled() {
 		// Abort writing file contents when feature is disabled.
@@ -220,7 +220,7 @@ func (r *Result) parseEnterSyscall(syscall, args string, logger *slog.Logger) er
 			writeBuffer = args[firstQuoteIndex+1 : lastQuoteIndex]
 		}
 		logger.Debug("write", "path", path, "size", bytesWritten)
-		return r.recordFileWrite(path, []byte(writeBuffer), bytesWritten, logger)
+		return r.recordFileWrite(path, []byte(writeBuffer), bytesWritten)
 	}
 	return nil
 }

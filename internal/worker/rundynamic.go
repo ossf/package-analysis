@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"log/slog"
+	"os"
 	"runtime"
 	"strconv"
 	"time"
@@ -148,11 +149,26 @@ func RunDynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandb
 	return result, nil
 }
 
+// getStraceLogger returns an slog.Logger instance for the strace parsing functions.
+// If featureflags.DisableStraceDebugLogging is enabled, the logger will discard any
+// log messages with level below slog.LevelInfo (i.e. LevelDebug). Otherwise, the
+// default logging method is used.
+func getStraceLogger(ctx context.Context) *slog.Logger {
+	logger := slog.Default()
+	if featureflags.DisableStraceDebugLogging.Enabled() {
+		infoOnly := &slog.HandlerOptions{Level: slog.LevelInfo}
+		logger = slog.New(slog.NewTextHandler(os.Stderr, infoOnly))
+	}
+
+	return log.LoggerWithContext(logger, ctx)
+}
+
 func runDynamicAnalysisPhase(ctx context.Context, pkg *pkgmanager.Pkg, sb sandbox.Sandbox, analysisCmd string, phase analysisrun.DynamicPhase, result *DynamicAnalysisResult) error {
 	phaseCtx := log.ContextWithAttrs(ctx, log.Label("phase", string(phase)))
 	startTime := time.Now()
 	args := dynamicanalysis.MakeAnalysisArgs(pkg, phase)
-	phaseResult, err := dynamicanalysis.Run(ctx, sb, analysisCmd, args, log.LoggerWithContext(slog.Default(), ctx))
+	straceLogger := getStraceLogger(ctx)
+	phaseResult, err := dynamicanalysis.Run(ctx, sb, analysisCmd, args, straceLogger)
 	result.LastRunPhase = phase
 	runDuration := time.Since(startTime)
 	slog.InfoContext(phaseCtx, "Dynamic analysis phase finished",

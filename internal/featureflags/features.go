@@ -17,4 +17,9 @@ var (
 	// which may uncover extra malicious behaviour. The names of executed functions,
 	// methods and classes are logged to a file.
 	CodeExecution = new("CodeExecution", false)
+
+	// DisableStraceDebugLogging prevents debug logging of strace parsing during
+	// dynamic analysis. Since the strace parsing produces a large amount of debug
+	// output, it can be useful to disable this when the information is not needed.
+	DisableStraceDebugLogging = new("DisableStraceDebugLogging", false)
 )
