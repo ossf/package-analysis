@@ -52,6 +52,8 @@ Prefer smaller PRs to make reviewing easier. Larger changes can be split into sm
 
 ### Code style
 
+We generally follow the [Google Go Style Guide](https://google.github.io/styleguide/go/index).
+
 #### Warnings
 
 Some things that are OK:
