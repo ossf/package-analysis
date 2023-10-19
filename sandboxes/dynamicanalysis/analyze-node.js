@@ -46,11 +46,6 @@ function importPkg(pkg) {
 }
 
 function executePkg(pkg) {
-  // run package execution only if the log file exists
-  if (!fs.existsSync(executionLogPath)) {
-    return;
-  }
-
   // if we're here, module importing should have worked in import phase
   let mod = require(pkg.name);
 

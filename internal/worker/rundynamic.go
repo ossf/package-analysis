@@ -9,10 +9,12 @@ import (
 
 	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/dynamicanalysis"
+	"github.com/ossf/package-analysis/internal/featureflags"
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgmanager"
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/pkg/api/analysisrun"
+	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
 // defaultDynamicAnalysisImage is container image name of the default dynamic analysis sandbox
@@ -40,6 +42,23 @@ type DynamicAnalysisResult struct {
 	AnalysisData analysisrun.DynamicAnalysisResults
 	LastRunPhase analysisrun.DynamicPhase
 	LastStatus   analysis.Status
+}
+
+func dynamicPhases(ecosystem pkgecosystem.Ecosystem) []analysisrun.DynamicPhase {
+	phases := analysisrun.DefaultDynamicPhases()
+
+	// currently, the execute phase is only supported for python analysis
+	executePhaseSupported := map[pkgecosystem.Ecosystem]struct{}{
+		pkgecosystem.PyPI: {},
+	}
+
+	if featureflags.CodeExecution.Enabled() {
+		if _, supported := executePhaseSupported[ecosystem]; supported {
+			phases = append(phases, analysisrun.DynamicPhaseExecute)
+		}
+	}
+
+	return phases
 }
 
 /*
@@ -98,7 +117,7 @@ func RunDynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandb
 	// from our code, as opposed to the package under analysis
 	var lastError error
 
-	for _, phase := range analysisrun.DefaultDynamicPhases() {
+	for _, phase := range dynamicPhases(pkg.Ecosystem()) {
 		if err := runDynamicAnalysisPhase(ctx, pkg, sb, analysisCmd, phase, &result); err != nil {
 			// Error when trying to actually run; don't record the result for this phase
 			// or attempt subsequent phases
@@ -130,17 +149,6 @@ func RunDynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandb
 }
 
 func runDynamicAnalysisPhase(ctx context.Context, pkg *pkgmanager.Pkg, sb sandbox.Sandbox, analysisCmd string, phase analysisrun.DynamicPhase, result *DynamicAnalysisResult) error {
-	if phase == analysisrun.DynamicPhaseExecute {
-		// silently skip execute phase if disabled globally or for specific ecosystem
-		if !isExecutePhaseEnabled(pkg.Ecosystem()) {
-			return nil
-		}
-		if err := initialiseExecutePhase(ctx, sb); err != nil {
-			slog.ErrorContext(ctx, "Error initialising execute phase", "error", err)
-			return err
-		}
-	}
-
 	phaseCtx := log.ContextWithAttrs(ctx, log.Label("phase", string(phase)))
 	startTime := time.Now()
 	args := dynamicanalysis.MakeAnalysisArgs(pkg, phase)

@@ -108,10 +108,6 @@ def execute_package(package):
 
 
 def execute_module(module):
-    # only run package execution if the log file exists
-    if not os.path.exists(EXECUTION_LOG_PATH):
-        return
-
     # Setup for module execution
     # 1. handler for function execution timeout alarms
     # 2. redirect stdout and stderr to execution log file

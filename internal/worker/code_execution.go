@@ -2,56 +2,19 @@ package worker
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
 
-	"github.com/ossf/package-analysis/internal/featureflags"
 	"github.com/ossf/package-analysis/internal/sandbox"
-	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
 // sandboxExecutionLogPath is the absolute path of the execution log file
-// inside the sandbox. The file is used for code execution feature.
+// inside the sandbox. This file is used for logging during the execute phase.
 const sandboxExecutionLogPath = "/execution.log"
 
 var nonSpaceControlChars = regexp.MustCompile("[\x00-\x08\x0b-\x1f\x7f]")
-
-func isExecutePhaseEnabled(ecosystem pkgecosystem.Ecosystem) bool {
-	if !featureflags.CodeExecution.Enabled() {
-		return false
-	}
-
-	switch ecosystem {
-	case pkgecosystem.PyPI:
-		return true
-	default:
-		return false
-	}
-}
-
-// initialiseExecutePhase copies an empty file to the sandbox, which becomes the execution log.
-func initialiseExecutePhase(ctx context.Context, sb sandbox.Sandbox) error {
-	tempFile, err := os.CreateTemp("", "")
-	if err != nil {
-		return fmt.Errorf("could not create empty execution log file in host: %w", err)
-	}
-
-	// file wasn't written to, so don't worry too much about close errors
-	_ = tempFile.Close()
-	tempPath := tempFile.Name()
-
-	if err := sb.CopyIntoSandbox(ctx, tempPath, sandboxExecutionLogPath); err != nil {
-		return fmt.Errorf("could not copy empty execution log file to sandbox: %w", err)
-	}
-
-	// file wasn't written to, so don't worry too much about remove errors
-	_ = os.Remove(tempPath)
-
-	return nil
-}
 
 // retrieveExecutionLog copies the execution log back from the sandbox
 // to the host, so it can be included in the dynamic analysis results.
