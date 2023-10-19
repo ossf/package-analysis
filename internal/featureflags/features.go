@@ -18,8 +18,7 @@ var (
 	// methods and classes are logged to a file.
 	CodeExecution = new("CodeExecution", false)
 
-	// DisableStraceDebugLogging prevents debug logging of strace parsing during
-	// dynamic analysis. Since the strace parsing produces a large amount of debug
-	// output, it can be useful to disable this when the information is not needed.
-	DisableStraceDebugLogging = new("DisableStraceDebugLogging", false)
+	// StraceDebugLogging enables verbose logging of strace parsing during dynamic analysis.
+	// It is useful for debugging strace parsing code but can be safely disabled otherwise.
+	StraceDebugLogging = new("StraceDebugLogging", true)
 )
