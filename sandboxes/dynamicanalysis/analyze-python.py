@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import importlib
+import importlib.metadata
 import inspect
 import os.path
 import signal
@@ -8,7 +9,6 @@ import sys
 import traceback
 from contextlib import redirect_stdout, redirect_stderr
 from dataclasses import dataclass
-from importlib.metadata import files
 from typing import Optional
 from unittest.mock import MagicMock
 
@@ -62,22 +62,25 @@ def path_to_import(path):
     return import_path.replace('/', '.')
 
 
+def module_paths_to_import(package):
+    """Returns list of paths of modules to import (or execute) for the package."""
+    paths = []
+    for f in importlib.metadata.files(package.name):
+        # TODO: pyc, C extensions?
+        if f.suffix == PY_EXTENSION:
+            paths.append(path_to_import(f))
+    return paths
+
+
 def import_package(package):
     """Import phase for analyzing the package."""
-
-    for path in files(package.name):
-        # TODO: pyc, C extensions?
-        if path.suffix != PY_EXTENSION:
-            continue
-
-        import_path = path_to_import(path)
-        import_module(import_path)
+    for p in module_paths_to_import(package):
+        import_module(p)
 
 
 def import_single_module(import_path):
     module_dir = os.path.dirname(import_path)
     sys.path.append(module_dir)
-
     module_name = os.path.basename(import_path).rstrip(PY_EXTENSION)
 
     print(f'Import single module at {import_path}')
@@ -89,7 +92,8 @@ def import_module(import_path):
     # noinspection PyBroadException
     try:
         importlib.import_module(import_path)
-    except Exception:
+    # catch everything, including SystemExit and KeyboardInterrupt
+    except BaseException:
         print('Failed to import', import_path)
         traceback.print_exc()
         return
@@ -97,13 +101,9 @@ def import_module(import_path):
 
 def execute_package(package):
     """Execute phase for analyzing the package."""
-    for path in files(package.name):
-        # TODO: pyc, C extensions?
-        if path.suffix != PY_EXTENSION:
-            continue
-        import_path = path_to_import(path)
+    for p in module_paths_to_import(package):
         # if we're here, importing should have already worked during import phase
-        module = importlib.import_module(import_path)
+        module = importlib.import_module(p)
         execute_module(module)
 
 
