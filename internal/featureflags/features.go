@@ -20,7 +20,7 @@ var (
 
 	// StraceDebugLogging enables verbose logging of strace parsing during dynamic analysis.
 	// This feature can only be used in the analysis image, and if enabled, the -strace-logs-dir
-	// command-line flag must also be set. The log files are then accessible via an explicit
-	// docker mount or copy of the specified directory in the container to the host filesystem.
+	// flag must also be set. When enabled, the log files are then accessible via an explicit
+	// docker mount or copy of the specified directory from the container to the host filesystem.
 	StraceDebugLogging = new("StraceDebugLogging", false)
 )
