@@ -29,6 +29,10 @@ func (e LoggingEnv) String() string {
 const (
 	LoggingEnvDev  LoggingEnv = "dev"
 	LoggingEnvProd LoggingEnv = "prod"
+
+	// StraceDebugLogDirKey is a context object key used to store the path to the
+	// strace debug log, if strace debug logging is enabled
+	StraceDebugLogDirKey = "strace_log_dir"
 )
 
 var (

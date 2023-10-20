@@ -64,7 +64,7 @@ func Run(ctx context.Context, sb sandbox.Sandbox, command string, args []string,
 	}
 	defer l.Close()
 
-	straceResult, err := strace.Parse(l, straceLogger)
+	straceResult, err := strace.Parse(ctx, l, straceLogger)
 	if err != nil {
 		return resultError, fmt.Errorf("strace parsing failed (%w)", err)
 	}
