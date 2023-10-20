@@ -2,11 +2,7 @@ package worker
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
-	"os"
-	"path/filepath"
-	"regexp"
 	"runtime"
 	"strconv"
 	"time"
@@ -23,12 +19,6 @@ import (
 
 // defaultDynamicAnalysisImage is container image name of the default dynamic analysis sandbox
 const defaultDynamicAnalysisImage = "gcr.io/ossf-malware-analysis/dynamic-analysis"
-
-// sandboxExecutionLogPath is the absolute path of the execution log file
-// inside the sandbox. The file is used for code execution feature.
-const sandboxExecutionLogPath = "/execution.log"
-
-var nonSpaceControlChars = regexp.MustCompile("[\x00-\x08\x0b-\x1f\x7f]")
 
 /*
 DynamicAnalysisResult holds all the results from RunDynamicAnalysis
@@ -54,70 +44,21 @@ type DynamicAnalysisResult struct {
 	LastStatus   analysis.Status
 }
 
-func shouldEnableCodeExecution(ecosystem pkgecosystem.Ecosystem) bool {
-	if !featureflags.CodeExecution.Enabled() {
-		return false
+func dynamicPhases(ecosystem pkgecosystem.Ecosystem) []analysisrun.DynamicPhase {
+	phases := analysisrun.DefaultDynamicPhases()
+
+	// currently, the execute phase is only supported for python analysis
+	executePhaseSupported := map[pkgecosystem.Ecosystem]struct{}{
+		pkgecosystem.PyPI: {},
 	}
 
-	switch ecosystem {
-	case pkgecosystem.PyPI:
-		return true
-	default:
-		return false
-	}
-}
-
-func enableCodeExecution(ctx context.Context, sb sandbox.Sandbox) error {
-	// Create empty execution log file and copy to sandbox, to enable code execution feature
-	tempFile, err := os.CreateTemp("", "")
-	if err != nil {
-		return fmt.Errorf("could not create execution log file in host: %w", err)
+	if featureflags.CodeExecution.Enabled() {
+		if _, supported := executePhaseSupported[ecosystem]; supported {
+			phases = append(phases, analysisrun.DynamicPhaseExecute)
+		}
 	}
 
-	// file wasn't written to so don't worry too much about close errors
-	_ = tempFile.Close()
-	tempPath := tempFile.Name()
-
-	if err := sb.CopyIntoSandbox(ctx, tempPath, sandboxExecutionLogPath); err != nil {
-		return fmt.Errorf("could not copy execution log file to sandbox: %w", err)
-	}
-
-	// file wasn't written to so don't worry too much about remove errors
-	_ = os.Remove(tempPath)
-
-	return nil
-}
-
-// retrieveExecutionLog copies the execution log back from the sandbox
-// to the host, so it can be included in the dynamic analysis results.
-// To mitigate tampering of the file, all control characters except tab
-// and newline are stripped from the file.
-func retrieveExecutionLog(ctx context.Context, sb sandbox.Sandbox) (string, error) {
-	executionLogDir, err := os.MkdirTemp("", "")
-	if err != nil {
-		return "", err
-	}
-
-	defer os.RemoveAll(executionLogDir)
-	hostExecutionLogPath := filepath.Join(executionLogDir, "execution.log")
-
-	// if the copy fails, it could be that the execution log is not actually present.
-	// For now, we'll just log the error and otherwise ignore it
-	if err := sb.CopyBackToHost(ctx, hostExecutionLogPath, sandboxExecutionLogPath); err != nil {
-		slog.WarnContext(ctx, "Could not retrieve execution log from sandbox", "error", err)
-		return "", nil
-	}
-
-	logData, err := os.ReadFile(hostExecutionLogPath)
-	if err != nil {
-		return "", err
-	}
-
-	// remove control characters except tab (\x09) and newline (\x0A)
-	processedLog := nonSpaceControlChars.ReplaceAllLiteral(logData, []byte{})
-	slog.InfoContext(ctx, "Read execution log", "rawLength", len(logData), "processedLength", len(processedLog))
-
-	return string(processedLog), nil
+	return phases
 }
 
 /*
@@ -163,15 +104,6 @@ func RunDynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandb
 		return DynamicAnalysisResult{}, err
 	}
 
-	codeExecutionEnabled := false
-	if shouldEnableCodeExecution(pkg.Ecosystem()) {
-		if err := enableCodeExecution(ctx, sb); err != nil {
-			slog.ErrorContext(ctx, "Code execution disabled due to error", "error", err)
-		} else {
-			codeExecutionEnabled = true
-		}
-	}
-
 	result := DynamicAnalysisResult{
 		AnalysisData: analysisrun.DynamicAnalysisResults{
 			StraceSummary:      make(analysisrun.DynamicAnalysisStraceSummary),
@@ -185,20 +117,8 @@ func RunDynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandb
 	// from our code, as opposed to the package under analysis
 	var lastError error
 
-	for _, phase := range analysisrun.DefaultDynamicPhases() {
-		phaseCtx := log.ContextWithAttrs(ctx, log.Label("phase", string(phase)))
-		startTime := time.Now()
-		args := dynamicanalysis.MakeAnalysisArgs(pkg, phase)
-		phaseResult, err := dynamicanalysis.Run(ctx, sb, analysisCmd, args, log.LoggerWithContext(slog.Default(), ctx))
-		result.LastRunPhase = phase
-
-		runDuration := time.Since(startTime)
-		slog.InfoContext(phaseCtx, "Dynamic analysis phase finished",
-			"error", err,
-			"dynamic_analysis_phase_duration", runDuration,
-		)
-
-		if err != nil {
+	for _, phase := range dynamicPhases(pkg.Ecosystem()) {
+		if err := runDynamicAnalysisPhase(ctx, pkg, sb, analysisCmd, phase, &result); err != nil {
 			// Error when trying to actually run; don't record the result for this phase
 			// or attempt subsequent phases
 			result.LastStatus = ""
@@ -206,11 +126,6 @@ func RunDynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandb
 			break
 		}
 
-		result.AnalysisData.StraceSummary[phase] = &phaseResult.StraceSummary
-		result.AnalysisData.FileWritesSummary[phase] = &phaseResult.FileWritesSummary
-		result.AnalysisData.FileWriteBufferIds[phase] = phaseResult.FileWriteBufferIds
-
-		result.LastStatus = phaseResult.StraceSummary.Status
 		if result.LastStatus != analysis.StatusCompleted {
 			// Error caused by an issue with the package (probably).
 			// Don't continue with phases if this one did not complete successfully.
@@ -230,18 +145,39 @@ func RunDynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandb
 
 	LogDynamicAnalysisResult(ctx, pkg, result.LastRunPhase, result.LastStatus)
 
-	if !codeExecutionEnabled {
-		// nothing more to do
-		return result, nil
-	}
-
-	executionLog, err := retrieveExecutionLog(ctx, sb)
-	if err != nil {
-		// don't return this error, just log it
-		slog.ErrorContext(ctx, "Error retrieving execution log", "error", err)
-	} else {
-		result.AnalysisData.ExecutionLog = analysisrun.DynamicAnalysisExecutionLog(executionLog)
-	}
-
 	return result, nil
+}
+
+func runDynamicAnalysisPhase(ctx context.Context, pkg *pkgmanager.Pkg, sb sandbox.Sandbox, analysisCmd string, phase analysisrun.DynamicPhase, result *DynamicAnalysisResult) error {
+	phaseCtx := log.ContextWithAttrs(ctx, log.Label("phase", string(phase)))
+	startTime := time.Now()
+	args := dynamicanalysis.MakeAnalysisArgs(pkg, phase)
+	phaseResult, err := dynamicanalysis.Run(ctx, sb, analysisCmd, args, log.LoggerWithContext(slog.Default(), ctx))
+	result.LastRunPhase = phase
+	runDuration := time.Since(startTime)
+	slog.InfoContext(phaseCtx, "Dynamic analysis phase finished",
+		"error", err,
+		"dynamic_analysis_phase_duration", runDuration,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	result.AnalysisData.StraceSummary[phase] = &phaseResult.StraceSummary
+	result.AnalysisData.FileWritesSummary[phase] = &phaseResult.FileWritesSummary
+	result.AnalysisData.FileWriteBufferIds[phase] = phaseResult.FileWriteBufferIds
+	result.LastStatus = phaseResult.StraceSummary.Status
+
+	if phase == analysisrun.DynamicPhaseExecute {
+		executionLog, err := retrieveExecutionLog(ctx, sb)
+		if err != nil {
+			// don't return this error, just log it
+			slog.ErrorContext(ctx, "Error retrieving execution log", "error", err)
+		} else {
+			result.AnalysisData.ExecutionLog = analysisrun.DynamicAnalysisExecutionLog(executionLog)
+		}
+	}
+
+	return nil
 }
