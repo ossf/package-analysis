@@ -353,7 +353,7 @@ func Parse(ctx context.Context, r io.Reader, debugLogger *slog.Logger) (*Result,
 					return nil, err
 				}
 			}
-			if match != nil && match[2] == "X" {
+			if match[2] == "X" {
 				// Analyze exit events.
 				if err := result.parseExitSyscall(match[3], match[4], debugLogger); errors.Is(err, ErrParseFailure) {
 					// Log parsing errors and continue.
