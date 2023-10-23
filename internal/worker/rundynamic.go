@@ -153,30 +153,19 @@ func RunDynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandb
 	return result, nil
 }
 
-// openStraceDebugLogFile returns the file to be used for debug logging of strace parsing during a
-// dynamic analysis phase, or nil if logging should be disabled or an error occurred while opening it.
-// The file is created with the given filename. It should be closed by the caller.
-// The directory path (within the analysis container) is configured via setting a (string) value
-// for the log.StraceDebugLogDirKey key on the context object passed to this function. If there
-// is no directory configured, logging will be disabled
+// openStraceDebugLogFile creates and returns the file to be used for debug logging of strace parsing
+// during a dynamic analysis phase. The file is created with the given filename in log.StraceDebugLogDir.
+// It is truncated on open (so a unique name per analysis phase should be used) and is the caller's
+// responsibility to close. If strace debug logging is disabled, or some error occurs during creation,
+// a nil file pointer is returned, and nothing more need be done by the caller.
 func openStraceDebugLogFile(ctx context.Context, name string) *os.File {
 	if !featureflags.StraceDebugLogging.Enabled() {
 		return nil
 	}
 
-	var logDir string
-	if v := ctx.Value(log.StraceDebugLogDirKey); v == nil {
-		slog.WarnContext(ctx, "StraceDebugLogging enabled but log dir not set")
-		return nil
-	} else if dirPath, ok := v.(string); !ok {
-		slog.WarnContext(ctx, "non-string value for log.StraceDebugLogDirKey", "value", v)
-		return nil
-	} else {
-		logDir = dirPath
-	}
-
+	var logDir = log.StraceDebugLogDir
 	if err := os.MkdirAll(logDir, 0o777); err != nil {
-		slog.WarnContext(ctx, "could not create directory for strace debug log file", "path", logDir, "error", err)
+		slog.WarnContext(ctx, "could not create directory for strace debug logs", "path", logDir, "error", err)
 	}
 
 	logPath := filepath.Join(logDir, name)
@@ -189,8 +178,14 @@ func openStraceDebugLogFile(ctx context.Context, name string) *os.File {
 }
 
 func straceDebugLogFilename(pkg *pkgmanager.Pkg, phase analysisrun.DynamicPhase) string {
-	filename := fmt.Sprintf("strace-%s-%s-%s-%s.log", pkg.EcosystemName(), pkg.Name(), pkg.Version(), phase)
-	// protect against e.g. a package name that contains a slash
+	filename := fmt.Sprintf("%s-%s", pkg.Ecosystem(), pkg.Name())
+	if pkg.Version() != "" {
+		filename += "-" + pkg.Version()
+	}
+	filename += fmt.Sprintf("-%s-strace.log", phase)
+
+	// Protect against e.g. a package name that contains a slash.
+	// This may cause name collisions, but it's probably fine for a debug log
 	return strings.ReplaceAll(filename, string(os.PathSeparator), "-")
 }
 

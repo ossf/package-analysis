@@ -37,7 +37,6 @@ var (
 	offline             = flag.Bool("offline", false, "disables sandbox network access")
 	customSandbox       = flag.String("sandbox-image", "", "override default dynamic analysis sandbox with custom image")
 	customAnalysisCmd   = flag.String("analysis-command", "", "override default dynamic analysis script path (use with custom sandbox image)")
-	straceLogsDir       = flag.String("strace-logs-dir", "", "specify directory in container to write strace logs (for -feature 'StraceDebugLogging')")
 	listModes           = flag.Bool("list-modes", false, "prints out a list of available analysis modes")
 	features            = flag.String("features", "", "override features that are enabled/disabled by default")
 	listFeatures        = flag.Bool("list-features", false, "list available features that can be toggled")
@@ -125,10 +124,6 @@ func dynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, resultStores *wor
 
 	if *customSandbox != "" {
 		sbOpts = append(sbOpts, sandbox.Image(*customSandbox))
-	}
-
-	if featureflags.StraceDebugLogging.Enabled() && *straceLogsDir != "" {
-		ctx = context.WithValue(ctx, log.StraceDebugLogDirKey, *straceLogsDir)
 	}
 
 	result, err := worker.RunDynamicAnalysis(ctx, pkg, sbOpts, *customAnalysisCmd)

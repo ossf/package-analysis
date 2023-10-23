@@ -30,9 +30,9 @@ const (
 	LoggingEnvDev  LoggingEnv = "dev"
 	LoggingEnvProd LoggingEnv = "prod"
 
-	// StraceDebugLogDirKey is a context object key used to store the path to the
-	// strace debug log, if strace debug logging is enabled
-	StraceDebugLogDirKey = "strace_log_dir"
+	// StraceDebugLogDir is a hardcoded directory that can be used to store
+	// the strace debug log, if the strace debug logging feature is enabled
+	StraceDebugLogDir = "/straceLogs"
 )
 
 var (
