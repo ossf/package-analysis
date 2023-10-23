@@ -2,9 +2,14 @@ package worker
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ossf/package-analysis/internal/analysis"
@@ -148,11 +153,58 @@ func RunDynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandb
 	return result, nil
 }
 
+// openStraceDebugLogFile creates and returns the file to be used for debug logging of strace parsing
+// during a dynamic analysis phase. The file is created with the given filename in log.StraceDebugLogDir.
+// It is truncated on open (so a unique name per analysis phase should be used) and is the caller's
+// responsibility to close. If strace debug logging is disabled, or some error occurs during creation,
+// a nil file pointer is returned, and nothing more need be done by the caller.
+func openStraceDebugLogFile(ctx context.Context, name string) *os.File {
+	if !featureflags.StraceDebugLogging.Enabled() {
+		return nil
+	}
+
+	var logDir = log.StraceDebugLogDir
+	if err := os.MkdirAll(logDir, 0o777); err != nil {
+		slog.WarnContext(ctx, "could not create directory for strace debug logs", "path", logDir, "error", err)
+	}
+
+	logPath := filepath.Join(logDir, name)
+	if logFile, err := os.Create(logPath); err != nil {
+		slog.WarnContext(ctx, "could not create strace debug log file", "path", logPath, "error", err)
+		return nil
+	} else {
+		return logFile
+	}
+}
+
+func straceDebugLogFilename(pkg *pkgmanager.Pkg, phase analysisrun.DynamicPhase) string {
+	filename := fmt.Sprintf("%s-%s", pkg.Ecosystem(), pkg.Name())
+	if pkg.Version() != "" {
+		filename += "-" + pkg.Version()
+	}
+	filename += fmt.Sprintf("-%s-strace.log", phase)
+
+	// Protect against e.g. a package name that contains a slash.
+	// This may cause name collisions, but it's probably fine for a debug log
+	return strings.ReplaceAll(filename, string(os.PathSeparator), "-")
+}
+
 func runDynamicAnalysisPhase(ctx context.Context, pkg *pkgmanager.Pkg, sb sandbox.Sandbox, analysisCmd string, phase analysisrun.DynamicPhase, result *DynamicAnalysisResult) error {
 	phaseCtx := log.ContextWithAttrs(ctx, log.Label("phase", string(phase)))
 	startTime := time.Now()
 	args := dynamicanalysis.MakeAnalysisArgs(pkg, phase)
-	phaseResult, err := dynamicanalysis.Run(ctx, sb, analysisCmd, args, log.LoggerWithContext(slog.Default(), ctx))
+
+	straceLogger := slog.New(slog.NewTextHandler(io.Discard, nil)) // default is nop logger
+	if logFile := openStraceDebugLogFile(phaseCtx, straceDebugLogFilename(pkg, phase)); logFile != nil {
+		slog.InfoContext(phaseCtx, "strace debug logging enabled")
+		defer logFile.Close()
+
+		enableDebug := &slog.HandlerOptions{Level: slog.LevelDebug}
+		straceLogger = slog.New(log.NewContextLogHandler(slog.NewTextHandler(logFile, enableDebug)))
+		straceLogger.InfoContext(phaseCtx, "running dynamic analysis")
+	}
+
+	phaseResult, err := dynamicanalysis.Run(phaseCtx, sb, analysisCmd, args, straceLogger)
 	result.LastRunPhase = phase
 	runDuration := time.Since(startTime)
 	slog.InfoContext(phaseCtx, "Dynamic analysis phase finished",
