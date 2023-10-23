@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ossf/package-analysis/internal/analysis"
@@ -165,6 +166,7 @@ func openStraceDebugLogFile(ctx context.Context, name string) *os.File {
 
 	var logDir string
 	if v := ctx.Value(log.StraceDebugLogDirKey); v == nil {
+		slog.WarnContext(ctx, "StraceDebugLogging enabled but log dir not set")
 		return nil
 	} else if dirPath, ok := v.(string); !ok {
 		slog.WarnContext(ctx, "non-string value for log.StraceDebugLogDirKey", "value", v)
@@ -187,7 +189,9 @@ func openStraceDebugLogFile(ctx context.Context, name string) *os.File {
 }
 
 func straceDebugLogFilename(pkg *pkgmanager.Pkg, phase analysisrun.DynamicPhase) string {
-	return fmt.Sprintf("strace-%s-%s-%s-%s.log", pkg.EcosystemName(), pkg.Name(), pkg.Version(), phase)
+	filename := fmt.Sprintf("strace-%s-%s-%s-%s.log", pkg.EcosystemName(), pkg.Name(), pkg.Version(), phase)
+	// protect against e.g. a package name that contains a slash
+	return strings.ReplaceAll(filename, string(os.PathSeparator), "-")
 }
 
 func runDynamicAnalysisPhase(ctx context.Context, pkg *pkgmanager.Pkg, sb sandbox.Sandbox, analysisCmd string, phase analysisrun.DynamicPhase, result *DynamicAnalysisResult) error {
