@@ -18,8 +18,8 @@ import (
 	_ "gocloud.dev/blob/s3blob"
 
 	"github.com/ossf/package-analysis/internal/pkgmanager"
-	"github.com/ossf/package-analysis/internal/staticanalysis"
 	"github.com/ossf/package-analysis/internal/utils"
+	"github.com/ossf/package-analysis/pkg/api/staticanalysis"
 )
 
 type ResultStore struct {
@@ -261,20 +261,11 @@ func (rs *ResultStore) SaveDynamicAnalysis(ctx context.Context, p Pkg, analysis 
 	return rs.saveWithFilename(ctx, p, data, filename)
 }
 
-// SaveStaticAnalysis wraps the results object with the StaticAnalysisRecord struct and saves it to the bucket
+// SaveStaticAnalysis wraps the results object with the Record struct and saves it to the bucket
 // using saveWithFilename. If filename is empty, a default filename (chosen using DefaultFilename) is used.
-func (rs *ResultStore) SaveStaticAnalysis(ctx context.Context, p Pkg, results any, filename string) error {
+func (rs *ResultStore) SaveStaticAnalysis(ctx context.Context, p Pkg, data *staticanalysis.Record, filename string) error {
 	if filename == "" {
 		filename = DefaultFilename(p)
-	}
-
-	data := &StaticAnalysisRecord{
-		SchemaVersion: staticanalysis.SchemaVersion,
-		Ecosystem:     p.EcosystemName(),
-		Name:          p.Name(),
-		Version:       p.Version(),
-		Created:       time.Now().UTC(),
-		Results:       results,
 	}
 
 	return rs.saveWithFilename(ctx, p, data, filename)

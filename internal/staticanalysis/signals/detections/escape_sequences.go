@@ -3,7 +3,7 @@ package detections
 import (
 	"regexp"
 
-	"github.com/ossf/package-analysis/internal/staticanalysis/token"
+	"github.com/ossf/package-analysis/pkg/api/staticanalysis/token"
 )
 
 /*

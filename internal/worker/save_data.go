@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"time"
@@ -9,7 +10,9 @@ import (
 	"github.com/ossf/package-analysis/internal/featureflags"
 	"github.com/ossf/package-analysis/internal/pkgmanager"
 	"github.com/ossf/package-analysis/internal/resultstore"
+	"github.com/ossf/package-analysis/internal/staticanalysis"
 	"github.com/ossf/package-analysis/pkg/api/analysisrun"
+	staticapi "github.com/ossf/package-analysis/pkg/api/staticanalysis"
 )
 
 // ResultStores holds ResultStore instances for saving each kind of analysis data.
@@ -79,7 +82,7 @@ func saveExecutionLog(ctx context.Context, pkg *pkgmanager.Pkg, dest *ResultStor
 }
 
 // SaveStaticAnalysisData saves the data from static analysis to the corresponding bucket in the ResultStores
-func SaveStaticAnalysisData(ctx context.Context, pkg *pkgmanager.Pkg, dest *ResultStores, data analysisrun.StaticAnalysisResults) error {
+func SaveStaticAnalysisData(ctx context.Context, pkg *pkgmanager.Pkg, dest *ResultStores, data staticapi.SandboxData) error {
 	if dest.StaticAnalysis == nil {
 		return nil
 	} else if len(data) == 0 {
@@ -87,7 +90,20 @@ func SaveStaticAnalysisData(ctx context.Context, pkg *pkgmanager.Pkg, dest *Resu
 		return nil
 	}
 
-	if err := dest.StaticAnalysis.SaveStaticAnalysis(ctx, pkg, data, ""); err != nil {
+	var internalResult staticanalysis.Result
+	if err := json.Unmarshal(data, &internalResult); err != nil {
+		return fmt.Errorf("failed to unmarshal JSON data from sandbox into staticanalysis.Result: %w", err)
+	}
+
+	key := analysisrun.Key{
+		Ecosystem: pkg.Ecosystem(),
+		Name:      pkg.Name(),
+		Version:   pkg.Version(),
+	}
+	serializableResult := internalResult.ToAPIResults()
+	record := staticapi.CreateRecord(serializableResult, key)
+
+	if err := dest.StaticAnalysis.SaveStaticAnalysis(ctx, pkg, record, ""); err != nil {
 		return fmt.Errorf("failed to save static analysis results to %s: %w", dest.StaticAnalysis, err)
 	}
 

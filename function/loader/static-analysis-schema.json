@@ -45,7 +45,7 @@
             "type": "RECORD",
             "fields": [
               {
-                "name": "description",
+                "name": "detected_type",
                 "mode": "NULLABLE",
                 "type": "STRING"
               },

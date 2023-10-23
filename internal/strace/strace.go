@@ -2,6 +2,7 @@ package strace
 
 import (
 	"bufio"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -154,7 +155,7 @@ func (r *Result) recordFileAccess(file string, read, write, del bool) {
 	r.files[file].Delete = r.files[file].Delete || del
 }
 
-func (r *Result) recordFileWrite(file string, writeBuffer []byte, bytesWritten int64, logger *slog.Logger) error {
+func (r *Result) recordFileWrite(file string, writeBuffer []byte, bytesWritten int64) error {
 	r.recordFileAccess(file, false, true, false)
 	if !featureflags.WriteFileContents.Enabled() {
 		// Abort writing file contents when feature is disabled.
@@ -220,7 +221,7 @@ func (r *Result) parseEnterSyscall(syscall, args string, logger *slog.Logger) er
 			writeBuffer = args[firstQuoteIndex+1 : lastQuoteIndex]
 		}
 		logger.Debug("write", "path", path, "size", bytesWritten)
-		return r.recordFileWrite(path, []byte(writeBuffer), bytesWritten, logger)
+		return r.recordFileWrite(path, []byte(writeBuffer), bytesWritten)
 	}
 	return nil
 }
@@ -323,9 +324,9 @@ func (r *Result) parseExitSyscall(syscall, args string, logger *slog.Logger) err
 	return nil
 }
 
-// Parse reads an strace and collects the files, sockets and commands that were
-// accessed.
-func Parse(r io.Reader, logger *slog.Logger) (*Result, error) {
+// Parse reads the output from strace and collects the files, sockets and commands that
+// were accessed. debugLogger can be used to log verbose information about strace parsing.
+func Parse(ctx context.Context, r io.Reader, debugLogger *slog.Logger) (*Result, error) {
 	result := &Result{
 		files:            make(map[string]*FileInfo),
 		sockets:          make(map[string]*SocketInfo),
@@ -345,18 +346,18 @@ func Parse(r io.Reader, logger *slog.Logger) (*Result, error) {
 		if match != nil {
 			if match[2] == "E" {
 				// Analyze entry events.
-				if err := result.parseEnterSyscall(match[3], match[4], logger); errors.Is(err, ErrParseFailure) {
+				if err := result.parseEnterSyscall(match[3], match[4], debugLogger); errors.Is(err, ErrParseFailure) {
 					// Log parsing errors and continue.
-					logger.Warn("Failed to parse entry syscall", "error", err)
+					slog.WarnContext(ctx, "Failed to parse entry syscall", "error", err)
 				} else if err != nil {
 					return nil, err
 				}
 			}
 			if match[2] == "X" {
 				// Analyze exit events.
-				if err := result.parseExitSyscall(match[3], match[4], logger); errors.Is(err, ErrParseFailure) {
+				if err := result.parseExitSyscall(match[3], match[4], debugLogger); errors.Is(err, ErrParseFailure) {
 					// Log parsing errors and continue.
-					logger.Warn("Failed to parse exit syscall", "error", err)
+					slog.WarnContext(ctx, "Failed to parse exit syscall", "error", err)
 				} else if err != nil {
 					return nil, err
 				}

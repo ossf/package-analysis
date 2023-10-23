@@ -29,6 +29,10 @@ func (e LoggingEnv) String() string {
 const (
 	LoggingEnvDev  LoggingEnv = "dev"
 	LoggingEnvProd LoggingEnv = "prod"
+
+	// StraceDebugLogDir is a hardcoded directory that can be used to store
+	// the strace debug log, if the strace debug logging feature is enabled
+	StraceDebugLogDir = "/straceLogs"
 )
 
 var (
