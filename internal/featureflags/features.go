@@ -17,4 +17,10 @@ var (
 	// which may uncover extra malicious behaviour. The names of executed functions,
 	// methods and classes are logged to a file.
 	CodeExecution = new("CodeExecution", false)
+
+	// StraceDebugLogging enables verbose logging of strace parsing during dynamic analysis.
+	// This feature can only be used in the analysis image, and if enabled, the -strace-logs-dir
+	// flag must also be set. When enabled, the log files are then accessible via an explicit
+	// docker mount or copy of the specified directory from the container to the host filesystem.
+	StraceDebugLogging = new("StraceDebugLogging", false)
 )
