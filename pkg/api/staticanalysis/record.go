@@ -52,20 +52,20 @@ func CreateRecord(r *Results, k analysisrun.Key) *Record {
 // mandatory field, and holds the path to the file relative to the package root.
 // Other fields may be present or missing depending on whether relevant data was collected.
 type FileResult struct {
-	Filename              string                  `json:"filename"`
-	DetectedType          string                  `json:"detected_type,omitempty"`
-	Size                  int64                   `json:"size,omitempty"`
-	SHA256                string                  `json:"sha256,omitempty"`
-	LineLengths           valuecounts.ValueCounts `json:"line_lengths,omitempty"`
-	Js                    JsData                  `json:"js,omitempty"`
-	IdentifierLengths     valuecounts.ValueCounts `json:"identifier_lengths,omitempty"`
-	StringLengths         valuecounts.ValueCounts `json:"string_lengths,omitempty"`
-	Base64Strings         []string                `json:"base64_strings,omitempty"`
-	HexStrings            []string                `json:"hex_strings,omitempty"`
-	IPAddresses           []string                `json:"ip_addresses,omitempty"`
-	URLs                  []string                `json:"urls,omitempty"`
-	SuspiciousIdentifiers []SuspiciousIdentifier  `json:"suspicious_identifiers,omitempty"`
-	EscapedStrings        []EscapedString         `json:"escaped_strings,omitempty"`
+	Filename              string                   `json:"filename"`
+	DetectedType          string                   `json:"detected_type,omitempty"`
+	Size                  int64                    `json:"size,omitempty"`
+	SHA256                string                   `json:"sha256,omitempty"`
+	LineLengths           *valuecounts.ValueCounts `json:"line_lengths,omitempty"`
+	Js                    *JsData                  `json:"js,omitempty"`
+	IdentifierLengths     *valuecounts.ValueCounts `json:"identifier_lengths,omitempty"`
+	StringLengths         *valuecounts.ValueCounts `json:"string_lengths,omitempty"`
+	Base64Strings         []string                 `json:"base64_strings,omitempty"`
+	HexStrings            []string                 `json:"hex_strings,omitempty"`
+	IPAddresses           []string                 `json:"ip_addresses,omitempty"`
+	URLs                  []string                 `json:"urls,omitempty"`
+	SuspiciousIdentifiers []SuspiciousIdentifier   `json:"suspicious_identifiers,omitempty"`
+	EscapedStrings        []EscapedString          `json:"escaped_strings,omitempty"`
 }
 
 type JsData struct {
