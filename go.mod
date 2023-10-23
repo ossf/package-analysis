@@ -14,7 +14,7 @@ require (
 	gocloud.dev v0.34.0
 	gocloud.dev/pubsub/kafkapubsub v0.34.0
 	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53
-	google.golang.org/api v0.147.0
+	google.golang.org/api v0.148.0
 	google.golang.org/grpc v1.59.0
 	google.golang.org/protobuf v1.31.0
 )
@@ -84,5 +84,5 @@ require (
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20231002182017-d307bd883b97 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20231002182017-d307bd883b97 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20231009173412-8bfb1ae86b6c // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20231012201019-e917dd12ba7a // indirect
 )
