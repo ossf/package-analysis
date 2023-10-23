@@ -150,9 +150,10 @@ func RunDynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandb
 		LogDynamicAnalysisError(ctx, pkg, "", err)
 		return DynamicAnalysisResult{}, err
 	}
-	
+
 	if err := addSSHKeysToSandbox(ctx, sb); err != nil {
-		return DynamicAnalysisResult{}, err
+		// Log error and proceed without ssh keys.
+		LogDynamicAnalysisError(ctx, pkg, "", err)
 	}
 
 	result := DynamicAnalysisResult{
