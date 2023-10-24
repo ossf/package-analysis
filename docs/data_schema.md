@@ -129,6 +129,8 @@ This captures the query part of the request, with hostname tracking the specific
 
 This is the current structure of the JSON files written by static analysis.
 The top-level identifying keys have been revised a little bit from the dynamic analysis schema.
+The struct that is serialized to produce this JSON data is located at `pkg/api/staticanalysis/record.go`.
+
 
 ### JSON schema
 
@@ -143,16 +145,13 @@ The top-level identifying keys have been revised a little bit from the dynamic a
     "files": [
       {
         "filename": string,
-        "basic": {
-          "description": string,
-          "size": int,
-          "sha256": string,
-          "line_lengths": [
-            { "value": int, "count": int }
-          ]
-        },
-        "parsing": {
-          "language": string,
+	    "detected_type": string,
+        "size": int,
+        "sha256": string,
+        "line_lengths": [
+          { "value": int, "count": int }
+		],
+        "js": {
           "identifiers": [
             { "name": string, "type": string, "entropy": float64 }
           ],
@@ -169,24 +168,22 @@ The top-level identifying keys have been revised a little bit from the dynamic a
             { "text": string }
           ]
         },
-        "signals": {
-          "identifier_lengths": [
-            { "value": int, "count": int }
-          ],
-          "string_lengths": [
-            { "value": int, "count": int }
-          ],
-          "suspicious_identifiers": [
-            { "name": string, "rule": string }
-          ],
-          "escaped_strings": [
-            { "value": string, "raw": string, "levenshtein_dist": string }
-          ],
-          "base64_strings": [ string ],
-          "hex_strings": [ string ],
-          "ip_addresses": [ string ],
-          "urls": [ string ]
-        }
+        "identifier_lengths": [
+          { "value": int, "count": int }
+        ],
+        "string_lengths": [
+          { "value": int, "count": int }
+        ],
+        "suspicious_identifiers": [
+          { "name": string, "rule": string }
+        ],
+        "escaped_strings": [
+          { "value": string, "raw": string, "levenshtein_dist": float }
+        ],
+        "base64_strings": [ string ],
+        "hex_strings": [ string ],
+        "ip_addresses": [ string ],
+        "urls": [ string ]
       }
     ]
   }
@@ -220,41 +217,63 @@ Contains all result data from the static analysis; see description below
 ### `results` object
 
 #### `files`
-List of static analysis results, one per file contained in the analyzed package tarball. Files are enumerated in lexical order. Symlinks or special files such as device files, sockets and pipes are excluded. Each item is corresponds to a SingleResult object in Go; see description below.
+List of static analysis results, one per file contained in the analyzed package tarball. Files are enumerated in lexical order. Symlinks or special files such as device files, sockets and pipes are excluded. Each item is corresponds to a FileResult object in Go; see description below.
 
-### `SingleResult` object
+### `FileResult` object
 
 #### `filename`
 Path of the file, relative to the package archive root
 
-#### `basic` (optional)
-Contains results from the basic static analysis task; this is information that can be obtained without parsing the file. See basic object description below. Field is omitted if the basic analysis task was excluded during the analysis run.
-
-#### `parsing` (optional)
-Contains results from the parsing static analysis task; this is raw data obtained from parsing as source code. See parsing object description below. Field is omitted if the parsing analysis task was excluded during the analysis run.
-
-#### `signals` (optional)
-Contains results from the signals static analysis task; this is potentially useful information extracted from parsing data. See signals object description below. Field is omitted if the signals analysis task was excluded during the analysis run.
-
-
-### `basic` object
-
-#### `description`
-Output of file command run on the file
+#### `detected_type`
+Output of `file` command run on the file. Omitted if the `basic` analysis task was not run.
 
 #### `size`
-Size of the file in bytes
+Size of the file in bytes. Omitted if the `basic` analysis task was not run.
 
 #### `sha256`
-SHA256 hashsum of the file
+SHA256 hashsum of the file. Omitted if the `basic` analysis task was not run.
 
 #### `line_lengths`
-Counts of line lengths in the file. This is represented as a list of (length, count) pairs. For example, a file with 4 lines of lengths 20, 30, 20, 30 characters respectively would have a `line_lengths` of `[{ "value": 20, "count": 2 }, { "value": 30, "count", 2 }]`.
+Counts of line lengths in the file. This is represented as a list of (length, count) pairs. For example, a file with 4 lines of lengths 20, 30, 20, 30 characters respectively would have a `line_lengths` of `[{ "value": 20, "count": 2 }, { "value": 30, "count", 2 }]`. Omitted if the `basic` analysis task was not run.
 
-### `parsing` object
+#### `js` (optional)
+Contains results from the `parsing` analysis task; this is raw data obtained from parsing as JavaScript source code. If the JS parser reports syntax errors while parsing the file, the file is assumed to not be a JavaScript source file. Omitted if the `parsing` analysis task was not run or there is no data. See further description of the `js` object below.
 
-#### `language`
-Which programming language the file was parsed in. The only currently supported language is JavaScript. If a parser fails to parse a file due to syntax errors, it is assumed to not be a valid file in the parser’s language. If all language parsers report syntax errors while parsing the file, the language is set to "" and the remaining fields are also set to empty arrays
+#### `identifier_lengths`
+Counts of lengths of identifiers found during parsing. This is represented as a list of (length, count) pairs in the same format as the `line_lengths` field above. Omitted if the `signals` analysis task was not run or there is no data.
+
+
+#### `string_lengths`
+Counts of lengths of string literals found during parsing. This is represented as a list of (length, count) pairs in the same format as the `line_lengths` field above. Omitted if the `signals` analysis task was not run or there is no data.
+
+#### `suspicious_identifiers`
+Identifiers which match one of a list of inbuilt rules. Each record contains the following fields:
+`name` - Identifier name as reported in the parsing section
+`rule` - Name of the rule that the identifier name matched against
+Omitted if the `signals` analysis task was not run or there is no data.
+
+#### `escaped_strings`
+String literals which contain a lot of escape characters. Each record contains the following fields:
+`value` - String value as defined in the parsing section
+`raw` - Raw value as defined in the parsing section
+`levenshtein_dist` - Levenshtein distance between the value and the raw representation. This is a crude measure of how much ‘escaping’ there is in the string.
+Omitted if the `signals` analysis task was not run or there is no data.
+
+#### `base64_strings`
+Substrings of string literals that match a base64-like regex. Omitted if the `signals` analysis task was not run or there is no data.
+
+#### `hex_strings`
+Substrings of at least 16 hexadecimal digits found in string literals. Omitted if the `signals` analysis task was not run or there is no data.
+
+#### `ip_addresses`
+Substrings of string literals that match an IP address-like regex (both IPv4 and IPv6). Omitted if the `signals` analysis task was not run or there is no data.
+
+#### `urls`
+Substrings of string literals that match an URL-like regex. Omitted if the `signals` analysis task was not run or there is no data.
+
+
+
+### `js` object
 
 #### `identifiers`
 List of source code identifiers found in the file. Each record contains the following fields:
@@ -283,37 +302,5 @@ List of floating point literals found in the file. Each record contains the foll
 #### `comments`
 List of comments found in the file. Each record contains the following fields:
 `text` - Raw comment text
-
-
-### `signals` object
-
-#### `identifier_lengths`
-Counts of lengths of identifiers listed in the parsing section. This is represented as a list of (length, count) pairs in the same format as the line_lengths field above.
-
-#### `string_lengths`
-Counts of lengths of string literals listed in the parsing section. This is represented as a list of (length, count) pairs in the same format as the line_lengths field above.
-
-#### `suspicious_identifiers`
-Identifiers which match one of a list of inbuilt rules. Each record contains the following fields:
-`name` - Identifier name as reported in the parsing section
-`rule` - Name of the rule that the identifier name matched against
-
-#### `escaped_strings`
-String literals which contain a lot of escape characters. Each record contains the following fields:
-`value` - String value as defined in the parsing section
-`raw` - Raw value as defined in the parsing section
-`levenshtein_dist` - Levenshtein distance between the value and the raw representation. This is a crude measure of how much ‘escaping’ there is in the string.
-
-#### `base64_strings`
-Substrings of string literals that match a base64-like regex
-
-#### `hex_strings`
-Substrings of at least 16 hexadecimal digits found in string literals
-
-#### `ip_addresses`
-Substrings of string literals that match an IP address-like regex (both IPv4 and IPv6)
-
-#### `urls`
-Substrings of string literals that match an URL-like regex
 
 
