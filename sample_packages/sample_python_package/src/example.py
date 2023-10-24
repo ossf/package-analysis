@@ -36,6 +36,8 @@ def access_ssh_keys(called_from: str, print_logs: bool) -> None:
         # Fail gracefully to allow execution to continue.
         if print_logs:
           print(f"An exception occurred when calling access_ssh_keys: {str(e)}")
+    elif print_logs:
+      print("Could not locate ssh key directory.")
 
 def read_file_and_log(file_to_read: str, called_from: str, print_logs: bool) -> None:
   if os.path.isfile(file_to_read):

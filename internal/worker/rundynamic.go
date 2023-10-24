@@ -2,6 +2,9 @@ package worker
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"log/slog"
@@ -20,6 +23,7 @@ import (
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
+	"golang.org/x/crypto/ssh"
 )
 
 // defaultDynamicAnalysisImage is container image name of the default dynamic analysis sandbox
@@ -66,6 +70,44 @@ func dynamicPhases(ecosystem pkgecosystem.Ecosystem) []analysisrun.DynamicPhase 
 	return phases
 }
 
+// addSSHKeysToSandbox generates a new rsa private and public key pair
+// and copies them into the ~/.ssh directory of the sandbox with the
+// default file names.
+func addSSHKeysToSandbox(ctx context.Context, sb sandbox.Sandbox) error {
+	generatedPrivateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	generatedPublicKey := generatedPrivateKey.PublicKey
+	if err != nil {
+		return err
+	}
+
+	tempdir, err := os.MkdirTemp(".", "temp_ssh_dir")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tempdir)
+	privateKeyFile, err := os.Create(filepath.Join(tempdir, "id_rsa"))
+	if err != nil {
+		return err
+	}
+	defer privateKeyFile.Close()
+	pubKeyFile, err := os.Create(filepath.Join(tempdir, "id_rsa.pub"))
+	if err != nil {
+		return err
+	}
+	defer pubKeyFile.Close()
+
+	openSSHPrivateKeyBlock, err := ssh.MarshalPrivateKey(generatedPrivateKey, "")
+	if err = pem.Encode(privateKeyFile, openSSHPrivateKeyBlock); err != nil {
+		return err
+	}
+	publicKey, err := ssh.NewPublicKey(&generatedPublicKey)
+	if err != nil {
+		return err
+	}
+	pubKeyFile.Write(ssh.MarshalAuthorizedKey(publicKey))
+	return sb.CopyIntoSandbox(ctx, tempdir+"/.", "/root/.ssh")
+}
+
 /*
 RunDynamicAnalysis runs dynamic analysis on the given package across the phases
 valid in the package ecosystem (e.g. import, install), in a sandbox created
@@ -107,6 +149,11 @@ func RunDynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandb
 	if err := sb.Init(ctx); err != nil {
 		LogDynamicAnalysisError(ctx, pkg, "", err)
 		return DynamicAnalysisResult{}, err
+	}
+
+	if err := addSSHKeysToSandbox(ctx, sb); err != nil {
+		// Log error and proceed without ssh keys.
+		LogDynamicAnalysisError(ctx, pkg, "", err)
 	}
 
 	result := DynamicAnalysisResult{
