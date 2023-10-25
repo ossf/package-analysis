@@ -145,12 +145,12 @@ The struct that is serialized to produce this JSON data is located at `pkg/api/s
     "files": [
       {
         "filename": string,
-	    "detected_type": string,
+        "detected_type": string,
         "size": int,
         "sha256": string,
         "line_lengths": [
           { "value": int, "count": int }
-		],
+        ],
         "js": {
           "identifiers": [
             { "name": string, "type": string, "entropy": float64 }
@@ -217,7 +217,7 @@ Contains all result data from the static analysis; see description below
 ### `results` object
 
 #### `files`
-List of static analysis results, one per file contained in the analyzed package tarball. Files are enumerated in lexical order. Symlinks or special files such as device files, sockets and pipes are excluded. Each item is corresponds to a FileResult object in Go; see description below.
+List of static analysis results, one per file contained in the analyzed package tarball. Files are enumerated in lexical order. Symlinks or special files such as device files, sockets and pipes are excluded. Each item corresponds to a FileResult object in Go; see description below.
 
 ### `FileResult` object
 
@@ -225,7 +225,7 @@ List of static analysis results, one per file contained in the analyzed package 
 Path of the file, relative to the package archive root
 
 #### `detected_type`
-Output of `file` command run on the file. Omitted if the `basic` analysis task was not run.
+Filetype as determined by running the `file` command, which is included in most standard Linux distributions. Omitted if the `basic` analysis task was not run.
 
 #### `size`
 Size of the file in bytes. Omitted if the `basic` analysis task was not run.
