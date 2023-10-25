@@ -130,7 +130,7 @@ run:
 E2E_TEST_COMPOSE_ARGS := -p pa-e2e-testing -f ./configs/e2e/docker-compose.yml -f ./test/e2e/docker-compose.test.yml
 
 .PHONY: e2e_test_start
-e2e_test_start:
+e2e_test_start: build_e2e_test_images
 	docker-compose $(E2E_TEST_COMPOSE_ARGS) up -d
 	@echo
 	@echo "To see analysis results, go to http://localhost:9000/minio/package-analysis"
@@ -159,6 +159,13 @@ e2e_test_logs_scheduler:
 .PHONY: e2e_test_logs_analysis
 e2e_test_logs_analysis:
 	docker-compose $(E2E_TEST_COMPOSE_ARGS) logs -f analysis
+
+
+.PHONY: build_e2e_test_images
+build_e2e_test_images: TAG=test
+build_e2e_test_images: sync_prod_sandboxes build_analysis_image build_scheduler_image
+
+
 
 .PHONY: test_go
 test_go:
