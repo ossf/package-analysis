@@ -8,11 +8,11 @@ fi
 git checkout "${GIT_TAG}"
 gcloud container clusters get-credentials analysis-cluster --zone=us-central1-c --project=ossf-malware-analysis
 
-pushd infra/worker
+pushd infra/worker || echo "could not change to infra/worker directory" && exit 1
 
 echo "Were any changes made to the k8s config?"
 echo "Enter y to apply config changes and then restart workers, n to just restart, ctrl-C to exit"
-read -p "" yn
+read yn
 case $yn in
 	[Yy]* )
 		echo "kubectl apply -f ."
@@ -20,7 +20,7 @@ case $yn in
 		;;
 	[Nn]* )
 		echo "kubectl rollout restart statefulset workers-deployment"
-		kubectl rollout restart statefulset workers-deployment"
+		kubectl rollout restart statefulset workers-deployment
 	;;
 esac
 
