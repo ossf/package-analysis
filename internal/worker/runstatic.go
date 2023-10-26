@@ -55,7 +55,7 @@ func RunStaticAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandbo
 	}
 
 	// create the results JSON file as an empty file, so it can be mounted into the container
-	resultsFile, err := os.OpenFile(resultsJSONFile, os.O_RDONLY|os.O_CREATE, 0o644)
+	resultsFile, err := os.Create(resultsJSONFile)
 	if err != nil {
 		return nil, "", fmt.Errorf("could not create results JSON file: %w", err)
 	}
