@@ -26,7 +26,7 @@ case $yn in
 		kubectl apply -f .
 		;;
 	[Nn]* )
-		echo "kubectl rollout restart statefulset workers-deployment"
+		echo "kubectl rollout restart deployment workers-deployment"
 		kubectl rollout restart statefulset workers-deployment
 	;;
 esac
