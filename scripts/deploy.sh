@@ -15,7 +15,7 @@ fi
 
 gcloud container clusters get-credentials analysis-cluster --zone=us-central1-c --project=ossf-malware-analysis
 
-pushd infra/worker || echo "pushd infra/worker failed" && exit 1
+pushd infra/worker || (echo "pushd infra/worker failed" && exit 1)
 
 echo "Were any changes made to the k8s config?"
 echo "Enter y to apply config changes and then restart workers, n to just restart, ctrl-C to exit"
@@ -26,10 +26,10 @@ case $yn in
 		kubectl apply -f .
 		;;
 	[Nn]* )
-		echo "kubectl rollout restart statefulset workers-deployment"
+		echo "kubectl rollout restart deployment workers-deployment"
 		kubectl rollout restart statefulset workers-deployment
 	;;
 esac
 
 
-popd || echo "failed to popd" && exit 1
+popd || (echo "failed to popd" && exit 1)
