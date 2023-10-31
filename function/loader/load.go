@@ -62,13 +62,15 @@ func LoadStaticAnalysis(ctx context.Context, m PubSubMessage) error {
 
 	bq, err := bigquery.NewClient(ctx, project)
 	if err != nil {
-		log.Panicf("Failed to create BigQuery client: %v", err)
+		return fmt.Errorf("failed to create BigQuery client: %w", err)
+
 	}
 	defer bq.Close()
 
 	schema, err := bigquery.SchemaFromJSON(staticAnalysisSchemaJSON)
 	if err != nil {
-		log.Panicf("Failed to decode schema: %v", err)
+		return fmt.Errorf("failed to decode schema: %w", err)
+
 	}
 
 	gcsRef := bigquery.NewGCSReference(fmt.Sprintf("gs://%s/*.json", bucket))
@@ -86,9 +88,24 @@ func LoadStaticAnalysis(ctx context.Context, m PubSubMessage) error {
 
 	job, err := loader.Run(ctx)
 	if err != nil {
-		log.Panicf("Failed to create load job: %v", err)
+		return fmt.Errorf("failed to create load job: %v", err)
 	}
 
-	log.Printf("Job created: %s", job.ID())
+	fmt.Printf("load job created: %s\n", job.ID())
+
+	status, err := job.Wait(ctx)
+	if err != nil {
+		return fmt.Errorf("error waiting for job: %w", err)
+	}
+
+	if status.Err() != nil {
+		fmt.Printf("job completed with %d errors\n", len(status.Errors))
+		for idx, err := range status.Errors {
+			fmt.Printf("error %d: %v\n", idx, err)
+		}
+
+		return status.Err()
+	}
+
 	return nil
 }
