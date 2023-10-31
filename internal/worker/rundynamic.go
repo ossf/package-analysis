@@ -4,10 +4,12 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"io"
 	"log/slog"
+	"math/big"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -108,6 +110,28 @@ func addSSHKeysToSandbox(ctx context.Context, sb sandbox.Sandbox) error {
 	return sb.CopyIntoSandbox(ctx, tempdir+"/.", "/root/.ssh")
 }
 
+// generateAWSAccessID generates an AWS access key id based off of some known patterns and random values.
+func generateAWSAccessKeyId() (string, error) {
+	const charSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
+	var randString = "AKIAI"
+	for i := 0; i < 15; i++ {
+		randInt, err := rand.Int(rand.Reader, big.NewInt(int64(len(charSet))))
+		if err != nil {
+			return "", err
+		}
+		randString += string(charSet[randInt.Int64()])
+	}
+	randString += "Q"
+	return randString, nil
+}
+
+// generateAWSSecretAccessKey generates a random 30 byte base64 encoded string to use as an AWS secret access key.
+func generateAWSSecretAccessKey() string {
+	b := make([]byte, 30)
+	rand.Read(b)
+	return base64.StdEncoding.EncodeToString(b)
+}
+
 /*
 RunDynamicAnalysis runs dynamic analysis on the given package across the phases
 valid in the package ecosystem (e.g. import, install), in a sandbox created
@@ -136,6 +160,15 @@ func RunDynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandb
 	if analysisCmd == "" {
 		analysisCmd = dynamicanalysis.DefaultCommand(pkg.Ecosystem())
 	}
+
+	// Adding environment variable baits
+	AWSAccessKeyId, err := generateAWSAccessKeyId()
+	if err != nil {
+		LogDynamicAnalysisError(ctx, pkg, "", err)
+	} else {
+		sbOpts = append(sbOpts, sandbox.SetEnv("AWS_ACCESS_KEY_ID", AWSAccessKeyId))
+	}
+	sbOpts = append(sbOpts, sandbox.SetEnv("AWS_SECRET_ACCESS_KEY", generateAWSSecretAccessKey()))
 
 	sb := sandbox.New(sbOpts...)
 
