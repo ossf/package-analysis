@@ -70,7 +70,6 @@ func LoadStaticAnalysis(ctx context.Context, m PubSubMessage) error {
 	schema, err := bigquery.SchemaFromJSON(staticAnalysisSchemaJSON)
 	if err != nil {
 		return fmt.Errorf("failed to decode schema: %w", err)
-
 	}
 
 	gcsRef := bigquery.NewGCSReference(fmt.Sprintf("gs://%s/*.json", bucket))
