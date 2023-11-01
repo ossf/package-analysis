@@ -113,16 +113,16 @@ func addSSHKeysToSandbox(ctx context.Context, sb sandbox.Sandbox) error {
 // generateAWSAccessID generates an AWS access key id based off of some known patterns and random values.
 func generateAWSAccessKeyId() (string, error) {
 	const charSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
-	var randString = "AKIAI"
-	for i := 0; i < 15; i++ {
+	var accessKeyId = "AKIAI"
+	for i := 0; i < 14; i++ {
 		randInt, err := rand.Int(rand.Reader, big.NewInt(int64(len(charSet))))
 		if err != nil {
 			return "", err
 		}
-		randString += string(charSet[randInt.Int64()])
+		accessKeyId += string(charSet[randInt.Int64()])
 	}
-	randString += "Q"
-	return randString, nil
+	accessKeyId += "Q"
+	return accessKeyId, nil
 }
 
 // generateAWSSecretAccessKey generates a random 30 byte base64 encoded string to use as an AWS secret access key.
