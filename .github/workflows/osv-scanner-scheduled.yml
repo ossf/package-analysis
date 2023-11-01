@@ -8,10 +8,10 @@ on:
     branches: [ main ]
 
 permissions:
-  # Require writing security events to upload SARIF file to security tab
-  security-events: write
   # Only need to read contents
   contents: read
+  # Require writing security events to upload SARIF file to security tab
+  security-events: write
 
 jobs:
   scan-scheduled:
