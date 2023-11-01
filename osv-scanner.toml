@@ -1,0 +1,3 @@
+[[IgnoredVulns]]
+id = "CVE-2020-8911"
+reason = "Indirect dependency, vulnerable function is probably not used and we can't do much about it anyway"
