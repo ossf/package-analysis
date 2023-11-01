@@ -157,7 +157,7 @@ DOCKER_MOUNTS=("-v" "$CONTAINER_MOUNT_DIR:/var/lib/containers" "-v" "$RESULTS_DI
 
 ANALYSIS_IMAGE=gcr.io/ossf-malware-analysis/analysis
 
-ANALYSIS_ARGS=("analyze" "-upload" "file:///results/" "-upload-file-write-info" "file:///writeResults/" "-upload-static" "file:///staticResults/" "-upload-analyzed-pkg" "file:///analyzedPackages/")
+ANALYSIS_ARGS=("analyze" "-dynamic-bucket" "file:///results/" "-file-writes-bucket" "file:///writeResults/" "-static-bucket" "file:///staticResults/" "-analyzed-pkg-bucket" "file:///analyzedPackages/" "-execution-log-bucket" "file:///results")
 
 # Add the remaining command line arguments
 ANALYSIS_ARGS=("${ANALYSIS_ARGS[@]}" "${args[@]}")
