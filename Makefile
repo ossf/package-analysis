@@ -129,11 +129,16 @@ run:
 
 E2E_TEST_COMPOSE_ARGS := -p pa-e2e-testing -f ./configs/e2e/docker-compose.yml -f ./test/e2e/docker-compose.test.yml
 
+.PHONY: e2e_test_build
+e2e_test_build: build_e2e_test_images
+
 .PHONY: e2e_test_start
-e2e_test_start: build_e2e_test_images
+e2e_test_start:
 	docker-compose $(E2E_TEST_COMPOSE_ARGS) up -d
 	@echo
 	@echo "To see analysis results, go to http://localhost:9000/minio/package-analysis"
+	@echo "Username: minio"
+	@echo "Password: minio123"
 	@echo
 	@echo "Remember to run 'make e2e_test_stop' when done!"
 	@sleep 5
