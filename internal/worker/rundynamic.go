@@ -163,7 +163,7 @@ func RunDynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandb
 
 	// Adding environment variable baits. We use mocked AWS keys since they are
 	// commonly added as environment variables and will be easy to query for in
-	//the analysis results. See AWS docs on environment variable configuration:
+	// the analysis results. See AWS docs on environment variable configuration:
 	// https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html
 	AWSAccessKeyId, err := generateAWSAccessKeyId()
 	if err != nil {
