@@ -7,7 +7,7 @@ import os
 def send_https_post_request(called_from: str, print_logs: bool) -> None:
   host = "www.httpbin.org"
   conn = http.client.HTTPSConnection(host)
-  data = {'text': 'Sending data through HTTPS from: ' + called_from + '. Found environment variables: ' + str(os.environ)}
+  data = {"text": f"Sending data through HTTPS from: {called_from}. Found environment variables: {str(os.environ)}"}
   json_data = json.dumps(data)
   conn.request("POST", "/post", json_data, headers={"Host": host})
   response = conn.getresponse()
