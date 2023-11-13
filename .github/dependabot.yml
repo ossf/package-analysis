@@ -33,3 +33,8 @@ updates:
   directory: "/internal/staticanalysis/parsing"
   schedule:
     interval: "weekly"
+  groups:
+    parsing-minor-updates:
+      update-types:
+        - "minor"
+        - "patch"
