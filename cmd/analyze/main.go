@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -167,7 +168,7 @@ func staticAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, resultStores *work
 	}
 }
 
-func main() {
+func run() (int, error) {
 	log.Initialize(os.Getenv("LOGGER_ENV"))
 
 	flag.TextVar(&ecosystem, "ecosystem", pkgecosystem.None, fmt.Sprintf("package ecosystem. Can be %s", pkgecosystem.SupportedEcosystemsStrings))
@@ -176,50 +177,51 @@ func main() {
 	flag.Parse()
 
 	if err := featureflags.Update(*features); err != nil {
-		slog.Error("Failed to parse flags", "error", err)
-		return
+		return -1, fmt.Errorf("failed to parse flags: %w", err)
 	}
 
 	if *help {
 		flag.Usage()
-		return
+		return -1, nil
 	}
 
 	if *listModes {
 		printAnalysisModes()
-		return
+		return 0, nil
 	}
 
 	if *listFeatures {
 		printFeatureFlags()
-		return
+		return 0, nil
 	}
 
 	if ecosystem == pkgecosystem.None {
 		flag.Usage()
-		return
+		return -1, errors.New("missing ecosystem")
 	}
-	ctx := log.ContextWithAttrs(context.Background(), slog.Any("ecosystem", ecosystem))
 
 	manager := pkgmanager.Manager(ecosystem)
 	if manager == nil {
-		slog.ErrorContext(ctx, "Unsupported pkg manager")
-		os.Exit(1)
+		return -1, fmt.Errorf("unsupported package ecosystem: %s", ecosystem)
 	}
 
 	if *pkgName == "" {
 		flag.Usage()
-		return
+		return -1, errors.New("missing package name")
 	}
-	ctx = log.ContextWithAttrs(ctx, slog.String("name", *pkgName), slog.String("version", *version))
+
+	ctx := log.ContextWithAttrs(context.Background(),
+		slog.Any("ecosystem", ecosystem),
+		slog.String("name", *pkgName),
+		slog.String("version", *version),
+	)
 
 	runMode := make(map[analysis.Mode]bool)
 	for _, analysisName := range analysisMode.Values {
 		mode, ok := analysis.ModeFromString(strings.ToLower(analysisName))
 		if !ok {
-			slog.ErrorContext(ctx, "Unknown analysis mode: "+analysisName)
 			printAnalysisModes()
-			return
+			return -1, errors.New("unknown analysis mode: " + analysisName)
 		}
 		runMode[mode] = true
 	}
@@ -229,7 +231,7 @@ func main() {
 	pkg, err := worker.ResolvePkg(manager, *pkgName, *version, *localPkg)
 	if err != nil {
 		slog.ErrorContext(ctx, "Error resolving package", "error", err)
-		os.Exit(1)
+		return 1, err
 	}
 
 	resultStores := makeResultStores()
@@ -243,5 +245,18 @@ func main() {
 	if runMode[analysis.Dynamic] {
 		slog.InfoContext(ctx, "Starting dynamic analysis")
 		dynamicAnalysis(ctx, pkg, &resultStores)
+	}
+
+	return 0, nil
+}
+
+func main() {
+	ret, err := run()
+	if err != nil {
+		fmt.Printf("%v\n", err)
+	}
+
+	if ret != 0 {
+		os.Exit(ret)
 	}
 }
