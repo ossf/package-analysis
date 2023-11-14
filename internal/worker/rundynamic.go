@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"math/big"
+	mathrand "math/rand"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -110,26 +110,22 @@ func addSSHKeysToSandbox(ctx context.Context, sb sandbox.Sandbox) error {
 	return sb.CopyIntoSandbox(ctx, tempdir+"/.", "/root/.ssh")
 }
 
-// generateAWSAccessID generates an AWS access key id based off of some known patterns and random values.
-func generateAWSAccessKeyId() (string, error) {
+// generateAWSKeys returns two strings. The first is an AWS access key id based
+// off of some known patterns and pseudorandom values. The second is a random 30
+// byte base64 encoded string to use as an AWS secret access key.
+func generateAWSKeys() (string, string) {
 	const charSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
 	var accessKeyId = "AKIAI"
+	src := mathrand.NewSource(time.Now().UnixNano())
+	r := mathrand.New(src)
 	for i := 0; i < 14; i++ {
-		randInt, err := rand.Int(rand.Reader, big.NewInt(int64(len(charSet))))
-		if err != nil {
-			return "", err
-		}
-		accessKeyId += string(charSet[randInt.Int64()])
+		randInt := r.Intn(len(charSet))
+		accessKeyId += string(charSet[randInt])
 	}
 	accessKeyId += "Q"
-	return accessKeyId, nil
-}
-
-// generateAWSSecretAccessKey generates a random 30 byte base64 encoded string to use as an AWS secret access key.
-func generateAWSSecretAccessKey() string {
 	b := make([]byte, 30)
-	rand.Read(b)
-	return base64.StdEncoding.EncodeToString(b)
+	r.Read(b)
+	return accessKeyId, base64.StdEncoding.EncodeToString(b)
 }
 
 /*
@@ -165,13 +161,9 @@ func RunDynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandb
 	// commonly added as environment variables and will be easy to query for in
 	// the analysis results. See AWS docs on environment variable configuration:
 	// https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html
-	AWSAccessKeyId, err := generateAWSAccessKeyId()
-	if err != nil {
-		slog.WarnContext(ctx, "could not create AWS access key id", "error", err)
-	} else {
-		sbOpts = append(sbOpts, sandbox.SetEnv("AWS_ACCESS_KEY_ID", AWSAccessKeyId))
-	}
-	sbOpts = append(sbOpts, sandbox.SetEnv("AWS_SECRET_ACCESS_KEY", generateAWSSecretAccessKey()))
+	AWSAccessKeyId, AWSSecretAccessKey := generateAWSKeys()
+	sbOpts = append(sbOpts, sandbox.SetEnv("AWS_ACCESS_KEY_ID", AWSAccessKeyId))
+	sbOpts = append(sbOpts, sandbox.SetEnv("AWS_SECRET_ACCESS_KEY", AWSSecretAccessKey))
 
 	sb := sandbox.New(sbOpts...)
 
