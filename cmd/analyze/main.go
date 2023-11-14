@@ -24,6 +24,13 @@ import (
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
+const (
+	// program exit codes
+	exitSuccess      = 0
+	exitProgramError = 1
+	exitUserError    = 2
+)
+
 var (
 	pkgName            = flag.String("package", "", "package name")
 	localPkg           = flag.String("local", "", "local package path")
@@ -177,37 +184,37 @@ func run() (int, error) {
 	flag.Parse()
 
 	if err := featureflags.Update(*features); err != nil {
-		return -1, fmt.Errorf("failed to parse flags: %w", err)
+		return exitUserError, fmt.Errorf("failed to parse flags: %w", err)
 	}
 
 	if *help {
 		flag.Usage()
-		return -1, nil
+		return exitSuccess, nil
 	}
 
 	if *listModes {
 		printAnalysisModes()
-		return 0, nil
+		return exitSuccess, nil
 	}
 
 	if *listFeatures {
 		printFeatureFlags()
-		return 0, nil
+		return exitSuccess, nil
 	}
 
 	if ecosystem == pkgecosystem.None {
 		flag.Usage()
-		return -1, errors.New("missing ecosystem")
+		return exitUserError, errors.New("missing ecosystem")
 	}
 
 	manager := pkgmanager.Manager(ecosystem)
 	if manager == nil {
-		return -1, fmt.Errorf("unsupported package ecosystem: %s", ecosystem)
+		return exitUserError, fmt.Errorf("unsupported package ecosystem: %s", ecosystem)
 	}
 
 	if *pkgName == "" {
 		flag.Usage()
-		return -1, errors.New("missing package name")
+		return exitUserError, errors.New("missing package name")
 	}
 
 	ctx := log.ContextWithAttrs(context.Background(),
@@ -221,7 +228,7 @@ func run() (int, error) {
 		mode, ok := analysis.ModeFromString(strings.ToLower(analysisName))
 		if !ok {
 			printAnalysisModes()
-			return -1, errors.New("unknown analysis mode: " + analysisName)
+			return exitUserError, errors.New("unknown analysis mode: " + analysisName)
 		}
 		runMode[mode] = true
 	}
@@ -231,7 +238,7 @@ func run() (int, error) {
 	pkg, err := worker.ResolvePkg(manager, *pkgName, *version, *localPkg)
 	if err != nil {
 		slog.ErrorContext(ctx, "Error resolving package", "error", err)
-		return 1, err
+		return exitProgramError, err
 	}
 
 	resultStores := makeResultStores()
@@ -247,7 +254,7 @@ func run() (int, error) {
 		dynamicAnalysis(ctx, pkg, &resultStores)
 	}
 
-	return 0, nil
+	return exitSuccess, nil
 }
 
 func main() {
