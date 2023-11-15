@@ -180,7 +180,8 @@ func staticAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, resultStores *work
 func run() error {
 	log.Initialize(os.Getenv("LOGGER_ENV"))
 
-	flag.TextVar(&ecosystem, "ecosystem", pkgecosystem.None, fmt.Sprintf("package ecosystem. Can be %s", pkgecosystem.SupportedEcosystemsStrings))
+	flag.TextVar(&ecosystem, "ecosystem", pkgecosystem.None, "package ecosystem. Available: "+
+		strings.Join(pkgecosystem.SupportedEcosystemsStrings, ", "))
 
 	analysisMode.InitFlag()
 	flag.Parse()
@@ -211,7 +212,7 @@ func run() error {
 
 	manager := pkgmanager.Manager(ecosystem)
 	if manager == nil {
-		return usagef("unsupported package ecosystem '%s'", ecosystem)
+		return usagef("unsupported package ecosystem %q", ecosystem)
 	}
 
 	if *pkgName == "" {
@@ -230,7 +231,7 @@ func run() error {
 		mode, ok := analysis.ModeFromString(strings.ToLower(analysisName))
 		if !ok {
 			printAnalysisModes()
-			return usagef("unknown analysis mode '%s'", analysisName)
+			return usagef("unknown analysis mode %q", analysisName)
 		}
 		runMode[mode] = true
 	}
@@ -263,9 +264,10 @@ func main() {
 	if err := run(); err != nil {
 		if errors.As(err, &usageError{}) {
 			fmt.Fprintf(os.Stderr, "Usage error: %v\n", err)
+			os.Exit(2)
 		} else {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
 		}
-		os.Exit(1)
 	}
 }
