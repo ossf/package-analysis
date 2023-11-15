@@ -18,10 +18,11 @@ import (
 // ResultStores holds ResultStore instances for saving each kind of analysis data.
 // They can be nil, in which case calling the associated Upload function here is a no-op
 type ResultStores struct {
-	DynamicAnalysis      *resultstore.ResultStore
-	StaticAnalysis       *resultstore.ResultStore
-	FileWrites           *resultstore.ResultStore
 	AnalyzedPackage      *resultstore.ResultStore
+	DynamicAnalysis      *resultstore.ResultStore
+	ExecutionLog         *resultstore.ResultStore
+	FileWrites           *resultstore.ResultStore
+	StaticAnalysis       *resultstore.ResultStore
 	AnalyzedPackageSaved bool
 }
 
@@ -64,7 +65,7 @@ func SaveDynamicAnalysisData(ctx context.Context, pkg *pkgmanager.Pkg, dest *Res
 
 // saveExecutionLog saves the execution log to the dynamic analysis resultstore, only if it is nonempty
 func saveExecutionLog(ctx context.Context, pkg *pkgmanager.Pkg, dest *ResultStores, data analysisrun.DynamicAnalysisResults) error {
-	if dest.DynamicAnalysis == nil || len(data.ExecutionLog) == 0 {
+	if dest.ExecutionLog == nil || len(data.ExecutionLog) == 0 {
 		// nothing to do
 		return nil
 	}
@@ -74,7 +75,7 @@ func saveExecutionLog(ctx context.Context, pkg *pkgmanager.Pkg, dest *ResultStor
 		execLogFilename = fmt.Sprintf("execution-log-%s.json", pkg.Version())
 	}
 
-	if err := dest.DynamicAnalysis.SaveDynamicAnalysis(ctx, pkg, data.ExecutionLog, execLogFilename); err != nil {
+	if err := dest.ExecutionLog.SaveDynamicAnalysis(ctx, pkg, data.ExecutionLog, execLogFilename); err != nil {
 		return fmt.Errorf("failed to save execution log to %s: %w", dest.DynamicAnalysis, err)
 	}
 

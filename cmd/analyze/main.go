@@ -24,42 +24,45 @@ import (
 )
 
 var (
-	pkgName             = flag.String("package", "", "package name")
-	localPkg            = flag.String("local", "", "local package path")
-	ecosystem           pkgecosystem.Ecosystem
-	version             = flag.String("version", "", "version")
-	noPull              = flag.Bool("nopull", false, "disables pulling down sandbox images")
-	imageTag            = flag.String("image-tag", "", "set image tag for analysis sandboxes")
-	dynamicUpload       = flag.String("upload", "", "bucket path for uploading dynamic analysis results")
-	staticUpload        = flag.String("upload-static", "", "bucket path for uploading static analysis results")
-	uploadFileWriteInfo = flag.String("upload-file-write-info", "", "bucket path for uploading information from file writes")
-	uploadAnalyzedPkg   = flag.String("upload-analyzed-pkg", "", "bucket path for uploading analyzed packages")
-	offline             = flag.Bool("offline", false, "disables sandbox network access")
-	customSandbox       = flag.String("sandbox-image", "", "override default dynamic analysis sandbox with custom image")
-	customAnalysisCmd   = flag.String("analysis-command", "", "override default dynamic analysis script path (use with custom sandbox image)")
-	listModes           = flag.Bool("list-modes", false, "prints out a list of available analysis modes")
-	features            = flag.String("features", "", "override features that are enabled/disabled by default")
-	listFeatures        = flag.Bool("list-features", false, "list available features that can be toggled")
-	help                = flag.Bool("help", false, "print help on available options")
-	analysisMode        = utils.CommaSeparatedFlags("mode", []string{"static", "dynamic"},
+	pkgName            = flag.String("package", "", "package name")
+	localPkg           = flag.String("local", "", "local package path")
+	ecosystem          pkgecosystem.Ecosystem
+	version            = flag.String("version", "", "version")
+	noPull             = flag.Bool("nopull", false, "disables pulling down sandbox images")
+	imageTag           = flag.String("image-tag", "", "set image tag for analysis sandboxes")
+	dynamicBucket      = flag.String("dynamic-bucket", "", "bucket path for uploading dynamic analysis results")
+	staticBucket       = flag.String("static-bucket", "", "bucket path for uploading static analysis results")
+	executionLogBucket = flag.String("execution-log-bucket", "", "bucket path for uploading execution log (dynamic analysis)")
+	fileWritesBucket   = flag.String("file-writes-bucket", "", "bucket path for uploading file writes data (dynamic analysis)")
+	analyzedPkgBucket  = flag.String("analyzed-pkg-bucket", "", "bucket path for uploading analyzed packages")
+	offline            = flag.Bool("offline", false, "disables sandbox network access")
+	customSandbox      = flag.String("sandbox-image", "", "override default dynamic analysis sandbox with custom image")
+	customAnalysisCmd  = flag.String("analysis-command", "", "override default dynamic analysis script path (use with custom sandbox image)")
+	listModes          = flag.Bool("list-modes", false, "prints out a list of available analysis modes")
+	features           = flag.String("features", "", "override features that are enabled/disabled by default")
+	listFeatures       = flag.Bool("list-features", false, "list available features that can be toggled")
+	help               = flag.Bool("help", false, "print help on available options")
+	analysisMode       = utils.CommaSeparatedFlags("mode", []string{"static", "dynamic"},
 		"list of analysis modes to run, separated by commas. Use -list-modes to see available options")
 )
 
 func makeResultStores() worker.ResultStores {
 	rs := worker.ResultStores{}
 
-	if *dynamicUpload != "" {
-		rs.DynamicAnalysis = resultstore.New(*dynamicUpload)
+	if *analyzedPkgBucket != "" {
+		rs.AnalyzedPackage = resultstore.New(*analyzedPkgBucket)
 	}
-	if *staticUpload != "" {
-		rs.StaticAnalysis = resultstore.New(*staticUpload)
+	if *dynamicBucket != "" {
+		rs.DynamicAnalysis = resultstore.New(*dynamicBucket)
 	}
-	if *uploadFileWriteInfo != "" {
-		rs.FileWrites = resultstore.New(*uploadFileWriteInfo)
+	if *executionLogBucket != "" {
+		rs.ExecutionLog = resultstore.New(*executionLogBucket)
 	}
-
-	if *uploadAnalyzedPkg != "" {
-		rs.AnalyzedPackage = resultstore.New(*uploadAnalyzedPkg)
+	if *fileWritesBucket != "" {
+		rs.FileWrites = resultstore.New(*fileWritesBucket)
+	}
+	if *staticBucket != "" {
+		rs.StaticAnalysis = resultstore.New(*staticBucket)
 	}
 
 	return rs

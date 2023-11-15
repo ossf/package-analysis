@@ -16,7 +16,7 @@ var (
 	// CodeExecution invokes package code automatically during dynamic analysis,
 	// which may uncover extra malicious behaviour. The names of executed functions,
 	// methods and classes are logged to a file.
-	CodeExecution = new("CodeExecution", false)
+	CodeExecution = new("CodeExecution", true)
 
 	// StraceDebugLogging enables verbose logging of strace parsing during dynamic analysis.
 	// This feature can only be used in the analysis image, and if enabled, the -strace-logs-dir

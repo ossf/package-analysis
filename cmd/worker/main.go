@@ -37,10 +37,11 @@ const (
 
 // resultBucketPaths holds bucket paths for the different types of results.
 type resultBucketPaths struct {
-	dynamicAnalysis string
-	staticAnalysis  string
-	fileWrites      string
 	analyzedPkg     string
+	dynamicAnalysis string
+	executionLog    string
+	fileWrites      string
+	staticAnalysis  string
 }
 
 type sandboxImageSpec struct {
@@ -79,17 +80,20 @@ func copyPackageToLocalFile(ctx context.Context, packagesBucket *blob.Bucket, bu
 func makeResultStores(dest resultBucketPaths) worker.ResultStores {
 	resultStores := worker.ResultStores{}
 
+	if dest.analyzedPkg != "" {
+		resultStores.AnalyzedPackage = resultstore.New(dest.analyzedPkg, resultstore.ConstructPath())
+	}
 	if dest.dynamicAnalysis != "" {
 		resultStores.DynamicAnalysis = resultstore.New(dest.dynamicAnalysis, resultstore.ConstructPath())
 	}
-	if dest.staticAnalysis != "" {
-		resultStores.StaticAnalysis = resultstore.New(dest.staticAnalysis, resultstore.ConstructPath())
+	if dest.executionLog != "" {
+		resultStores.ExecutionLog = resultstore.New(dest.executionLog, resultstore.ConstructPath())
 	}
 	if dest.fileWrites != "" {
 		resultStores.FileWrites = resultstore.New(dest.fileWrites, resultstore.ConstructPath())
 	}
-	if dest.analyzedPkg != "" {
-		resultStores.AnalyzedPackage = resultstore.New(dest.analyzedPkg, resultstore.ConstructPath())
+	if dest.staticAnalysis != "" {
+		resultStores.StaticAnalysis = resultstore.New(dest.staticAnalysis, resultstore.ConstructPath())
 	}
 
 	return resultStores
@@ -274,10 +278,11 @@ func main() {
 	}
 
 	resultsBuckets := resultBucketPaths{
-		dynamicAnalysis: os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS"),
-		staticAnalysis:  os.Getenv("OSSF_MALWARE_STATIC_ANALYSIS_RESULTS"),
-		fileWrites:      os.Getenv("OSSF_MALWARE_ANALYSIS_FILE_WRITE_RESULTS"),
 		analyzedPkg:     os.Getenv("OSSF_MALWARE_ANALYZED_PACKAGES"),
+		dynamicAnalysis: os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS"),
+		executionLog:    os.Getenv("OSSF_MALWARE_ANALYSIS_EXECUTION_LOGS"),
+		fileWrites:      os.Getenv("OSSF_MALWARE_ANALYSIS_FILE_WRITE_RESULTS"),
+		staticAnalysis:  os.Getenv("OSSF_MALWARE_STATIC_ANALYSIS_RESULTS"),
 	}
 	resultStores := makeResultStores(resultsBuckets)
 
@@ -305,6 +310,7 @@ func main() {
 		"static_results_bucket", resultsBuckets.staticAnalysis,
 		"file_write_results_bucket", resultsBuckets.fileWrites,
 		"analyzed_packages_bucket", resultsBuckets.analyzedPkg,
+		"execution_log_bucket", resultsBuckets.executionLog,
 		"image_tag", imageSpec.tag,
 		"image_nopull", imageSpec.noPull,
 		"topic_notification", notificationTopicURL,

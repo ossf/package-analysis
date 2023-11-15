@@ -152,7 +152,123 @@
         "name": "import",
         "mode": "NULLABLE",
         "type": "RECORD",
-
+        "fields": [
+          {
+            "name": "Status",
+            "mode": "NULLABLE",
+            "type": "STRING"
+          },
+          {
+            "name": "Stdout",
+            "mode": "NULLABLE",
+            "type": "BYTES"
+          },
+          {
+            "name": "Stderr",
+            "mode": "NULLABLE",
+            "type": "STRING"
+          },
+          {
+            "name": "DNS",
+            "mode": "REPEATED",
+            "type": "RECORD",
+            "fields": [
+              {
+                "name": "Class",
+                "mode": "NULLABLE",
+                "type": "STRING"
+              },
+              {
+                "name": "Queries",
+                "mode": "REPEATED",
+                "type": "RECORD",
+                "fields": [
+                  {
+                    "name": "Hostname",
+                    "mode": "NULLABLE",
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "Types",
+                    "mode": "REPEATED",
+                    "type": "STRING"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Commands",
+            "mode": "REPEATED",
+            "type": "RECORD",
+            "fields": [
+              {
+                "name": "Command",
+                "mode": "REPEATED",
+                "type": "STRING"
+              },
+              {
+                "name": "Environment",
+                "mode": "REPEATED",
+                "type": "STRING"
+              }
+            ]
+          },
+          {
+            "name": "Sockets",
+            "mode": "REPEATED",
+            "type": "RECORD",
+            "fields": [
+              {
+                "name": "Hostnames",
+                "mode": "REPEATED",
+                "type": "STRING"
+              },
+              {
+                "name": "Port",
+                "mode": "NULLABLE",
+                "type": "INTEGER"
+              },
+              {
+                "name": "Address",
+                "mode": "NULLABLE",
+                "type": "STRING"
+              }
+            ]
+          },
+          {
+            "name": "Files",
+            "mode": "REPEATED",
+            "type": "RECORD",
+            "fields": [
+              {
+                "name": "Delete",
+                "mode": "NULLABLE",
+                "type": "BOOLEAN"
+              },
+              {
+                "name": "Write",
+                "mode": "NULLABLE",
+                "type": "BOOLEAN"
+              },
+              {
+                "name": "Read",
+                "mode": "NULLABLE",
+                "type": "BOOLEAN"
+              },
+              {
+                "name": "Path",
+                "mode": "NULLABLE",
+                "type": "STRING"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "execute",
+        "mode": "NULLABLE",
+        "type": "RECORD",
         "fields": [
           {
             "name": "Status",
