@@ -40,54 +40,42 @@
             "type": "STRING"
           },
           {
-            "name": "basic",
+            "name": "detected_type",
             "mode": "NULLABLE",
+            "type": "STRING"
+          },
+          {
+            "name": "size",
+            "mode": "NULLABLE",
+            "type": "INT64"
+          },
+          {
+            "name": "sha256",
+            "mode": "NULLABLE",
+            "type": "STRING"
+          },
+          {
+            "name": "line_lengths",
+            "mode": "REPEATED",
             "type": "RECORD",
             "fields": [
               {
-                "name": "detected_type",
-                "mode": "NULLABLE",
-                "type": "STRING"
-              },
-              {
-                "name": "size",
-                "mode": "NULLABLE",
+                "name": "value",
+                "mode": "REQUIRED",
                 "type": "INT64"
               },
               {
-                "name": "sha256",
-                "mode": "NULLABLE",
-                "type": "STRING"
-              },
-              {
-                "name": "line_lengths",
-                "mode": "REPEATED",
-                "type": "RECORD",
-                "fields": [
-                  {
-                    "name": "value",
-                    "mode": "REQUIRED",
-                    "type": "INT64"
-                  },
-                  {
-                    "name": "count",
-                    "mode": "REQUIRED",
-                    "type": "INT64"
-                  }
-                ]
+                "name": "count",
+                "mode": "REQUIRED",
+                "type": "INT64"
               }
             ]
           },
           {
-            "name": "parsing",
+            "name": "js",
             "mode": "NULLABLE",
             "type": "RECORD",
             "fields": [
-              {
-                "name": "language",
-                "mode": "REQUIRED",
-                "type": "STRING"
-              },
               {
                 "name": "identifiers",
                 "mode": "REPEATED",
@@ -181,106 +169,99 @@
             ]
           },
           {
-            "name": "signals",
-            "mode": "NULLABLE",
+            "name": "identifier_lengths",
+            "mode": "REPEATED",
             "type": "RECORD",
             "fields": [
-			  {
-				"name": "identifier_lengths",
-				"mode": "REPEATED",
-				"type": "RECORD",
-				"fields": [
-				  {
-					"name": "value",
-					"mode": "REQUIRED",
-					"type": "INT64"
-				  },
-				  {
-					"name": "count",
-					"mode": "REQUIRED",
-					"type": "INT64"
-				  }
-				]
-			  },
-			  {
-				"name": "string_lengths",
-				"mode": "REPEATED",
-				"type": "RECORD",
-				"fields": [
-				  {
-					"name": "value",
-					"mode": "REQUIRED",
-					"type": "INT64"
-				  },
-				  {
-					"name": "count",
-					"mode": "REQUIRED",
-					"type": "INT64"
-				  }
-				]
-			  },
-			  {
-				"name": "suspicious_identifiers",
-				"mode": "REPEATED",
-				"type": "RECORD",
-				"fields": [
-				  {
-					"name": "name",
-					"mode": "REQUIRED",
-					"type": "STRING"
-				  },
-				  {
-					"name": "rule",
-					"mode": "NULLABLE",
-					"type": "STRING"
-				  }
-				]
-			  },
-			  {
-				"name": "escaped_strings",
-				"mode": "REPEATED",
-				"type": "RECORD",
-				"fields": [
-				  {
-					"name": "value",
-					"mode": "REQUIRED",
-					"type": "STRING"
-				  },
-				  {
-					"name": "raw",
-					"mode": "REQUIRED",
-					"type": "STRING"
-				  },
-				  {
-					"name": "levenshtein_dist",
-					"mode": "NULLABLE",
-					"type": "INT64"
-				  }
-				]
-			  },
-			  {
-				"name": "base64_strings",
-				"mode": "REPEATED",
-				"type": "STRING"
-			  },
-			  {
-				"name": "hex_strings",
-				"mode": "REPEATED",
-				"type": "STRING"
-			  },
-			  {
-				"name": "ip_addresses",
-				"mode": "REPEATED",
-				"type": "STRING"
-			  },
-			  {
-				"name": "urls",
-				"mode": "REPEATED",
-				"type": "STRING"
-			  }
-			]
-		  }
-		]
+              {
+                "name": "value",
+                "mode": "REQUIRED",
+                "type": "INT64"
+              },
+              {
+                "name": "count",
+                "mode": "REQUIRED",
+                "type": "INT64"
+              }
+            ]
+          },
+          {
+            "name": "string_lengths",
+            "mode": "REPEATED",
+            "type": "RECORD",
+            "fields": [
+              {
+                "name": "value",
+                "mode": "REQUIRED",
+                "type": "INT64"
+              },
+              {
+                "name": "count",
+                "mode": "REQUIRED",
+                "type": "INT64"
+              }
+            ]
+          },
+          {
+            "name": "suspicious_identifiers",
+            "mode": "REPEATED",
+            "type": "RECORD",
+            "fields": [
+              {
+                "name": "name",
+                "mode": "REQUIRED",
+                "type": "STRING"
+              },
+              {
+                "name": "rule",
+                "mode": "NULLABLE",
+                "type": "STRING"
+              }
+            ]
+          },
+          {
+            "name": "escaped_strings",
+            "mode": "REPEATED",
+            "type": "RECORD",
+            "fields": [
+              {
+                "name": "value",
+                "mode": "REQUIRED",
+                "type": "STRING"
+              },
+              {
+                "name": "raw",
+                "mode": "REQUIRED",
+                "type": "STRING"
+              },
+              {
+                "name": "levenshtein_dist",
+                "mode": "NULLABLE",
+                "type": "INT64"
+              }
+            ]
+          },
+          {
+            "name": "base64_strings",
+            "mode": "REPEATED",
+            "type": "STRING"
+          },
+          {
+            "name": "hex_strings",
+            "mode": "REPEATED",
+            "type": "STRING"
+          },
+          {
+            "name": "ip_addresses",
+            "mode": "REPEATED",
+            "type": "STRING"
+          },
+          {
+            "name": "urls",
+            "mode": "REPEATED",
+            "type": "STRING"
+          }
+        ]
       }
     ]
   }
