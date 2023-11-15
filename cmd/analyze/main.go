@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -45,6 +46,15 @@ var (
 	analysisMode       = utils.CommaSeparatedFlags("mode", []string{"static", "dynamic"},
 		"list of analysis modes to run, separated by commas. Use -list-modes to see available options")
 )
+
+// usageError wraps an error, to signal that the error arises from incorrect user input.
+type usageError struct {
+	error
+}
+
+func usagef(format string, args ...any) error {
+	return usageError{fmt.Errorf(format, args...)}
+}
 
 func makeResultStores() worker.ResultStores {
 	rs := worker.ResultStores{}
@@ -167,59 +177,61 @@ func staticAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, resultStores *work
 	}
 }
 
-func main() {
+func run() error {
 	log.Initialize(os.Getenv("LOGGER_ENV"))
 
-	flag.TextVar(&ecosystem, "ecosystem", pkgecosystem.None, fmt.Sprintf("package ecosystem. Can be %s", pkgecosystem.SupportedEcosystemsStrings))
+	flag.TextVar(&ecosystem, "ecosystem", pkgecosystem.None, "package ecosystem. Available: "+
+		strings.Join(pkgecosystem.SupportedEcosystemsStrings, ", "))
 
 	analysisMode.InitFlag()
 	flag.Parse()
 
 	if err := featureflags.Update(*features); err != nil {
-		slog.Error("Failed to parse flags", "error", err)
-		return
+		return usageError{err}
 	}
 
 	if *help {
 		flag.Usage()
-		return
+		return nil
 	}
 
 	if *listModes {
 		printAnalysisModes()
-		return
+		return nil
 	}
 
 	if *listFeatures {
 		printFeatureFlags()
-		return
+		return nil
 	}
 
 	if ecosystem == pkgecosystem.None {
 		flag.Usage()
-		return
+		return usagef("missing ecosystem")
 	}
-	ctx := log.ContextWithAttrs(context.Background(), slog.Any("ecosystem", ecosystem))
 
 	manager := pkgmanager.Manager(ecosystem)
 	if manager == nil {
-		slog.ErrorContext(ctx, "Unsupported pkg manager")
-		os.Exit(1)
+		return usagef("unsupported package ecosystem %q", ecosystem)
 	}
 
 	if *pkgName == "" {
 		flag.Usage()
-		return
+		return usagef("missing package name")
 	}
-	ctx = log.ContextWithAttrs(ctx, slog.String("name", *pkgName), slog.String("version", *version))
+
+	ctx := log.ContextWithAttrs(context.Background(),
+		slog.Any("ecosystem", ecosystem),
+		slog.String("name", *pkgName),
+		slog.String("version", *version),
+	)
 
 	runMode := make(map[analysis.Mode]bool)
 	for _, analysisName := range analysisMode.Values {
 		mode, ok := analysis.ModeFromString(strings.ToLower(analysisName))
 		if !ok {
-			slog.ErrorContext(ctx, "Unknown analysis mode: "+analysisName)
 			printAnalysisModes()
-			return
+			return usagef("unknown analysis mode %q", analysisName)
 		}
 		runMode[mode] = true
 	}
@@ -229,7 +241,7 @@ func main() {
 	pkg, err := worker.ResolvePkg(manager, *pkgName, *version, *localPkg)
 	if err != nil {
 		slog.ErrorContext(ctx, "Error resolving package", "error", err)
-		os.Exit(1)
+		return err
 	}
 
 	resultStores := makeResultStores()
@@ -243,5 +255,19 @@ func main() {
 	if runMode[analysis.Dynamic] {
 		slog.InfoContext(ctx, "Starting dynamic analysis")
 		dynamicAnalysis(ctx, pkg, &resultStores)
+	}
+
+	return nil
+}
+
+func main() {
+	if err := run(); err != nil {
+		if errors.As(err, &usageError{}) {
+			fmt.Fprintf(os.Stderr, "Usage error: %v\n", err)
+			os.Exit(2)
+		} else {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 	}
 }
