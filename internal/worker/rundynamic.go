@@ -119,8 +119,8 @@ func generateAWSKeys() (string, string) {
 	src := mathrand.NewSource(time.Now().UnixNano())
 	r := mathrand.New(src)
 	for i := 0; i < 14; i++ {
-		randInt := r.Intn(len(charSet))
-		accessKeyId += string(charSet[randInt])
+		randIndex := r.Intn(len(charSet))
+		accessKeyId += string(charSet[randIndex])
 	}
 	accessKeyId += "Q"
 	b := make([]byte, 30)
