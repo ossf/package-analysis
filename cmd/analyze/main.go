@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -46,6 +47,7 @@ var (
 		"list of analysis modes to run, separated by commas. Use -list-modes to see available options")
 )
 
+// usageError wraps an error, to signal that the error arises from incorrect user input.
 type usageError struct {
 	error
 }
@@ -184,7 +186,7 @@ func run() error {
 	flag.Parse()
 
 	if err := featureflags.Update(*features); err != nil {
-		return usagef("failed to parse flags: %w", err)
+		return usageError{err}
 	}
 
 	if *help {
@@ -209,7 +211,7 @@ func run() error {
 
 	manager := pkgmanager.Manager(ecosystem)
 	if manager == nil {
-		return usagef("unsupported package ecosystem: %s", ecosystem)
+		return usagef("unsupported package ecosystem '%s'", ecosystem)
 	}
 
 	if *pkgName == "" {
@@ -228,7 +230,7 @@ func run() error {
 		mode, ok := analysis.ModeFromString(strings.ToLower(analysisName))
 		if !ok {
 			printAnalysisModes()
-			return usagef("unknown analysis mode: %s", analysisName)
+			return usagef("unknown analysis mode '%s'", analysisName)
 		}
 		runMode[mode] = true
 	}
@@ -259,7 +261,11 @@ func run() error {
 
 func main() {
 	if err := run(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		if errors.As(err, &usageError{}) {
+			fmt.Fprintf(os.Stderr, "Usage error: %v\n", err)
+		} else {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		}
 		os.Exit(1)
 	}
 }
