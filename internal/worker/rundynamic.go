@@ -4,10 +4,12 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"io"
 	"log/slog"
+	mathrand "math/rand"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -108,6 +110,24 @@ func addSSHKeysToSandbox(ctx context.Context, sb sandbox.Sandbox) error {
 	return sb.CopyIntoSandbox(ctx, tempdir+"/.", "/root/.ssh")
 }
 
+// generateAWSKeys returns two strings. The first is an AWS access key id based
+// off of some known patterns and pseudorandom values. The second is a random 30
+// byte base64 encoded string to use as an AWS secret access key.
+func generateAWSKeys() (string, string) {
+	const charSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
+	var accessKeyId = "AKIAI"
+	src := mathrand.NewSource(time.Now().UnixNano())
+	r := mathrand.New(src)
+	for i := 0; i < 14; i++ {
+		randIndex := r.Intn(len(charSet))
+		accessKeyId += string(charSet[randIndex])
+	}
+	accessKeyId += "Q"
+	b := make([]byte, 30)
+	r.Read(b)
+	return accessKeyId, base64.StdEncoding.EncodeToString(b)
+}
+
 /*
 RunDynamicAnalysis runs dynamic analysis on the given package across the phases
 valid in the package ecosystem (e.g. import, install), in a sandbox created
@@ -136,6 +156,14 @@ func RunDynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandb
 	if analysisCmd == "" {
 		analysisCmd = dynamicanalysis.DefaultCommand(pkg.Ecosystem())
 	}
+
+	// Adding environment variable baits. We use mocked AWS keys since they are
+	// commonly added as environment variables and will be easy to query for in
+	// the analysis results. See AWS docs on environment variable configuration:
+	// https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html
+	AWSAccessKeyId, AWSSecretAccessKey := generateAWSKeys()
+	sbOpts = append(sbOpts, sandbox.SetEnv("AWS_ACCESS_KEY_ID", AWSAccessKeyId))
+	sbOpts = append(sbOpts, sandbox.SetEnv("AWS_SECRET_ACCESS_KEY", AWSSecretAccessKey))
 
 	sb := sandbox.New(sbOpts...)
 
