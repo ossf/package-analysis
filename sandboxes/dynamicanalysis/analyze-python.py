@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import asyncio
 import importlib
 import importlib.metadata
 import inspect
@@ -197,11 +198,30 @@ def invoke_function(obj):
     # any exceptions will be propagated to the caller
     bound = signature.bind(*args, **kwargs)
 
-    # run with timeout to prevent hangs
+    # set timeout to prevent hangs
     signal.alarm(EXECUTION_TIMEOUT_SECONDS)
-    ret = obj(*bound.args, **bound.kwargs)
+
+    # run function and await the result if necessary
+    # ret_obj is the object returned by the function, which may need
+    # further evaluation / awaiting to produce the return value
+    ret_obj = obj(*bound.args, **bound.kwargs)
+    if inspect.isasyncgen(ret_obj):
+        # async generator - await in a loop
+        async def execute():
+            return [x async for x in ret_obj]
+        ret_val = asyncio.run(execute())
+    elif inspect.isgenerator(ret_obj):
+        # normal generator - execute in a loop
+        ret_val = [x for x in ret_obj]
+    elif inspect.iscoroutine(ret_obj):
+        # async function - await run
+        ret_val = asyncio.run(ret_obj)
+    else:
+        # normal function - just run
+        ret_val = ret_obj
+
     signal.alarm(0)
-    return ret
+    return ret_val
 
 
 # Execute a callable and catch any exception, logging to stdout
@@ -238,7 +258,6 @@ def try_instantiate_class(c, name):
 # tries to call the methods of the given object instance
 # should_investigate and mark_seen are mutable input/output variables
 # that track which types have been traversed
-# TODO support calling async methods
 def try_call_methods(instance, class_name, should_investigate, mark_seen):
     print('[instance methods]', class_name)
 
