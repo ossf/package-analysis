@@ -45,7 +45,7 @@ var (
 	socketPattern = regexp.MustCompile(`{Family: ([^,]+), (Addr: ([^,]*), Port: ([0-9]+)|[^}]+)}`)
 
 	// 0x7fe003272980 /tmp/jpu6po61
-	unlinkPatten = regexp.MustCompile(`0x[a-f\d]+ ([^)]+)`)
+	unlinkPatten = regexp.MustCompile(`0x[a-f\d]+ ([^)]+)?`)
 
 	// unlinkat(0x4 /tmp/pip-pip-egg-info-ng4_5gp_/temps.egg-info, 0x7fe0031c9a10 top_level.txt, 0x0)
 	// unlinkat(AT_FDCWD /app, 0x5569a7e83380 /app/vendor/composer/e06632ca, 0x200)
