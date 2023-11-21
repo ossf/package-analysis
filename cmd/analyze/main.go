@@ -220,12 +220,6 @@ func run() error {
 		return usagef("missing package name")
 	}
 
-	ctx := log.ContextWithAttrs(context.Background(),
-		slog.Any("ecosystem", ecosystem),
-		slog.String("name", *pkgName),
-		slog.String("version", *version),
-	)
-
 	runMode := make(map[analysis.Mode]bool)
 	for _, analysisName := range analysisMode.Values {
 		mode, ok := analysis.ModeFromString(strings.ToLower(analysisName))
@@ -236,7 +230,14 @@ func run() error {
 		runMode[mode] = true
 	}
 
-	slog.InfoContext(ctx, "Processing package", "package_path", *localPkg)
+	ctx := log.ContextWithAttrs(context.Background(),
+		slog.Any("ecosystem", ecosystem),
+	)
+
+	slog.InfoContext(ctx, "Got request",
+		slog.String("requested_name", *pkgName),
+		slog.String("requested_version", *version),
+	)
 
 	pkg, err := worker.ResolvePkg(manager, *pkgName, *version, *localPkg)
 	if err != nil {
@@ -244,6 +245,12 @@ func run() error {
 		return err
 	}
 
+	ctx = log.ContextWithAttrs(ctx,
+		slog.String("name", pkg.Name()),
+		slog.String("version", pkg.Version()),
+	)
+
+	slog.InfoContext(ctx, "Processing resolved package", "package_path", *localPkg)
 	resultStores := makeResultStores()
 
 	if runMode[analysis.Static] {
