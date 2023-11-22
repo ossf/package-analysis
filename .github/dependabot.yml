@@ -3,7 +3,7 @@ updates:
 - package-ecosystem: "gomod"
   directory: "/"
   schedule:
-    interval: "daily"
+    interval: "monthly"
   open-pull-requests-limit: 10
   groups:
     gomod-minor-updates:
@@ -13,7 +13,7 @@ updates:
 - package-ecosystem: "gomod"
   directory: "/function/loader"
   schedule:
-    interval: "daily"
+    interval: "monthly"
   open-pull-requests-limit: 10
   groups:
     loader-minor-updates:
@@ -23,7 +23,7 @@ updates:
 - package-ecosystem: "github-actions"
   directory: "/"
   schedule:
-    interval: "weekly"
+    interval: "monthly"
   groups:
     actions-minor-updates:
       update-types:
@@ -32,7 +32,7 @@ updates:
 - package-ecosystem: "npm"
   directory: "/internal/staticanalysis/parsing"
   schedule:
-    interval: "weekly"
+    interval: "monthly"
   groups:
     parsing-minor-updates:
       update-types:
