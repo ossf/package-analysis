@@ -183,7 +183,7 @@ func run() (err error) {
 	startHashTime := time.Now()
 	archiveHash, err := utils.SHA256Hash(archivePath)
 	if err != nil {
-		return fmt.Errorf("archive checksum calculation failed: %w", err)
+		slog.WarnContext(ctx, "failed to calculate archive checksum", "error", fmt.Sprintf("%s", err))
 	}
 	results.ArchiveSHA256 = archiveHash
 	hashTime := time.Since(startHashTime)
