@@ -180,6 +180,14 @@ func run() (err error) {
 		return fmt.Errorf("static analysis error: %w", err)
 	}
 
+	startHashTime := time.Now()
+	archiveHash, err := utils.SHA256Hash(archivePath)
+	if err != nil {
+		slog.WarnContext(ctx, "failed to calculate archive checksum", "error", err)
+	}
+	results.ArchiveSHA256 = archiveHash
+	hashTime := time.Since(startHashTime)
+
 	startWritingResultsTime := time.Now()
 
 	jsonResult, err := json.Marshal(results)
@@ -209,11 +217,12 @@ func run() (err error) {
 	writingResultsTime := time.Since(startWritingResultsTime)
 
 	totalTime := time.Since(startTime)
-	otherTime := totalTime - writingResultsTime - analysisTime - extractionTime
+	otherTime := totalTime - writingResultsTime - analysisTime - extractionTime - hashTime
 
 	slog.InfoContext(ctx, "Execution times",
 		"download and extraction", extractionTime,
 		"analysis", analysisTime,
+		"sha256Hash calculation", hashTime,
 		"writing results", writingResultsTime,
 		"other", otherTime,
 		"total", totalTime)
