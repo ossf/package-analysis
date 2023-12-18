@@ -5,6 +5,7 @@ STATIC_RESULTS_DIR=${STATIC_RESULTS_DIR:-"/tmp/staticResults"}
 FILE_WRITE_RESULTS_DIR=${FILE_WRITE_RESULTS_DIR:-"/tmp/writeResults"}
 ANALYZED_PACKAGES_DIR=${ANALYZED_PACKAGES_DIR:-"/tmp/analyzedPackages"}
 LOGS_DIR=${LOGS_DIR:-"/tmp/dockertmp"}
+STRACE_LOGS_DIR=${STRACE_LOGS_DIR:-"/tmp/straceLogs"}
 
 # for pretty printing
 LINE="-----------------------------------------"
@@ -45,6 +46,7 @@ function print_results_dirs {
 	echo "File write results:       $FILE_WRITE_RESULTS_DIR"
 	echo "Analyzed package saved:   $ANALYZED_PACKAGES_DIR"
 	echo "Debug logs:               $LOGS_DIR"
+	echo "Strace logs:              $STRACE_LOGS_DIR"
 }
 
 
@@ -81,12 +83,13 @@ while [[ $i -lt $# ]]; do
 			HELP=1
 			;;
 		"-local")
+			# need to create a mount to pass the package archive to the docker image
 			LOCAL=1
 			i=$((i+1))
 			# -m preserves invalid/non-existent paths (which will be detected below)
 			PKG_PATH=$(realpath -m "${args[$i]}")
 			if [[ -z "$PKG_PATH" ]]; then
-				echo "--local specified but no package path given"
+				echo "-local specified but no package path given"
 				exit 255
 			fi
 			PKG_FILE=$(basename "$PKG_PATH")
@@ -150,11 +153,11 @@ elif is_mount_type overlay /var/lib; then
 fi
 
 
-DOCKER_MOUNTS=("-v" "$CONTAINER_MOUNT_DIR:/var/lib/containers" "-v" "$RESULTS_DIR:/results" "-v" "$STATIC_RESULTS_DIR:/staticResults" "-v" "$FILE_WRITE_RESULTS_DIR:/writeResults" "-v" "$LOGS_DIR:/tmp" "-v" "$ANALYZED_PACKAGES_DIR:/analyzedPackages")
+DOCKER_MOUNTS=("-v" "$CONTAINER_MOUNT_DIR:/var/lib/containers" "-v" "$RESULTS_DIR:/results" "-v" "$STATIC_RESULTS_DIR:/staticResults" "-v" "$FILE_WRITE_RESULTS_DIR:/writeResults" "-v" "$LOGS_DIR:/tmp" "-v" "$ANALYZED_PACKAGES_DIR:/analyzedPackages" "-v" "$STRACE_LOGS_DIR:/straceLogs")
 
 ANALYSIS_IMAGE=gcr.io/ossf-malware-analysis/analysis
 
-ANALYSIS_ARGS=("analyze" "-upload" "file:///results/" "-upload-file-write-info" "file:///writeResults/" "-upload-static" "file:///staticResults/" "-upload-analyzed-pkg" "file:///analyzedPackages/")
+ANALYSIS_ARGS=("analyze" "-dynamic-bucket" "file:///results/" "-file-writes-bucket" "file:///writeResults/" "-static-bucket" "file:///staticResults/" "-analyzed-pkg-bucket" "file:///analyzedPackages/" "-execution-log-bucket" "file:///results")
 
 # Add the remaining command line arguments
 ANALYSIS_ARGS=("${ANALYSIS_ARGS[@]}" "${args[@]}")
@@ -222,6 +225,7 @@ mkdir -p "$STATIC_RESULTS_DIR"
 mkdir -p "$FILE_WRITE_RESULTS_DIR"
 mkdir -p "$ANALYZED_PACKAGES_DIR"
 mkdir -p "$LOGS_DIR"
+mkdir -p "$STRACE_LOGS_DIR"
 
 docker "${DOCKER_OPTS[@]}" "${DOCKER_MOUNTS[@]}" "$ANALYSIS_IMAGE" "${ANALYSIS_ARGS[@]}"
 
@@ -246,6 +250,7 @@ echo $LINE
 		rmdir --ignore-fail-on-non-empty "$FILE_WRITE_RESULTS_DIR"
 		rmdir --ignore-fail-on-non-empty "$ANALYZED_PACKAGES_DIR"
 		rmdir --ignore-fail-on-non-empty "$LOGS_DIR"
+		rmdir --ignore-fail-on-non-empty "$STRACE_LOGS_DIR"
 	fi
 
 echo $LINE

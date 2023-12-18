@@ -4,14 +4,15 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ossf/package-analysis/internal/staticanalysis/token"
 	"github.com/ossf/package-analysis/internal/utils"
+	"github.com/ossf/package-analysis/pkg/api/staticanalysis/token"
 )
 
 // Language represents a programming language used for parsing.
 type Language string
 
 const (
+	NoLanguage Language = ""
 	JavaScript Language = "JavaScript"
 )
 
@@ -28,11 +29,20 @@ type tokenType string
 type statusType string
 
 const (
-	identifier tokenType  = "Identifier" // source code identifier (variable, class, function name)
-	literal    tokenType  = "Literal"    // source code data (string, integer, floating point literals)
-	comment    tokenType  = "Comment"    // source code comments
-	parseInfo  statusType = "Info"       // information about the parsing (e.g. number of bytes read by parser)
-	parseError statusType = "Error"      // any error encountered by parser; some are recoverable and some are not
+	// identifier means a name, e.g. variable, class, function name
+	identifier tokenType = "Identifier"
+
+	// literal means data, e.g. string, integer, floating point literals.
+	literal tokenType = "Literal"
+
+	// comment means any comment in the source code
+	comment tokenType = "Comment"
+
+	// parseInfo means any metadata about the parsing, e.g. number of bytes read by parser.
+	parseInfo statusType = "Info"
+
+	// parseError means any error encountered during parsing. It may be recoverable from, or may not
+	parseError statusType = "Error"
 )
 
 type parsedIdentifier struct {
@@ -42,7 +52,7 @@ type parsedIdentifier struct {
 }
 
 func (i parsedIdentifier) String() string {
-	return fmt.Sprintf("%s %s [pos %d:%d]", i.Type, i.Name, i.Pos.Row(), i.Pos.Col())
+	return fmt.Sprintf("%s %s [pos %d:%d]", i.Type.String(), i.Name, i.Pos.Row(), i.Pos.Col())
 }
 
 type parsedLiteral[T any] struct {
@@ -83,11 +93,8 @@ func (s parserStatus) String() string {
 	return fmt.Sprintf("[%s] %s: %s pos %d:%d", s.Type, s.Name, s.Message, s.Pos.Row(), s.Pos.Col())
 }
 
-// languageResult maps filenames to languageData for that file (i.e. parsing results for a single language).
-type languageResult map[string]languageData
-
-// languageData holds data for a single file processed by a single language parser.
-type languageData struct {
+// singleParseData holds package-internal data for a single file processed by a single language parser.
+type singleParseData struct {
 	ValidInput  bool
 	Identifiers []parsedIdentifier
 	Literals    []parsedLiteral[any]
@@ -96,12 +103,12 @@ type languageData struct {
 	Errors      []parserStatus
 }
 
-func (p languageData) String() string {
-	identifiers := utils.Transform(p.Identifiers, func(pi parsedIdentifier) string { return pi.String() })
-	literals := utils.Transform(p.Literals, func(pl parsedLiteral[any]) string { return pl.String() })
-	comments := utils.Transform(p.Comments, func(c parsedComment) string { return c.String() })
-	info := utils.Transform(p.Info, func(i parserStatus) string { return i.String() })
-	errors := utils.Transform(p.Errors, func(e parserStatus) string { return e.String() })
+func (d singleParseData) String() string {
+	identifiers := utils.Transform(d.Identifiers, func(pi parsedIdentifier) string { return pi.String() })
+	literals := utils.Transform(d.Literals, func(pl parsedLiteral[any]) string { return pl.String() })
+	comments := utils.Transform(d.Comments, func(c parsedComment) string { return c.String() })
+	info := utils.Transform(d.Info, func(i parserStatus) string { return i.String() })
+	errors := utils.Transform(d.Errors, func(e parserStatus) string { return e.String() })
 
 	parts := []string{
 		"== Identifiers ==",

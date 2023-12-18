@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"regexp"
 
 	"github.com/ossf/package-feeds/pkg/feeds"
-	"go.uber.org/zap"
 	"gocloud.dev/pubsub"
 	_ "gocloud.dev/pubsub/gcppubsub"
 	_ "gocloud.dev/pubsub/kafkapubsub"
@@ -60,15 +60,15 @@ var supportedPkgManagers = map[string]*ManagerConfig{
 func main() {
 	subscriptionURL := os.Getenv("OSSMALWARE_SUBSCRIPTION_URL")
 	topicURL := os.Getenv("OSSMALWARE_WORKER_TOPIC")
-	logger := log.Initialize(os.Getenv("LOGGER_ENV")).Desugar()
+	log.Initialize(os.Getenv("LOGGER_ENV"))
 
-	err := listenLoop(logger, subscriptionURL, topicURL)
+	err := listenLoop(subscriptionURL, topicURL)
 	if err != nil {
-		logger.With(zap.Error(err)).Error("Error encountered")
+		slog.Error("Error encountered", "error", err)
 	}
 }
 
-func listenLoop(logger *zap.Logger, subURL, topicURL string) error {
+func listenLoop(subURL, topicURL string) error {
 	ctx := context.Background()
 
 	sub, err := pubsub.OpenSubscription(ctx, subURL)
@@ -82,12 +82,10 @@ func listenLoop(logger *zap.Logger, subURL, topicURL string) error {
 	}
 
 	srv := proxy.New(topic, sub)
-	logger.Info("Listening for messages to proxy...")
+	slog.InfoContext(ctx, "Listening for messages to proxy...")
 
-	err = srv.Listen(ctx, logger, func(m *pubsub.Message) (*pubsub.Message, error) {
-		logger.With(
-			zap.ByteString("body", m.Body),
-		).Info("Handling message")
+	err = srv.Listen(ctx, func(m *pubsub.Message) (*pubsub.Message, error) {
+		slog.InfoContext(ctx, "Handling message", "body", string(m.Body))
 		pkg := feeds.Package{}
 		if err := json.Unmarshal(m.Body, &pkg); err != nil {
 			return nil, fmt.Errorf("error unmarshalling json: %w", err)

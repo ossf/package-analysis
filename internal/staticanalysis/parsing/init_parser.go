@@ -1,6 +1,7 @@
 package parsing
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"os"
@@ -55,7 +56,7 @@ var parserFiles = []parserFile{
 	{packageLockJSONFileName, packageLockJSON, false},
 }
 
-func InitParser(installDir string) (ParserConfig, error) {
+func InitParser(ctx context.Context, installDir string) (ParserConfig, error) {
 	if err := os.MkdirAll(installDir, 0o777); err != nil {
 		return ParserConfig{}, fmt.Errorf("error creating JS parser directory: %w", err)
 	}
@@ -76,7 +77,7 @@ func InitParser(installDir string) (ParserConfig, error) {
 		npmArgs = append(npmArgs, "--cache", npmCacheDir, "--prefer-offline")
 	}
 
-	cmd := exec.Command("npm", npmArgs...)
+	cmd := exec.CommandContext(ctx, "npm", npmArgs...)
 	if err := cmd.Run(); err != nil {
 		return ParserConfig{}, fmt.Errorf("npm install error: %w", err)
 	}

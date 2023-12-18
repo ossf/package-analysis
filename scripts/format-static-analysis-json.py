@@ -14,50 +14,41 @@ import sys
 
 # Changes JSON structs that are formatted like:
 #     {
-#         "Name": "...",
-#         "Type": "..."
+#         "key1": ...
 #     }
 # into ones like
-#     { "Name": "...", "Type": "..." }
-name_type_substitution = (
-    re.compile('{$\\n^\\s*"Name": ?"(.*)",$\\n^\\s*"Type": ?"(.*)"$\\n^\\s*}', re.MULTILINE),
-    '{ "Name": "\\1", "Type": "\\2" }'
+#     { "key1": ... }
+struct_single_key_substitution = (
+    re.compile('{$\\n^\\s*"(.+)": ?(.*)$\\n^\\s*}', re.MULTILINE),
+    '{ "\\1": \\2 }'
 )
 
 # Changes JSON structs that are formatted like:
 #     {
-#         "Value": ..., (may not be a string)
-#         "Raw": "..."
+#         "key1": ...,
+#         "key2": ...
 #     }
 # into ones like
-#     { "Value": ..., "Raw": "..." }
-value_raw_substitution = (
-    re.compile('{$\\n^\\s*"Value": ?(.*),$\\n^\\s*"Raw": ?"(.*)"$\\n^\\s*}', re.MULTILINE),
-    '{ "Value": \\1, "Raw": "\\2" }'
+#     { "key1": ..., "key2": ... }
+struct_pair_substitution = (
+    re.compile('{$\\n^\\s*"(.+)": ?(.*),$\\n^\\s*"(.+)": ?(.*)$\\n^\\s*}', re.MULTILINE),
+    '{ "\\1": \\2, "\\3": \\4 }'
 )
 
-# Changes JSON arrays that are formatted like:
-#     "Quartiles": [
-#         0.1762,
-#         1.3075,
-#         1.4424,
-#         1.4766,
-#         1.6646
-#     ]
+# Changes JSON structs that are formatted like:
+#     {
+#         "key1": ...,
+#         "key2": ...,
+#         "key3": ...
+#     }
 # into ones like
-#     "Quartiles": [ 0.1762, 1.3075, 1.4424, 1.4766, 1.6646 ]
-quartile_substitution = (
-    re.compile('"Quartiles": \\[$\\n'
-               '^\\s*(\\d+\\.?\\d*),$\\n'
-               '^\\s*(\\d+\\.?\\d*),$\\n'
-               '^\\s*(\\d+\\.?\\d*),$\\n'
-               '^\\s*(\\d+\\.?\\d*),$\\n'
-               '^\\s*(\\d+\\.?\\d*)$\\n'
-               '^\\s*]', re.MULTILINE),
-    '"Quartiles": [ \\1, \\2, \\3, \\4, \\5 ]'
+#     { "key1": ..., "key2": ..., "key3": ... }
+struct_triple_substitution = (
+    re.compile('{$\\n^\\s*"(.+)": ?(.*),$\\n^\\s*"(.+)": ?(.*),$\\n^\\s*"(.+)": ?(.*)$\\n^\\s*}', re.MULTILINE),
+    '{ "\\1": \\2, "\\3": \\4, "\\5": \\6 }'
 )
 
-all_substitutions = (name_type_substitution, value_raw_substitution, quartile_substitution)
+all_substitutions = (struct_single_key_substitution, struct_pair_substitution, struct_triple_substitution)
 
 
 # Pretty prints a JSON object with newlines and indentation, then applies

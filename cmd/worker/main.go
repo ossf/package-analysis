@@ -5,12 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"path"
 
-	"go.uber.org/zap"
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/fileblob"
 	_ "gocloud.dev/blob/gcsblob"
@@ -28,7 +28,6 @@ import (
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/internal/staticanalysis"
 	"github.com/ossf/package-analysis/internal/worker"
-	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
 
@@ -38,10 +37,11 @@ const (
 
 // resultBucketPaths holds bucket paths for the different types of results.
 type resultBucketPaths struct {
-	dynamicAnalysis string
-	staticAnalysis  string
-	fileWrites      string
 	analyzedPkg     string
+	dynamicAnalysis string
+	executionLog    string
+	fileWrites      string
+	staticAnalysis  string
 }
 
 type sandboxImageSpec struct {
@@ -80,14 +80,20 @@ func copyPackageToLocalFile(ctx context.Context, packagesBucket *blob.Bucket, bu
 func makeResultStores(dest resultBucketPaths) worker.ResultStores {
 	resultStores := worker.ResultStores{}
 
+	if dest.analyzedPkg != "" {
+		resultStores.AnalyzedPackage = resultstore.New(dest.analyzedPkg, resultstore.ConstructPath())
+	}
 	if dest.dynamicAnalysis != "" {
 		resultStores.DynamicAnalysis = resultstore.New(dest.dynamicAnalysis, resultstore.ConstructPath())
 	}
-	if dest.staticAnalysis != "" {
-		resultStores.StaticAnalysis = resultstore.New(dest.staticAnalysis, resultstore.ConstructPath())
+	if dest.executionLog != "" {
+		resultStores.ExecutionLog = resultstore.New(dest.executionLog, resultstore.ConstructPath())
 	}
 	if dest.fileWrites != "" {
 		resultStores.FileWrites = resultstore.New(dest.fileWrites, resultstore.ConstructPath())
+	}
+	if dest.staticAnalysis != "" {
+		resultStores.StaticAnalysis = resultstore.New(dest.staticAnalysis, resultstore.ConstructPath())
 	}
 
 	return resultStores
@@ -96,34 +102,34 @@ func makeResultStores(dest resultBucketPaths) worker.ResultStores {
 func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blob.Bucket, resultStores *worker.ResultStores, imageSpec sandboxImageSpec, notificationTopic *pubsub.Topic) error {
 	name := msg.Metadata["name"]
 	if name == "" {
-		log.Warn("name is empty")
+		slog.WarnContext(ctx, "name is empty")
 		return nil
 	}
 
 	ecosystem := pkgecosystem.Ecosystem(msg.Metadata["ecosystem"])
 	if ecosystem == "" {
-		log.Warn("ecosystem is empty",
-			"name", name)
+		slog.WarnContext(ctx, "ecosystem is empty", "name", name)
 		return nil
 	}
 
+	ctx = log.ContextWithAttrs(ctx,
+		log.Label("ecosystem", ecosystem.String()),
+		slog.String("name", name))
+
 	manager := pkgmanager.Manager(ecosystem)
 	if manager == nil {
-		log.Warn("Unsupported pkg manager",
-			log.Label("ecosystem", ecosystem.String()),
-			"name", name)
+		slog.WarnContext(ctx, "Unsupported pkg manager")
 		return nil
 	}
 
 	version := msg.Metadata["version"]
 	remotePkgPath := msg.Metadata["package_path"]
 
-	resultsBucketOverride := msg.Metadata["results_bucket_override"]
-	if resultsBucketOverride != "" {
-		resultStores.DynamicAnalysis = resultstore.New(resultsBucketOverride, resultstore.ConstructPath())
-	}
+	ctx = log.ContextWithAttrs(ctx, slog.String("version", version))
 
-	worker.LogRequest(ecosystem, name, version, remotePkgPath, resultsBucketOverride)
+	slog.InfoContext(ctx, "Got request",
+		"package_path", remotePkgPath,
+	)
 
 	localPkgPath := ""
 	sandboxOpts := []sandbox.Option{sandbox.Tag(imageSpec.tag)}
@@ -146,41 +152,34 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 
 	pkg, err := worker.ResolvePkg(manager, name, version, localPkgPath)
 	if err != nil {
-		log.Error("Error resolving package",
-			log.Label("ecosystem", ecosystem.String()),
-			log.Label("name", name),
-			"error", err)
-		return err
-	}
-
-	dynamicSandboxOpts := append(worker.DynamicSandboxOptions(), sandboxOpts...)
-	result, err := worker.RunDynamicAnalysis(pkg, dynamicSandboxOpts, "")
-	if err != nil {
+		slog.ErrorContext(ctx, "Error resolving package", "error", err)
 		return err
 	}
 
 	staticSandboxOpts := append(worker.StaticSandboxOptions(), sandboxOpts...)
-	var staticResults analysisrun.StaticAnalysisResults
-	// TODO run static analysis first and remove the if statement below
-	if resultStores.StaticAnalysis != nil {
-		staticResults, _, err = worker.RunStaticAnalysis(pkg, staticSandboxOpts, staticanalysis.All)
-		if err != nil {
-			return err
-		}
+	dynamicSandboxOpts := append(worker.DynamicSandboxOptions(), sandboxOpts...)
+
+	// run both dynamic and static analysis regardless of error status of either
+	// and return combined error(s) afterwards, if applicable
+	staticResults, _, staticAnalysisErr := worker.RunStaticAnalysis(ctx, pkg, staticSandboxOpts, staticanalysis.All)
+	if staticAnalysisErr == nil {
+		staticAnalysisErr = worker.SaveStaticAnalysisData(ctx, pkg, resultStores, staticResults)
 	}
 
-	if err := worker.SaveStaticAnalysisData(ctx, pkg, resultStores, staticResults); err != nil {
-		return err
-	}
-	if err := worker.SaveDynamicAnalysisData(ctx, pkg, resultStores, result.AnalysisData); err != nil {
-		return err
+	result, dynamicAnalysisErr := worker.RunDynamicAnalysis(ctx, pkg, dynamicSandboxOpts, "")
+	if dynamicAnalysisErr == nil {
+		dynamicAnalysisErr = worker.SaveDynamicAnalysisData(ctx, pkg, resultStores, result.AnalysisData)
 	}
 
 	resultStores.AnalyzedPackageSaved = false
 
+	// combine errors
+	if analysisErr := errors.Join(dynamicAnalysisErr, staticAnalysisErr); analysisErr != nil {
+		return analysisErr
+	}
+
 	if notificationTopic != nil {
-		err := notification.PublishAnalysisCompletion(ctx, notificationTopic, name, version, ecosystem)
-		if err != nil {
+		if err := notification.PublishAnalysisCompletion(ctx, notificationTopic, name, version, ecosystem); err != nil {
 			return err
 		}
 	}
@@ -197,7 +196,9 @@ func messageLoop(ctx context.Context, subURL, packagesBucket, notificationTopicU
 	if err != nil {
 		return err
 	}
-	log.Info("Subscription deadline extender", "deadline", extender.Deadline, "grace_period", extender.GracePeriod)
+	slog.InfoContext(ctx, "Subscription deadline extender",
+		"deadline", extender.Deadline,
+		"grace_period", extender.GracePeriod)
 
 	// the default value of the notificationTopic object is nil
 	// if no environment variable for a notification topic is set,
@@ -222,15 +223,19 @@ func messageLoop(ctx context.Context, subURL, packagesBucket, notificationTopicU
 		defer pkgsBkt.Close()
 	}
 
-	log.Info("Listening for messages to process...")
+	slog.InfoContext(ctx, "Listening for messages to process...")
 	for {
 		msg, err := sub.Receive(ctx)
 		if err != nil {
 			// All subsequent receive calls will return the same error, so we bail out.
 			return fmt.Errorf("error receiving message: %w", err)
 		}
-		me, err := extender.Start(ctx, msg, func() {
-			log.Info("Message Ack deadline extended", "message_id", msg.LoggableID, "message_meta", msg.Metadata)
+
+		// Create a message context to wrap the message_id that we are currently processing.
+		msgCtx := log.ContextWithAttrs(ctx, slog.String("message_id", msg.LoggableID))
+
+		me, err := extender.Start(msgCtx, msg, func() {
+			slog.InfoContext(msgCtx, "Message Ack deadline extended", "message_meta", msg.Metadata)
 		})
 		if err != nil {
 			// If Start fails it will always fail, so we bail out.
@@ -241,17 +246,17 @@ func messageLoop(ctx context.Context, subURL, packagesBucket, notificationTopicU
 			return fmt.Errorf("error starting message ack deadline extender: %w", err)
 		}
 
-		if err := handleMessage(ctx, msg, pkgsBkt, resultsBuckets, imageSpec, notificationTopic); err != nil {
-			log.Error("Failed to process message", "error", err)
+		if err := handleMessage(msgCtx, msg, pkgsBkt, resultsBuckets, imageSpec, notificationTopic); err != nil {
+			slog.ErrorContext(msgCtx, "Failed to process message", "error", err)
 			if err := me.Stop(); err != nil {
-				log.Error("Extender failed", "error", err)
+				slog.ErrorContext(msgCtx, "Extender failed", "error", err)
 			}
 			if msg.Nackable() {
 				msg.Nack()
 			}
 		} else {
 			if err := me.Stop(); err != nil {
-				log.Error("Extender failed", "error", err)
+				slog.ErrorContext(msgCtx, "Extender failed", "error", err)
 			}
 			msg.Ack()
 		}
@@ -259,7 +264,7 @@ func messageLoop(ctx context.Context, subURL, packagesBucket, notificationTopicU
 }
 
 func main() {
-	logger := log.Initialize(os.Getenv("LOGGER_ENV"))
+	log.Initialize(os.Getenv("LOGGER_ENV"))
 
 	ctx := context.Background()
 	subURL := os.Getenv("OSSMALWARE_WORKER_SUBSCRIPTION")
@@ -268,14 +273,16 @@ func main() {
 	enableProfiler := os.Getenv("OSSF_MALWARE_ANALYSIS_ENABLE_PROFILER")
 
 	if err := featureflags.Update(os.Getenv("OSSF_MALWARE_FEATURE_FLAGS")); err != nil {
-		logger.Fatal("Failed to parse feature flags", zap.Error(err))
+		slog.Error("Failed to parse feature flags", "error", err)
+		os.Exit(1)
 	}
 
 	resultsBuckets := resultBucketPaths{
-		dynamicAnalysis: os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS"),
-		staticAnalysis:  os.Getenv("OSSF_MALWARE_STATIC_ANALYSIS_RESULTS"),
-		fileWrites:      os.Getenv("OSSF_MALWARE_ANALYSIS_FILE_WRITE_RESULTS"),
 		analyzedPkg:     os.Getenv("OSSF_MALWARE_ANALYZED_PACKAGES"),
+		dynamicAnalysis: os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS"),
+		executionLog:    os.Getenv("OSSF_MALWARE_ANALYSIS_EXECUTION_LOGS"),
+		fileWrites:      os.Getenv("OSSF_MALWARE_ANALYSIS_FILE_WRITE_RESULTS"),
+		staticAnalysis:  os.Getenv("OSSF_MALWARE_STATIC_ANALYSIS_RESULTS"),
 	}
 	resultStores := makeResultStores(resultsBuckets)
 
@@ -284,33 +291,34 @@ func main() {
 		noPull: os.Getenv("OSSF_SANDBOX_NOPULL") != "",
 	}
 
-	sandbox.InitNetwork()
+	sandbox.InitNetwork(ctx)
 
 	// If configured, start a webserver so that Go's pprof can be accessed for
 	// debugging and profiling.
 	if enableProfiler != "" {
 		go func() {
-			logger.Info("Starting profiler")
+			slog.Info("Starting profiler")
 			http.ListenAndServe(":6060", nil)
 		}()
 	}
 
 	// Log the configuration of the worker at startup so we can observe it.
-	logger.With(
-		zap.String("subscription", subURL),
-		zap.String("package_bucket", packagesBucket),
-		zap.String("results_bucket", resultsBuckets.dynamicAnalysis),
-		zap.String("static_results_bucket", resultsBuckets.staticAnalysis),
-		zap.String("file_write_results_bucket", resultsBuckets.fileWrites),
-		zap.String("analyzed_packages_bucket", resultsBuckets.analyzedPkg),
-		zap.String("image_tag", imageSpec.tag),
-		zap.Bool("image_nopull", imageSpec.noPull),
-		zap.String("topic_notification", notificationTopicURL),
-		zap.Reflect("feature_flags", featureflags.State()),
-	).Info("Starting worker")
+	slog.InfoContext(ctx, "Starting worker",
+		"subscription", subURL,
+		"package_bucket", packagesBucket,
+		"results_bucket", resultsBuckets.dynamicAnalysis,
+		"static_results_bucket", resultsBuckets.staticAnalysis,
+		"file_write_results_bucket", resultsBuckets.fileWrites,
+		"analyzed_packages_bucket", resultsBuckets.analyzedPkg,
+		"execution_log_bucket", resultsBuckets.executionLog,
+		"image_tag", imageSpec.tag,
+		"image_nopull", imageSpec.noPull,
+		"topic_notification", notificationTopicURL,
+		"feature_flags", featureflags.State(),
+	)
 
 	err := messageLoop(ctx, subURL, packagesBucket, notificationTopicURL, imageSpec, &resultStores)
 	if err != nil {
-		logger.Errorw("Error encountered", "error", err)
+		slog.ErrorContext(ctx, "Error encountered", "error", err)
 	}
 }

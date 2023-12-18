@@ -1,0 +1,268 @@
+[
+  {
+    "name": "schema_version",
+    "mode": "REQUIRED",
+    "type": "STRING"
+  },
+  {
+    "name": "ecosystem",
+    "mode": "REQUIRED",
+    "type": "STRING"
+  },
+  {
+    "name": "name",
+    "mode": "REQUIRED",
+    "type": "STRING"
+  },
+  {
+    "name": "version",
+    "mode": "REQUIRED",
+    "type": "STRING"
+  },
+  {
+    "name": "created",
+    "mode": "REQUIRED",
+    "type": "TIMESTAMP"
+  },
+  {
+    "name": "results",
+    "mode": "NULLABLE",
+    "type": "RECORD",
+    "fields": [
+      {
+        "name": "files",
+        "mode": "REPEATED",
+        "type": "RECORD",
+        "fields": [
+          {
+            "name": "filename",
+            "mode": "REQUIRED",
+            "type": "STRING"
+          },
+          {
+            "name": "detected_type",
+            "mode": "NULLABLE",
+            "type": "STRING"
+          },
+          {
+            "name": "size",
+            "mode": "NULLABLE",
+            "type": "INT64"
+          },
+          {
+            "name": "sha256",
+            "mode": "NULLABLE",
+            "type": "STRING"
+          },
+          {
+            "name": "line_lengths",
+            "mode": "REPEATED",
+            "type": "RECORD",
+            "fields": [
+              {
+                "name": "value",
+                "mode": "REQUIRED",
+                "type": "INT64"
+              },
+              {
+                "name": "count",
+                "mode": "REQUIRED",
+                "type": "INT64"
+              }
+            ]
+          },
+          {
+            "name": "js",
+            "mode": "NULLABLE",
+            "type": "RECORD",
+            "fields": [
+              {
+                "name": "identifiers",
+                "mode": "REPEATED",
+                "type": "RECORD",
+                "fields": [
+                  {
+                    "name": "name",
+                    "mode": "REQUIRED",
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "type",
+                    "mode": "NULLABLE",
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "entropy",
+                    "mode": "NULLABLE",
+                    "type": "FLOAT64"
+                  }
+                ]
+              },
+              {
+                "name": "string_literals",
+                "mode": "REPEATED",
+                "type": "RECORD",
+                "fields": [
+                  {
+                    "name": "value",
+                    "mode": "REQUIRED",
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "raw",
+                    "mode": "NULLABLE",
+                    "type": "STRING"
+                  },
+                  {
+                    "name": "entropy",
+                    "mode": "NULLABLE",
+                    "type": "FLOAT64"
+                  }
+                ]
+              },
+              {
+                "name": "int_literals",
+                "mode": "REPEATED",
+                "type": "RECORD",
+                "fields": [
+                  {
+                    "name": "value",
+                    "mode": "REQUIRED",
+                    "type": "INT64"
+                  },
+                  {
+                    "name": "raw",
+                    "mode": "NULLABLE",
+                    "type": "STRING"
+                  }
+                ]
+              },
+              {
+                "name": "float_literals",
+                "mode": "REPEATED",
+                "type": "RECORD",
+                "fields": [
+                  {
+                    "name": "value",
+                    "mode": "REQUIRED",
+                    "type": "FLOAT64"
+                  },
+                  {
+                    "name": "raw",
+                    "mode": "REQUIRED",
+                    "type": "STRING"
+                  }
+                ]
+              },
+              {
+                "name": "comments",
+                "mode": "REPEATED",
+                "type": "RECORD",
+                "fields": [
+                  {
+                    "name": "text",
+                    "mode": "REQUIRED",
+                    "type": "STRING"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "identifier_lengths",
+            "mode": "REPEATED",
+            "type": "RECORD",
+            "fields": [
+              {
+                "name": "value",
+                "mode": "REQUIRED",
+                "type": "INT64"
+              },
+              {
+                "name": "count",
+                "mode": "REQUIRED",
+                "type": "INT64"
+              }
+            ]
+          },
+          {
+            "name": "string_lengths",
+            "mode": "REPEATED",
+            "type": "RECORD",
+            "fields": [
+              {
+                "name": "value",
+                "mode": "REQUIRED",
+                "type": "INT64"
+              },
+              {
+                "name": "count",
+                "mode": "REQUIRED",
+                "type": "INT64"
+              }
+            ]
+          },
+          {
+            "name": "suspicious_identifiers",
+            "mode": "REPEATED",
+            "type": "RECORD",
+            "fields": [
+              {
+                "name": "name",
+                "mode": "REQUIRED",
+                "type": "STRING"
+              },
+              {
+                "name": "rule",
+                "mode": "NULLABLE",
+                "type": "STRING"
+              }
+            ]
+          },
+          {
+            "name": "escaped_strings",
+            "mode": "REPEATED",
+            "type": "RECORD",
+            "fields": [
+              {
+                "name": "value",
+                "mode": "REQUIRED",
+                "type": "STRING"
+              },
+              {
+                "name": "raw",
+                "mode": "REQUIRED",
+                "type": "STRING"
+              },
+              {
+                "name": "levenshtein_dist",
+                "mode": "NULLABLE",
+                "type": "INT64"
+              }
+            ]
+          },
+          {
+            "name": "base64_strings",
+            "mode": "REPEATED",
+            "type": "STRING"
+          },
+          {
+            "name": "hex_strings",
+            "mode": "REPEATED",
+            "type": "STRING"
+          },
+          {
+            "name": "ip_addresses",
+            "mode": "REPEATED",
+            "type": "STRING"
+          },
+          {
+            "name": "urls",
+            "mode": "REPEATED",
+            "type": "STRING"
+          }
+        ]
+      }
+    ]
+  }
+]

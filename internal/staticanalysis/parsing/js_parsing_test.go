@@ -1,20 +1,20 @@
 package parsing
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"reflect"
 	"testing"
 
-	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/staticanalysis/externalcmd"
-	"github.com/ossf/package-analysis/internal/staticanalysis/token"
+	"github.com/ossf/package-analysis/pkg/api/staticanalysis/token"
 )
 
 type jsTestCase struct {
 	name      string
 	inputJS   string
-	want      languageData
+	want      singleParseData
 	printJSON bool // set to true to see raw parser output
 }
 
@@ -37,7 +37,7 @@ function test() {
 //"'11"'` + "`" + `;
 	var mystring12 = ` + "`hello\"'${5.6 + 6.4}\"'`" + `;
 }`,
-		want: languageData{
+		want: singleParseData{
 			Identifiers: []parsedIdentifier{
 				{token.Function, "test", token.Position{2, 9}},
 				{token.Variable, "mystring1", token.Position{3, 8}},
@@ -63,13 +63,11 @@ function test() {
 				{"String", "string", "hello'7'", `'hello\'7\''`, false, token.Position{9, 20}},
 				{"String", "string", "hello", `"hello"`, false, token.Position{10, 20}},
 				{"String", "string", "8", `"8"`, false, token.Position{10, 30}},
-				{"StringTemplate", "string", "hello9", `hello9`, false, token.Position{11, 21}},
-				{"StringTemplate", "string", "hello\"'", `hello"'`, false, token.Position{12, 22}},
-				{"StringTemplate", "string", "\"'", `"'`, false, token.Position{12, 34}},
+				{"StringTemplate", "string", "hello9", "`hello9`", false, token.Position{11, 20}},
+				{"StringTemplate", "string", "hello\"'${}\"'", "`hello\"'${}\"'`", false, token.Position{12, 21}},
 				{"Numeric", "float64", 10.0, "10", false, token.Position{12, 31}},
-				{"StringTemplate", "string", "hello\n//\"'11\"'", `hello` + "\n" + `//"'11"'`, false, token.Position{13, 19}},
-				{"StringTemplate", "string", "hello\"'", `hello"'`, false, token.Position{15, 19}},
-				{"StringTemplate", "string", "\"'", `"'`, false, token.Position{15, 38}},
+				{"StringTemplate", "string", "hello\n//\"'11\"'", "`hello\n//\"'11\"'`", false, token.Position{13, 18}},
+				{"StringTemplate", "string", "hello\"'${}\"'", "`hello\"'${}\"'`", false, token.Position{15, 18}},
 				{"Numeric", "float64", 5.6, "5.6", false, token.Position{15, 28}},
 				{"Numeric", "float64", 6.4, "6.4", false, token.Position{15, 34}},
 			},
@@ -81,7 +79,7 @@ function test() {
 function test2(param1, param2, param3 = "ahd") {
 	return param1 + param2 + param3;
 }`,
-		want: languageData{
+		want: singleParseData{
 			Identifiers: []parsedIdentifier{
 				{token.Function, "test2", token.Position{2, 9}},
 				{token.Parameter, "param1", token.Position{2, 15}},
@@ -114,7 +112,7 @@ outer:
     }
     console.log("End");
 }`,
-		want: languageData{
+		want: singleParseData{
 			Identifiers: []parsedIdentifier{
 				{token.Function, "test3", token.Position{2, 9}},
 				{token.Parameter, "a", token.Position{2, 15}},
@@ -166,7 +164,7 @@ function test4() {
             break;
     }
 }`,
-		want: languageData{
+		want: singleParseData{
 			Identifiers: []parsedIdentifier{
 				{token.Function, "test4", token.Position{2, 9}},
 				{token.Variable, "a", token.Position{3, 10}},
@@ -222,7 +220,7 @@ Rectangle = class Rectangle2 {
 console.log(Rectangle.name);
 // output: "Rectangle2"
 `,
-		want: languageData{
+		want: singleParseData{
 			Identifiers: []parsedIdentifier{
 				{token.Variable, "Rectangle", token.Position{3, 4}},
 				{token.Parameter, "height", token.Position{4, 16}},
@@ -250,7 +248,7 @@ console.log(Rectangle.name);
 'use strict';
 console.log("Hello");
 `,
-		want: languageData{
+		want: singleParseData{
 			Identifiers: []parsedIdentifier{
 				{token.Member, "log", token.Position{3, 8}},
 			},
@@ -270,7 +268,7 @@ var index = 0,
     {length, width} = 10,
     cancelled = false;
 `,
-		want: languageData{
+		want: singleParseData{
 			Identifiers: []parsedIdentifier{
 				{token.Variable, "a", token.Position{2, 5}},
 				{token.Variable, "b", token.Position{2, 8}},
@@ -305,7 +303,7 @@ function validateIPAddress(ipaddress) {
     return (false)
 }
 `,
-		want: languageData{
+		want: singleParseData{
 			ValidInput: true,
 			Identifiers: []parsedIdentifier{
 				{token.Function, "validateIPAddress", token.Position{2, 9}},
@@ -337,7 +335,7 @@ let b = 0o777777777777n;         // 68719476735
 let c = 0x123456789ABCDEFn;      // 81985529216486895
 let d = 0b11101001010101010101n; // 955733
 `,
-		want: languageData{
+		want: singleParseData{
 			ValidInput: true,
 			Identifiers: []parsedIdentifier{
 				{token.Variable, "a", token.Position{2, 4}},
@@ -359,7 +357,7 @@ let d = 0b11101001010101010101n; // 955733
 		inputJS: `
 a = w w;
 `,
-		want: languageData{
+		want: singleParseData{
 			ValidInput:  false,
 			Identifiers: []parsedIdentifier{},
 			Errors: []parserStatus{
@@ -373,23 +371,41 @@ a = w w;
 		},
 		printJSON: false,
 	},
-}
+	{
+		name: "more string templates",
+		inputJS: "console.log(`the operation ${1} \\u2297 ${2} equals ${5}`);\n" +
+			"console.log(`\\u{54}\\u0065\\x78t`);",
+		want: singleParseData{
+			ValidInput: true,
+			Identifiers: []parsedIdentifier{
+				{token.Member, "log", token.Position{1, 8}},
+				{token.Member, "log", token.Position{2, 8}},
+			},
+			Literals: []parsedLiteral[any]{
+				{"StringTemplate", "string", "the operation ${} ⊗ ${} equals ${}",
+					"`the operation ${} \\u2297 ${} equals ${}`", false, token.Position{1, 12}},
+				{"Numeric", "float64", 1.0, "1", false, token.Position{1, 29}},
+				{"Numeric", "float64", 2.0, "2", false, token.Position{1, 41}},
+				{"Numeric", "float64", 5.0, "5", false, token.Position{1, 53}},
+				{"StringTemplate", "string", "Text", "`\\u{54}\\u0065\\x78t`", false, token.Position{2, 12}},
+			},
+		},
 
-func init() {
-	log.Initialize("")
+		printJSON: false,
+	},
 }
 
 func TestParseJS(t *testing.T) {
 	const printAllJSON = false
 
-	jsParserConfig, err := InitParser(t.TempDir())
+	jsParserConfig, err := InitParser(context.Background(), t.TempDir())
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
 
 	for _, tt := range jsTestCases {
 		t.Run(tt.name, func(t *testing.T) {
-			result, rawOutput, err := parseJS(jsParserConfig, externalcmd.StringInput(tt.inputJS))
+			result, rawOutput, err := parseJS(context.Background(), jsParserConfig, externalcmd.StringInput(tt.inputJS))
 			got := result["stdin"]
 			if err != nil {
 				t.Errorf("parseJS() error = %v", err)

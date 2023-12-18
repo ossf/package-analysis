@@ -2,23 +2,27 @@ package worker
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/ossf/package-analysis/internal/featureflags"
-	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgmanager"
 	"github.com/ossf/package-analysis/internal/resultstore"
+	"github.com/ossf/package-analysis/internal/staticanalysis"
 	"github.com/ossf/package-analysis/pkg/api/analysisrun"
+	staticapi "github.com/ossf/package-analysis/pkg/api/staticanalysis"
 )
 
 // ResultStores holds ResultStore instances for saving each kind of analysis data.
 // They can be nil, in which case calling the associated Upload function here is a no-op
 type ResultStores struct {
-	DynamicAnalysis      *resultstore.ResultStore
-	StaticAnalysis       *resultstore.ResultStore
-	FileWrites           *resultstore.ResultStore
 	AnalyzedPackage      *resultstore.ResultStore
+	DynamicAnalysis      *resultstore.ResultStore
+	ExecutionLog         *resultstore.ResultStore
+	FileWrites           *resultstore.ResultStore
+	StaticAnalysis       *resultstore.ResultStore
 	AnalyzedPackageSaved bool
 }
 
@@ -31,7 +35,7 @@ func SaveDynamicAnalysisData(ctx context.Context, pkg *pkgmanager.Pkg, dest *Res
 		return nil
 	}
 
-	if err := dest.DynamicAnalysis.Save(ctx, pkg, data.StraceSummary); err != nil {
+	if err := dest.DynamicAnalysis.SaveDynamicAnalysis(ctx, pkg, data.StraceSummary, ""); err != nil {
 		return fmt.Errorf("failed to save strace data to %s: %w", dest.DynamicAnalysis, err)
 	}
 	if err := saveExecutionLog(ctx, pkg, dest, data); err != nil {
@@ -61,7 +65,7 @@ func SaveDynamicAnalysisData(ctx context.Context, pkg *pkgmanager.Pkg, dest *Res
 
 // saveExecutionLog saves the execution log to the dynamic analysis resultstore, only if it is nonempty
 func saveExecutionLog(ctx context.Context, pkg *pkgmanager.Pkg, dest *ResultStores, data analysisrun.DynamicAnalysisResults) error {
-	if dest.DynamicAnalysis == nil || len(data.ExecutionLog) == 0 {
+	if dest.ExecutionLog == nil || len(data.ExecutionLog) == 0 {
 		// nothing to do
 		return nil
 	}
@@ -71,7 +75,7 @@ func saveExecutionLog(ctx context.Context, pkg *pkgmanager.Pkg, dest *ResultStor
 		execLogFilename = fmt.Sprintf("execution-log-%s.json", pkg.Version())
 	}
 
-	if err := dest.DynamicAnalysis.SaveWithFilename(ctx, pkg, execLogFilename, data.ExecutionLog); err != nil {
+	if err := dest.ExecutionLog.SaveDynamicAnalysis(ctx, pkg, data.ExecutionLog, execLogFilename); err != nil {
 		return fmt.Errorf("failed to save execution log to %s: %w", dest.DynamicAnalysis, err)
 	}
 
@@ -79,12 +83,28 @@ func saveExecutionLog(ctx context.Context, pkg *pkgmanager.Pkg, dest *ResultStor
 }
 
 // SaveStaticAnalysisData saves the data from static analysis to the corresponding bucket in the ResultStores
-func SaveStaticAnalysisData(ctx context.Context, pkg *pkgmanager.Pkg, dest *ResultStores, data analysisrun.StaticAnalysisResults) error {
+func SaveStaticAnalysisData(ctx context.Context, pkg *pkgmanager.Pkg, dest *ResultStores, data staticapi.SandboxData) error {
 	if dest.StaticAnalysis == nil {
+		return nil
+	} else if len(data) == 0 {
+		slog.WarnContext(ctx, "static analysis data is empty")
 		return nil
 	}
 
-	if err := dest.StaticAnalysis.Save(ctx, pkg, data); err != nil {
+	var internalResult staticanalysis.Result
+	if err := json.Unmarshal(data, &internalResult); err != nil {
+		return fmt.Errorf("failed to unmarshal JSON data from sandbox into staticanalysis.Result: %w", err)
+	}
+
+	key := analysisrun.Key{
+		Ecosystem: pkg.Ecosystem(),
+		Name:      pkg.Name(),
+		Version:   pkg.Version(),
+	}
+	serializableResult := internalResult.ToAPIResults()
+	record := staticapi.CreateRecord(serializableResult, key)
+
+	if err := dest.StaticAnalysis.SaveStaticAnalysis(ctx, pkg, record, ""); err != nil {
 		return fmt.Errorf("failed to save static analysis results to %s: %w", dest.StaticAnalysis, err)
 	}
 
@@ -116,12 +136,8 @@ func SaveFileWritesData(ctx context.Context, pkg *pkgmanager.Pkg, dest *ResultSt
 	}
 	fileWriteDataDuration := time.Since(fileWriteDataUploadStart)
 
-	log.Info("Write data upload duration",
-		log.Label("ecosystem", pkg.EcosystemName()),
-		"name", pkg.Name(),
-		"version", pkg.Version(),
-		"write_data_upload_duration", fileWriteDataDuration,
-	)
+	slog.InfoContext(ctx, "Write data upload duration",
+		"write_data_upload_duration", fileWriteDataDuration)
 
 	return nil
 }

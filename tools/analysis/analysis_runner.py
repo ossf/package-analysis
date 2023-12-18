@@ -93,9 +93,6 @@ def _request(name, ecosystem, version, local_file=None, results_bucket=None):
     uploaded_path = _upload_file(local_file)
     attributes.append('package_path=' + uploaded_path)
 
-  if results_bucket:
-    attributes.append('results_bucket_override=' + results_bucket)
-
   print('Requesting analysis with', attributes)
   topic = _TOPIC[_TOPIC.find('://') + 3:]
   subprocess.run(
@@ -119,8 +116,6 @@ def main():
       '-a', '--all', default=False,
       action=argparse.BooleanOptionalAction,
       help='Use all publised versions for the package')
-  parser.add_argument(
-      '-b', '--results', help='Results bucket (overrides default).')
 
   args = parser.parse_args()
 

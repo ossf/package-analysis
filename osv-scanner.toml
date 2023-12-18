@@ -1,0 +1,7 @@
+[[IgnoredVulns]]
+id = "CVE-2020-8911"
+reason = "Indirect dependency, vulnerable function is probably not used and we can't do much about it anyway"
+
+[[IgnoredVulns]]
+id = "GO-2022-0646"
+reason = "alias of CVE-2020-8911"

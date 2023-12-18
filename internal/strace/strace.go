@@ -2,11 +2,14 @@ package strace
 
 import (
 	"bufio"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -14,12 +17,11 @@ import (
 	"strings"
 	"unicode"
 
-	"go.uber.org/zap"
-
 	"github.com/ossf/package-analysis/internal/featureflags"
-	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/utils"
 )
+
+var ErrParseFailure = errors.New("parse failure")
 
 var (
 	// 510 06:34:52.506847   43512 strace.go:587] [   2] python3 E openat(AT_FDCWD /app, 0x7f13f2254c50 /root/.ssh, O_RDONLY|O_CLOEXEC|O_DIRECTORY|O_NONBLOCK, 0o0)
@@ -43,7 +45,7 @@ var (
 	socketPattern = regexp.MustCompile(`{Family: ([^,]+), (Addr: ([^,]*), Port: ([0-9]+)|[^}]+)}`)
 
 	// 0x7fe003272980 /tmp/jpu6po61
-	unlinkPatten = regexp.MustCompile(`0x[a-f\d]+ ([^)]+)`)
+	unlinkPatten = regexp.MustCompile(`0x[a-f\d]+ ([^)]+)?`)
 
 	// unlinkat(0x4 /tmp/pip-pip-egg-info-ng4_5gp_/temps.egg-info, 0x7fe0031c9a10 top_level.txt, 0x0)
 	// unlinkat(AT_FDCWD /app, 0x5569a7e83380 /app/vendor/composer/e06632ca, 0x200)
@@ -153,11 +155,11 @@ func (r *Result) recordFileAccess(file string, read, write, del bool) {
 	r.files[file].Delete = r.files[file].Delete || del
 }
 
-func (r *Result) recordFileWrite(file string, writeBuffer []byte, bytesWritten int64) {
+func (r *Result) recordFileWrite(file string, writeBuffer []byte, bytesWritten int64) error {
 	r.recordFileAccess(file, false, true, false)
 	if !featureflags.WriteFileContents.Enabled() {
 		// Abort writing file contents when feature is disabled.
-		return
+		return nil
 	}
 	hash := sha256.New()
 	hash.Write(writeBuffer)
@@ -166,10 +168,11 @@ func (r *Result) recordFileWrite(file string, writeBuffer []byte, bytesWritten i
 	r.files[file].WriteInfo = append(r.files[file].WriteInfo, writeContentsAndBytes)
 	if _, exists := r.allWriteBufferId[writeID]; !exists {
 		if err := utils.CreateAndWriteTempFile(writeID, writeBuffer); err != nil {
-			log.Fatal("Could not create and write temp file", "error", err)
+			return fmt.Errorf("failed to create and write temp file: %w", err)
 		}
 		r.allWriteBufferId[writeID] = struct{}{}
 	}
+	return nil
 }
 
 func (r *Result) recordSocket(address string, port int) {
@@ -194,19 +197,19 @@ func (r *Result) recordCommand(cmd, env []string) {
 	}
 }
 
-func (r *Result) parseEnterSyscall(syscall, args string, logger *zap.SugaredLogger) error {
+func (r *Result) parseEnterSyscall(syscall, args string, logger *slog.Logger) error {
 	switch syscall {
 	case "write":
 		// The index of the start of bytes written. Bytes written is expected to be in hex.
 		bytesWrittenHexIndex := strings.LastIndex(args, hexPrefix)
 		// Return an error if we can't find the beginning of bytes written as a hex value or there is no value after the hex prefix.
 		if bytesWrittenHexIndex == -1 || len(args) <= bytesWrittenHexIndex+len(hexPrefix) {
-			return fmt.Errorf("strace of file write syscall has the bytes written argument in an unexpected format")
+			return fmt.Errorf("%w: strace of file write syscall has the bytes written argument in an unexpected format", ErrParseFailure)
 		}
 		// Get the hex value after "0x" to convert to an integer.
 		bytesWritten, err := strconv.ParseInt(args[bytesWrittenHexIndex+len(hexPrefix):], 16, 64)
 		if err != nil {
-			return err
+			return fmt.Errorf("%w: bytes written: %w", ErrParseFailure, err)
 		}
 		writeBuffer := ""
 		match := writePattern.FindStringSubmatch(args)
@@ -217,63 +220,63 @@ func (r *Result) parseEnterSyscall(syscall, args string, logger *zap.SugaredLogg
 			// Save the contents between the first and last quote.
 			writeBuffer = args[firstQuoteIndex+1 : lastQuoteIndex]
 		}
-		logger.Debugw("write", "path", path, "size", bytesWritten)
-		r.recordFileWrite(path, []byte(writeBuffer), bytesWritten)
+		logger.Debug("write", "path", path, "size", bytesWritten)
+		return r.recordFileWrite(path, []byte(writeBuffer), bytesWritten)
 	}
 	return nil
 }
 
-func (r *Result) parseExitSyscall(syscall, args string, logger *zap.SugaredLogger) error {
+func (r *Result) parseExitSyscall(syscall, args string, logger *slog.Logger) error {
 	switch syscall {
 	case "creat":
 		match := creatPattern.FindStringSubmatch(args)
 		if match == nil {
-			return fmt.Errorf("failed to parse create args: %s", args)
+			return fmt.Errorf("%w: create args: %s", ErrParseFailure, args)
 		}
 
 		path := match[1]
-		logger.Debugw("creat", "path", path)
+		logger.Debug("creat", "path", path)
 		r.recordFileAccess(path, false, true, false)
 	case "open":
 		match := openPattern.FindStringSubmatch(args)
 		if match == nil {
-			return fmt.Errorf("failed to parse open args: %s", args)
+			return fmt.Errorf("%w: open args: %s", ErrParseFailure, args)
 		}
 
 		path := match[1]
 		read, write := parseOpenFlags(match[2])
-		logger.Debugw("open", "path", path, "read", read, "write", write)
+		logger.Debug("open", "path", path, "read", read, "write", write)
 		r.recordFileAccess(path, read, write, false)
 	case "openat":
 		match := openatPattern.FindStringSubmatch(args)
 		if match == nil {
-			return fmt.Errorf("failed to parse openat args: %s", args)
+			return fmt.Errorf("%w: openat args: %s", ErrParseFailure, args)
 		}
 
 		path := joinPaths(match[1], match[2])
 		read, write := parseOpenFlags(match[3])
-		logger.Debugw("openat", "path", path, "read", read, "write", write)
+		logger.Debug("openat", "path", path, "read", read, "write", write)
 		r.recordFileAccess(path, read, write, false)
 	case "execve":
 		match := execvePattern.FindStringSubmatch(args)
 		if match == nil {
-			return fmt.Errorf("failed to parse execve args: %s", args)
+			return fmt.Errorf("%w: execve args: %s", ErrParseFailure, args)
 		}
 
-		logger.Debugw("execve", "cmdAndEnv", match[1])
+		logger.Debug("execve", "cmdAndEnv", match[1])
 		cmd, env, err := parseCmdAndEnv(match[1])
 		if err != nil {
-			return err
+			return fmt.Errorf("%w: cmd and env: %w", ErrParseFailure, err)
 		}
 		r.recordCommand(cmd, env)
 	case "bind", "connect":
 		match := socketPattern.FindStringSubmatch(args)
 		if match == nil {
-			return fmt.Errorf("failed to parse socket args: %s", args)
+			return fmt.Errorf("%w: socket args: %s", ErrParseFailure, args)
 		}
 		family := match[1]
 		if family != "AF_INET" && family != "AF_INET6" {
-			log.Debug("Ignoring socket",
+			logger.Debug("Ignoring socket",
 				"family", family,
 				"socket", match[2])
 			return nil
@@ -281,49 +284,49 @@ func (r *Result) parseExitSyscall(syscall, args string, logger *zap.SugaredLogge
 		address := match[3]
 		port, err := parsePort(match[4])
 		if err != nil {
-			return err
+			return fmt.Errorf("%w: port: %w", ErrParseFailure, err)
 		}
-		logger.Debugw("socket", "address", address, "port", port)
+		logger.Debug("socket", "address", address, "port", port)
 		r.recordSocket(address, port)
 	case "stat", "fstat", "lstat":
 		match := statPattern.FindStringSubmatch(args)
 		if match == nil {
-			return fmt.Errorf("failed to parse stat args: %s", args)
+			return fmt.Errorf("%w: stat args: %s", ErrParseFailure, args)
 		}
 		path := match[1]
-		logger.Debugw("stat", "path", path)
+		logger.Debug("stat", "path", path)
 		r.recordFileAccess(path, true, false, false)
 	case "newfstatat":
 		match := newfstatatPattern.FindStringSubmatch(args)
 		if match == nil {
-			return fmt.Errorf("failed to parse newfstatat args: %s", args)
+			return fmt.Errorf("%w: newfstatat args: %s", ErrParseFailure, args)
 		}
 		path := joinPaths(match[1], match[2])
-		logger.Debugw("newfstatat", "path", path)
+		logger.Debug("newfstatat", "path", path)
 		r.recordFileAccess(path, true, false, false)
 	case "unlink":
 		match := unlinkPatten.FindStringSubmatch(args)
 		if match == nil {
-			return fmt.Errorf("failed to parse unlink args: %s", args)
+			return fmt.Errorf("%w: unlink args: %s", ErrParseFailure, args)
 		}
 		path := match[1]
-		logger.Infow("unlink", "path", path)
+		logger.Debug("unlink", "path", path)
 		r.recordFileAccess(path, false, false, true)
 	case "unlinkat":
 		match := unlinkatPattern.FindStringSubmatch(args)
 		if match == nil {
-			return fmt.Errorf("failed to parse unlinkat args: %s", args)
+			return fmt.Errorf("%w: unlinkat args: %s", ErrParseFailure, args)
 		}
 		path := joinPaths(match[1], match[2])
-		logger.Debugw("unlinkat", "path", path)
+		logger.Debug("unlinkat", "path", path)
 		r.recordFileAccess(path, false, false, true)
 	}
 	return nil
 }
 
-// Parse reads an strace and collects the files, sockets and commands that were
-// accessed.
-func Parse(r io.Reader, logger *zap.SugaredLogger) (*Result, error) {
+// Parse reads the output from strace and collects the files, sockets and commands that
+// were accessed. debugLogger can be used to log verbose information about strace parsing.
+func Parse(ctx context.Context, r io.Reader, debugLogger *slog.Logger) (*Result, error) {
 	result := &Result{
 		files:            make(map[string]*FileInfo),
 		sockets:          make(map[string]*SocketInfo),
@@ -343,16 +346,20 @@ func Parse(r io.Reader, logger *zap.SugaredLogger) (*Result, error) {
 		if match != nil {
 			if match[2] == "E" {
 				// Analyze entry events.
-				if err := result.parseEnterSyscall(match[3], match[4], logger); err != nil {
-					// Log errors and continue.
-					log.Warn("Failed to parse entry syscall", "error", err)
+				if err := result.parseEnterSyscall(match[3], match[4], debugLogger); errors.Is(err, ErrParseFailure) {
+					// Log parsing errors and continue.
+					slog.WarnContext(ctx, "Failed to parse entry syscall", "error", err)
+				} else if err != nil {
+					return nil, err
 				}
 			}
 			if match[2] == "X" {
 				// Analyze exit events.
-				if err := result.parseExitSyscall(match[3], match[4], logger); err != nil {
-					// Log errors and continue.
-					log.Warn("Failed to parse exit syscall", "error", err)
+				if err := result.parseExitSyscall(match[3], match[4], debugLogger); errors.Is(err, ErrParseFailure) {
+					// Log parsing errors and continue.
+					slog.WarnContext(ctx, "Failed to parse exit syscall", "error", err)
+				} else if err != nil {
+					return nil, err
 				}
 			}
 		}

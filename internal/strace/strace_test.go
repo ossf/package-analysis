@@ -1,28 +1,24 @@
 package strace_test
 
 import (
+	"context"
 	"fmt"
+	"io"
+	"log/slog"
 	"reflect"
 	"strings"
 	"testing"
 
-	"go.uber.org/zap"
-
-	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/strace"
 	"github.com/ossf/package-analysis/internal/utils"
 )
 
-var nopLogger = zap.NewNop().Sugar()
-
-func init() {
-	log.Initialize("")
-}
+var nopLogger = slog.New(slog.NewTextHandler(io.Discard, nil))
 
 func TestIgnoreEntryLogs(t *testing.T) {
 	input := "I1203 05:29:21.585712     173 strace.go:625] [   2] python3 E creat(0x7f015d7865d0 /tmp/abctest, 0o600)"
 	r := strings.NewReader(input)
-	res, err := strace.Parse(r, nopLogger)
+	res, err := strace.Parse(context.Background(), r, nopLogger)
 	if err != nil || res == nil {
 		t.Errorf(`Parse(r) = %v, %v, want _, nil`, res, err)
 	}
@@ -41,7 +37,7 @@ func TestParseFileReadThenCreate(t *testing.T) {
 	}
 
 	r := strings.NewReader(input)
-	res, err := strace.Parse(r, nopLogger)
+	res, err := strace.Parse(context.Background(), r, nopLogger)
 	if err != nil || res == nil {
 		t.Errorf(`Parse(r) = %v, %v, want _, nil`, res, err)
 	}
@@ -70,7 +66,7 @@ func TestParseFileWriteMultipleWritesToSameFile(t *testing.T) {
 		WriteInfo: writeInfoWantArray}
 
 	r := strings.NewReader(input)
-	res, err := strace.Parse(r, nopLogger)
+	res, err := strace.Parse(context.Background(), r, nopLogger)
 	if err != nil || res == nil {
 		t.Errorf(`Parse(r) = %v, %v, want _, nil`, res, err)
 	}
@@ -111,7 +107,7 @@ func TestParseFileWritesToDifferentFiles(t *testing.T) {
 	want := []strace.FileInfo{firstFileWant, secondFileWant}
 
 	r := strings.NewReader(input)
-	res, err := strace.Parse(r, nopLogger)
+	res, err := strace.Parse(context.Background(), r, nopLogger)
 	if err != nil || res == nil {
 		t.Errorf(`Parse(r) = %v, %v, want _, nil`, res, err)
 	}
@@ -139,7 +135,7 @@ func TestParseFileWriteWithZeroBytesWritten(t *testing.T) {
 	}
 
 	r := strings.NewReader(input)
-	res, err := strace.Parse(r, nopLogger)
+	res, err := strace.Parse(context.Background(), r, nopLogger)
 	if err != nil || res == nil {
 		t.Errorf(`Parse(r) = %v, %v, want _, nil`, res, err)
 	}
@@ -148,6 +144,63 @@ func TestParseFileWriteWithZeroBytesWritten(t *testing.T) {
 		t.Errorf(`Files() = %v, want [%v]`, files, want)
 	}
 	utils.RemoveTempFilesDirectory()
+}
+
+func TestUnlinkOneEntry(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  strace.FileInfo
+	}{
+		{
+			// unlink with path
+			name:  "unlink",
+			input: "I0902 01:19:17.729518     303 strace.go:625] [   4:   4] python3 X unlink(0x7ff5f78e4980 /tmp/lbosrzlp) = 0 (0x0) (58.552Âµs)",
+			want: strace.FileInfo{
+				Path:   "/tmp/lbosrzlp",
+				Delete: true,
+			},
+		},
+		{
+			// unlink with no path and error
+			name:  "unlink2",
+			input: "I1116 06:22:52.164421    1158 strace.go:625] [  23:  23] cmake X unlink(0x7f234e5bd500 ) = 0 (0x0) errno=2 (no such file or directory) (667ns)",
+			want: strace.FileInfo{
+				Path:   "",
+				Delete: true,
+			},
+		},
+		{
+			name:  "unlinkat",
+			input: "I0902 01:19:18.991729     303 strace.go:631] [   4:   4] python3 X unlinkat(0x3 /tmp/pip-unpack-7xfj8327, 0x7ff5f790c410 temps-0.3.0.tar.gz, 0x0) = 0 (0x0) (39.914Âµs)",
+			want: strace.FileInfo{
+				Path:   "/tmp/pip-unpack-7xfj8327/temps-0.3.0.tar.gz",
+				Delete: true,
+			},
+		},
+		{
+			name:  "unlinkat_2",
+			input: "I0907 23:56:32.113900     302 strace.go:631] [  48:  48] rm X unlinkat(AT_FDCWD /app, 0x5569a7e83380 /app/vendor/composer/e06632ca, 0x200) = 0 (0x0) (69.951µs)",
+			want: strace.FileInfo{
+				Path:   "/app/vendor/composer/e06632ca",
+				Delete: true,
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			r := strings.NewReader(test.input)
+			res, err := strace.Parse(context.Background(), r, nopLogger)
+			if err != nil || res == nil {
+				t.Errorf(`Parse(r) = %v, %v, want _, nil`, res, err)
+			}
+			files := res.Files()
+			if len(files) != 1 || !reflect.DeepEqual(files[0], test.want) {
+				t.Errorf(`Files() = %v, want [%v]`, files, test.want)
+			}
+		})
+	}
+
 }
 
 func TestParseFilesOneEntry(t *testing.T) {
@@ -291,35 +344,11 @@ func TestParseFilesOneEntry(t *testing.T) {
 				Write: false,
 			},
 		},
-		{
-			name:  "unlink",
-			input: "I0902 01:19:17.729518     303 strace.go:625] [   4:   4] python3 X unlink(0x7ff5f78e4980 /tmp/lbosrzlp) = 0 (0x0) (58.552Âµs)",
-			want: strace.FileInfo{
-				Path:   "/tmp/lbosrzlp",
-				Delete: true,
-			},
-		},
-		{
-			name:  "unlinkat",
-			input: "I0902 01:19:18.991729     303 strace.go:631] [   4:   4] python3 X unlinkat(0x3 /tmp/pip-unpack-7xfj8327, 0x7ff5f790c410 temps-0.3.0.tar.gz, 0x0) = 0 (0x0) (39.914Âµs)",
-			want: strace.FileInfo{
-				Path:   "/tmp/pip-unpack-7xfj8327/temps-0.3.0.tar.gz",
-				Delete: true,
-			},
-		},
-		{
-			name:  "unlinkat_2",
-			input: "I0907 23:56:32.113900     302 strace.go:631] [  48:  48] rm X unlinkat(AT_FDCWD /app, 0x5569a7e83380 /app/vendor/composer/e06632ca, 0x200) = 0 (0x0) (69.951µs)",
-			want: strace.FileInfo{
-				Path:   "/app/vendor/composer/e06632ca",
-				Delete: true,
-			},
-		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			r := strings.NewReader(test.input)
-			res, err := strace.Parse(r, nopLogger)
+			res, err := strace.Parse(context.Background(), r, nopLogger)
 			if err != nil || res == nil {
 				t.Errorf(`Parse(r) = %v, %v, want _, nil`, res, err)
 			}
@@ -336,7 +365,7 @@ func TestParseIgnoredSockets(t *testing.T) {
 		"I1206 02:02:36.989375     205 strace.go:622] [   2] gem X bind(0x5 socket:[1], 0x7f414ed92cf8 {Family: AF_NETLINK, PortID: 0, Groups: 0}, 0xc) = 0x0 (16.276µs)\n" +
 		"I1206 02:02:36.990646     205 strace.go:622] [   2] gem X connect(0x5 socket:[2], 0x7f414ed93080 {Family: AF_UNSPEC, family addr format unknown}, 0x10) = 0x0 (8.598µs)\n"
 	r := strings.NewReader(input)
-	res, err := strace.Parse(r, nopLogger)
+	res, err := strace.Parse(context.Background(), r, nopLogger)
 	if err != nil || res == nil {
 		t.Errorf(`Parse(r) = %v, %v, want _, nil`, res, err)
 	}
@@ -413,7 +442,7 @@ func TestParseSocketsOneEntry(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			r := strings.NewReader(test.input)
-			res, err := strace.Parse(r, nopLogger)
+			res, err := strace.Parse(context.Background(), r, nopLogger)
 			if err != nil || res == nil {
 				t.Errorf(`Parse(r) = %v, %v, want _, nil`, res, err)
 			}
@@ -431,7 +460,7 @@ func TestReallyLongLogLine(t *testing.T) {
 	input := fmt.Sprintf(inputTmpl, strings.Repeat(part, 1000))
 
 	r := strings.NewReader(input)
-	res, err := strace.Parse(r, nopLogger)
+	res, err := strace.Parse(context.Background(), r, nopLogger)
 	if err != nil || res == nil {
 		t.Fatalf(`Parse(r) = %v, %v, want _, nil`, res, err)
 	}

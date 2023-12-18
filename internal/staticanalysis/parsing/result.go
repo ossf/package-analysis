@@ -4,33 +4,29 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ossf/package-analysis/internal/staticanalysis/token"
+	"github.com/ossf/package-analysis/pkg/api/staticanalysis/token"
 )
 
-// PackageResult maps file paths (e.g. in a package) to the FileResult for that file.
-type PackageResult map[string]FileResult
-
-// FileResult holds the full set of parsing data for a single file, which may
-// contain valid parsing results for multiple languages.
-type FileResult map[Language]*SingleResult
-
-// SingleResult holds information about source code tokens found in a file,
-// when parsed as particular language.
+// SingleResult holds processed information about source code tokens
+// found in a single file by a single language parser
 type SingleResult struct {
+	Language       Language           `json:"language"`
 	Identifiers    []token.Identifier `json:"identifiers"`
 	StringLiterals []token.String     `json:"string_literals"`
 	IntLiterals    []token.Int        `json:"int_literals"`
 	FloatLiterals  []token.Float      `json:"float_literals"`
 	Comments       []token.Comment    `json:"comments"`
+	// future: external function calls / references (e.g. eval)
 }
 
-func (rd SingleResult) String() string {
+func (r SingleResult) String() string {
 	parts := []string{
-		fmt.Sprintf("identifiers\n%v\n", rd.Identifiers),
-		fmt.Sprintf("string literals\n%v\n", rd.StringLiterals),
-		fmt.Sprintf("integer literals\n%v\n", rd.IntLiterals),
-		fmt.Sprintf("float literals\n%v\n", rd.FloatLiterals),
-		fmt.Sprintf("comments\n%v\n", rd.Comments),
+		fmt.Sprintf("language: %s", r.Language),
+		fmt.Sprintf("identifiers\n%v", r.Identifiers),
+		fmt.Sprintf("string literals\n%v", r.StringLiterals),
+		fmt.Sprintf("integer literals\n%v", r.IntLiterals),
+		fmt.Sprintf("float literals\n%v", r.FloatLiterals),
+		fmt.Sprintf("comments\n%v", r.Comments),
 	}
-	return strings.Join(parts, "\n-------------------\n")
+	return strings.Join(parts, "\n")
 }

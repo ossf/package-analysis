@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-var ErrUndefinedFlag = errors.New("flag is undefined")
+var ErrUndefinedFlag = errors.New("undefined feature flag")
 
 var flagRegistry = make(map[string]*FeatureFlag)
 
@@ -54,7 +54,7 @@ func Update(flags string) error {
 		if ff, ok := flagRegistry[n]; ok {
 			ff.isEnabled = isEnabled
 		} else {
-			return fmt.Errorf("%w: %s", ErrUndefinedFlag, n)
+			return fmt.Errorf("%w %q", ErrUndefinedFlag, n)
 		}
 	}
 	return nil

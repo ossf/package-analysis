@@ -16,11 +16,16 @@ ENV DEBIAN_FRONTEND noninteractive
 # Silence 'debconf: delaying package configuation, since apt-utils is not installed' warning
 # as it related to interactive configuration anyway
 ENV DEBCONF_NOWARNINGS="yes"
+# Define the major version of Node.js to use.
+ENV NODE_MAJOR=18
 
 # setup repo for kubectl
-RUN mkdir -m 0700 -p /etc/apt/keyrings && \
-	curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /etc/apt/trusted.gpg.d/kubernetes-archive-keyring.gpg && \
+RUN curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /etc/apt/trusted.gpg.d/kubernetes-archive-keyring.gpg && \
 	echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list
+
+# install repo for nodejs
+RUN curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/trusted.gpg.d/nodesource.gpg && \
+    echo "deb https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" > /etc/apt/sources.list.d/nodesource.list
 
 # install keys for powershell
 RUN curl -fsSL "https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb" -o /setup/packages-microsoft-prod.deb && \
@@ -34,6 +39,7 @@ RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-reco
 	build-essential \
 	cmake \
 	clang \
+	dnsutils \
 	golang \
 	iproute2 \
 	iputils-ping \
@@ -51,16 +57,20 @@ RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-reco
 	telnet \
 	tshark \
 	software-properties-common \
+	xxd \
 	zip
 
 # Configure sudo for passwordless execution
 RUN echo "ALL ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
+# Create ssh directory for root
+RUN mkdir -m 0700 /root/.ssh
+
 #
 # PHP setup
 #
 WORKDIR /setup/php
-RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
 	php \
 	php-zip \
 	php-gd
@@ -75,10 +85,10 @@ RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" &&
 #
 # NPM setup
 #
+# Installs node and npm via the nodejs package, pulled from nodesource.com configured above.
 WORKDIR /setup/node
-RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
-	nodejs \
-	npm
+RUN apt-get update && apt-get install -y --no-install-recommends \
+	nodejs
 
 COPY bowerrc /app/.bowerrc
 
@@ -87,8 +97,9 @@ COPY bowerrc /app/.bowerrc
 # Python setup
 #
 WORKDIR /setup/python
-RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
 	python3 \
+	python3-dev \
 	python3-pip
 
 # Some Python packages expect certain dependencies to already be installed
@@ -100,7 +111,7 @@ RUN pip install --require-hashes --requirement pypi-packages.txt
 # Rubygems setup
 #
 WORKDIR /setup/ruby
-RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
 	ruby \
 	ruby-rubygems
 
@@ -108,7 +119,7 @@ RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-reco
 # Rust setup
 #
 WORKDIR /setup/rust
-RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
 	rust-all
 
 

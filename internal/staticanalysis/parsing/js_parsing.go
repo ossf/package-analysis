@@ -1,17 +1,18 @@
 package parsing
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
-	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/staticanalysis/externalcmd"
-	"github.com/ossf/package-analysis/internal/staticanalysis/token"
+	"github.com/ossf/package-analysis/pkg/api/staticanalysis/token"
 )
 
 // parseOutputJSON represents the output JSON format of the JS parser
@@ -63,14 +64,14 @@ either by filename (jsFilePath) or piping jsSource to the program's stdin.
 
 If sourcePath is empty, sourceString will be parsed as JS code.
 */
-func runParser(parserPath string, input externalcmd.Input, extraArgs ...string) (string, error) {
+func runParser(ctx context.Context, parserPath string, input externalcmd.Input, extraArgs ...string) (string, error) {
 	workingDir, err := os.MkdirTemp("", "package-analysis-run-parser-*")
 	if err != nil {
 		return "", fmt.Errorf("runParser failed to create temp working directory: %w", err)
 	}
 	defer func() {
 		if err := os.RemoveAll(workingDir); err != nil {
-			log.Error("could not remove working directory", "path", workingDir, "error", err)
+			slog.ErrorContext(ctx, "could not remove working directory", "path", workingDir, "error", err)
 		}
 	}()
 
@@ -81,7 +82,7 @@ func runParser(parserPath string, input externalcmd.Input, extraArgs ...string) 
 		nodeArgs = append(nodeArgs, extraArgs...)
 	}
 
-	cmd := exec.Command("node", nodeArgs...)
+	cmd := exec.CommandContext(ctx, "node", nodeArgs...)
 
 	if err := input.SendTo(cmd, parserArgsHandler{}, workingDir); err != nil {
 		return "", fmt.Errorf("runParser failed to prepare parsing input: %w", err)
@@ -98,8 +99,8 @@ func runParser(parserPath string, input externalcmd.Input, extraArgs ...string) 
 	}
 }
 
-func (pd parseDataJSON) process() languageData {
-	processed := languageData{
+func (pd parseDataJSON) process(ctx context.Context) singleParseData {
+	processed := singleParseData{
 		ValidInput: true,
 	}
 
@@ -107,24 +108,31 @@ func (pd parseDataJSON) process() languageData {
 	for _, t := range pd.Tokens {
 		switch t.TokenType {
 		case identifier:
-			symbolSubtype := token.CheckIdentifierType(t.TokenSubType)
+			symbolSubtype := token.ParseIdentifierType(t.TokenSubType)
 			if symbolSubtype == token.Other || symbolSubtype == token.Unknown {
 				break
 			}
 			processed.Identifiers = append(processed.Identifiers, parsedIdentifier{
-				Type: token.CheckIdentifierType(t.TokenSubType),
+				Type: token.ParseIdentifierType(t.TokenSubType),
 				Name: t.Data.(string),
 				Pos:  t.Pos,
 			})
 		case literal:
 			literal := parsedLiteral[any]{
-				Type:     t.TokenSubType,
-				GoType:   fmt.Sprintf("%T", t.Data),
-				Value:    t.Data,
-				RawValue: t.Extra["raw"].(string),
-				InArray:  t.Extra["array"] == true,
-				Pos:      t.Pos,
+				Type:    t.TokenSubType,
+				GoType:  fmt.Sprintf("%T", t.Data),
+				Value:   t.Data,
+				InArray: t.Extra["array"] == true,
+				Pos:     t.Pos,
 			}
+
+			// Since t.Extra is a map[string]any, t.Extra["raw"].(string) will panic
+			// if "raw" is not present in the map, due to nil -> string conversion.
+			// Therefore we need the conditional type assertion as below.
+			if rawValue, ok := t.Extra["raw"].(string); ok {
+				literal.RawValue = rawValue
+			}
+
 			// check for BigInteger types which have to be represented as strings in JSON
 			if literal.Type == "Numeric" && literal.GoType == "string" {
 				if intAsString, ok := literal.Value.(string); ok {
@@ -143,7 +151,7 @@ func (pd parseDataJSON) process() languageData {
 				Pos:  t.Pos,
 			})
 		default:
-			log.Warn(fmt.Sprintf("parseJS: unrecognised token type %s", t.TokenType))
+			slog.WarnContext(ctx, fmt.Sprintf("parseJS: unrecognised token type %s", t.TokenType))
 		}
 	}
 	// process parser status (info/errors)
@@ -173,13 +181,13 @@ parseJS extracts source code identifiers and string literals from JavaScript cod
 
 parserConfig specifies options relevant to the parser itself, and is produced by InitParser
 
-If internal errors occurred during parsing, then a nil languageResult pointer is returned.
+If internal errors occurred during parsing, then a nil map is returned.
 The other two return values are the raw parser output and the error respectively.
 Otherwise, the first return value points to the parsing result object while the second
 contains the raw JSON output from the parser.
 */
-func parseJS(parserConfig ParserConfig, input externalcmd.Input) (languageResult, string, error) {
-	rawOutput, err := runParser(parserConfig.ParserPath, input)
+func parseJS(ctx context.Context, parserConfig ParserConfig, input externalcmd.Input) (map[string]singleParseData, string, error) {
+	rawOutput, err := runParser(ctx, parserConfig.ParserPath, input)
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			rawOutput = string(exitErr.Stderr)
@@ -188,23 +196,23 @@ func parseJS(parserConfig ParserConfig, input externalcmd.Input) (languageResult
 	}
 
 	decoder := json.NewDecoder(strings.NewReader(rawOutput))
+
 	var parseOutput parseOutputJSON
-	err = decoder.Decode(&parseOutput)
-	if err != nil {
+	if err := decoder.Decode(&parseOutput); err != nil {
 		return nil, rawOutput, err
 	}
 
 	// convert the elements into more natural data structure
-	result := languageResult{}
+	result := map[string]singleParseData{}
 	for filename, data := range parseOutput {
-		result[filename] = data.process()
+		result[filename] = data.process(ctx)
 	}
 
 	return result, rawOutput, nil
 }
 
-func RunExampleParsing(config ParserConfig, input externalcmd.Input) {
-	parseResult, rawOutput, err := parseJS(config, input)
+func RunExampleParsing(ctx context.Context, config ParserConfig, input externalcmd.Input) {
+	parseResult, rawOutput, err := parseJS(ctx, config, input)
 
 	fmt.Println("\nRaw JSON:\n", rawOutput)
 

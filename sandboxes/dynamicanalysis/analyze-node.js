@@ -38,18 +38,16 @@ function redirectConsoleWrite(stdoutWrite, stderrWrite) {
 }
 
 function importPkg(pkg) {
-  let mod = null;
   try {
-    mod = require(pkg.name);
+    require(pkg.name);
   } catch (e) {
     console.log(`Failed to import ${pkg.name}: ${e}`);
-    return;
   }
+}
 
-  // run package execution only if the log file exists
-  if (!fs.existsSync(executionLogPath)) {
-    return;
-  }
+function executePkg(pkg) {
+  // if we're here, module importing should have worked in import phase
+  let mod = require(pkg.name);
 
   executeModule(pkg.name, mod);
 }
@@ -159,7 +157,8 @@ function executeModuleCode(name, mod) {
 const phases = new Map([
   ['all', [install, importPkg]],
   ['install', [install]],
-  ['import', [importPkg]]
+  ['import', [importPkg]],
+  ['execute', [executePkg]],
 ]);
 
 const argv = process.argv;

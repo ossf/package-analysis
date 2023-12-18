@@ -1,8 +1,10 @@
 package sandbox
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"os/exec"
 
@@ -27,8 +29,8 @@ const (
 	NetworkInterface = bridgeInterface
 )
 
-func loadIptablesRules() error {
-	log.Debug("Loading iptable rules")
+func loadIptablesRules(ctx context.Context) error {
+	slog.DebugContext(ctx, "Loading iptable rules")
 
 	// Open the iptables-restore configuration
 	f, err := os.Open(iptablesRules)
@@ -37,12 +39,12 @@ func loadIptablesRules() error {
 	}
 	defer f.Close()
 
-	logOut := log.Writer(log.InfoLevel)
+	logOut := log.NewWriter(ctx, slog.Default(), slog.LevelInfo)
 	defer logOut.Close()
-	logErr := log.Writer(log.WarnLevel)
+	logErr := log.NewWriter(ctx, slog.Default(), slog.LevelWarn)
 	defer logErr.Close()
 
-	cmd := exec.Command(iptablesLoadBin)
+	cmd := exec.CommandContext(ctx, iptablesLoadBin)
 	cmd.Stdout = logOut
 	cmd.Stderr = logErr
 	stdin, err := cmd.StdinPipe()
@@ -67,11 +69,11 @@ func loadIptablesRules() error {
 // podman would create this bridge interface anyway, but doing it early allows
 // a packet capture to be started on the interface prior to the sandbox
 // starting.
-func createBridgeNetwork() error {
-	log.Debug("Creating bridge network")
+func createBridgeNetwork(ctx context.Context) error {
+	slog.DebugContext(ctx, "Creating bridge network")
 
 	// Create the bridge
-	cmd := exec.Command(ipBin, "link", "add", "name", bridgeInterface, "type", "bridge")
+	cmd := exec.CommandContext(ctx, ipBin, "link", "add", "name", bridgeInterface, "type", "bridge")
 	if err := cmd.Run(); err != nil {
 		// If the error is not an ExitError, or the Exit Code is not 2, then abort.
 		if exitErr, ok := err.(*exec.ExitError); !ok || exitErr.ExitCode() != 2 {
@@ -80,13 +82,13 @@ func createBridgeNetwork() error {
 	}
 
 	// Bring the bridge up.
-	cmd = exec.Command(ipBin, "link", "set", bridgeInterface, "up")
+	cmd = exec.CommandContext(ctx, ipBin, "link", "set", bridgeInterface, "up")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to bring up bridge interface: %w", err)
 	}
 
 	// Add a dummy device so the bridge stays up
-	cmd = exec.Command(ipBin, "link", "add", "dev", dummyInterface, "type", "dummy")
+	cmd = exec.CommandContext(ctx, ipBin, "link", "add", "dev", dummyInterface, "type", "dummy")
 	if err := cmd.Run(); err != nil {
 		// If the error is not an ExitError, or the Exit Code is not 2, then abort.
 		if exitErr, ok := err.(*exec.ExitError); !ok || exitErr.ExitCode() != 2 {
@@ -95,13 +97,13 @@ func createBridgeNetwork() error {
 	}
 
 	// Add the dummy device to the bridge network
-	cmd = exec.Command(ipBin, "link", "set", "dev", dummyInterface, "master", bridgeInterface)
+	cmd = exec.CommandContext(ctx, ipBin, "link", "set", "dev", dummyInterface, "master", bridgeInterface)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to add dummy interface to bridge: %w", err)
 	}
 
 	// Bring the dummy device up.
-	cmd = exec.Command(ipBin, "link", "set", dummyInterface, "up")
+	cmd = exec.CommandContext(ctx, ipBin, "link", "set", dummyInterface, "up")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to bring up dummy interface: %w", err)
 	}
@@ -118,13 +120,15 @@ func createBridgeNetwork() error {
 //
 // This function must be called after logging is complete, and may exit if
 // any of the commands fail.
-func InitNetwork() {
+func InitNetwork(ctx context.Context) {
 	// Create the bridge network
-	if err := createBridgeNetwork(); err != nil {
-		log.Fatal("Failed to create bridge network", "error", err)
+	if err := createBridgeNetwork(ctx); err != nil {
+		slog.ErrorContext(ctx, "Failed to create bridge network", "error", err)
+		os.Exit(1)
 	}
 	// Load iptables rules to further isolate the sandbox
-	if err := loadIptablesRules(); err != nil {
-		log.Fatal("Failed restoring iptables rules", "error", err)
+	if err := loadIptablesRules(ctx); err != nil {
+		slog.ErrorContext(ctx, "Failed restoring iptables rules", "error", err)
+		os.Exit(1)
 	}
 }

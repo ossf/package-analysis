@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
@@ -34,9 +36,9 @@ type workDirs struct {
 	parserDir  string
 }
 
-func (wd *workDirs) cleanup() {
+func (wd *workDirs) cleanup(ctx context.Context) {
 	if err := os.RemoveAll(wd.baseDir); err != nil {
-		log.Error("Failed to remove work dirs", "baseDir", wd.baseDir, "error", err)
+		slog.ErrorContext(ctx, "Failed to remove work dirs", "baseDir", wd.baseDir, "error", err)
 	}
 }
 
@@ -104,7 +106,7 @@ func run() (err error) {
 	analyses.InitFlag()
 	flag.Parse()
 
-	if len(os.Args) == 1 || *help == true {
+	if len(os.Args) == 1 || *help {
 		flag.Usage()
 		fmt.Fprintln(os.Stderr, "")
 		printAllTasks()
@@ -123,7 +125,7 @@ func run() (err error) {
 
 	pkg, err := worker.ResolvePkg(manager, *packageName, *version, *localFile)
 	if err != nil {
-		return fmt.Errorf("package error: %v", err)
+		return fmt.Errorf("package error: %w", err)
 	}
 
 	analysisTasks, err := checkTasks(analyses.Values)
@@ -132,19 +134,22 @@ func run() (err error) {
 		return err
 	}
 
-	log.Info("Static analysis launched",
+	ctx := log.ContextWithAttrs(context.Background(),
 		log.Label("ecosystem", ecosystem.String()),
-		"package", *packageName,
-		"version", *version,
+		slog.String("package", *packageName),
+		slog.String("version", *version),
+	)
+
+	slog.InfoContext(ctx, "Static analysis launched",
 		"local_path", *localFile,
 		"output_file", *output,
 		"analyses", analysisTasks)
 
 	workDirs, err := makeWorkDirs()
 	if err != nil {
-		return fmt.Errorf("failed to create work directories: %v", err)
+		return fmt.Errorf("failed to create work directories: %w", err)
 	}
-	defer workDirs.cleanup()
+	defer workDirs.cleanup(ctx)
 
 	startExtractionTime := time.Now()
 	var archivePath string
@@ -153,62 +158,71 @@ func run() (err error) {
 	} else {
 		archivePath, err = manager.DownloadArchive(pkg.Name(), pkg.Version(), workDirs.archiveDir)
 		if err != nil {
-			return fmt.Errorf("error downloading archive: %v\n", err)
+			return fmt.Errorf("error downloading archive: %w", err)
 		}
 	}
 
-	err = manager.ExtractArchive(archivePath, workDirs.extractDir)
-	if err != nil {
-		return fmt.Errorf("archive extraction failed: %v", err)
+	if err := manager.ExtractArchive(archivePath, workDirs.extractDir); err != nil {
+		return fmt.Errorf("archive extraction failed: %w", err)
 	}
 
 	extractionTime := time.Since(startExtractionTime)
 
-	jsParserConfig, parserInitErr := parsing.InitParser(filepath.Join(workDirs.parserDir, jsParserDirName))
+	jsParserConfig, parserInitErr := parsing.InitParser(ctx, filepath.Join(workDirs.parserDir, jsParserDirName))
 	if parserInitErr != nil {
-		log.Error("failed to init JS parser", "error", parserInitErr)
+		slog.ErrorContext(ctx, "failed to init JS parser", "error", parserInitErr)
 	}
 
 	startAnalysisTime := time.Now()
-	results, err := staticanalysis.AnalyzePackageFiles(workDirs.extractDir, jsParserConfig, analysisTasks)
+	results, err := staticanalysis.AnalyzePackageFiles(ctx, workDirs.extractDir, jsParserConfig, analysisTasks)
 	analysisTime := time.Since(startAnalysisTime)
 	if err != nil {
 		return fmt.Errorf("static analysis error: %w", err)
 	}
 
+	startHashTime := time.Now()
+	archiveHash, err := utils.SHA256Hash(archivePath)
+	if err != nil {
+		slog.WarnContext(ctx, "failed to calculate archive checksum", "error", err)
+	}
+	results.ArchiveSHA256 = archiveHash
+	hashTime := time.Since(startHashTime)
+
 	startWritingResultsTime := time.Now()
 
 	jsonResult, err := json.Marshal(results)
 	if err != nil {
-		return fmt.Errorf("JSON marshall error: %v", err)
+		slog.WarnContext(ctx, fmt.Sprintf("unserialisable JSON: %v", results))
+		return fmt.Errorf("JSON marshal error: %w", err)
 	}
 
 	outputFile := os.Stdout
 	if *output != "" {
 		outputFile, err = os.Create(*output)
 		if err != nil {
-			return fmt.Errorf("could not open/create output file %s: %v", *output, err)
+			return fmt.Errorf("could not open/create output file %s: %w", *output, err)
 		}
 
 		defer func() {
 			if err := outputFile.Close(); err != nil {
-				log.Warn("could not close output file", "path", *output, "error", err)
+				slog.WarnContext(ctx, "could not close output file", "path", *output, "error", err)
 			}
 		}()
 	}
 
 	if _, writeErr := outputFile.Write(jsonResult); writeErr != nil {
-		return fmt.Errorf("could not write JSON results: %v", writeErr)
+		return fmt.Errorf("could not write JSON results: %w", writeErr)
 	}
 
 	writingResultsTime := time.Since(startWritingResultsTime)
 
 	totalTime := time.Since(startTime)
-	otherTime := totalTime - writingResultsTime - analysisTime - extractionTime
+	otherTime := totalTime - writingResultsTime - analysisTime - extractionTime - hashTime
 
-	log.Info("Execution times",
+	slog.InfoContext(ctx, "Execution times",
 		"download and extraction", extractionTime,
 		"analysis", analysisTime,
+		"sha256Hash calculation", hashTime,
 		"writing results", writingResultsTime,
 		"other", otherTime,
 		"total", totalTime)
@@ -217,9 +231,8 @@ func run() (err error) {
 }
 
 func main() {
-	err := run()
-	if err != nil {
-		log.Error("static analysis failed", "error", err)
+	if err := run(); err != nil {
+		slog.Error("static analysis failed", "error", err)
 		os.Exit(1)
 	}
 }

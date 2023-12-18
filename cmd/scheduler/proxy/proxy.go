@@ -2,8 +2,9 @@ package proxy
 
 import (
 	"context"
+	"log/slog"
 
-	"go.uber.org/zap"
+	"github.com/ossf/package-analysis/internal/log"
 	"gocloud.dev/pubsub"
 )
 
@@ -21,29 +22,29 @@ func New(topic *pubsub.Topic, subscription *pubsub.Subscription) *PubSubProxy {
 	}
 }
 
-func (proxy *PubSubProxy) Listen(ctx context.Context, logger *zap.Logger, preprocess MessageMutateFunc) error {
+func (proxy *PubSubProxy) Listen(ctx context.Context, preprocess MessageMutateFunc) error {
 	for {
 		msg, err := proxy.subscription.Receive(ctx)
 		if err != nil {
-			logger.With(zap.Error(err)).Error("Error receiving message")
+			slog.ErrorContext(ctx, "Error receiving message", "error", err)
 			return err
 		}
 		go func(m *pubsub.Message) {
-			logger := logger.With(zap.String("message_id", m.LoggableID))
+			innerCtx := log.ContextWithAttrs(ctx, slog.String("message_id", m.LoggableID))
 			outMsg, err := preprocess(msg)
 			if err != nil {
 				// Failure to parse and process messages should result in an acknowledgement
 				// to avoid the message being redelivered.
-				logger.With(zap.Error(err)).Warn("Error processing message")
+				slog.WarnContext(innerCtx, "Error processing message", "error", err)
 				m.Ack()
 				return
 			}
-			logger.Info("Sending message to topic")
+			slog.InfoContext(innerCtx, "Sending message to topic")
 			if err := proxy.topic.Send(ctx, outMsg); err != nil {
-				logger.With(zap.Error(err)).Error("Error sending message")
+				slog.ErrorContext(ctx, "Error sending message", "error", err)
 				return
 			}
-			logger.Info("Sent message successfully")
+			slog.InfoContext(innerCtx, "Sent message successfully")
 			msg.Ack()
 		}(msg)
 	}

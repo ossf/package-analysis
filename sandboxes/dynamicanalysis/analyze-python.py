@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
+import asyncio
 import importlib
+import importlib.metadata
 import inspect
 import os.path
 import signal
@@ -8,7 +10,6 @@ import sys
 import traceback
 from contextlib import redirect_stdout, redirect_stderr
 from dataclasses import dataclass
-from importlib.metadata import files
 from typing import Optional
 from unittest.mock import MagicMock
 
@@ -16,6 +17,7 @@ PY_EXTENSION = '.py'
 
 EXECUTION_LOG_PATH = '/execution.log'
 EXECUTION_TIMEOUT_SECONDS = 10
+
 
 @dataclass
 class Package:
@@ -61,22 +63,25 @@ def path_to_import(path):
     return import_path.replace('/', '.')
 
 
+def module_paths_to_import(package):
+    """Returns list of paths of modules to import (or execute) for the package."""
+    paths = []
+    for f in importlib.metadata.files(package.name):
+        # TODO: pyc, C extensions?
+        if f.suffix == PY_EXTENSION:
+            paths.append(path_to_import(f))
+    return paths
+
+
 def import_package(package):
     """Import phase for analyzing the package."""
-
-    for path in files(package.name):
-        # TODO: pyc, C extensions?
-        if path.suffix != PY_EXTENSION:
-            continue
-
-        import_path = path_to_import(path)
-        import_module(import_path)
+    for p in module_paths_to_import(package):
+        import_module(p)
 
 
 def import_single_module(import_path):
     module_dir = os.path.dirname(import_path)
     sys.path.append(module_dir)
-
     module_name = os.path.basename(import_path).rstrip(PY_EXTENSION)
 
     print(f'Import single module at {import_path}')
@@ -85,33 +90,43 @@ def import_single_module(import_path):
 
 def import_module(import_path):
     print('Importing', import_path)
+    # noinspection PyBroadException
     try:
-        module = importlib.import_module(import_path)
-    except:
+        importlib.import_module(import_path)
+    # catch everything, including SystemExit and KeyboardInterrupt
+    except BaseException:
         print('Failed to import', import_path)
         traceback.print_exc()
         return
 
-    # only run package execution if the log file exists
-    if not os.path.exists(EXECUTION_LOG_PATH):
-        return
 
+def execute_package(package):
+    """Execute phase for analyzing the package."""
+    for p in module_paths_to_import(package):
+        # if we're here, importing should have already worked during import phase
+        module = importlib.import_module(p)
+        execute_module(module)
+
+
+def execute_module(module):
     # Setup for module execution
     # 1. handler for function execution timeout alarms
     # 2. redirect stdout and stderr to execution log file
     signal.signal(signal.SIGALRM, handler=alarm_handler)
     with open(EXECUTION_LOG_PATH, 'at') as log, redirect_stdout(log), redirect_stderr(log):
+        # noinspection PyBroadException
         try:
-            execute_module(module)
-        except:
-            print('Failed to execute code for module', import_path)
+            do_execute(module)
+        # want to catch everything since code execution may cause some weird behaviour
+        except BaseException:
+            print('Failed to execute code for module', module)
             traceback.print_exc()
 
     # restore default signal handler for SIGALRM
     signal.signal(signal.SIGALRM, signal.SIG_DFL)
 
 
-def execute_module(module):
+def do_execute(module):
     """Best-effort execution of code in a module"""
     print('[module]', module)
 
@@ -183,11 +198,30 @@ def invoke_function(obj):
     # any exceptions will be propagated to the caller
     bound = signature.bind(*args, **kwargs)
 
-    # run with timeout to prevent hangs
+    # set timeout to prevent hangs
     signal.alarm(EXECUTION_TIMEOUT_SECONDS)
-    ret = obj(*bound.args, **bound.kwargs)
+
+    # run function and await the result if necessary
+    # ret_obj is the object returned by the function, which may need
+    # further evaluation / awaiting to produce the return value
+    ret_obj = obj(*bound.args, **bound.kwargs)
+    if inspect.isasyncgen(ret_obj):
+        # async generator - await in a loop
+        async def execute():
+            return [x async for x in ret_obj]
+        ret_val = asyncio.run(execute())
+    elif inspect.isgenerator(ret_obj):
+        # normal generator - execute in a loop
+        ret_val = [x for x in ret_obj]
+    elif inspect.iscoroutine(ret_obj):
+        # async function - await run
+        ret_val = asyncio.run(ret_obj)
+    else:
+        # normal function - just run
+        ret_val = ret_obj
+
     signal.alarm(0)
-    return ret
+    return ret_val
 
 
 # Execute a callable and catch any exception, logging to stdout
@@ -224,7 +258,6 @@ def try_instantiate_class(c, name):
 # tries to call the methods of the given object instance
 # should_investigate and mark_seen are mutable input/output variables
 # that track which types have been traversed
-# TODO support calling async methods
 def try_call_methods(instance, class_name, should_investigate, mark_seen):
     print('[instance methods]', class_name)
 
@@ -242,18 +275,20 @@ def try_call_methods(instance, class_name, should_investigate, mark_seen):
 
 
 PHASES = {
-    'all': [install, import_package],
+    'all': [install, import_package, execute_module],
     'install': [install],
-    'import': [import_package]
+    'import': [import_package],
+    'execute': [execute_package],
 }
 
 
-def main():
+def main() -> int:
     args = list(sys.argv)
     script = args.pop(0)
 
     if len(args) < 2 or len(args) > 4:
-        raise ValueError(f'Usage: {script} [--local file | --version version] phase package_name')
+        print(f'Usage: {script} [--local file | --version version] phase package_name')
+        return -1
 
     # Parse the arguments manually to avoid introducing unnecessary dependencies
     # and side effects that add noise to the strace output.
@@ -275,16 +310,16 @@ def main():
 
     if phase not in PHASES:
         print(f'Unknown phase {phase} specified.')
-        exit(1)
+        return 1
 
     if package_name is None:
         # single module mode
         if phase == 'import' and local_path is not None:
             import_single_module(local_path)
-            return
+            return 0
         else:
             print('install requested but no package name given, or local file missing for single module import')
-            exit(1)
+            return 1
 
     package = Package(name=package_name, version=version, local_path=local_path)
 
@@ -292,6 +327,8 @@ def main():
     for phase in PHASES[phase]:
         phase(package)
 
+    return 0
+
 
 if __name__ == '__main__':
-    main()
+    exit(main())
