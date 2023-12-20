@@ -13,7 +13,7 @@ require (
 	go.uber.org/zap/exp v0.2.0
 	gocloud.dev v0.34.0
 	gocloud.dev/pubsub/kafkapubsub v0.34.0
-	golang.org/x/crypto v0.16.0
+	golang.org/x/crypto v0.17.0
 	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53
 	google.golang.org/api v0.152.0
 	google.golang.org/grpc v1.59.0

@@ -67,7 +67,7 @@ kafka for scheduler in
 [one line](https://github.com/ossf/package-analysis/commit/985ab76a67d29d2fc8582b3920643e7eb963da8a#diff-8565ef29cfb886db7902792675eddce1e7a0ccfe33428a59e7f2e365b354af88R12).
 
 An example of these variables can be found in the
-[e2e example docker-compose](examples/e2e/docker-compose.yml).
+[e2e example docker-compose](configs/e2e/docker-compose.yml).
 
 ### Analysis
 
