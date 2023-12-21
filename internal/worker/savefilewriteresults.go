@@ -11,17 +11,17 @@ import (
 	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 )
 
-func saveFileWriteResults(rs *resultstore.ResultStore, ctx context.Context, pkg *pkgmanager.Pkg, dynamicResults analysisrun.DynamicAnalysisResults) error {
+func saveFileWriteResults(rs *resultstore.ResultStore, ctx context.Context, pkg *pkgmanager.Pkg, data analysisrun.DynamicAnalysisData) error {
 	if rs == nil {
 		// TODO this should become a method on resultstore.ResultStore?
 		return errors.New("resultstore is nil")
 	}
 
-	if err := rs.SaveDynamicAnalysis(ctx, pkg, dynamicResults.FileWritesSummary, ""); err != nil {
+	if err := rs.SaveDynamicAnalysis(ctx, pkg, data.FileWritesSummary, ""); err != nil {
 		return fmt.Errorf("failed to upload file write analysis to blobstore = %w", err)
 	}
 	var allPhasesWriteBufferIdsArray []string
-	for _, writeBufferIds := range dynamicResults.FileWriteBufferIds {
+	for _, writeBufferIds := range data.FileWriteBufferIds {
 		allPhasesWriteBufferIdsArray = append(allPhasesWriteBufferIdsArray, writeBufferIds...)
 	}
 

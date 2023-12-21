@@ -17,6 +17,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/crypto/ssh"
+
 	"github.com/ossf/package-analysis/internal/analysis"
 	"github.com/ossf/package-analysis/internal/dynamicanalysis"
 	"github.com/ossf/package-analysis/internal/featureflags"
@@ -25,20 +27,15 @@ import (
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
-	"golang.org/x/crypto/ssh"
 )
 
 // defaultDynamicAnalysisImage is container image name of the default dynamic analysis sandbox
 const defaultDynamicAnalysisImage = "gcr.io/ossf-malware-analysis/dynamic-analysis"
 
 /*
-DynamicAnalysisResult holds all the results from RunDynamicAnalysis
+DynamicAnalysisResult holds all data and status from RunDynamicAnalysis.
 
-AnalysisData: Map of each successfully run phase to a summary of
-the corresponding dynamic analysis result. This summary has two parts:
-1. StraceSummary: information about system calls performed by the process
-2. FileWrites: list of files which were written to and counts of bytes written
-
+Data: analysisrun.DynamicAnalysisData for the package under analysis.
 Note, if error is not nil, then results[lastRunPhase] is nil.
 
 LastRunPhase: the last phase that was run. If error is non-nil, this phase did not
@@ -46,11 +43,11 @@ successfully complete, and the results for this phase are not recorded.
 Otherwise, the results contain data for this phase, even in cases where the
 sandboxed process terminated abnormally.
 
-Status: the status of the last run phase if it completed without error, else empty
+LastStatus: the status of the last run phase if it completed without error, else empty
 */
 
 type DynamicAnalysisResult struct {
-	AnalysisData analysisrun.DynamicAnalysisResults
+	Data         analysisrun.DynamicAnalysisData
 	LastRunPhase analysisrun.DynamicPhase
 	LastStatus   analysis.Status
 }
@@ -185,7 +182,7 @@ func RunDynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, sbOpts []sandb
 	}
 
 	result := DynamicAnalysisResult{
-		AnalysisData: analysisrun.DynamicAnalysisResults{
+		Data: analysisrun.DynamicAnalysisData{
 			StraceSummary:      make(analysisrun.DynamicAnalysisStraceSummary),
 			FileWritesSummary:  make(analysisrun.DynamicAnalysisFileWritesSummary),
 			FileWriteBufferIds: make(analysisrun.DynamicAnalysisFileWriteBufferIds),
@@ -291,9 +288,9 @@ func runDynamicAnalysisPhase(ctx context.Context, pkg *pkgmanager.Pkg, sb sandbo
 		return err
 	}
 
-	result.AnalysisData.StraceSummary[phase] = &phaseResult.StraceSummary
-	result.AnalysisData.FileWritesSummary[phase] = &phaseResult.FileWritesSummary
-	result.AnalysisData.FileWriteBufferIds[phase] = phaseResult.FileWriteBufferIds
+	result.Data.StraceSummary[phase] = &phaseResult.StraceSummary
+	result.Data.FileWritesSummary[phase] = &phaseResult.FileWritesSummary
+	result.Data.FileWriteBufferIds[phase] = phaseResult.FileWriteBufferIds
 	result.LastStatus = phaseResult.StraceSummary.Status
 
 	if phase == analysisrun.DynamicPhaseExecute {
@@ -302,7 +299,7 @@ func runDynamicAnalysisPhase(ctx context.Context, pkg *pkgmanager.Pkg, sb sandbo
 			// don't return this error, just log it
 			slog.ErrorContext(ctx, "Error retrieving execution log", "error", err)
 		} else {
-			result.AnalysisData.ExecutionLog = analysisrun.DynamicAnalysisExecutionLog(executionLog)
+			result.Data.ExecutionLog = analysisrun.DynamicAnalysisExecutionLog(executionLog)
 		}
 	}
 

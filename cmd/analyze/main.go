@@ -152,7 +152,7 @@ func dynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, resultStores *wor
 			"status", string(result.LastStatus))
 	}
 
-	if err := worker.SaveDynamicAnalysisData(ctx, pkg, resultStores, result.AnalysisData); err != nil {
+	if err := worker.SaveDynamicAnalysisData(ctx, pkg, resultStores, result.Data); err != nil {
 		slog.ErrorContext(ctx, "Upload error", "error", err)
 	}
 }
