@@ -19,6 +19,7 @@ import (
 
 	"github.com/ossf/package-analysis/internal/pkgmanager"
 	"github.com/ossf/package-analysis/internal/utils"
+	"github.com/ossf/package-analysis/pkg/api/analysisrun"
 	"github.com/ossf/package-analysis/pkg/api/staticanalysis"
 )
 
@@ -248,9 +249,9 @@ func (rs *ResultStore) SaveDynamicAnalysis(ctx context.Context, p Pkg, analysis 
 		filename = DefaultFilename(p)
 	}
 
-	data := &DynamicAnalysisRecord{
-		Package: pkg{
-			Ecosystem: p.EcosystemName(),
+	data := &analysisrun.DynamicAnalysisRecord{
+		Package: analysisrun.Key{
+			Ecosystem: p.Ecosystem(),
 			Name:      p.Name(),
 			Version:   p.Version(),
 		},

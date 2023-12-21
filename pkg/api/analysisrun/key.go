@@ -7,9 +7,9 @@ import (
 )
 
 type Key struct {
-	Ecosystem pkgecosystem.Ecosystem
-	Name      string
-	Version   string
+	Ecosystem pkgecosystem.Ecosystem `json:"Ecosystem"`
+	Name      string                 `json:"Name"`
+	Version   string                 `json:"Version"`
 }
 
 func (k Key) String() string {

@@ -11,6 +11,14 @@ type (
 	DynamicAnalysisExecutionLog       string
 )
 
+// DynamicAnalysisRecord is the top-level struct which is serialised to produce JSON results files
+// for dynamic analysis.
+type DynamicAnalysisRecord struct {
+	Package          Key   `json:"Package"`
+	CreatedTimestamp int64 `json:"CreatedTimestamp"`
+	Analysis         any   `json:"Analysis"`
+}
+
 type DynamicAnalysisResults struct {
 	StraceSummary     DynamicAnalysisStraceSummary
 	FileWritesSummary DynamicAnalysisFileWritesSummary
