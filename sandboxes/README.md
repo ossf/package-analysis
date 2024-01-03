@@ -2,7 +2,7 @@
 
 ## Sandbox Image Testing
 
-By default the analysis command will update the sandbox images from the grc.io
+By default, the analysis command will update the sandbox images from the grc.io
 repository. To test local changes to sandboxes, they need to be built locally,
 and the analysis needs to redirect its container source to the local filesystem.
 
@@ -34,7 +34,7 @@ These commands will (re-)build both sandboxes and copy them to the correct locat
 ### Running the analysis
 
 The `scripts/run_analysis.sh` script automates much of the setup for running
-local analysis, but it the default setting will pull the sandbox images from
+local analysis, but the default setting will pull the sandbox images from
 the remote container registry rather than using locally built ones. To change
 this, add the `-nopull` option to the script.
 
@@ -108,8 +108,7 @@ $ pip install django==9.3.4
 
 ##### import
 
-Iterates through the installed package's modules, etc and attempts to import
-them.
+Iterates through the installed package's modules and attempts to import them.
 
 This is relevant to languages that execute code at import time.
 
