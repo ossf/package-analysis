@@ -152,7 +152,8 @@ func run() (err error) {
 	}
 	defer workDirs.cleanup(ctx)
 
-	startExtractionTime := time.Now()
+	startDownloadTime := time.Now()
+
 	var archivePath string
 	if *localFile != "" {
 		archivePath = *localFile
@@ -163,24 +164,11 @@ func run() (err error) {
 		}
 	}
 
-	if err := manager.ExtractArchive(archivePath, workDirs.extractDir); err != nil {
-		return fmt.Errorf("archive extraction failed: %w", err)
-	}
+	downloadTime := time.Since(startDownloadTime)
 
-	extractionTime := time.Since(startExtractionTime)
+	results := staticanalysis.Result{}
 
-	jsParserConfig, parserInitErr := parsing.InitParser(ctx, filepath.Join(workDirs.parserDir, jsParserDirName))
-	if parserInitErr != nil {
-		slog.ErrorContext(ctx, "failed to init JS parser", "error", parserInitErr)
-	}
-
-	startAnalysisTime := time.Now()
-	results, err := staticanalysis.AnalyzePackageFiles(ctx, workDirs.extractDir, jsParserConfig, analysisTasks)
-	analysisTime := time.Since(startAnalysisTime)
-	if err != nil {
-		return fmt.Errorf("static analysis error: %w", err)
-	}
-
+	startArchiveAnalysisTime := time.Now()
 	archiveResult, err := basicdata.Analyze(ctx, []string{archivePath},
 		basicdata.SkipLineLengths(),
 		basicdata.FormatPaths(func(absPath string) string { return "/" }),
@@ -198,6 +186,29 @@ func run() (err error) {
 		}
 	}
 
+	archiveAnalysisTime := time.Since(startArchiveAnalysisTime)
+
+	startExtractionTime := time.Now()
+
+	if err := manager.ExtractArchive(archivePath, workDirs.extractDir); err != nil {
+		return fmt.Errorf("archive extraction failed: %w", err)
+	}
+
+	extractionTime := time.Since(startExtractionTime)
+
+	jsParserConfig, parserInitErr := parsing.InitParser(ctx, filepath.Join(workDirs.parserDir, jsParserDirName))
+	if parserInitErr != nil {
+		slog.ErrorContext(ctx, "failed to init JS parser", "error", parserInitErr)
+	}
+
+	startAnalysisTime := time.Now()
+	fileResults, err := staticanalysis.AnalyzePackageFiles(ctx, workDirs.extractDir, jsParserConfig, analysisTasks)
+	if err != nil {
+		return fmt.Errorf("static analysis error: %w", err)
+	}
+	results.Files = fileResults
+
+	analysisTime := time.Since(startAnalysisTime)
 	startWritingResultsTime := time.Now()
 
 	jsonResult, err := json.Marshal(results)
@@ -227,11 +238,13 @@ func run() (err error) {
 	writingResultsTime := time.Since(startWritingResultsTime)
 
 	totalTime := time.Since(startTime)
-	otherTime := totalTime - writingResultsTime - analysisTime - extractionTime
+	otherTime := totalTime - writingResultsTime - analysisTime - extractionTime - archiveAnalysisTime - downloadTime
 
 	slog.InfoContext(ctx, "Execution times",
-		"download and extraction", extractionTime,
-		"analysis", analysisTime,
+		"download", downloadTime,
+		"archive analysis", archiveAnalysisTime,
+		"archive extraction", extractionTime,
+		"file analysis", analysisTime,
 		"writing results", writingResultsTime,
 		"other", otherTime,
 		"total", totalTime)
