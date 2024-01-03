@@ -89,7 +89,7 @@ func AnalyzePackageFiles(ctx context.Context, extractDir string, jsParserConfig 
 
 	if runTask[Basic] {
 		slog.InfoContext(ctx, "run basic analysis")
-		basicData, err := basicdata.Analyze(ctx, paths, getPathInArchive)
+		basicData, err := basicdata.Analyze(ctx, paths, basicdata.FormatPaths(getPathInArchive))
 		if err != nil {
 			slog.ErrorContext(ctx, "static analysis basic data error", "error", err)
 		} else if len(basicData) != len(fileResults) {

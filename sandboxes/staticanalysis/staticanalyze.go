@@ -13,6 +13,7 @@ import (
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgmanager"
 	"github.com/ossf/package-analysis/internal/staticanalysis"
+	"github.com/ossf/package-analysis/internal/staticanalysis/basicdata"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"github.com/ossf/package-analysis/internal/utils"
 	"github.com/ossf/package-analysis/internal/worker"
@@ -180,13 +181,22 @@ func run() (err error) {
 		return fmt.Errorf("static analysis error: %w", err)
 	}
 
-	startHashTime := time.Now()
-	archiveHash, err := utils.SHA256Hash(archivePath)
+	archiveResult, err := basicdata.Analyze(ctx, []string{archivePath},
+		basicdata.SkipLineLengths(),
+		basicdata.FormatPaths(func(absPath string) string { return "/" }),
+	)
 	if err != nil {
-		slog.WarnContext(ctx, "failed to calculate archive checksum", "error", err)
+		slog.WarnContext(ctx, "failed to analyze archive file", "error", err)
+	} else if len(archiveResult) != 1 {
+		slog.WarnContext(ctx, "archive file analysis: unexpected number of results", "len", len(archiveResult))
+	} else {
+		archiveInfo := archiveResult[0]
+		results.Archive = staticanalysis.ArchiveResult{
+			DetectedType: archiveInfo.DetectedType,
+			Size:         archiveInfo.Size,
+			SHA256:       archiveInfo.SHA256,
+		}
 	}
-	results.ArchiveSHA256 = archiveHash
-	hashTime := time.Since(startHashTime)
 
 	startWritingResultsTime := time.Now()
 
@@ -217,12 +227,11 @@ func run() (err error) {
 	writingResultsTime := time.Since(startWritingResultsTime)
 
 	totalTime := time.Since(startTime)
-	otherTime := totalTime - writingResultsTime - analysisTime - extractionTime - hashTime
+	otherTime := totalTime - writingResultsTime - analysisTime - extractionTime
 
 	slog.InfoContext(ctx, "Execution times",
 		"download and extraction", extractionTime,
 		"analysis", analysisTime,
-		"sha256Hash calculation", hashTime,
 		"writing results", writingResultsTime,
 		"other", otherTime,
 		"total", totalTime)

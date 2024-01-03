@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/ossf/package-analysis/internal/utils"
@@ -72,11 +71,7 @@ func TestGetBasicData(t *testing.T) {
 				}
 			}
 
-			getArchivePath := func(absolutePath string) string {
-				return strings.TrimPrefix(absolutePath, testDir+string(os.PathSeparator))
-			}
-
-			got, err := Analyze(context.Background(), paths, getArchivePath)
+			got, err := Analyze(context.Background(), paths)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("detectFileTypes() error = %v, wantErr %v", err, tt.wantErr)
 				return
