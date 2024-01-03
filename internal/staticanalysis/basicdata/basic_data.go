@@ -73,9 +73,9 @@ func SkipLineLengths() Option {
 
 // FormatPaths uses the given function to transform absolute file paths
 // before they are passed to logging.
-func FormatPaths(transform func(absPath string) string) Option {
+func FormatPaths(formatPathFunc func(absPath string) string) Option {
 	return option(func(config *analyzeConfig) {
-		config.withLineLengths = false
+		config.formatPathFunc = formatPathFunc
 	})
 }
 

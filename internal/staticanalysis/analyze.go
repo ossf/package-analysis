@@ -47,7 +47,7 @@ If staticanalysis.Parsing is not in the list of analysisTasks, jsParserConfig ma
 If an error occurs while traversing the extracted package directory tree, or an invalid
 task is requested, a nil result is returned along with the corresponding error object.
 */
-func AnalyzePackageFiles(ctx context.Context, extractDir string, jsParserConfig parsing.ParserConfig, analysisTasks []Task) (*Result, error) {
+func AnalyzePackageFiles(ctx context.Context, extractDir string, jsParserConfig parsing.ParserConfig, analysisTasks []Task) ([]SingleResult, error) {
 	runTask := map[Task]bool{}
 
 	for _, task := range analysisTasks {
@@ -133,5 +133,5 @@ func AnalyzePackageFiles(ctx context.Context, extractDir string, jsParserConfig 
 		}
 	}
 
-	return &Result{Files: fileResults}, nil
+	return fileResults, nil
 }
