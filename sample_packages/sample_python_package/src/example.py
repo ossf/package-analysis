@@ -18,6 +18,8 @@ def send_https_post_request(called_from: str, print_logs: bool) -> None:
 # Attempts to ping a subset of addresses that packages should not be able to
 # ping. Checks if those addresses will send a packet back.
 def connect_to_blocked_addresses(called_from: str, print_logs: bool) -> None:
+  # blocked_addresses is based off of ip addresses that we block access to in
+  # tools/network/iptables.rules
   blocked_addresses = ["172.16.16.1", "169.254.169.254", "10.0.0.1",
                        "172.16.0.1", "192.168.0.1"]
   successful_pings = []
