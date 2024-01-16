@@ -13,6 +13,7 @@ import (
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/pkgmanager"
 	"github.com/ossf/package-analysis/internal/staticanalysis"
+	"github.com/ossf/package-analysis/internal/staticanalysis/basicdata"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
 	"github.com/ossf/package-analysis/internal/utils"
 	"github.com/ossf/package-analysis/internal/worker"
@@ -151,7 +152,8 @@ func run() (err error) {
 	}
 	defer workDirs.cleanup(ctx)
 
-	startExtractionTime := time.Now()
+	startDownloadTime := time.Now()
+
 	var archivePath string
 	if *localFile != "" {
 		archivePath = *localFile
@@ -161,6 +163,32 @@ func run() (err error) {
 			return fmt.Errorf("error downloading archive: %w", err)
 		}
 	}
+
+	downloadTime := time.Since(startDownloadTime)
+
+	results := staticanalysis.Result{}
+
+	startArchiveAnalysisTime := time.Now()
+	archiveResult, err := basicdata.Analyze(ctx, []string{archivePath},
+		basicdata.SkipLineLengths(),
+		basicdata.FormatPaths(func(absPath string) string { return "/" }),
+	)
+	if err != nil {
+		slog.WarnContext(ctx, "failed to analyze archive file", "error", err)
+	} else if len(archiveResult) != 1 {
+		slog.WarnContext(ctx, "archive file analysis: unexpected number of results", "len", len(archiveResult))
+	} else {
+		archiveInfo := archiveResult[0]
+		results.Archive = staticanalysis.ArchiveResult{
+			DetectedType: archiveInfo.DetectedType,
+			Size:         archiveInfo.Size,
+			SHA256:       archiveInfo.SHA256,
+		}
+	}
+
+	archiveAnalysisTime := time.Since(startArchiveAnalysisTime)
+
+	startExtractionTime := time.Now()
 
 	if err := manager.ExtractArchive(archivePath, workDirs.extractDir); err != nil {
 		return fmt.Errorf("archive extraction failed: %w", err)
@@ -174,20 +202,13 @@ func run() (err error) {
 	}
 
 	startAnalysisTime := time.Now()
-	results, err := staticanalysis.AnalyzePackageFiles(ctx, workDirs.extractDir, jsParserConfig, analysisTasks)
-	analysisTime := time.Since(startAnalysisTime)
+	fileResults, err := staticanalysis.AnalyzePackageFiles(ctx, workDirs.extractDir, jsParserConfig, analysisTasks)
 	if err != nil {
 		return fmt.Errorf("static analysis error: %w", err)
 	}
+	results.Files = fileResults
 
-	startHashTime := time.Now()
-	archiveHash, err := utils.SHA256Hash(archivePath)
-	if err != nil {
-		slog.WarnContext(ctx, "failed to calculate archive checksum", "error", err)
-	}
-	results.ArchiveSHA256 = archiveHash
-	hashTime := time.Since(startHashTime)
-
+	analysisTime := time.Since(startAnalysisTime)
 	startWritingResultsTime := time.Now()
 
 	jsonResult, err := json.Marshal(results)
@@ -217,12 +238,13 @@ func run() (err error) {
 	writingResultsTime := time.Since(startWritingResultsTime)
 
 	totalTime := time.Since(startTime)
-	otherTime := totalTime - writingResultsTime - analysisTime - extractionTime - hashTime
+	otherTime := totalTime - writingResultsTime - analysisTime - extractionTime - archiveAnalysisTime - downloadTime
 
 	slog.InfoContext(ctx, "Execution times",
-		"download and extraction", extractionTime,
-		"analysis", analysisTime,
-		"sha256Hash calculation", hashTime,
+		"download", downloadTime,
+		"archive analysis", archiveAnalysisTime,
+		"archive extraction", extractionTime,
+		"file analysis", analysisTime,
 		"writing results", writingResultsTime,
 		"other", otherTime,
 		"total", totalTime)
