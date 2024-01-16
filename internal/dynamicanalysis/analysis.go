@@ -21,7 +21,8 @@ const (
 type Result struct {
 	StraceSummary     analysisrun.StraceSummary
 	FileWritesSummary analysisrun.FileWritesSummary
-	// Ids that correlate to the name of the file that saves the actual write buffer contents. We save this separately so we don't need to dig through the FileWritesSummary later on.
+	// IDs that correlate to the name of the file that saves the actual write buffer contents.
+	// We save this separately so that we don't need to dig through the FileWritesSummary later on.
 	FileWriteBufferIds []string
 }
 
