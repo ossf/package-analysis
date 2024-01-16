@@ -29,7 +29,7 @@ type ResultStores struct {
 // SaveDynamicAnalysisData saves the data from dynamic analysis to the corresponding bucket in the ResultStores.
 // This includes strace data, execution log, and file writes (in that order).
 // If any operation fails, the rest are aborted
-func SaveDynamicAnalysisData(ctx context.Context, pkg *pkgmanager.Pkg, dest *ResultStores, data analysisrun.DynamicAnalysisResults) error {
+func SaveDynamicAnalysisData(ctx context.Context, pkg *pkgmanager.Pkg, dest *ResultStores, data analysisrun.DynamicAnalysisData) error {
 	if dest.DynamicAnalysis == nil {
 		// nothing to do
 		return nil
@@ -64,7 +64,7 @@ func SaveDynamicAnalysisData(ctx context.Context, pkg *pkgmanager.Pkg, dest *Res
 }
 
 // saveExecutionLog saves the execution log to the dynamic analysis resultstore, only if it is nonempty
-func saveExecutionLog(ctx context.Context, pkg *pkgmanager.Pkg, dest *ResultStores, data analysisrun.DynamicAnalysisResults) error {
+func saveExecutionLog(ctx context.Context, pkg *pkgmanager.Pkg, dest *ResultStores, data analysisrun.DynamicAnalysisData) error {
 	if dest.ExecutionLog == nil || len(data.ExecutionLog) == 0 {
 		// nothing to do
 		return nil
@@ -125,7 +125,7 @@ func SaveStaticAnalysisData(ctx context.Context, pkg *pkgmanager.Pkg, dest *Resu
 }
 
 // SaveFileWritesData saves file writes data from dynamic analysis to the file writes bucket in the ResultStores
-func SaveFileWritesData(ctx context.Context, pkg *pkgmanager.Pkg, dest *ResultStores, data analysisrun.DynamicAnalysisResults) error {
+func SaveFileWritesData(ctx context.Context, pkg *pkgmanager.Pkg, dest *ResultStores, data analysisrun.DynamicAnalysisData) error {
 	if dest.FileWrites == nil {
 		return nil
 	}

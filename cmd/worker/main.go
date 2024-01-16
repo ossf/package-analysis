@@ -168,7 +168,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 
 	result, dynamicAnalysisErr := worker.RunDynamicAnalysis(ctx, pkg, dynamicSandboxOpts, "")
 	if dynamicAnalysisErr == nil {
-		dynamicAnalysisErr = worker.SaveDynamicAnalysisData(ctx, pkg, resultStores, result.AnalysisData)
+		dynamicAnalysisErr = worker.SaveDynamicAnalysisData(ctx, pkg, resultStores, result.Data)
 	}
 
 	resultStores.AnalyzedPackageSaved = false
