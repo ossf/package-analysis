@@ -98,7 +98,7 @@ push_prod_images: push_prod_sandboxes push_analysis_image push_scheduler_image
 # pass '-nopull' to scripts/run_analysis.sh
 #
 sync_%_sandbox:
-	sudo buildah pull docker-daemon:${REGISTRY}/${IMAGE_NAME}:$(TAG)
+	docker save ${REGISTRY}/${IMAGE_NAME}:$(TAG) | sudo podman load
 
 sync_dynamic_analysis_sandbox: IMAGE_NAME=dynamic-analysis
 sync_dynamic_analysis_sandbox: build_dynamic_analysis_sandbox
