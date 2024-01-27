@@ -147,6 +147,9 @@ allows caching the sandbox images and supports local developement.
 
 ## Development
 
+### Testing
+See `sample_packages/README.md` for how to use a sample package that simulates malicious activity for testing purposes.
+
 ### Required Dependencies
 
 - Go v1.21
