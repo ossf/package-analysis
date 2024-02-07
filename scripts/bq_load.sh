@@ -37,8 +37,8 @@ fi
 
 union=""
 
-for bucket_prefix in `gsutil ls "$BUCKET"`; do
-    prefix=`echo "$bucket_prefix" | sed "s|$BUCKET/\([^\]*\)/|\1|g"`
+for bucket_prefix in `gsutil ls "$RESULT_BUCKET"`; do
+    prefix=`echo "$bucket_prefix" | sed "s|$RESULT_BUCKET/\([^\]*\)/|\1|g"`
     clean_prefix=`echo "$prefix" | tr -c -d "[:alnum:]"`
     table_name="$LOAD_TABLE_PREFIX$clean_prefix"
 
