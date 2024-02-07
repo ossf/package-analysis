@@ -62,7 +62,7 @@ for bucket_prefix in `gsutil ls "$RESULT_BUCKET"`; do
     union="$union$subquery"
 done
 
-query="CREATE OR REPLACE TABLE \`$PROJECT_ID.$DEST_DATASET.$DEST_TABLE\` LIKE \`$PROJECT_ID.$LOAD_DATASET.$table_name\` PARTITION BY TIMESTAMP_TRUNC(CreatedTimestamp, DAY) AS $union;"
+query="CREATE OR REPLACE TABLE \`$PROJECT_ID.$DEST_DATASET.$DEST_TABLE\` LIKE \`$PROJECT_ID.$LOAD_DATASET.$table_name\` PARTITION BY TIMESTAMP_TRUNC(CreatedTimestamp, DAY) OPTIONS(expiration_timestamp=NULL) AS $union;"
 
 echo "## Updating \`$PROJECT_ID.$DEST_DATASET.$DEST_TABLE\` from shards."
 echo "Executing query: '$query'"
