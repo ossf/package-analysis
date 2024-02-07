@@ -8,6 +8,7 @@ steps:
   - 'DEST_TABLE=analysis'
   - 'RESULT_BUCKET=gs://ossf-malware-analysis-results'
   - 'SCHEMA_FILE=function/loader/dynamic-analysis-schema.json'
+  entrypoint: '/bin/bash'
   args: ['scripts/bq_load.sh']
 timeout: 43200s  # 12 hours
 options:
