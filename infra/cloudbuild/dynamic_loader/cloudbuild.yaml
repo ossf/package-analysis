@@ -10,3 +10,5 @@ steps:
   - 'SCHEMA_FILE=function/loader/dynamic-analysis-schema.json'
   args: ['scripts/bq_load.sh']
 timeout: 43200s  # 12 hours
+options:
+  logging: CLOUD_LOGGING_ONLY
