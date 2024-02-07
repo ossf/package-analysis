@@ -44,6 +44,7 @@ for bucket_prefix in `gsutil ls "$RESULT_BUCKET"`; do
 
     echo "## Loading $bucket_prefix into \`$PROJECT_ID.$LOAD_DATASET.$table_name\`."
     bq load \
+        --headless \
         --project_id="$PROJECT_ID" \
         --dataset_id="$LOAD_DATASET" \
         --replace \
@@ -66,4 +67,4 @@ query="CREATE OR REPLACE TABLE \`$PROJECT_ID.$DEST_DATASET.$DEST_TABLE\` LIKE \`
 echo "## Updating \`$PROJECT_ID.$DEST_DATASET.$DEST_TABLE\` from shards."
 echo "Executing query: '$query'"
 
-bq query --nouse_legacy_sql --project_id="$PROJECT_ID" "$query"
+bq query --headless --nouse_legacy_sql --project_id="$PROJECT_ID" "$query"
