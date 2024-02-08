@@ -5,24 +5,47 @@ import (
 )
 
 type (
-	DynamicAnalysisStraceSummary      map[DynamicPhase]*StraceSummary
-	DynamicAnalysisFileWritesSummary  map[DynamicPhase]*FileWritesSummary
+	// DynamicAnalysisStraceSummary holds system calls made during each analysis phase,
+	// obtained by strace monitoring.
+	DynamicAnalysisStraceSummary map[DynamicPhase]*StraceSummary
+
+	// DynamicAnalysisFileWritesSummary holds a summary of files written by all processes
+	// under analysis, during each analysis phase. This includes a list of paths written to,
+	// and counts of bytes written each time. Write data is obtained via strace monitoring.
+	DynamicAnalysisFileWritesSummary map[DynamicPhase]*FileWritesSummary
+
+	// DynamicAnalysisFileWriteBufferIds holds IDs (names) for each recorded write operation
+	// during each analysis phase. These names correspond to files in a zip archive that contain
+	// the actual write buffer contents.
 	DynamicAnalysisFileWriteBufferIds map[DynamicPhase][]string
-	DynamicAnalysisExecutionLog       string
+
+	// DynamicAnalysisExecutionLog contains a record of which package symbols (e.g. modules,
+	// functions, classes) were discovered during the 'execute' analysis phase, and the results
+	// of attempts to call or instantiate them.
+	DynamicAnalysisExecutionLog string
 )
 
-// DynamicAnalysisRecord is the top-level struct which is serialised to produce JSON results files
-// for dynamic analysis.
+// DynamicAnalysisRecord is a generic top-level struct which is used to produce JSON results
+// files for dynamic analysis in the current schema format. This format is used for
+// strace data, file write summary data and execution log data.
 type DynamicAnalysisRecord struct {
 	Package          Key   `json:"Package"`
 	CreatedTimestamp int64 `json:"CreatedTimestamp"`
 	Analysis         any   `json:"Analysis"`
 }
 
-type DynamicAnalysisResults struct {
-	StraceSummary     DynamicAnalysisStraceSummary
-	FileWritesSummary DynamicAnalysisFileWritesSummary
-	// Ids that correlate to the name of the file that saves the actual write buffer contents.
+// DynamicAnalysisStraceRecord is a specialisation of DynamicAnalysisRecord that can be used for
+// deserializing JSON files from the original strace-only dynamic analysis results.
+type DynamicAnalysisStraceRecord struct {
+	Package          Key                          `json:"Package"`
+	CreatedTimestamp int64                        `json:"CreatedTimestamp"`
+	Analysis         DynamicAnalysisStraceSummary `json:"Analysis"`
+}
+
+// DynamicAnalysisData holds all data obtained from running dynamic analysis.
+type DynamicAnalysisData struct {
+	StraceSummary      DynamicAnalysisStraceSummary
+	FileWritesSummary  DynamicAnalysisFileWritesSummary
 	FileWriteBufferIds DynamicAnalysisFileWriteBufferIds
 	ExecutionLog       DynamicAnalysisExecutionLog
 }

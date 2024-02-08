@@ -13,8 +13,19 @@ import (
 // Result (staticanalysis.Result) is the top-level internal data structure
 // that stores all data produced by static analysis performed on a package artifact.
 type Result struct {
-	ArchiveSHA256 string
-	Files         []SingleResult
+	Archive ArchiveResult
+	Files   []SingleResult
+}
+
+type ArchiveResult struct {
+	// DetectedType records the output of the `file` command run on the archive.
+	DetectedType string
+
+	// Size records the (compressed) size of the archive (as reported by the filesystem).
+	Size int64
+
+	// SHA256 records the SHA256 hashsum of the archive.
+	SHA256 string
 }
 
 /*

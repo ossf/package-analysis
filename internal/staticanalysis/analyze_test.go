@@ -34,12 +34,10 @@ var helloWorldJs = testFile{
 	lineLengths: valuecounts.Count([]int{18}),
 }
 
-func makeDesiredResult(files ...testFile) *Result {
-	result := Result{
-		Files: []SingleResult{},
-	}
-	for _, file := range files {
-		result.Files = append(result.Files, SingleResult{
+func makeDesiredResult(files ...testFile) []SingleResult {
+	result := make([]SingleResult, len(files))
+	for index, file := range files {
+		result[index] = SingleResult{
 			Filename: file.filename,
 			Basic: &basicdata.FileData{
 				DetectedType: file.fileType,
@@ -67,17 +65,17 @@ func makeDesiredResult(files ...testFile) *Result {
 				IPAddresses:           []string{},
 				URLs:                  []string{},
 			},
-		})
+		}
 	}
 
-	return &result
+	return result
 }
 
 func TestAnalyzePackageFiles(t *testing.T) {
 	tests := []struct {
 		name    string
 		files   []testFile
-		want    *Result
+		want    []SingleResult
 		wantErr bool
 	}{
 		{
