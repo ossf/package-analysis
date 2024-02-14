@@ -62,7 +62,21 @@ for bucket_prefix in `gsutil ls "$RESULT_BUCKET"`; do
     union="$union$subquery"
 done
 
-query="CREATE OR REPLACE TABLE \`$PROJECT_ID.$DEST_DATASET.$DEST_TABLE\` LIKE \`$PROJECT_ID.$LOAD_DATASET.$table_name\` PARTITION BY TIMESTAMP_TRUNC(CreatedTimestamp, DAY) OPTIONS(expiration_timestamp=NULL) AS $union;"
+# Query to populate the destination table.
+#
+# If the table does not exist it will be created. Keeping the table ensures
+# that breaking schema changes are not accidentally propagated to the
+# destination table.
+#
+# A transaction is used to keep the update atomic. It will also rollback the
+# TRUNCATE if the INSERT fails, such as when the schema has changed.
+query="
+CREATE TABLE IF NOT EXISTS \`$PROJECT_ID.$DEST_DATASET.$DEST_TABLE\` LIKE \`$PROJECT_ID.$LOAD_DATASET.$table_name\`
+    PARTITION BY TIMESTAMP_TRUNC(CreatedTimestamp, DAY) OPTIONS(expiration_timestamp=NULL);
+BEGIN TRANSACTION;
+TRUNCATE TABLE \`$PROJECT_ID.$DEST_DATASET.$DEST_TABLE\`;
+INSERT INTO \`$PROJECT_ID.$DEST_DATASET.$DEST_TABLE\` $union;
+COMMIT TRANSACTION;"
 
 echo "## Updating \`$PROJECT_ID.$DEST_DATASET.$DEST_TABLE\` from shards."
 echo "Executing query: '$query'"
