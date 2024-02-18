@@ -2,9 +2,9 @@ steps:
 - name: gcr.io/google.com/cloudsdktool/cloud-sdk
   env:
   - 'PROJECT_ID=ossf-malware-analysis'
-  - 'LOAD_DATASET=testing'  # TODO: change after testing is completed
+  - 'LOAD_DATASET=loading'
   - 'LOAD_TABLE_PREFIX=merge_'
-  - 'DEST_DATASET=testing'  # TODO: change after testing is completed
+  - 'DEST_DATASET=packages'
   - 'DEST_TABLE=analysis'
   - 'RESULT_BUCKET=gs://ossf-malware-analysis-results'
   - 'SCHEMA_FILE=function/loader/dynamic-analysis-schema.json'
