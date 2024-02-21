@@ -39,6 +39,8 @@ spec:
           value: gs://ossf-malware-analysis-packages
         - name: OSSF_MALWARE_NOTIFICATION_TOPIC
           value: gcppubsub://projects/ossf-malware-analysis/topics/analysis-notify
+        - name: OSSF_MALWARE_USER_AGENT_EXTRA
+          value: "production"
         - name: OSSF_MALWARE_FEATURE_FLAGS
           value: "CodeExecution"
         securityContext:
