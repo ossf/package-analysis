@@ -8,7 +8,7 @@ COPY ./go.sum ./
 RUN go mod download
 
 COPY . ./
-RUN go build -o analyze cmd/analyze/main.go && go build -o worker cmd/worker/main.go
+RUN go build -o analyze ./cmd/analyze && go build -o worker ./cmd/worker
 
 FROM ubuntu:22.04@sha256:42ba2dfce475de1113d55602d40af18415897167d47c2045ec7b6d9746ff148f
 

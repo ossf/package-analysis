@@ -5,11 +5,13 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 
 	"github.com/package-url/packageurl-go"
 
+	"github.com/ossf/package-analysis/internal/useragent"
 	"github.com/ossf/package-analysis/internal/worker"
 )
 
@@ -85,6 +87,8 @@ func processFileLine(text string) error {
 
 func run() error {
 	flag.Parse()
+
+	http.DefaultTransport = useragent.DefaultRoundTripper(http.DefaultTransport, "")
 
 	if *purlFilePath == "" {
 		return newCmdError("Please specify packages to download using -f <file>")
