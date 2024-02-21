@@ -24,9 +24,9 @@ import (
 	"github.com/ossf/package-analysis/internal/log"
 	"github.com/ossf/package-analysis/internal/notification"
 	"github.com/ossf/package-analysis/internal/pkgmanager"
-	"github.com/ossf/package-analysis/internal/resultstore"
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/internal/staticanalysis"
+	"github.com/ossf/package-analysis/internal/useragent"
 	"github.com/ossf/package-analysis/internal/worker"
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
 )
@@ -34,20 +34,6 @@ import (
 const (
 	localPkgPathFmt = "/local/%s"
 )
-
-// resultBucketPaths holds bucket paths for the different types of results.
-type resultBucketPaths struct {
-	analyzedPkg     string
-	dynamicAnalysis string
-	executionLog    string
-	fileWrites      string
-	staticAnalysis  string
-}
-
-type sandboxImageSpec struct {
-	tag    string
-	noPull bool
-}
 
 func copyPackageToLocalFile(ctx context.Context, packagesBucket *blob.Bucket, bucketPath string) (string, *os.File, error) {
 	if packagesBucket == nil {
@@ -77,29 +63,7 @@ func copyPackageToLocalFile(ctx context.Context, packagesBucket *blob.Bucket, bu
 	return fmt.Sprintf(localPkgPathFmt, path.Base(bucketPath)), f, nil
 }
 
-func makeResultStores(dest resultBucketPaths) worker.ResultStores {
-	resultStores := worker.ResultStores{}
-
-	if dest.analyzedPkg != "" {
-		resultStores.AnalyzedPackage = resultstore.New(dest.analyzedPkg, resultstore.ConstructPath())
-	}
-	if dest.dynamicAnalysis != "" {
-		resultStores.DynamicAnalysis = resultstore.New(dest.dynamicAnalysis, resultstore.ConstructPath())
-	}
-	if dest.executionLog != "" {
-		resultStores.ExecutionLog = resultstore.New(dest.executionLog, resultstore.ConstructPath())
-	}
-	if dest.fileWrites != "" {
-		resultStores.FileWrites = resultstore.New(dest.fileWrites, resultstore.ConstructPath())
-	}
-	if dest.staticAnalysis != "" {
-		resultStores.StaticAnalysis = resultstore.New(dest.staticAnalysis, resultstore.ConstructPath())
-	}
-
-	return resultStores
-}
-
-func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blob.Bucket, resultStores *worker.ResultStores, imageSpec sandboxImageSpec, notificationTopic *pubsub.Topic) error {
+func handleMessage(ctx context.Context, msg *pubsub.Message, cfg *config, packagesBucket *blob.Bucket, notificationTopic *pubsub.Topic) error {
 	name := msg.Metadata["name"]
 	if name == "" {
 		slog.WarnContext(ctx, "name is empty")
@@ -132,7 +96,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	)
 
 	localPkgPath := ""
-	sandboxOpts := []sandbox.Option{sandbox.Tag(imageSpec.tag)}
+	sandboxOpts := []sandbox.Option{sandbox.Tag(cfg.imageSpec.tag)}
 
 	if remotePkgPath != "" {
 		tmpPkgPath, pkgFile, err := copyPackageToLocalFile(ctx, packagesBucket, remotePkgPath)
@@ -146,7 +110,7 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 		sandboxOpts = append(sandboxOpts, sandbox.Volume(pkgFile.Name(), localPkgPath))
 	}
 
-	if imageSpec.noPull {
+	if cfg.imageSpec.noPull {
 		sandboxOpts = append(sandboxOpts, sandbox.NoPull())
 	}
 
@@ -159,19 +123,24 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	staticSandboxOpts := append(worker.StaticSandboxOptions(), sandboxOpts...)
 	dynamicSandboxOpts := append(worker.DynamicSandboxOptions(), sandboxOpts...)
 
+	// propogate user agent extras to the static analysis sandbox if it is set.
+	if cfg.userAgentExtra != "" {
+		staticSandboxOpts = append(staticSandboxOpts, sandbox.SetEnv("OSSF_MALWARE_USER_AGENT_EXTRA", cfg.userAgentExtra))
+	}
+
 	// run both dynamic and static analysis regardless of error status of either
 	// and return combined error(s) afterwards, if applicable
 	staticResults, _, staticAnalysisErr := worker.RunStaticAnalysis(ctx, pkg, staticSandboxOpts, staticanalysis.All)
 	if staticAnalysisErr == nil {
-		staticAnalysisErr = worker.SaveStaticAnalysisData(ctx, pkg, resultStores, staticResults)
+		staticAnalysisErr = worker.SaveStaticAnalysisData(ctx, pkg, cfg.resultStores, staticResults)
 	}
 
 	result, dynamicAnalysisErr := worker.RunDynamicAnalysis(ctx, pkg, dynamicSandboxOpts, "")
 	if dynamicAnalysisErr == nil {
-		dynamicAnalysisErr = worker.SaveDynamicAnalysisData(ctx, pkg, resultStores, result.Data)
+		dynamicAnalysisErr = worker.SaveDynamicAnalysisData(ctx, pkg, cfg.resultStores, result.Data)
 	}
 
-	resultStores.AnalyzedPackageSaved = false
+	cfg.resultStores.AnalyzedPackageSaved = false
 
 	// combine errors
 	if analysisErr := errors.Join(dynamicAnalysisErr, staticAnalysisErr); analysisErr != nil {
@@ -187,12 +156,12 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, packagesBucket *blo
 	return nil
 }
 
-func messageLoop(ctx context.Context, subURL, packagesBucket, notificationTopicURL string, imageSpec sandboxImageSpec, resultsBuckets *worker.ResultStores) error {
-	sub, err := pubsub.OpenSubscription(ctx, subURL)
+func messageLoop(ctx context.Context, cfg *config) error {
+	sub, err := pubsub.OpenSubscription(ctx, cfg.subURL)
 	if err != nil {
 		return err
 	}
-	extender, err := pubsubextender.New(ctx, subURL, sub)
+	extender, err := pubsubextender.New(ctx, cfg.subURL, sub)
 	if err != nil {
 		return err
 	}
@@ -205,8 +174,8 @@ func messageLoop(ctx context.Context, subURL, packagesBucket, notificationTopicU
 	// we pass in a nil notificationTopic object to handleMessage
 	// and continue with the analysis with no notifications published
 	var notificationTopic *pubsub.Topic
-	if notificationTopicURL != "" {
-		notificationTopic, err = pubsub.OpenTopic(ctx, notificationTopicURL)
+	if cfg.notificationTopicURL != "" {
+		notificationTopic, err = pubsub.OpenTopic(ctx, cfg.notificationTopicURL)
 		if err != nil {
 			return err
 		}
@@ -214,9 +183,9 @@ func messageLoop(ctx context.Context, subURL, packagesBucket, notificationTopicU
 	}
 
 	var pkgsBkt *blob.Bucket
-	if packagesBucket != "" {
+	if cfg.packagesBucket != "" {
 		var err error
-		pkgsBkt, err = blob.OpenBucket(ctx, packagesBucket)
+		pkgsBkt, err = blob.OpenBucket(ctx, cfg.packagesBucket)
 		if err != nil {
 			return err
 		}
@@ -246,7 +215,7 @@ func messageLoop(ctx context.Context, subURL, packagesBucket, notificationTopicU
 			return fmt.Errorf("error starting message ack deadline extender: %w", err)
 		}
 
-		if err := handleMessage(msgCtx, msg, pkgsBkt, resultsBuckets, imageSpec, notificationTopic); err != nil {
+		if err := handleMessage(msgCtx, msg, cfg, pkgsBkt, notificationTopic); err != nil {
 			slog.ErrorContext(msgCtx, "Failed to process message", "error", err)
 			if err := me.Stop(); err != nil {
 				slog.ErrorContext(msgCtx, "Extender failed", "error", err)
@@ -267,35 +236,21 @@ func main() {
 	log.Initialize(os.Getenv("LOGGER_ENV"))
 
 	ctx := context.Background()
-	subURL := os.Getenv("OSSMALWARE_WORKER_SUBSCRIPTION")
-	packagesBucket := os.Getenv("OSSF_MALWARE_ANALYSIS_PACKAGES")
-	notificationTopicURL := os.Getenv("OSSF_MALWARE_NOTIFICATION_TOPIC")
-	enableProfiler := os.Getenv("OSSF_MALWARE_ANALYSIS_ENABLE_PROFILER")
+
+	cfg := configFromEnv()
+
+	http.DefaultTransport = useragent.DefaultRoundTripper(http.DefaultTransport, cfg.userAgentExtra)
 
 	if err := featureflags.Update(os.Getenv("OSSF_MALWARE_FEATURE_FLAGS")); err != nil {
 		slog.Error("Failed to parse feature flags", "error", err)
 		os.Exit(1)
 	}
 
-	resultsBuckets := resultBucketPaths{
-		analyzedPkg:     os.Getenv("OSSF_MALWARE_ANALYZED_PACKAGES"),
-		dynamicAnalysis: os.Getenv("OSSF_MALWARE_ANALYSIS_RESULTS"),
-		executionLog:    os.Getenv("OSSF_MALWARE_ANALYSIS_EXECUTION_LOGS"),
-		fileWrites:      os.Getenv("OSSF_MALWARE_ANALYSIS_FILE_WRITE_RESULTS"),
-		staticAnalysis:  os.Getenv("OSSF_MALWARE_STATIC_ANALYSIS_RESULTS"),
-	}
-	resultStores := makeResultStores(resultsBuckets)
-
-	imageSpec := sandboxImageSpec{
-		tag:    os.Getenv("OSSF_SANDBOX_IMAGE_TAG"),
-		noPull: os.Getenv("OSSF_SANDBOX_NOPULL") != "",
-	}
-
 	sandbox.InitNetwork(ctx)
 
 	// If configured, start a webserver so that Go's pprof can be accessed for
 	// debugging and profiling.
-	if enableProfiler != "" {
+	if os.Getenv("OSSF_MALWARE_ANALYSIS_ENABLE_PROFILER") != "" {
 		go func() {
 			slog.Info("Starting profiler")
 			http.ListenAndServe(":6060", nil)
@@ -304,20 +259,11 @@ func main() {
 
 	// Log the configuration of the worker at startup so we can observe it.
 	slog.InfoContext(ctx, "Starting worker",
-		"subscription", subURL,
-		"package_bucket", packagesBucket,
-		"results_bucket", resultsBuckets.dynamicAnalysis,
-		"static_results_bucket", resultsBuckets.staticAnalysis,
-		"file_write_results_bucket", resultsBuckets.fileWrites,
-		"analyzed_packages_bucket", resultsBuckets.analyzedPkg,
-		"execution_log_bucket", resultsBuckets.executionLog,
-		"image_tag", imageSpec.tag,
-		"image_nopull", imageSpec.noPull,
-		"topic_notification", notificationTopicURL,
+		"config", cfg,
 		"feature_flags", featureflags.State(),
 	)
 
-	err := messageLoop(ctx, subURL, packagesBucket, notificationTopicURL, imageSpec, &resultStores)
+	err := messageLoop(ctx, cfg)
 	if err != nil {
 		slog.ErrorContext(ctx, "Error encountered", "error", err)
 	}

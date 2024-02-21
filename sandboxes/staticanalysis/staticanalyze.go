@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/ossf/package-analysis/internal/staticanalysis"
 	"github.com/ossf/package-analysis/internal/staticanalysis/basicdata"
 	"github.com/ossf/package-analysis/internal/staticanalysis/parsing"
+	"github.com/ossf/package-analysis/internal/useragent"
 	"github.com/ossf/package-analysis/internal/utils"
 	"github.com/ossf/package-analysis/internal/worker"
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
@@ -103,6 +105,9 @@ func run() (err error) {
 
 	log.Initialize(os.Getenv("LOGGER_ENV"))
 
+	userAgentExtra := os.Getenv("OSSF_MALWARE_USER_AGENT_EXTRA")
+	http.DefaultTransport = useragent.DefaultRoundTripper(http.DefaultTransport, userAgentExtra)
+
 	flag.TextVar(&ecosystem, "ecosystem", pkgecosystem.None, fmt.Sprintf("package ecosystem. Can be %s (required)", pkgecosystem.SupportedEcosystemsStrings))
 	analyses.InitFlag()
 	flag.Parse()
@@ -144,7 +149,8 @@ func run() (err error) {
 	slog.InfoContext(ctx, "Static analysis launched",
 		"local_path", *localFile,
 		"output_file", *output,
-		"analyses", analysisTasks)
+		"analyses", analysisTasks,
+		"user_agent_extra", userAgentExtra)
 
 	workDirs, err := makeWorkDirs()
 	if err != nil {

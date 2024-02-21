@@ -16,9 +16,9 @@ jobs:
         go-version: '1.21.0'
     - name: Install libpcap-dev
       run: sudo apt-get install -y libpcap-dev
-    - run: go build -o scheduler cmd/scheduler/main.go
-    - run: go build -o worker cmd/worker/main.go
-    - run: go build -o analyze cmd/analyze/main.go
+    - run: go build -o scheduler ./cmd/scheduler
+    - run: go build -o worker ./cmd/worker
+    - run: go build -o analyze ./cmd/analyze
     - run: go build -o loader load.go
       working-directory: function/loader
     - run: go build -o staticanalyze staticanalyze.go

@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"strings"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/ossf/package-analysis/internal/resultstore"
 	"github.com/ossf/package-analysis/internal/sandbox"
 	"github.com/ossf/package-analysis/internal/staticanalysis"
+	"github.com/ossf/package-analysis/internal/useragent"
 	"github.com/ossf/package-analysis/internal/utils"
 	"github.com/ossf/package-analysis/internal/worker"
 	"github.com/ossf/package-analysis/pkg/api/pkgecosystem"
@@ -185,6 +187,8 @@ func run() error {
 
 	analysisMode.InitFlag()
 	flag.Parse()
+
+	http.DefaultTransport = useragent.DefaultRoundTripper(http.DefaultTransport, "")
 
 	if err := featureflags.Update(*features); err != nil {
 		return usageError{err}
