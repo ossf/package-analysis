@@ -19,12 +19,19 @@ else
 	BUILD_ARG=--build-arg=SANDBOX_IMAGE_TAG=$(TAG)
 endif
 
+.PHONY: help
+help:  ## Display this help
+	@awk 'BEGIN {FS = ":.*##"; \
+			printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9\/-]+:.*?##/ \
+			{ printf "  \033[36m%-25s\033[0m %s\n", $$1, $$2 } \
+			/^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+
 
 #
 # This recipe builds and pushes images for production. Note: RELEASE_TAG must be set
 #
 .PHONY: cloudbuild
-cloudbuild: require_release_tag push_prod_images
+cloudbuild: require_release_tag push_prod_images ## Build and push images
 
 .PHONY: require_release_tag
 require_release_tag:
@@ -64,7 +71,7 @@ build_dynamic_analysis_sandbox: DOCKERFILE=$(SANDBOX_DIR)/dynamicanalysis/Docker
 build_dynamic_analysis_sandbox: IMAGE_NAME=dynamic-analysis
 
 .PHONY: build_prod_images
-build_prod_images: build_dynamic_analysis_sandbox build_static_analysis_sandbox build_analysis_image build_scheduler_image
+build_prod_images: build_dynamic_analysis_sandbox build_static_analysis_sandbox build_analysis_image build_scheduler_image ## Build images
 
 #
 # Builds then pushes analysis and sandbox images
@@ -89,7 +96,7 @@ push_static_analysis_sandbox: build_static_analysis_sandbox
 push_prod_sandboxes: push_dynamic_analysis_sandbox push_static_analysis_sandbox
 
 .PHONY: push_prod_images
-push_prod_images: push_prod_sandboxes push_analysis_image push_scheduler_image
+push_prod_images: push_prod_sandboxes push_analysis_image push_scheduler_image ## Push production images
 
 
 #
