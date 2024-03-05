@@ -331,6 +331,7 @@ func (s *podmanSandbox) startContainerCmd(ctx context.Context, logDir string) *e
 	args := []string{
 		"start",
 		"--runtime=" + runtimeBin,
+		"--runtime-flag=overlay2=none",
 		"--runtime-flag=root=" + rootDir,
 		"--runtime-flag=debug-log=" + filepath.Join(logDir, "runsc.log.%COMMAND%"),
 	}
