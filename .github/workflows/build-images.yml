@@ -28,4 +28,4 @@ jobs:
         docker version -f '{{.Server.Experimental}}'
 
     - name: build_docker
-      run: make build_prod_images
+      run: make build
