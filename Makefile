@@ -116,7 +116,7 @@ sync/sandbox/static_analysis: IMAGE_NAME=static-analysis
 sync/sandbox/static_analysis: build/sandbox/static_analysis
 
 .PHONY: sync
-sync: sync/sandbox/dynamic_analysis sync/sandbox/static_analysis
+sync: sync/sandbox/dynamic_analysis sync/sandbox/static_analysis ## Sync prod sandboxes
 
 
 #
