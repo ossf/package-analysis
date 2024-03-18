@@ -4,7 +4,7 @@ go 1.21
 
 require cloud.google.com/go/bigquery v1.59.1
 
-require google.golang.org/protobuf v1.33.0 // indirect; was indirect; made explicit due to vulnerability in v1.32.0
+require google.golang.org/protobuf v1.33.0 // moved here due to explicit bump to v1.33.0
 
 require (
 	cloud.google.com/go v0.112.0 // indirect
