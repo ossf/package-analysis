@@ -11,10 +11,10 @@ import (
 	"strings"
 )
 
-// ExtractTarGzFile extracts a .tar.gz / .tgz file located at tgzPath,
+// ExtractArchiveFile extracts a .tar.gz / .tgz file located at archivePath,
 // using outputDir as the root of the extracted files.
-func ExtractTarGzFile(tgzPath string, outputDir string) error {
-	f, err := os.Open(tgzPath)
+func ExtractArchiveFile(archivePath string, outputDir string) error {
+	f, err := os.Open(archivePath)
 	if err != nil {
 		return err
 	}

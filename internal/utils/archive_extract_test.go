@@ -107,7 +107,7 @@ func doExtractionTest(archivePath, extractPath string, archiveHeaders []*tar.Hea
 
 	log.Initialize("")
 
-	if err = ExtractTarGzFile(archivePath, extractPath); err != nil {
+	if err = ExtractArchiveFile(archivePath, extractPath); err != nil {
 		return fmt.Errorf("extract failed: %w", err)
 	}
 

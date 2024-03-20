@@ -88,5 +88,5 @@ var npmPkgManager = PkgManager{
 	latestVersion:   getNPMLatest,
 	archiveURL:      getNPMArchiveURL,
 	archiveFilename: getNPMArchiveFilename,
-	extractArchive:  utils.ExtractTarGzFile,
+	extractArchive:  utils.ExtractArchiveFile,
 }
