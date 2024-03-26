@@ -58,7 +58,7 @@ func ExtractArchiveFile(archivePath string, outputDir string) error {
 				return fmt.Errorf("archive content open failed: %w", err)
 			}
 			defer reader.Close()
-		
+
 			if _, err = io.Copy(extractedFile, reader); err != nil {
 				if closeErr := extractedFile.Close(); closeErr != nil {
 					return fmt.Errorf("copy failed: %w; close also failed: %v", err, closeErr)
