@@ -83,5 +83,5 @@ var pypiPkgManager = PkgManager{
 	latestVersion:   getPyPILatest,
 	archiveURL:      getPyPIArchiveURL,
 	archiveFilename: defaultArchiveFilename,
-	extractArchive:  utils.ExtractTarGzFile,
+	extractArchive:  utils.ExtractArchiveFile,
 }
