@@ -8,9 +8,10 @@ This Charter sets forth the responsibilities and procedures for technical contri
 
 ## 1. Mission and Scope of the Project
 
-a. The mission of the Project is to improve the security of open source software by detecting malicious behavior, informing consumers selecting packages, and providing researchers with data about the ecosystem.
+a. The mission of the Project is to improve the security of open source software by detecting malicious and unsafe behaviour in packages published to open source repositories, helping inform consumers about the packages they choose, and providing security teams and researchers with data about open source ecosystems.
 
 b. The scope of the Project includes collaborative development under the Project License (as defined herein) supporting the mission, including documentation, testing, integration and the creation of other artifacts that aid the development, deployment, operation or adoption of the open source project.
+
 ## 2. Technical Steering Committee
 
 a. The Technical Steering Committee (the “TSC”) will be responsible for all technical oversight of the open source Project. 
