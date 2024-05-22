@@ -46,7 +46,7 @@ WHERE
   /* Ignore hostname lookups for "A" (IPv4 addresses) and "AAAA" (IPv6 addresses)
      records with only one part to limit noise */
   (QueryType NOT IN ('A', 'AAAA') OR ARRAY_LENGTH(SPLIT(Hostname, ".")) >= 2) AND
-  /* Ignore "safe" jostnames that are used frequently */
+  /* Ignore "safe" hostnames that are used frequently */
   Hostname NOT IN ('gcr.io.default.svc.cluster.local', 'storage.googleapis.com.cluster.local',
                    'storage.googleapis.com.svc.cluster.local', 'gcr.io.cluster.local',
                    'gcr.io.google.internal', 'storage.googleapis.com.default.svc.cluster.local',
