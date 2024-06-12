@@ -19,7 +19,6 @@ linters:
   enable:
     - asciicheck
     - bodyclose
-    - deadcode
     - depguard
     - dogsled
     - errcheck
@@ -62,7 +61,6 @@ linters:
     - unconvert
     - unparam
     - unused
-    - varcheck
     - whitespace
     - wrapcheck
 linters-settings:
