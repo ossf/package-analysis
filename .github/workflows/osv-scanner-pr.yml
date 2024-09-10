@@ -9,7 +9,7 @@ on:
 
 # Declare default permissions as read only.
 permissions:
-  # Only need to read contents
+  actions: read
   contents: read
   # Require writing security events to upload SARIF file to security tab
   security-events: write
