@@ -152,7 +152,7 @@ See `sample_packages/README.md` for how to use a sample package that simulates m
 
 ### Required Dependencies
 
-- Go v1.21
+- Go v1.23.1
 - Docker
 
 # Contributing
