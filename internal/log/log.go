@@ -76,9 +76,7 @@ func Initialize(env string) {
 	}
 	zap.RedirectStdLog(logger)
 	// Ensure slog.Default logs to the same destination as zap.
-	slogger := slog.New(NewContextLogHandler(zapslog.NewHandler(logger.Core(), &zapslog.HandlerOptions{
-		AddSource: true,
-	})))
+	slogger := slog.New(NewContextLogHandler(zapslog.NewHandler(logger.Core(), zapslog.WithCaller(true))))
 	slog.SetDefault(slogger)
 }
 
