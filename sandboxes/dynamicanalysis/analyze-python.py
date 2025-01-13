@@ -58,7 +58,7 @@ def path_to_import(path):
     if path.name == '__init__.py':
         import_path = str(path.parent)
     else:
-        import_path = str(path).rstrip(PY_EXTENSION)
+        import_path = str(path).removesuffix(PY_EXTENSION)
 
     return import_path.replace('/', '.')
 
