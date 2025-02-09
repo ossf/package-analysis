@@ -33,3 +33,18 @@ func TestCreateAndWriteTempFile(t *testing.T) {
 		t.Errorf("CreateAndWriteTempFile(): did not create file, want %v", fileName)
 	}
 }
+
+func TestRemoveTempFilesDirectory(t *testing.T) {
+	if err := os.MkdirAll(writeBufferFolder, 0777); err != nil {
+		t.Errorf("%s could not be created for test", writeBufferFolder)
+	}
+
+	err := RemoveTempFilesDirectory()
+	if err != nil {
+		t.Errorf("Error removing temp folder: %s", err)
+	}
+
+	if fileExists((writeBufferFolder)) {
+		t.Errorf("RemoveTempFilesDirectory(): folder exists, want no folder.")
+	}
+}
