@@ -3,6 +3,7 @@ package utils
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 )
 
@@ -20,17 +21,40 @@ func TestCreateAndWriteTempFile(t *testing.T) {
 	fileName := "CreateAndWriteTempFile_testfile.txt"
 	filePath := filepath.Join(writeBufferFolder, fileName)
 
-	defer func() {
-		err := RemoveTempFilesDirectory()
-		if err != nil {
-			t.Logf("%s could not be cleaned up: %s.", fileName, err)
-		}
-	}()
+	defer RemoveTempFilesDirectory()
 
 	CreateAndWriteTempFile(fileName, []byte("This test file is safe to remove."))
 
 	if !fileExists(filePath) {
 		t.Errorf("CreateAndWriteTempFile(): did not create file, want %v", fileName)
+	}
+}
+
+func TestOpenTempFile(t *testing.T) {
+	fileName := "CreateAndWriteTempFile_testfile.txt"
+	fileBody := []byte("This test file is safe to remove.")
+	CreateAndWriteTempFile(fileName, []byte(fileBody))
+
+	defer RemoveTempFilesDirectory()
+
+	file, err := OpenTempFile(fileName)
+	if err != nil {
+		t.Errorf("%s could not be opened for test", fileName)
+	}
+	defer file.Close()
+
+	actualName := file.Name()
+	if actualName != filepath.Join(writeBufferFolder, fileName) {
+		t.Errorf("Name() = %s; want %s", actualName, fileName)
+	}
+
+	actualBody := []byte{}
+	_, err = file.Read(actualBody)
+	if err != nil {
+		t.Errorf("%s could not be read for test", fileName)
+	}
+	if !reflect.DeepEqual(actualBody, fileBody) {
+		t.Errorf("Read() = %s; want %s", actualBody, fileBody)
 	}
 }
 
