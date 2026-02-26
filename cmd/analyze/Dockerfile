@@ -28,7 +28,7 @@ RUN apt-get update && apt-get upgrade -y && \
 # Install gVisor.
 RUN mkdir -m 0700 -p /etc/apt/keyrings && \
     curl -fsSL https://gvisor.dev/archive.key -o /etc/apt/keyrings/gvisor.key && \
-    echo "deb [signed-by=/etc/apt/keyrings/gvisor.key] https://storage.googleapis.com/gvisor/releases 20240212 main" > /etc/apt/sources.list.d/gvisor.list && \
+    echo "deb [signed-by=/etc/apt/keyrings/gvisor.key] https://storage.googleapis.com/gvisor/releases 20260216 main" > /etc/apt/sources.list.d/gvisor.list && \
     apt-get update && apt-get install -y runsc
 
 COPY --from=build /src/analyze /usr/local/bin/analyze
