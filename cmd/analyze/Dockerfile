@@ -1,4 +1,4 @@
-FROM golang:1.23.1@sha256:4a3c2bcd243d3dbb7b15237eecb0792db3614900037998c2cd6a579c46888c1e as build
+FROM golang:1.23.1@sha256:4a3c2bcd243d3dbb7b15237eecb0792db3614900037998c2cd6a579c46888c1e AS build
 RUN apt-get update && apt-get install -y libpcap-dev
 WORKDIR /src
 
@@ -10,9 +10,9 @@ RUN go mod download
 COPY . ./
 RUN go build -o analyze ./cmd/analyze && go build -o worker ./cmd/worker
 
-FROM ubuntu:22.04@sha256:42ba2dfce475de1113d55602d40af18415897167d47c2045ec7b6d9746ff148f
+FROM ubuntu:22.04@sha256:3ba65aa20f86a0fad9df2b2c259c613df006b2e6d0bfcc8a146afb8c525a9751
 
-ENV DEBIAN_FRONTEND noninteractive
+ENV DEBIAN_FRONTEND="noninteractive"
 RUN apt-get update && apt-get upgrade -y && \
     apt-get install -y \
         apt-transport-https \

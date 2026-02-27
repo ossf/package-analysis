@@ -1,4 +1,4 @@
-FROM golang:1.23.1@sha256:4a3c2bcd243d3dbb7b15237eecb0792db3614900037998c2cd6a579c46888c1e as build
+FROM golang:1.23.1@sha256:4a3c2bcd243d3dbb7b15237eecb0792db3614900037998c2cd6a579c46888c1e AS build
 
 # Note: Dockerfile uses paths relative to the top-level project directory,
 # so it should be built from that directory, i.e:
@@ -18,7 +18,7 @@ WORKDIR /src/sandboxes/staticanalysis
 # If CGO is disabled then we don't need glibc
 RUN CGO_ENABLED=0 go build -o staticanalyze staticanalyze.go
 
-FROM alpine:3.17.1@sha256:93d5a28ff72d288d69b5997b8ba47396d2cbb62a72b5d87cd3351094b5d578a0
+FROM alpine:3.23.3@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659
 RUN apk add --no-cache file && \
 	apk add --no-cache nodejs && \
 	apk add --no-cache npm && \

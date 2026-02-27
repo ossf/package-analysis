@@ -5,14 +5,14 @@
 # NO_PUBKEY B53DC80D13EDEF05 [kubectl]
 
 # buildpack-deps 22.04 [ubuntu]
-FROM buildpack-deps@sha256:d76488a56e1e85930e053b794daa9f990636565bf0de54903d65d93c43c3cad5 AS image
+FROM buildpack-deps@sha256:e3a9f4d68852ea0111610b75443f6eb809c28816b04088722f9a079a49cf1287 AS image
 
 # All intermediate files during first-stage build are stored under /setup
 # This directory is removed before second-stage build (i.e. copying runtime files to an empty image)
 WORKDIR /setup
 
 # Suppress questions relating to package installs
-ENV DEBIAN_FRONTEND noninteractive
+ENV DEBIAN_FRONTEND="noninteractive"
 # Silence 'debconf: delaying package configuation, since apt-utils is not installed' warning
 # as it related to interactive configuration anyway
 ENV DEBCONF_NOWARNINGS="yes"
