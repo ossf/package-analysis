@@ -17,9 +17,9 @@ ENV DEBIAN_FRONTEND="noninteractive"
 # as it related to interactive configuration anyway
 ENV DEBCONF_NOWARNINGS="yes"
 # Define the version of Kubernetes to use.
-ENV K8S_VERSION="v1.29"
+ENV K8S_VERSION="v1.35"
 # Define the major version of Node.js to use.
-ENV NODE_MAJOR=18
+ENV NODE_MAJOR=24
 
 # setup repo for kubectl
 RUN curl -fsSL "https://pkgs.k8s.io/core:/stable:/${K8S_VERSION}/deb/Release.key" | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg && \
