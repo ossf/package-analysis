@@ -103,9 +103,13 @@ def import_module(import_path):
 def execute_package(package):
     """Execute phase for analyzing the package."""
     for p in module_paths_to_import(package):
-        # if we're here, importing should have already worked during import phase
-        module = importlib.import_module(p)
-        execute_module(module)
+        try:
+            module = importlib.import_module(p)
+        except BaseException:
+            # We reach here when import fails. So skip this package.
+            continue
+        else:
+            execute_module(module)
 
 
 def execute_module(module):
