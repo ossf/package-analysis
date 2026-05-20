@@ -95,7 +95,7 @@ RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" &&
 WORKDIR /setup/node
 RUN apt-get update && apt-get install -y --no-install-recommends \
 	nodejs
-
+RUN npm install -g bun@1.3.14
 COPY bowerrc /app/.bowerrc
 
 
