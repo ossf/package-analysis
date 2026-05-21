@@ -143,11 +143,11 @@ e2e_test_build: build_e2e_test_images
 
 .PHONY: e2e_test_start
 e2e_test_start:
-	docker-compose $(E2E_TEST_COMPOSE_ARGS) up -d
+	docker compose $(E2E_TEST_COMPOSE_ARGS) up -d
 	@echo
-	@echo "To see analysis results, go to http://localhost:9000/minio/package-analysis"
-	@echo "Username: minio"
-	@echo "Password: minio123"
+	@echo "To see analysis results, go to http://localhost:9001/"
+	@echo "Username: rustfs"
+	@echo "Password: rustfs123"
 	@echo
 	@echo "Remember to run 'make e2e_test_stop' when done!"
 	@sleep 5
@@ -156,23 +156,23 @@ e2e_test_start:
 
 .PHONY: e2e_test_stop
 e2e_test_stop:
-	docker-compose $(E2E_TEST_COMPOSE_ARGS) down
+	docker compose $(E2E_TEST_COMPOSE_ARGS) down
 
 .PHONY: e2e_test_logs_all
 e2e_test_logs_all:
-	docker-compose $(E2E_TEST_COMPOSE_ARGS) logs
+	docker compose $(E2E_TEST_COMPOSE_ARGS) logs
 
 .PHONY: e2e_test_logs_feeds
 e2e_test_logs_feeds:
-	docker-compose $(E2E_TEST_COMPOSE_ARGS) logs -f feeds
+	docker compose $(E2E_TEST_COMPOSE_ARGS) logs -f feeds
 
 .PHONY: e2e_test_logs_scheduler
 e2e_test_logs_scheduler:
-	docker-compose $(E2E_TEST_COMPOSE_ARGS) logs -f scheduler
+	docker compose $(E2E_TEST_COMPOSE_ARGS) logs -f scheduler
 
 .PHONY: e2e_test_logs_analysis
 e2e_test_logs_analysis:
-	docker-compose $(E2E_TEST_COMPOSE_ARGS) logs -f analysis
+	docker compose $(E2E_TEST_COMPOSE_ARGS) logs -f analysis
 
 
 .PHONY: build_e2e_test_images

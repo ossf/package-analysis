@@ -36,23 +36,39 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_offsets_topic_replication_factor: 1
 
-  minio:
-    image: minio/minio@sha256:684ce208c005fe032659ec77bafa6a17a16c41686c334618dec924b3505e7090
-    hostname: minio
+  rustfs:
+    image: rustfs/rustfs@sha256:378642b05b7dcb4849fb77ebe6aca4ced1c3f66e7e504247df95a5c9018d3358
+    hostname: rustfs
     ports:
       - 9000:9000
+      - 9001:9001
     restart: on-failure
     environment:
-      MINIO_ROOT_USER: minio
-      MINIO_ROOT_PASSWORD: minio123
-      MINIO_REGION_NAME: dummy_region
-    entrypoint: sh
-    command: -c 'mkdir -p /data/package-analysis/{analyzed-packages,dynamic,execution-logs,file-writes,static} && /usr/bin/minio server /data'
+      RUSTFS_ACCESS_KEY: rustfs
+      RUSTFS_SECRET_KEY: rustfs123
+      RUSTFS_CONSOLE_ENABLE: true
+      RUSTFS_CONSOLE_ADDRESS: :9001
+      RUSTFS_ADDRESS: :9000
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health/ready"]
       interval: 30s
       timeout: 20s
       retries: 3
+
+  rustfs-create-buckets:
+    image: rustfs/rc@sha256:9abd6fb2b41a38aad8e6efb4a47c308701ee72417962da2205ea4ec72e30a75f
+    depends_on:
+      rustfs:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      rc alias set local http://rustfs:9000 rustfs rustfs123;
+      rc mb local/package-analysis-analyzed-packages;
+      rc mb local/package-analysis-dynamic;
+      rc mb local/package-analysis-execution-logs;
+      rc mb local/package-analysis-file-writes;
+      rc mb local/package-analysis-static || true;
+      "
 
   analysis:
     image: gcr.io/ossf-malware-analysis/analysis:latest
@@ -61,24 +77,24 @@ services:
       - 6060:6060
     restart: unless-stopped
     entrypoint: "/usr/local/bin/worker"
+    cgroup: host
     environment:
       OSSMALWARE_WORKER_SUBSCRIPTION: kafka://worker?topic=workers
       OSSF_MALWARE_NOTIFICATION_TOPIC: kafka://notifications
-      OSSF_MALWARE_ANALYZED_PACKAGES: s3://package-analysis/analyzed-packages?endpoint=minio:9000&disableSSL=true&s3ForcePathStyle=true
-      OSSF_MALWARE_ANALYSIS_RESULTS: s3://package-analysis/dynamic?endpoint=minio:9000&disableSSL=true&s3ForcePathStyle=true
-      OSSF_MALWARE_ANALYSIS_EXECUTION_LOGS: s3://package-analysis/execution-logs?endpoint=minio:9000&disableSSL=true&s3ForcePathStyle=true
-      OSSF_MALWARE_ANALYSIS_FILE_WRITE_RESULTS: s3://package-analysis/file-writes?endpoint=minio:9000&disableSSL=true&s3ForcePathStyle=true
-      OSSF_MALWARE_STATIC_ANALYSIS_RESULTS: s3://package-analysis/static?endpoint=minio:9000&disableSSL=true&s3ForcePathStyle=true
+      OSSF_MALWARE_ANALYZED_PACKAGES: s3://package-analysis-analyzed-packages?disable_https=true&use_path_style=true&endpoint=http://rustfs:9000
+      OSSF_MALWARE_ANALYSIS_RESULTS: s3://package-analysis-dynamic?disable_https=true&use_path_style=true&endpoint=http://rustfs:9000
+      OSSF_MALWARE_ANALYSIS_EXECUTION_LOGS: s3://package-analysis-execution-logs?disable_https=true&use_path_style=true&endpoint=http://rustfs:9000
+      OSSF_MALWARE_ANALYSIS_FILE_WRITE_RESULTS: s3://package-analysis-file-writes?disable_https=true&use_path_style=true&endpoint=http://rustfs:9000
+      OSSF_MALWARE_STATIC_ANALYSIS_RESULTS: s3://package-analysis-static?disable_https=true&use_path_style=true&endpoint=http://rustfs:9000
       OSSF_MALWARE_ANALYSIS_ENABLE_PROFILER: "true"
       OSSF_MALWARE_FEATURE_FLAGS: ""
       KAFKA_BROKERS: kafka:9092
-      AWS_ACCESS_KEY_ID: minio
-      AWS_SECRET_ACCESS_KEY: minio123
-      AWS_REGION: dummy_region
+      AWS_ACCESS_KEY_ID: rustfs
+      AWS_SECRET_ACCESS_KEY: rustfs123
     depends_on:
       kafka:
         condition: service_healthy
-      minio:
+      rustfs:
         condition: service_healthy
 
   scheduler:
@@ -103,5 +119,6 @@ services:
         condition: service_healthy
     environment:
       PACKAGE_FEEDS_CONFIG_PATH: /config/feeds.yml
+    user: "0"
     volumes:
       - "./config/:/config/"
