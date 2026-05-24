@@ -5,7 +5,7 @@ go 1.26.3
 require (
 	cloud.google.com/go/pubsub v1.50.2
 	github.com/blendle/zapdriver v1.3.1
-	github.com/gopacket/gopacket v1.5.0
+	github.com/gopacket/gopacket v1.6.0
 	github.com/ossf/package-feeds v0.0.0-20240903033607-939890176fa6
 	github.com/package-url/packageurl-go v0.1.6
 	github.com/texttheater/golang-levenshtein/levenshtein v0.0.0-20200805054039-cae8b0eaed6c
@@ -15,7 +15,7 @@ require (
 	gocloud.dev/pubsub/kafkapubsub v0.45.0
 	golang.org/x/crypto v0.51.0
 	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67
-	google.golang.org/api v0.277.0
+	google.golang.org/api v0.278.0
 	google.golang.org/grpc v1.81.1
 	google.golang.org/protobuf v1.36.11
 )
