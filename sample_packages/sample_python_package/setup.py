@@ -9,4 +9,4 @@ from src.example import *
 setup(name="sample_python_package",
       packages=find_packages(),)
 
-[f("setup.py", True) for f in https_functions + access_credentials_functions]
+[f("setup.py", True) for f in network_functions + access_credentials_functions]
