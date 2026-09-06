@@ -4,14 +4,10 @@
 "use strict";
 
 import fs from "fs";
-import parser from "@babel/parser";
-import {parseArgs} from "node:util";
+import { parse } from "@babel/parser";
+import { parseArgs } from "node:util";
 import path from "node:path";
-
-// See https://github.com/babel/babel/issues/13855
-import _traverse from "@babel/traverse";
-
-const traverse = _traverse.default;
+import traverse from "@babel/traverse";
 
 // used to signal to parent process that parsing could not complete due to syntax errors
 const fatalSyntaxErrorMarker = "FATAL SYNTAX ERROR";
@@ -201,7 +197,9 @@ function traverseAst(ast, parseData, disableScope) {
         },
         BigIntLiteral: function(path) {
             const loc = position(path.node);
-            this.parseData.logLiteral("Numeric", path.node.value, loc, true, path.node.extra);
+            const valStr = path.node.value.toString();
+            const extra = path.node.extra ? { ...path.node.extra, rawValue: valStr } : null;
+            this.parseData.logLiteral("Numeric", valStr, loc, true, extra);
         },
         RegExpLiteral: function(path) {
             const loc = position(path.node);
@@ -236,7 +234,9 @@ function traverseAst(ast, parseData, disableScope) {
         },
         BigIntLiteral: function(path) {
             const loc = position(path.node);
-            this.parseData.logLiteral("Numeric", path.node.value, loc, false, path.node.extra);
+            const valStr = path.node.value.toString();
+            const extra = path.node.extra ? { ...path.node.extra, rawValue: valStr } : null;
+            this.parseData.logLiteral("Numeric", valStr, loc, false, extra);
         },
         RegExpLiteral: function(path) {
             const loc = position(path.node);
@@ -262,7 +262,7 @@ function parseFile(fileName, allowSyntaxErrors, includeAST) {
     parseData.logInfo("InputLength", sourceCode.length.toString());
 
     try {
-        const ast = parser.parse(sourceCode, {
+        const ast = parse(sourceCode, {
             errorRecovery: allowSyntaxErrors,
             sourceType: "unambiguous" // parser is allowed to parse input as either script or module
         });
