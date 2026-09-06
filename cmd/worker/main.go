@@ -248,6 +248,18 @@ func main() {
 
 	sandbox.InitNetwork(ctx)
 
+	// Confirm the configured sandbox images are accessible before we start
+	// consuming messages. This catches a misconfigured or unavailable image at
+	// startup instead of letting messages be acked errantly later on. When
+	// noPull is set the worker uses images that are already present locally, so
+	// the remote registry check is skipped.
+	if !cfg.imageSpec.noPull {
+		if err := worker.CheckSandboxImagesAccessible(ctx, cfg.imageSpec.tag); err != nil {
+			slog.ErrorContext(ctx, "Sandbox image preflight check failed", "error", err)
+			os.Exit(1)
+		}
+	}
+
 	// If configured, start a webserver so that Go's pprof can be accessed for
 	// debugging and profiling.
 	if os.Getenv("OSSF_MALWARE_ANALYSIS_ENABLE_PROFILER") != "" {
