@@ -9,7 +9,9 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"os/signal"
 	"path"
+	"syscall"
 
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/fileblob"
@@ -156,6 +158,15 @@ func handleMessage(ctx context.Context, msg *pubsub.Message, cfg *config, packag
 	return nil
 }
 
+// shutdownRequested reports whether a graceful shutdown has been requested for
+// the given context. The worker uses this to decide whether to pull another
+// message in the receive loop: once a SIGTERM has cancelled the context we stop
+// grabbing new work instead of starting an analysis we cannot finish before the
+// SIGKILL that Kubernetes sends roughly 30 seconds later.
+func shutdownRequested(ctx context.Context) bool {
+	return ctx.Err() != nil
+}
+
 func messageLoop(ctx context.Context, cfg *config) error {
 	sub, err := pubsub.OpenSubscription(ctx, cfg.subURL)
 	if err != nil {
@@ -194,8 +205,23 @@ func messageLoop(ctx context.Context, cfg *config) error {
 
 	slog.InfoContext(ctx, "Listening for messages to process...")
 	for {
+		// If a shutdown has been requested (e.g. SIGTERM from Kubernetes), stop
+		// pulling new messages and return cleanly. Any in-flight message has
+		// already been handled by the time we reach the top of the loop.
+		if shutdownRequested(ctx) {
+			slog.InfoContext(ctx, "Shutdown requested, no longer receiving messages")
+			return nil
+		}
+
 		msg, err := sub.Receive(ctx)
 		if err != nil {
+			// A cancelled context means a shutdown was requested while we were
+			// waiting for the next message, so exit cleanly rather than treating
+			// it as a failure.
+			if shutdownRequested(ctx) {
+				slog.InfoContext(ctx, "Shutdown requested while waiting for a message, stopping")
+				return nil
+			}
 			// All subsequent receive calls will return the same error, so we bail out.
 			return fmt.Errorf("error receiving message: %w", err)
 		}
@@ -235,7 +261,12 @@ func messageLoop(ctx context.Context, cfg *config) error {
 func main() {
 	log.Initialize(os.Getenv("LOGGER_ENV"))
 
-	ctx := context.Background()
+	// Cancel the context when a SIGTERM (or interrupt) is received so the worker
+	// stops pulling new messages and shuts down gracefully. Kubernetes sends a
+	// SIGTERM and then a SIGKILL roughly 30 seconds later, so this gives any
+	// in-flight analysis a chance to finish before the loop exits.
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer stop()
 
 	cfg := configFromEnv()
 
