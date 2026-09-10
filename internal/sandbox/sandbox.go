@@ -503,12 +503,7 @@ func (s *podmanSandbox) Run(ctx context.Context, command string, args ...string)
 	}
 
 	err = cmd.Wait()
-	if err == nil {
-		result.status = RunStatusSuccess
-	} else if _, ok := err.(*exec.ExitError); ok {
-		result.status = RunStatusFailure
-		err = nil
-	}
+	result.status, err = classifyRunResult(ctx, err)
 
 	// Stop the container
 	stopCmd := s.stopContainerCmd(ctx)
@@ -526,6 +521,24 @@ func (s *podmanSandbox) Run(ctx context.Context, command string, args ...string)
 	}
 
 	return result, err
+}
+
+// classifyRunResult determines the RunStatus for a sandboxed command based on
+// the error returned by cmd.Wait() and the run's context. A context that has
+// exceeded its deadline takes priority over the process error, since a
+// killed process surfaces to Wait() as a generic *exec.ExitError that is
+// otherwise indistinguishable from an ordinary non-zero exit.
+func classifyRunResult(ctx context.Context, err error) (RunStatus, error) {
+	if err == nil {
+		return RunStatusSuccess, nil
+	}
+	if ctx.Err() == context.DeadlineExceeded {
+		return RunStatusTimeout, nil
+	}
+	if _, ok := err.(*exec.ExitError); ok {
+		return RunStatusFailure, nil
+	}
+	return RunStatusUnknown, err
 }
 
 // Clean implements the Sandbox interface.
