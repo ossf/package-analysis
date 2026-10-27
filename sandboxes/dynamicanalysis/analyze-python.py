@@ -123,8 +123,12 @@ def execute_module(module):
             do_execute(module)
         # want to catch everything since code execution may cause some weird behaviour
         except BaseException:
-            print('Failed to execute code for module', module)
-            traceback.print_exc()
+            # The module may have closed sys.stdout / sys.stderr (which are currently
+            # the log file), so report the failure using a fresh handle to the log.
+            with open(EXECUTION_LOG_PATH, 'at') as error_log, \
+                    redirect_stdout(error_log), redirect_stderr(error_log):
+                print('Failed to execute code for module', module)
+                traceback.print_exc()
 
     # restore default signal handler for SIGALRM
     signal.signal(signal.SIGALRM, signal.SIG_DFL)
