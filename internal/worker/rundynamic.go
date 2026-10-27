@@ -32,6 +32,14 @@ import (
 // defaultDynamicAnalysisImage is container image name of the default dynamic analysis sandbox
 const defaultDynamicAnalysisImage = "gcr.io/ossf-malware-analysis/dynamic-analysis"
 
+// dynamicAnalysisPhaseTimeout bounds how long a single dynamic analysis phase
+// may run before it is treated as a timeout. It is kept below the sandbox
+// container's own self-destruct timer (`sleep 30m`, see
+// sandboxes/dynamicanalysis/Dockerfile) so that the Go side can detect and
+// report the timeout via sandbox.RunStatusTimeout instead of racing the
+// container's forced shutdown.
+const dynamicAnalysisPhaseTimeout = 25 * time.Minute
+
 /*
 DynamicAnalysisResult holds all data and status from RunDynamicAnalysis.
 
@@ -263,6 +271,8 @@ func straceDebugLogFilename(pkg *pkgmanager.Pkg, phase analysisrun.DynamicPhase)
 
 func runDynamicAnalysisPhase(ctx context.Context, pkg *pkgmanager.Pkg, sb sandbox.Sandbox, analysisCmd string, phase analysisrun.DynamicPhase, result *DynamicAnalysisResult) error {
 	phaseCtx := log.ContextWithAttrs(ctx, log.Label("phase", string(phase)))
+	phaseCtx, cancel := context.WithTimeout(phaseCtx, dynamicAnalysisPhaseTimeout)
+	defer cancel()
 	startTime := time.Now()
 	args := dynamicanalysis.MakeAnalysisArgs(pkg, phase)
 
