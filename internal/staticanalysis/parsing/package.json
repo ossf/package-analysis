@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "dependencies": {
-    "@babel/parser": "^8.0.7",
+    "@babel/parser": "^8.0.8",
     "@babel/traverse": "^8.0.7"
   }
 }
