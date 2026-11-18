@@ -131,9 +131,13 @@ func makeSandboxOptions() []sandbox.Option {
 }
 
 func dynamicAnalysis(ctx context.Context, pkg *pkgmanager.Pkg, resultStores *worker.ResultStores) {
-	if !*offline {
-		sandbox.InitNetwork(ctx)
-	}
+	// Dynamic analysis always starts a packet capture on the cni-analysis
+	// bridge (see internal/dynamicanalysis), so the bridge must exist even in
+	// offline mode. When offline, the sandbox container itself still runs with
+	// --network=none and produces no traffic, so the capture simply records
+	// nothing. Previously InitNetwork was skipped when offline, which left the
+	// bridge absent and caused packet capture to fail before any phase ran.
+	sandbox.InitNetwork(ctx)
 
 	sbOpts := append(worker.DynamicSandboxOptions(), makeSandboxOptions()...)
 

@@ -110,6 +110,9 @@ analysis.
 The commands below will dump the JSON results to `/tmp/results`
 and full logs to `/tmp/dockertmp`.
 
+For a detailed, step-by-step walkthrough on macOS (prerequisites, a worked
+example, and troubleshooting), see [docs/local-analysis.md](docs/local-analysis.md).
+
 [gVisor]: https://gvisor.dev/
 
 ### Live package

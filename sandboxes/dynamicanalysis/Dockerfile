@@ -49,7 +49,6 @@ RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-reco
 	libzip-dev \
 	net-tools \
 	netcat-openbsd \
-	powershell \
 	protobuf-compiler \
 	sshpass \
 	sudo \
@@ -61,13 +60,34 @@ RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-reco
 	zip
 
 
+#
+# PowerShell setup
+#
+# Microsoft's apt repo (configured above) only publishes an amd64 PowerShell
+# .deb, so installing it via apt breaks the dependency solver on arm64. Install
+# from apt on amd64 (unchanged behaviour), and from the official linux-arm64
+# tarball build on arm64.
+ENV PWSH_ARM64_VERSION="7.6.3"
+RUN if [ "$(dpkg --print-architecture)" = "amd64" ]; then \
+		apt-get update && apt-get install -y --no-install-recommends powershell; \
+	else \
+		curl -fsSL "https://github.com/PowerShell/PowerShell/releases/download/v${PWSH_ARM64_VERSION}/powershell-${PWSH_ARM64_VERSION}-linux-arm64.tar.gz" -o /setup/powershell.tar.gz && \
+		mkdir -p /opt/microsoft/powershell/7 && \
+		tar zxf /setup/powershell.tar.gz -C /opt/microsoft/powershell/7 && \
+		chmod +x /opt/microsoft/powershell/7/pwsh && \
+		ln -sf /opt/microsoft/powershell/7/pwsh /usr/bin/pwsh; \
+	fi
+
+
 # Configure sudo for passwordless execution
 RUN echo "ALL ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 
 # install awscli v2
 # TODO: validate the integrity of the archive
-RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/setup/awscliv2.zip"
+# AWS publishes per-arch installers; pick the right one so the image builds on
+# both amd64 (x86_64) and arm64 (aarch64) hosts.
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "/setup/awscliv2.zip"
 RUN unzip "/setup/awscliv2.zip" -d "/setup"
 RUN /setup/aws/install
 
