@@ -87,7 +87,12 @@ while [[ $i -lt $# ]]; do
 			LOCAL=1
 			i=$((i+1))
 			# -m preserves invalid/non-existent paths (which will be detected below)
-			PKG_PATH=$(realpath -m "${args[$i]}")
+			# macOS realpath doesn't support -m, so fall back to manual resolution
+			if realpath -m / &>/dev/null 2>&1; then
+				PKG_PATH=$(realpath -m "${args[$i]}")
+			else
+				PKG_PATH=$(cd "$(dirname "${args[$i]}")" 2>/dev/null && echo "$(pwd)/$(basename "${args[$i]}")" || echo "${args[$i]}")
+			fi
 			if [[ -z "$PKG_PATH" ]]; then
 				echo "-local specified but no package path given"
 				exit 255
@@ -118,7 +123,8 @@ if [[ $# -eq 0 ]]; then
 	HELP=1
 fi
 
-DOCKER_OPTS=("run" "--cgroupns=host" "--privileged" "--rm")
+ANALYSIS_IMAGE=gcr.io/ossf-malware-analysis/analysis
+DOCKER_OPTS=("run" "--platform" "linux/amd64" "--cgroupns=host" "--privileged" "--rm")
 
 # On development systems, we mount /var/lib/containers so that sandbox images can be
 # shared between the host system and the analysis image. However, this requires the
@@ -128,9 +134,14 @@ DOCKER_OPTS=("run" "--cgroupns=host" "--privileged" "--rm")
 
 # Checks that the given mountpoint has the given filesystem mount type
 function is_mount_type() {
-	if [[ $(findmnt -T "$2" -n -o FSTYPE) == "$1" ]]; then
-		return 0
+	if command -v findmnt &>/dev/null; then
+		if [[ $(findmnt -T "$2" -n -o FSTYPE) == "$1" ]]; then
+			return 0
+		else
+			return 1
+		fi
 	else
+		# findmnt not available (e.g. macOS), assume not the given type
 		return 1
 	fi
 }
@@ -139,6 +150,77 @@ CONTAINER_MOUNT_DIR="/var/lib/containers"
 
 if [[ -n "$CONTAINER_DIR_OVERRIDE" ]]; then
 	CONTAINER_MOUNT_DIR="$CONTAINER_DIR_OVERRIDE"
+elif [[ "$(uname)" == "Darwin" ]]; then
+	# On macOS (Docker Desktop), several issues with nested containers:
+	# 1. Overlay storage driver doesn't work (no kernel whiteout support)
+	# 2. Host bind mounts don't support pivot_root needed by podman
+	# 3. gVisor (runsc) can't run in Docker Desktop's LinuxKit VM
+	# 4. crun fails with memfd re-execution errors
+	# Fix: use Docker named volume, vfs storage driver, runc runtime,
+	#       and disable seccomp for nested containers
+	MACOS_CONFIG_DIR=$(mktemp -d)
+	CONTAINER_MOUNT_DIR="pa-containers"
+
+	# Force vfs storage driver
+	cat > "$MACOS_CONFIG_DIR/storage.conf" << 'STORAGEEOF'
+[storage]
+driver = "vfs"
+graphroot = "/var/lib/containers/storage"
+runroot = "/run/containers/storage"
+STORAGEEOF
+	PODMAN_STORAGE_CONF="$MACOS_CONFIG_DIR/storage.conf"
+
+	# Disable seccomp for nested containers (runc needs this in Docker Desktop)
+	cat > "$MACOS_CONFIG_DIR/containers.conf" << 'CONTAINERSEOF'
+[containers]
+seccomp_profile = "unconfined"
+CONTAINERSEOF
+	PODMAN_CONTAINERS_CONF="$MACOS_CONFIG_DIR/containers.conf"
+
+	# Create shim to replace gVisor runsc with runc
+	cat > "$MACOS_CONFIG_DIR/runsc_compat.sh" << 'SHIMEOF'
+#!/bin/bash
+# macOS shim: redirect gVisor runsc calls to runc
+ARGS=()
+for arg in "$@"; do
+    case "$arg" in
+        --overlay2=*|--net-raw*|--strace*|--log-packets*|--debug-log=*|--debug-log-fd=*|--root=*)
+            ;;
+        *)
+            ARGS+=("$arg")
+            ;;
+    esac
+done
+exec /usr/sbin/runc "${ARGS[@]}"
+SHIMEOF
+	chmod +x "$MACOS_CONFIG_DIR/runsc_compat.sh"
+	MACOS_RUNSC_SHIM="$MACOS_CONFIG_DIR/runsc_compat.sh"
+
+	# Extract runc binary (Docker Desktop's crun has memfd issues)
+	MACOS_RUNC_BIN="$MACOS_CONFIG_DIR/runc"
+	if [[ ! -f "$HOME/.cache/pa-runc/runc" ]]; then
+		echo "macOS: extracting runc binary (one-time setup)..."
+		mkdir -p "$HOME/.cache/pa-runc"
+		EXTRACT_ID=$(docker create --platform linux/amd64 --entrypoint="" "$ANALYSIS_IMAGE" sh -c 'apt-get update && apt-get install -y runc')
+		docker start -a "$EXTRACT_ID" > /dev/null 2>&1
+		docker cp "$EXTRACT_ID:/usr/sbin/runc" "$HOME/.cache/pa-runc/runc"
+		docker rm "$EXTRACT_ID" > /dev/null 2>&1
+		chmod +x "$HOME/.cache/pa-runc/runc"
+	fi
+	MACOS_RUNC_BIN="$HOME/.cache/pa-runc/runc"
+
+	# Entrypoint wrapper: copy runc to writable filesystem before analysis
+	cat > "$MACOS_CONFIG_DIR/entrypoint.sh" << 'ENTRYEOF'
+#!/bin/bash
+cp /mnt/runc-bin /usr/sbin/runc
+chmod +x /usr/sbin/runc
+exec "$@"
+ENTRYEOF
+	chmod +x "$MACOS_CONFIG_DIR/entrypoint.sh"
+	MACOS_ENTRYPOINT="$MACOS_CONFIG_DIR/entrypoint.sh"
+
+	echo "macOS detected, using Docker volume '$CONTAINER_MOUNT_DIR' with runc runtime"
+	echo "  Note: gVisor sandboxing is replaced by runc (strace/packet capture unavailable)"
 elif [[ $CODESPACES == "true" ]]; then
 	CONTAINER_MOUNT_DIR=$(mktemp -d)
 	echo "GitHub Codespaces environment detected, using $CONTAINER_MOUNT_DIR for container mount"
@@ -155,7 +237,23 @@ fi
 
 DOCKER_MOUNTS=("-v" "$CONTAINER_MOUNT_DIR:/var/lib/containers" "-v" "$RESULTS_DIR:/results" "-v" "$STATIC_RESULTS_DIR:/staticResults" "-v" "$FILE_WRITE_RESULTS_DIR:/writeResults" "-v" "$LOGS_DIR:/tmp" "-v" "$ANALYZED_PACKAGES_DIR:/analyzedPackages" "-v" "$STRACE_LOGS_DIR:/straceLogs")
 
-ANALYSIS_IMAGE=gcr.io/ossf-malware-analysis/analysis
+# macOS-specific mounts for podman/runc compatibility
+if [[ -n "$PODMAN_STORAGE_CONF" ]]; then
+	DOCKER_MOUNTS+=("-v" "$PODMAN_STORAGE_CONF:/etc/containers/storage.conf:ro")
+fi
+if [[ -n "$PODMAN_CONTAINERS_CONF" ]]; then
+	DOCKER_MOUNTS+=("-v" "$PODMAN_CONTAINERS_CONF:/etc/containers/containers.conf:ro")
+fi
+if [[ -n "$MACOS_RUNSC_SHIM" ]]; then
+	DOCKER_MOUNTS+=("-v" "$MACOS_RUNSC_SHIM:/usr/local/bin/runsc_compat.sh")
+fi
+if [[ -n "$MACOS_RUNC_BIN" ]]; then
+	DOCKER_MOUNTS+=("-v" "$MACOS_RUNC_BIN:/mnt/runc-bin:ro")
+fi
+if [[ -n "$MACOS_ENTRYPOINT" ]]; then
+	DOCKER_MOUNTS+=("-v" "$MACOS_ENTRYPOINT:/entrypoint.sh:ro")
+	DOCKER_OPTS+=("--entrypoint" "/entrypoint.sh")
+fi
 
 ANALYSIS_ARGS=("analyze" "-dynamic-bucket" "file:///results/" "-file-writes-bucket" "file:///writeResults/" "-static-bucket" "file:///staticResults/" "-analyzed-pkg-bucket" "file:///analyzedPackages/" "-execution-log-bucket" "file:///results")
 
@@ -245,12 +343,12 @@ echo $LINE
 		echo "docker process exited with code $DOCKER_EXIT_CODE"
 		echo
 		print_package_details
-		rmdir --ignore-fail-on-non-empty "$RESULTS_DIR"
-		rmdir --ignore-fail-on-non-empty "$STATIC_RESULTS_DIR"
-		rmdir --ignore-fail-on-non-empty "$FILE_WRITE_RESULTS_DIR"
-		rmdir --ignore-fail-on-non-empty "$ANALYZED_PACKAGES_DIR"
-		rmdir --ignore-fail-on-non-empty "$LOGS_DIR"
-		rmdir --ignore-fail-on-non-empty "$STRACE_LOGS_DIR"
+		rmdir "$RESULTS_DIR"
+		rmdir "$STATIC_RESULTS_DIR"
+		rmdir "$FILE_WRITE_RESULTS_DIR"
+		rmdir "$ANALYZED_PACKAGES_DIR"
+		rmdir "$LOGS_DIR"
+		rmdir "$STRACE_LOGS_DIR"
 	fi
 
 echo $LINE

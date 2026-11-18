@@ -57,19 +57,6 @@ func Run(ctx context.Context, sb sandbox.Sandbox, command string, args []string,
 	slog.DebugContext(ctx, "Stop the packet capture")
 	pcap.Close()
 
-	// Grab the log file
-	slog.DebugContext(ctx, "Parsing the strace log")
-	l, err := r.Log()
-	if err != nil {
-		return resultError, fmt.Errorf("failed to open strace log (%w)", err)
-	}
-	defer l.Close()
-
-	straceResult, err := strace.Parse(ctx, l, straceLogger)
-	if err != nil {
-		return resultError, fmt.Errorf("strace parsing failed (%w)", err)
-	}
-
 	analysisResult := Result{
 		StraceSummary: analysisrun.StraceSummary{
 			Status: analysis.StatusForRunResult(r),
@@ -77,8 +64,42 @@ func Run(ctx context.Context, sb sandbox.Sandbox, command string, args []string,
 			Stderr: utils.LastNBytes(r.Stderr(), maxOutputBytes),
 		},
 	}
+
+	// Grab the log file. If strace log is unavailable (e.g. when using runc
+	// instead of gVisor on macOS), return partial results with DNS data only.
+	slog.DebugContext(ctx, "Parsing the strace log")
+	l, err := r.Log()
+	if err != nil {
+		slog.WarnContext(ctx, "Could not open strace log, returning partial results", "error", err)
+		analysisResult.setDNSData(dns)
+		return &analysisResult, nil
+	}
+	defer l.Close()
+
+	straceResult, err := strace.Parse(ctx, l, straceLogger)
+	if err != nil {
+		slog.WarnContext(ctx, "Strace parsing failed, returning partial results", "error", err)
+		analysisResult.setDNSData(dns)
+		return &analysisResult, nil
+	}
+
 	analysisResult.setData(straceResult, dns)
 	return &analysisResult, nil
+}
+
+// setDNSData populates only the DNS portion of the result, for cases where
+// strace data is unavailable (e.g. running with runc instead of gVisor).
+func (d *Result) setDNSData(dns *dnsanalyzer.DNSAnalyzer) {
+	for dnsClass, queries := range dns.Questions() {
+		c := analysisrun.DNSResult{Class: dnsClass}
+		for host, types := range queries {
+			c.Queries = append(c.Queries, analysisrun.DNSQueries{
+				Hostname: host,
+				Types:    types,
+			})
+		}
+		d.StraceSummary.DNS = append(d.StraceSummary.DNS, c)
+	}
 }
 
 func (d *Result) setData(straceResult *strace.Result, dns *dnsanalyzer.DNSAnalyzer) {
