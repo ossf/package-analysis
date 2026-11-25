@@ -123,6 +123,7 @@ def execute_module(module):
             do_execute(module)
         # want to catch everything since code execution may cause some weird behaviour
         except BaseException:
+            reopen_closed_output()
             print('Failed to execute code for module', module)
             traceback.print_exc()
 
@@ -168,6 +169,20 @@ def do_execute(module):
             skipped_names.append(name)
 
     print('[skipped members]', ' '.join(skipped_names))
+
+
+def reopen_closed_output():
+    """Reopen the execution log if the code being executed closed stdout or stderr.
+
+    Both streams point at the same log file object during execution, so one
+    close (e.g. by an MCP stdio server) would make every later print fail.
+    """
+    if sys.stdout.closed or sys.stderr.closed:
+        log = open(EXECUTION_LOG_PATH, 'at')
+        if sys.stdout.closed:
+            sys.stdout = log
+        if sys.stderr.closed:
+            sys.stderr = log
 
 
 def alarm_handler(sig_num, frame):
@@ -234,7 +249,10 @@ def run_and_catch_all(c: callable):
         return c()
     except BaseException as e:
         # catch ALL exceptions, including KeyboardInterrupt and system exit
+        reopen_closed_output()
         print(type(e), e, sep=': ')
+    finally:
+        reopen_closed_output()
 
 
 def try_invoke_function(f, name, is_method=False):
